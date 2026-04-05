@@ -1,0 +1,25 @@
+.footer {
+  background: #f9f9f9;
+  color: #333;
+  padding: 28px 16px 32px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.footer__content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 0 8px;
+}
+
+.footer h3 {
+  color: #ff6b35;
+  margin-bottom: 6px;
+}
+
+.footer__copy {
+  margin-top: 18px;
+  font-size: 0.87rem;
+  color: #999;
+  text-align: center;
+}

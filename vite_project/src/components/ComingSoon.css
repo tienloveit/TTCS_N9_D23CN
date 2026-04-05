@@ -1,0 +1,42 @@
+.coming-soon {
+  background: white;
+  padding: 36px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.coming-soon h2 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.coming-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.coming-card {
+  background: #f9f9f9;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.coming-card img {
+  width: 100%;
+  object-fit: cover;
+  height: 180px;
+}
+
+.coming-card h3 {
+  margin: 12px 12px 6px;
+  color: #f3f6ff;
+}
+
+.coming-card p {
+  margin: 0 12px 8px;
+  color: #bed0f1;
+}

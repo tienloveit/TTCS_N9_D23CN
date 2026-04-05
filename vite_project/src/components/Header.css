@@ -1,0 +1,215 @@
+.galaxy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: white;
+  color: #333;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.galaxy-header__left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.galaxy-header__logo {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ff6b35;
+}
+
+.galaxy-header__buy-btn {
+  background: linear-gradient(90deg, #ff6b35 0%, #ff8c42 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.galaxy-header__buy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.galaxy-nav {
+  display: flex;
+  gap: 25px;
+  flex: 1;
+  margin-left: 30px;
+}
+
+.galaxy-nav__item {
+  position: relative;
+}
+
+.galaxy-nav__link {
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 0;
+  transition: color 0.3s ease;
+  font-weight: 500;
+}
+
+.galaxy-nav__link:hover {
+  color: #ff6b35;
+}
+
+.galaxy-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  min-width: 150px;
+  margin-top: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.galaxy-dropdown__item {
+  display: block;
+  padding: 10px 16px;
+  color: #333;
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.2s;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.galaxy-dropdown__item:last-child {
+  border-bottom: none;
+}
+
+.galaxy-dropdown__item:hover {
+  background: #fff5f0;
+  color: #ff6b35;
+  padding-left: 20px;
+}
+
+.galaxy-header__right {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.galaxy-search {
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  border-radius: 20px;
+  padding: 8px 15px;
+  border: 1px solid #e0e0e0;
+}
+
+.galaxy-search input {
+  background: none;
+  border: none;
+  color: #333;
+  outline: none;
+  font-size: 13px;
+  width: 120px;
+}
+
+.galaxy-search input::placeholder {
+  color: #999;
+}
+
+.galaxy-search__icon {
+  margin-left: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.galaxy-header__login {
+  background: none;
+  border: none;
+  color: #333;
+  text-decoration: none;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.galaxy-header__login:hover {
+  color: #ff6b35;
+}
+
+.galaxy-header__reward {
+  color: #ff6b35;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.galaxy-header__reward:hover {
+  color: #ff8c42;
+}
+
+.galaxy-header__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.galaxy-header__user-name {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+
+.galaxy-header__logout {
+  background: none;
+  border: 1px solid #ff6b35;
+  color: #ff6b35;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.galaxy-header__logout:hover {
+  background: #ff6b35;
+  color: white;
+}
+
+@media (max-width: 1024px) {
+  .galaxy-nav {
+    gap: 15px;
+    margin-left: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .galaxy-header {
+    flex-wrap: wrap;
+  }
+
+  .galaxy-header__left {
+    gap: 10px;
+  }
+
+  .galaxy-nav {
+    margin-left: 0;
+    gap: 12px;
+  }
+
+  .galaxy-header__right {
+    gap: 15px;
+  }
+}

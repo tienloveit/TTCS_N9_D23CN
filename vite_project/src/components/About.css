@@ -1,0 +1,33 @@
+.about {
+  padding: 40px 12px;
+  background: white;
+  color: #333;
+}
+
+.about h2 {
+  color: #333;
+  font-size: 1.9rem;
+  margin-bottom: 12px;
+}
+
+.about p {
+  margin-bottom: 12px;
+  line-height: 1.7;
+  color: #666;
+}
+
+.about ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.about li {
+  background: #f9f9f9;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #333;
+}

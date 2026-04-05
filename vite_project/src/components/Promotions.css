@@ -1,0 +1,122 @@
+.promotions {
+  padding: 35px 12px;
+  background: white;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.promotions-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 0 12px;
+}
+
+.promotions h2 {
+  font-size: 2.2rem;
+  color: #333;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+}
+
+.promotions-header p {
+  font-size: 1.05rem;
+  color: #666;
+}
+
+.promo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  padding: 0 8px;
+}
+
+.promo-card {
+  position: relative;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.promo-card:hover {
+  transform: translateY(-4px);
+  border-color: #ff6b35;
+  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.15);
+}
+
+.promo-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: linear-gradient(90deg, #ff6b75 0%, #ffa500 100%);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.promo-icon {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+}
+
+.promo-card h3 {
+  margin: 0 0 8px;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.promo-desc {
+  color: #666;
+  font-size: 0.95rem;
+  margin: 0 0 12px;
+}
+
+.promo-old {
+  color: #aaa;
+  text-decoration: line-through;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.promo-price {
+  color: #ffde5c;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 8px 0 14px;
+}
+
+.promo-btn {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #ffa500 0%, #ff6b75 100%);
+  color: #1f1f1f;
+  padding: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.promo-btn:hover {
+  box-shadow: 0 6px 16px rgba(255, 107, 117, 0.35);
+}
+
+@media (max-width: 768px) {
+  .promotions {
+    padding: 32px 16px;
+  }
+
+  .promo-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+
+  .promotions h2 {
+    font-size: 1.7rem;
+  }
+}

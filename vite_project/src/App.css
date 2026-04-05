@@ -1,0 +1,326 @@
+.galaxycinema-app {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #333;
+  background: white;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  padding: 0;
+}
+
+.booking-history {
+  padding: 40px 20px;
+  background: #f9f9f9;
+  margin-top: 40px;
+}
+
+.booking-history h2,
+.booking-result h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.booking-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.booking-history li {
+  background: white;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  border-left: 4px solid #ff6b35;
+  font-size: 14px;
+  color: #555;
+}
+
+.booking-result {
+  padding: 40px 20px;
+  background: #e8f5e9;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.booking-result p {
+  color: #333;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.booking-info select {
+  width: 100%;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(8, 17, 35, 0.9);
+  color: #fff;
+  padding: 6px;
+}
+
+.seat-summary {
+  font-size: 14px;
+  color: #ffd970;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 5, 14, 0.8);
+  z-index: 10000;
+}
+
+.modal-card {
+  width: min(92vw, 620px);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(6, 14, 35, 0.95), rgba(3, 8, 24, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 20px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+}
+
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.btn--confirm {
+  border-radius: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  background: linear-gradient(90deg, #ffbe49 0%, #ff6c75 100%);
+  color: #1f1f1f;
+  font-weight: 700;
+  margin-top: 14px;
+}
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.movie-home-bottom {
+  margin-top: 60px;
+  padding: 40px 0 18px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.movie-home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.movie-home-label {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #13294b;
+}
+
+.movie-home-tabs {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.movie-home-tab {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #8f98a6;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 8px 0;
+  position: relative;
+}
+
+.movie-home-tab.active {
+  color: #143a7a;
+}
+
+.movie-home-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 3px;
+  border-radius: 99px;
+  background: #1257d0;
+}
+
+.movie-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+  grid-auto-rows: 1fr;
+}
+
+.movie-home-card {
+  border-radius: 24px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(18, 37, 89, 0.08);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.movie-home-card-media {
+  position: relative;
+  min-height: 320px;
+  overflow: hidden;
+}
+
+.movie-home-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.movie-home-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.movie-home-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(255, 154, 79, 0.95);
+  color: #121212;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.movie-home-book-button {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: none;
+  background: #ff9c59;
+  color: #101010;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 16px 30px rgba(255, 156, 89, 0.32);
+}
+
+.movie-home-card-body {
+  padding: 18px 18px 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.movie-home-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.movie-home-rating,
+.movie-home-age {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.movie-home-card h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  color: #081f4a;
+}
+
+.movie-home-card p {
+  margin: 0;
+  color: #5f6c86;
+  font-size: 14px;
+}
+
+.movie-home-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 600;
+}
+
+@media (max-width: 1190px) {
+  .movie-home-grid {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .movie-home-grid {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .movie-home-bottom {
+    padding: 18px 12px 24px;
+  }
+
+  .movie-home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .movie-home-header {
+    align-items: flex-start;
+  }
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(33, 45, 75, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  z-index: 15000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+

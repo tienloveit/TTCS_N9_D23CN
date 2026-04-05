@@ -1,0 +1,281 @@
+.galaxy-hero {
+  position: relative;
+  width: 100%;
+  min-height: 640px;
+  overflow: hidden;
+}
+
+.galaxy-hero__slide {
+  position: relative;
+  width: 100%;
+  min-height: 640px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.galaxy-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 18, 40, 0.35) 0%, rgba(10, 18, 40, 0.15) 40%, rgba(10, 18, 40, 0.55) 100%);
+}
+
+.galaxy-hero__content {
+  position: absolute;
+  top: 80px;
+  left: 60px;
+  z-index: 2;
+  max-width: 520px;
+  color: white;
+}
+
+.galaxy-hero__top-line {
+  font-size: 0.95rem;
+  letter-spacing: 0.25rem;
+  text-transform: uppercase;
+  margin-bottom: 22px;
+  color: #ffdd65;
+}
+
+.galaxy-hero__content h1 {
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  line-height: 0.95;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.galaxy-hero__content p {
+  margin-top: 18px;
+  font-size: 1.05rem;
+  max-width: 420px;
+  color: #f5f5f5;
+}
+
+.galaxy-hero__promos {
+  position: absolute;
+  top: 220px;
+  left: 60px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: min(860px, calc(100% - 120px));
+}
+
+.galaxy-hero__promo-card {
+  background: rgba(14, 70, 180, 0.95);
+  border-radius: 20px;
+  padding: 18px 20px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.galaxy-hero__promo-card span {
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+.galaxy-hero__promo-card strong {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.galaxy-hero__booking-bar {
+  position: absolute;
+  left: 50%;
+  bottom: -40px;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100% - 80px));
+  background: white;
+  border-radius: 24px;
+  padding: 22px 24px;
+  box-shadow: 0 30px 80px rgba(15, 33, 80, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 3;
+}
+
+.hero-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 150px;
+  padding-right: 16px;
+  border-right: 1px solid #eee;
+}
+
+.hero-step:last-child {
+  border-right: none;
+}
+
+.hero-step__number {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ff6b35;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.hero-step--select {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hero-step--select select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e6e8ee;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  color: #333;
+  min-width: 180px;
+  cursor: pointer;
+}
+
+.hero-step--select select:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.12);
+}
+
+.hero-step__label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1b2130;
+}
+
+.hero-step__button {
+  border: none;
+  background: linear-gradient(90deg, #ff6b35 0%, #ff8c42 100%);
+  color: white;
+  font-weight: 700;
+  padding: 16px 28px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.hero-step__button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(255, 107, 53, 0.25);
+}
+
+.galaxy-hero__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+.galaxy-hero__arrow:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.galaxy-hero__arrow--left {
+  left: 24px;
+}
+
+.galaxy-hero__arrow--right {
+  right: 24px;
+}
+
+@media (max-width: 1200px) {
+  .galaxy-hero__content {
+    top: 60px;
+    left: 40px;
+    max-width: 440px;
+  }
+
+  .galaxy-hero__promos {
+    top: 220px;
+    left: 40px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .galaxy-hero {
+    min-height: 520px;
+  }
+
+  .galaxy-hero__promos {
+    top: 220px;
+    left: 30px;
+    right: 30px;
+    grid-template-columns: 1fr;
+    width: auto;
+  }
+
+  .galaxy-hero__booking-bar {
+    left: 50%;
+    bottom: -35px;
+    width: calc(100% - 40px);
+    padding: 18px 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hero-step {
+    border-right: none;
+    justify-content: center;
+    min-width: 120px;
+    padding-right: 0;
+  }
+
+  .galaxy-hero__content h1 {
+    font-size: 2.6rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .galaxy-hero {
+    min-height: 520px;
+  }
+
+  .galaxy-hero__content {
+    left: 20px;
+    top: 50px;
+  }
+
+  .galaxy-hero__promos {
+    top: 210px;
+    left: 20px;
+    right: 20px;
+  }
+
+  .hero-step__button {
+    width: 100%;
+    margin-top: 12px;
+  }
+}
+
