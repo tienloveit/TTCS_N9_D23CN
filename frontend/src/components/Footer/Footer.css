@@ -1,0 +1,294 @@
+/* Footer Styles */
+.cinema-footer {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif; /* assuming body has it, but good to ensure */
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
+}
+
+/* Typography Overrides */
+.cinema-footer h2, .cinema-footer h3, .cinema-footer h4, .cinema-footer h5 {
+    color: #ffffff;
+    margin-bottom: 12px;
+}
+
+.cinema-footer a {
+    color: #b0b0b0;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.cinema-footer a:hover {
+    color: #ef4444; /* Red accent for cinema */
+}
+
+/* Top Benefits Bar */
+.footer-benefits {
+    border-bottom: 1px solid #333;
+    padding: 20px 0;
+}
+
+.benefits-container {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.benefit-icon {
+    font-size: 32px;
+    color: #ef4444; /* Icon color */
+}
+
+.benefit-text h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.benefit-text p {
+    margin: 5px 0 0 0;
+    font-size: 13px;
+    color: #aaa;
+}
+
+/* Main Footer Content */
+.footer-main {
+    padding: 40px 0 20px 0;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 30px;
+}
+
+/* Column 1: Company Info */
+.footer-logo {
+    font-style: italic;
+    font-weight: 900;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+.footer-logo span {
+    color: #ef4444;
+}
+
+.company-info h5 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 10px;
+}
+
+.company-desc, .tax-id {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 15px;
+}
+
+.contact-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+.contact-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.contact-inline {
+    display: flex;
+    gap: 30px !important;
+}
+
+.contact-icon {
+    color: #fff;
+    margin-top: 4px;
+}
+
+.contact-list strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.contact-list p {
+    margin: 0;
+    font-size: 13px;
+    color: #aaa;
+}
+
+.social-links h4 {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.social-icons {
+    display: flex;
+    gap: 10px;
+}
+
+.social-icons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    color: #fff;
+    transition: all 0.3s;
+}
+
+.social-icons a:hover {
+    border-color: #ef4444;
+    background-color: #ef4444;
+    transform: translateY(-3px);
+}
+
+/* Columns 2 & 3: Links */
+.footer-col h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links li {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.footer-links li::before {
+    content: "•";
+    color: #777;
+    margin-right: 8px;
+}
+
+.hotline-box strong {
+    color: #fff;
+}
+
+/* Column 4: Newsletter & Payments */
+.newsletter-desc {
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.newsletter-form {
+    display: flex;
+    position: relative;
+}
+
+.newsletter-form input {
+    width: 100%;
+    background: transparent;
+    border: 1px solid #444;
+    padding: 12px 40px 12px 15px;
+    color: #fff;
+    border-radius: 30px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.newsletter-form input:focus {
+    border-color: #ef4444;
+}
+
+.newsletter-form button {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    bottom: 5px;
+    width: 36px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.newsletter-form button:hover {
+    background: #333;
+}
+
+.payment-methods h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.payment-icons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pay-icon {
+    background: #fff;
+    color: #000;
+    font-weight: bold;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Bottom Bar */
+.footer-bottom {
+    border-top: 1px solid #333;
+    padding: 15px 0;
+    text-align: center;
+    font-size: 13px;
+    color: #888;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .footer-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .benefits-container {
+        flex-direction: column;
+    }
+}
