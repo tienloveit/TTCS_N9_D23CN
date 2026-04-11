@@ -1,5 +1,6 @@
 package com.cgvptit.movie.dto.response;
 
+import com.cgvptit.movie.enums.MovieStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,6 @@ public class MovieResponse {
 	private Integer ageRating;
 	private String posterUrl;
 	private String trailerUrl;
-	private String status;
+	private MovieStatus status;
 	private String description;
 }

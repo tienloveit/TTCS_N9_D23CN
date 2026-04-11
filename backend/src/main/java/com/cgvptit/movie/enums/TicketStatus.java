@@ -1,5 +1,5 @@
 package com.cgvptit.movie.enums;
 
 public enum TicketStatus {
-    booked, scanned, cancelle
+    BOOKED, SCANNED, CANCELLED
 }

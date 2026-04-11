@@ -12,13 +12,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "seats")
+@Table(
+        name = "seats",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_seats_room_row_number", columnNames = {"room_id", "row_char", "number"})
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,7 +35,7 @@ public class Seat {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_id")
+    @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
     @Column(name = "row_char", nullable = false)
@@ -39,9 +45,10 @@ public class Seat {
     private Integer number;
 
     @Column(name = "is_active")
+    @Builder.Default
     private Boolean isActive = true;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "seat_type")
+    @Column(name = "seat_type", nullable = false)
     private SeatType seatType;
 }

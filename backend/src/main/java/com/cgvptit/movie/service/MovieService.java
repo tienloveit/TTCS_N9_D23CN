@@ -8,7 +8,6 @@ import com.cgvptit.movie.util.MovieConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -36,7 +35,7 @@ public class MovieService {
 	@Transactional
 	public Movie create(MovieRequest request) {
 		Movie movie = movieBeanMapper.toEntity(request);
-		if (!StringUtils.hasText(movie.getStatus())) {
+		if (movie.getStatus() == null) {
 			movie.setStatus(MovieConstants.DEFAULT_MOVIE_STATUS);
 		}
 		return movieRepository.save(movie);
@@ -46,7 +45,7 @@ public class MovieService {
 	public Movie update(Integer id, MovieRequest request) {
 		Movie movie = findById(id);
 		movieBeanMapper.copyRequestOntoEntity(request, movie);
-		if (!StringUtils.hasText(movie.getStatus())) {
+		if (movie.getStatus() == null) {
 			movie.setStatus(MovieConstants.DEFAULT_MOVIE_STATUS);
 		}
 		return movieRepository.save(movie);

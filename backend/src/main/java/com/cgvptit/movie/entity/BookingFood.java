@@ -9,7 +9,12 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "booking_food")
+@Table(
+        name = "booking_food",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_booking_food_booking_food", columnNames = {"booking_id", "food_id"})
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,16 +25,16 @@ public class BookingFood {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "food_id")
+    @JoinColumn(name = "food_id", nullable = false)
     private Food food;
 
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(name = "sub_total")
+    @Column(name = "sub_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal subTotal;
 }

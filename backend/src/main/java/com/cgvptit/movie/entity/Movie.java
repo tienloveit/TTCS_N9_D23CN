@@ -1,5 +1,6 @@
 package com.cgvptit.movie.entity;
 
+import com.cgvptit.movie.enums.MovieStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,7 +40,10 @@ public class Movie {
     @Column(name = "trailer_url")
     private String trailerUrl;
 
-    private String status = "Coming Soon";
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    @Builder.Default
+    private MovieStatus status = MovieStatus.COMING_SOON;
 
     @Column(columnDefinition = "TEXT")
     private String description;

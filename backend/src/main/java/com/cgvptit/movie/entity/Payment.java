@@ -12,7 +12,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(
+        name = "payments",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_payments_transaction_id", columnNames = "transaction_id")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,21 +28,28 @@ public class Payment {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private PaymentMethod method;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "transaction_id")
+    @Column(name = "transaction_id", unique = true)
     private String transactionId;
 
     @Enumerated(EnumType.STRING)
-    private PaymentStatus status = PaymentStatus.success;
+    @Column(nullable = false)
+    @Builder.Default
+    private PaymentStatus status = PaymentStatus.PENDING;
 
-    @Column(name = "payment_date")
-    private LocalDateTime paymentDate = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 }

@@ -1,5 +1,6 @@
 package com.cgvptit.movie.dto.request;
 
+import com.cgvptit.movie.enums.MovieStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -26,6 +27,6 @@ public class MovieRequest {
 	private Integer ageRating;
 	private String posterUrl;
 	private String trailerUrl;
-	private String status;
+	private MovieStatus status;
 	private String description;
 }

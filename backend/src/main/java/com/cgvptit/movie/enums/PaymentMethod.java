@@ -1,5 +1,5 @@
 package com.cgvptit.movie.enums;
 
 public enum PaymentMethod {
-    cash, momo, zalopay, credit_card
+    CASH, MOMO, ZALOPAY, CREDIT_CARD
 }
