@@ -117,7 +117,7 @@ WHERE NOT EXISTS (
 INSERT INTO users (
   role_id, full_name, email, password, phone, is_active, email_verified, last_login, points, created_at
 )
-SELECT r.id, 'Admin Demo', 'admin@demo.local', '$2a$10$examplehashedpassword', '0900000001', TRUE, TRUE, NOW(), 0, NOW()
+SELECT r.id, 'Admin Demo', 'admin@demo.local', '{noop}Demo@12345', '0900000001', TRUE, TRUE, NOW(), 0, NOW()
 FROM roles r
 WHERE r.name = 'ADMIN'
 ON DUPLICATE KEY UPDATE
@@ -310,7 +310,7 @@ WHERE NOT EXISTS (
 INSERT INTO users (
   role_id, full_name, email, password, phone, is_active, email_verified, last_login, points, created_at
 )
-SELECT r.id, 'Nhan Vien Demo', 'staff@demo.local', '$2a$10$examplehashedpassword', '0900000002', TRUE, TRUE, NOW(), 0, NOW()
+SELECT r.id, 'Nhan Vien Demo', 'staff@demo.local', '{noop}Demo@12345', '0900000002', TRUE, TRUE, NOW(), 0, NOW()
 FROM roles r
 WHERE r.name = 'STAFF'
 ON DUPLICATE KEY UPDATE
@@ -324,7 +324,7 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO users (
   role_id, full_name, email, password, phone, is_active, email_verified, last_login, points, created_at
 )
-SELECT r.id, 'Khach Hang 01', 'customer1@demo.local', '$2a$10$examplehashedpassword', '0900000003', TRUE, TRUE, NOW(), 120, NOW()
+SELECT r.id, 'Khach Hang 01', 'customer1@demo.local', '{noop}Demo@12345', '0900000003', TRUE, TRUE, NOW(), 120, NOW()
 FROM roles r
 WHERE r.name = 'CUSTOMER'
 ON DUPLICATE KEY UPDATE
@@ -340,7 +340,7 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO users (
   role_id, full_name, email, password, phone, is_active, email_verified, last_login, points, created_at
 )
-SELECT r.id, 'Khach Hang 02', 'customer2@demo.local', '$2a$10$examplehashedpassword', '0900000004', TRUE, FALSE, NULL, 20, NOW()
+SELECT r.id, 'Khach Hang 02', 'customer2@demo.local', '{noop}Demo@12345', '0900000004', TRUE, FALSE, NULL, 20, NOW()
 FROM roles r
 WHERE r.name = 'CUSTOMER'
 ON DUPLICATE KEY UPDATE
