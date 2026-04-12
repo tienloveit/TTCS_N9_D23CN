@@ -1,0 +1,10 @@
+.movie-detail-container {
+    background-color: #fdfdfd;
+    min-height: 100vh;
+}
+
+.movie-detail-main {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}

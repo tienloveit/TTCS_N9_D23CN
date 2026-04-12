@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Banner.css';
 
 // Import các hình ảnh từ thư mục images
@@ -8,10 +9,17 @@ import banner3 from '../../images/Banner3.png';
 import banner4 from '../../images/Banner4.png';
 import banner5 from '../../images/Banner5.png';
 
-const banners = [banner1, banner2, banner3, banner4, banner5];
+const banners = [
+    { id: 1, img: banner1, link: '/movie/1' },
+    { id: 2, img: banner2, link: '/movie/2' },
+    { id: 3, img: banner3, link: '/movie/3' },
+    { id: 4, img: banner4, link: '/movie/4' },
+    { id: 5, img: banner5, link: '/movie/5' }
+];
 
 const Banner = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const navigate = useNavigate();
 
     // Chuyển slide tự động sau mỗi 5 giây
     useEffect(() => {
@@ -41,8 +49,13 @@ const Banner = () => {
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
                 {banners.map((banner, index) => (
-                    <div className="banner-slide" key={index}>
-                        <img src={banner} alt={`Banner ${index + 1}`} />
+                    <div
+                        className="banner-slide"
+                        key={banner.id}
+                        onClick={() => navigate(banner.link)}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <img src={banner.img} alt={`Banner ${banner.id}`} />
                     </div>
                 ))}
             </div>

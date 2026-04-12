@@ -1,0 +1,327 @@
+/* MovieBooking CSS - Style chung cho cả page Detail */
+
+/* --- MovieBanner --- */
+.movie-banner {
+    position: relative;
+    width: 100%;
+    background-color: #000;
+    color: #fff;
+    padding-bottom: 40px;
+    margin-bottom: 30px;
+}
+
+.movie-banner-bg {
+    width: 100%;
+    height: 400px;
+    background-position: center;
+    background-size: cover;
+    opacity: 0.3;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.movie-banner-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 200px 20px 0; /* Đẩy nội dung xuống nửa dưới banner bg */
+    display: flex;
+    gap: 40px;
+}
+
+.movie-poster-container {
+    flex-shrink: 0;
+    width: 250px;
+    height: 380px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    background: #fff;
+}
+
+.movie-poster-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.movie-info {
+    padding-top: 10px;
+    flex-grow: 1;
+    color: #333;
+}
+
+.movie-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.movie-title-wrap h1 {
+    font-size: 32px;
+    margin: 0;
+    color: #222;
+}
+
+.age-rating {
+    background-color: #f58020;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.movie-sub-info {
+    display: flex;
+    gap: 20px;
+    font-size: 15px;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+.movie-sub-info span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.movie-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.movie-rating-score {
+    font-size: 24px;
+    color: #f58020;
+    font-weight: bold;
+}
+
+.movie-rating-votes {
+    color: #777;
+    font-size: 14px;
+}
+
+.movie-meta-grid {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 12px 20px;
+    font-size: 16px;
+    max-width: 600px;
+}
+
+.meta-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.meta-value {
+    color: #222;
+}
+
+.genre-tags, .cast-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-btn {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #444;
+    font-size: 14px;
+}
+
+
+/* --- MovieContent (Nội dung) --- */
+.movie-content-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+    padding-left: 10px;
+    border-left: 4px solid #034ea2;
+}
+
+.synopsis-text p {
+    font-size: 16px;
+    color: #444;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.note-text {
+    font-style: italic;
+    color: #034ea2;
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+
+/* --- Showtimes (Lịch chiếu) --- */
+.showtimes-section {
+    margin-bottom: 60px;
+}
+
+.showtimes-filters {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #034ea2;
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* Date Carousel CSS - Cập nhật cho Fixed layout theo yêu cầu */
+.date-selector-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 500px;
+}
+
+.date-nav-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #333;
+    cursor: pointer;
+}
+
+.date-track-container {
+    display: flex;
+    gap: 25px;
+    overflow: hidden;
+}
+
+.date-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 4px;
+    min-width: 60px;
+}
+
+.date-item.active {
+    background-color: #034ea2;
+    color: #fff;
+}
+
+.date-day {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.date-date {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Dropdowns */
+.location-filters {
+    display: flex;
+    gap: 15px;
+}
+
+.filter-select {
+    padding: 8px 30px 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+
+/* Cinema Schedule List */
+.cinema-schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.cinema-item {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.cinema-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.format-group {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.format-type {
+    font-weight: bold;
+    color: #555;
+    min-width: 100px;
+}
+
+.times-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.time-btn {
+    border: 1px solid #ddd;
+    background: #fff;
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.time-btn:hover {
+    border-color: #f58020;
+    color: #f58020;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .movie-banner-content {
+        flex-direction: column;
+        padding-top: 150px;
+        align-items: center;
+    }
+    .movie-meta-grid {
+        grid-template-columns: 1fr;
+    }
+    .showtimes-filters {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .format-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
