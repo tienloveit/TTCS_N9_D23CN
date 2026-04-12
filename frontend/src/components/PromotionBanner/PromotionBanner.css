@@ -1,0 +1,165 @@
+.promotion-section {
+    width: 100%;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.promotion-title {
+    position: relative;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    color: #222;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.promotion-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 50px;
+    height: 4px;
+    background-color: #f58020;
+}
+
+.promotion-carousel {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.promo-track-container {
+    overflow: hidden;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.promo-track {
+    display: flex;
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.promo-slide {
+    padding: 0 10px; /* Khoảng cách giữa các card */
+    box-sizing: border-box;
+}
+
+.promo-card {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.promo-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.promo-img-wrapper {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.promo-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.promo-card:hover .promo-img-wrapper img {
+    transform: scale(1.05); /* Hiệu ứng zoom nhẹ ảnh khi hover */
+}
+
+.promo-info {
+    padding: 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+    background-color: #fff;
+}
+
+.promo-info p {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #444;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Các nút điều hướng */
+.promo-nav-button {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    color: #555;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    position: absolute;
+    z-index: 2;
+    font-size: 20px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.promo-nav-button:hover:not(:disabled) {
+    background: #f58020;
+    color: #fff;
+    border-color: #f58020;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.promo-nav-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.promo-prev {
+    left: -22px;
+}
+
+.promo-next {
+    right: -22px;
+}
+
+/* Responsive breakpoint CSS cho độ rộng của slide. Note: thuộc tính flex-basis được setup trong JSX qua style, nhưng ta có fallback CSS ở đây */
+@media (max-width: 1024px) {
+    .promo-prev {
+        left: -10px;
+    }
+    .promo-next {
+        right: -10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .promo-prev {
+        left: 0;
+    }
+    .promo-next {
+        right: 0;
+    }
+    .promo-title {
+        font-size: 20px;
+    }
+}
