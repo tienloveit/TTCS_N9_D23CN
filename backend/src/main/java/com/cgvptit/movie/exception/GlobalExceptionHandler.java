@@ -1,5 +1,6 @@
 package com.cgvptit.movie.exception;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,19 @@ import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiErrorResponse> handleApiException(
+            ApiException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                ex.getStatus(),
+                ex.getMessage(),
+                request,
+                null
+        );
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(
@@ -70,6 +84,19 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.FORBIDDEN,
                 "Access denied",
+                request,
+                null
+        );
+    }
+
+    @ExceptionHandler({JwtException.class, IllegalArgumentException.class})
+    public ResponseEntity<ApiErrorResponse> handleJwtException(
+            RuntimeException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Invalid token",
                 request,
                 null
         );

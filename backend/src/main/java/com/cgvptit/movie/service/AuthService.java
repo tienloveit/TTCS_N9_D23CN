@@ -7,6 +7,7 @@ import com.cgvptit.movie.dto.response.AuthResponse;
 import com.cgvptit.movie.entity.RefreshToken;
 import com.cgvptit.movie.entity.Role;
 import com.cgvptit.movie.entity.User;
+import com.cgvptit.movie.exception.ApiException;
 import com.cgvptit.movie.repository.RefreshTokenRepository;
 import com.cgvptit.movie.repository.RoleRepository;
 import com.cgvptit.movie.repository.UserRepository;
@@ -15,7 +16,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
@@ -45,11 +45,11 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
 
         Role customerRole = roleRepository.findByName("CUSTOMER")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Role CUSTOMER not found"));
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Role CUSTOMER not found"));
 
         User user = User.builder()
                 .role(customerRole)
@@ -70,14 +70,14 @@ public class AuthService {
     @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
 
         if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is inactive");
+            throw new ApiException(HttpStatus.FORBIDDEN, "Account is inactive");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
         user.setLastLogin(LocalDateTime.now());
@@ -88,24 +88,18 @@ public class AuthService {
     @Transactional
     public AuthResponse refresh(RefreshTokenRequest request) {
         RefreshToken storedToken = refreshTokenRepository.findByToken(request.getRefreshToken())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
         if (Boolean.TRUE.equals(storedToken.getRevoked()) || storedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired or revoked");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Refresh token expired or revoked");
         }
 
         User user = storedToken.getUser();
         UserDetails userDetails = buildUserDetails(user);
 
-        try {
-            if (!"refresh".equals(jwtService.extractType(storedToken.getToken()))
-                    || !jwtService.isTokenValid(storedToken.getToken(), userDetails)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
-            }
-        } catch (ResponseStatusException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+        if (!"refresh".equals(jwtService.extractType(storedToken.getToken()))
+                || !jwtService.isTokenValid(storedToken.getToken(), userDetails)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
         refreshTokenRepository.deleteByUser(user);
