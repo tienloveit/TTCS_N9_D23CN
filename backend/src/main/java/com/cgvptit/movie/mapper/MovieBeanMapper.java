@@ -3,25 +3,15 @@ package com.cgvptit.movie.mapper;
 import com.cgvptit.movie.dto.request.MovieRequest;
 import com.cgvptit.movie.dto.response.MovieResponse;
 import com.cgvptit.movie.entity.Movie;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
-@Component
-public class MovieBeanMapper {
+@Mapper(componentModel = "spring")
+public interface MovieBeanMapper {
 
-	public Movie toEntity(MovieRequest request) {
-		Movie movie = new Movie();
-		BeanUtils.copyProperties(request, movie);
-		return movie;
-	}
+	Movie toEntity(MovieRequest request);
 
-	public void copyRequestOntoEntity(MovieRequest request, Movie movie) {
-		BeanUtils.copyProperties(request, movie);
-	}
+	void copyRequestOntoEntity(MovieRequest request, @MappingTarget Movie movie);
 
-	public MovieResponse toResponse(Movie movie) {
-		MovieResponse response = new MovieResponse();
-		BeanUtils.copyProperties(movie, response);
-		return response;
-	}
+	MovieResponse toResponse(Movie movie);
 }
