@@ -2,6 +2,7 @@ package com.cgvptit.movie.entity;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,14 +27,26 @@ public class User {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Column(unique = true)
+    private String username;
+
     @Column(nullable = false, unique = true)
     private String email;
 
     @Column(unique = true)
     private String phone;
 
+    @JsonIgnore
+    private String password;
+
+    @Builder.Default
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
+    @Builder.Default
     private Integer points = 0;
 
+    @Builder.Default
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 }

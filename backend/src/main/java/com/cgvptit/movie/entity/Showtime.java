@@ -32,4 +32,7 @@ public class Showtime {
 
     @Column(name = "end_time", nullable = false)
     private LocalDateTime endTime;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private java.math.BigDecimal price;
 }
