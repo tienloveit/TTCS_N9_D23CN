@@ -104,8 +104,8 @@ foreach ($name in $directorNames) {
 # ==========================================
 Write-Host "`n========== CREATE BRANCHES ==========" -ForegroundColor Cyan
 $branchData = @(
-    @{ branchCode = "CH-HN-01"; name = "CinemaHub Vincom Ba Trieu"; address = "191 Ba Trieu, Hai Ba Trung"; city = "Ha Noi"; phone = "024-1234-5678"; status = "ACTIVE" },
-    @{ branchCode = "CH-HCM-01"; name = "CinemaHub Landmark 81"; address = "772 Dien Bien Phu, Binh Thanh"; city = "Ho Chi Minh"; phone = "028-9876-5432"; status = "ACTIVE" }
+    @{ branchCode = "MPT-HN-01"; name = "MoviePTIT Vincom Ba Trieu"; address = "191 Ba Trieu, Hai Ba Trung"; city = "Ha Noi"; phone = "024-1234-5678"; status = "ACTIVE" },
+    @{ branchCode = "MPT-HCM-01"; name = "MoviePTIT Landmark 81"; address = "772 Dien Bien Phu, Binh Thanh"; city = "Ho Chi Minh"; phone = "028-9876-5432"; status = "ACTIVE" }
 )
 $branchIds = @()
 foreach ($b in $branchData) {

@@ -4,12 +4,18 @@ import { QRCodeSVG } from 'qrcode.react';
 import { bookingApi } from '../../api';
 import EmptyState from '../../components/Common/EmptyState';
 import DigitalTicket from '../../components/Ticket/DigitalTicket';
+import {
+  CheckCircleIcon,
+  TicketIcon,
+  TimerIcon,
+  XCircleIcon,
+} from '../../components/Common/CinemaIcons';
 
 const STATUS_MAP = {
-  PENDING: { label: 'Chờ thanh toán', color: '#f59e0b', icon: '⏳' },
-  COMPLETED: { label: 'Đã hoàn tất', color: '#22c55e', icon: '✅' },
-  CANCELLED: { label: 'Đã huỷ', color: '#ef4444', icon: '❌' },
-  EXPIRED: { label: 'Hết hạn', color: '#6b7280', icon: '⌛' },
+  PENDING: { label: 'Chờ thanh toán', color: '#f59e0b' },
+  COMPLETED: { label: 'Đã hoàn tất', color: '#22c55e' },
+  CANCELLED: { label: 'Đã huỷ', color: '#ef4444' },
+  EXPIRED: { label: 'Hết hạn', color: '#6b7280' },
 };
 
 const PAYMENT_MAP = {
@@ -115,7 +121,10 @@ export default function MyBookingsPage() {
     <div className="page">
       <div className="container">
         <div className="page-header">
-          <h1 className="page-title">🎟️ Vé của tôi</h1>
+          <h1 className="page-title page-title-with-icon">
+            <TicketIcon className="page-title-icon" />
+            Vé của tôi
+          </h1>
           <p className="page-subtitle">Lịch sử đặt vé và trạng thái thanh toán</p>
         </div>
 
@@ -123,15 +132,16 @@ export default function MyBookingsPage() {
         <div className="booking-filter-bar">
           {[
             { key: 'ALL', label: 'Tất cả' },
-            { key: 'PENDING', label: '⏳ Chờ thanh toán' },
-            { key: 'COMPLETED', label: '✅ Đã hoàn tất' },
-            { key: 'CANCELLED', label: '❌ Đã huỷ' },
+            { key: 'PENDING', label: 'Chờ thanh toán', Icon: TimerIcon },
+            { key: 'COMPLETED', label: 'Đã hoàn tất', Icon: CheckCircleIcon },
+            { key: 'CANCELLED', label: 'Đã huỷ', Icon: XCircleIcon },
           ].map(tab => (
             <button
               key={tab.key}
               className={`booking-filter-tab ${filter === tab.key ? 'booking-filter-tab--active' : ''}`}
               onClick={() => setFilter(tab.key)}
             >
+              {tab.Icon && <tab.Icon className="booking-filter-icon" />}
               {tab.label}
               {tab.key !== 'ALL' && (
                 <span className="booking-filter-count">
@@ -147,7 +157,7 @@ export default function MyBookingsPage() {
           <EmptyState 
             title="Bạn chưa có vé nào"
             message={filter === 'ALL' 
-              ? "Có vẻ như bạn chưa đặt vé nào tại CinemaHub. Hãy chọn một bộ phim và trải nghiệm ngay nhé!" 
+              ? "Có vẻ như bạn chưa đặt vé nào tại MoviePTIT. Hãy chọn một bộ phim và trải nghiệm ngay nhé!" 
               : `Bạn không có đơn hàng nào ở trạng thái "${STATUS_MAP[filter]?.label || filter}".`}
             buttonText="Tìm phim đặt vé ngay"
           />
@@ -157,7 +167,7 @@ export default function MyBookingsPage() {
               const ticketData = {
                 ...booking,
                 startTime: booking.showtimeStart,
-                branchName: booking.branchName || 'Chi nhánh CinemaHub'
+                branchName: booking.branchName || 'Chi nhánh MoviePTIT'
               };
 
               return (
@@ -173,7 +183,10 @@ export default function MyBookingsPage() {
                       <button
                         className="btn btn-secondary"
                         onClick={() => handleCancel(booking.bookingId)}
-                      > ❌ Hủy vé </button>
+                      >
+                        <XCircleIcon className="btn-icon" />
+                        Hủy vé
+                      </button>
                     </div>
                   )}
                 </div>

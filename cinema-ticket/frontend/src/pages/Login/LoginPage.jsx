@@ -33,7 +33,7 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">Đăng nhập</h1>
-        <p className="auth-subtitle">Chào mừng bạn trở lại CinemaHub</p>
+        <p className="auth-subtitle">Chào mừng bạn trở lại MoviePTIT</p>
 
         {error && <div className="error-message">{error}</div>}
 

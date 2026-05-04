@@ -55,7 +55,7 @@ export default function RegisterPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">Đăng ký</h1>
-        <p className="auth-subtitle">Tạo tài khoản mới tại CinemaHub</p>
+        <p className="auth-subtitle">Tạo tài khoản mới tại MoviePTIT</p>
 
         {error && <div className="error-message">{error}</div>}
 

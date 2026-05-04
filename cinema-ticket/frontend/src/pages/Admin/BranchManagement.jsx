@@ -277,11 +277,11 @@ const BranchManagement = () => {
             <form onSubmit={handleBranchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">Mã chi nhánh</label>
-                <input className="input" value={branchForm.branchCode} onChange={e => setBranchForm({...branchForm, branchCode: e.target.value})} placeholder="VD: CH-HANOI" required />
+                <input className="input" value={branchForm.branchCode} onChange={e => setBranchForm({...branchForm, branchCode: e.target.value})} placeholder="VD: MPT-HANOI" required />
               </div>
               <div className="form-group">
                 <label className="form-label">Tên rạp</label>
-                <input className="input" value={branchForm.name} onChange={e => setBranchForm({...branchForm, name: e.target.value})} placeholder="VD: CinemaHub Cầu Giấy" required />
+                <input className="input" value={branchForm.name} onChange={e => setBranchForm({...branchForm, name: e.target.value})} placeholder="VD: MoviePTIT Cầu Giấy" required />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">

@@ -147,7 +147,7 @@ export default function StaffBookingPage() {
       if (!branchMap.has(key)) {
         branchMap.set(key, {
           id: key,
-          name: showtime.branchName || 'CinemaHub chua xac dinh',
+          name: showtime.branchName || 'MoviePTIT chua xac dinh',
         });
       }
     });
@@ -337,9 +337,9 @@ export default function StaffBookingPage() {
             </p>
           </div>
           <label style={{ minWidth: 260 }}>
-            <span className="form-label">CinemaHub</span>
+            <span className="form-label">MoviePTIT</span>
             <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
-              <option value="ALL">Tat ca CinemaHub</option>
+              <option value="ALL">Tat ca MoviePTIT</option>
               {branchOptions.map((branch) => (
                 <option key={branch.id} value={branch.id}>
                   {branch.name}
@@ -350,7 +350,7 @@ export default function StaffBookingPage() {
         </div>
 
         {showtimeGroups.length === 0 ? (
-          <div className="empty-state">Khong co suat chieu phu hop voi CinemaHub da chon.</div>
+          <div className="empty-state">Khong co suat chieu phu hop voi MoviePTIT da chon.</div>
         ) : (
           <div style={{ display: 'grid', gap: 18 }}>
             {showtimeGroups.map((group) => (
@@ -374,7 +374,7 @@ export default function StaffBookingPage() {
                           cursor: available ? 'pointer' : 'not-allowed',
                           opacity: available ? 1 : 0.55,
                           borderColor: selected ? 'var(--accent)' : 'var(--border)',
-                          background: selected ? 'rgba(229, 9, 20, 0.08)' : 'var(--bg-card)',
+                          background: selected ? 'var(--accent-glow)' : 'var(--bg-card)',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>

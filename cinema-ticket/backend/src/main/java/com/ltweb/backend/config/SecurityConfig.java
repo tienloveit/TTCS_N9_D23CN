@@ -31,14 +31,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
   private final String[] PUBLIC_ENDPOINT = {
-    "/sign-up",
-    "/auth/login",
-    "/auth/refresh",
-    "/v1/vnpay/return",
-    "/v1/vnpay/ipn",
-    "/auth/forgot-password",
-    "/auth/reset-password",
-    "/api/v1/cleanup/**"
+      "/sign-up",
+      "/auth/login",
+      "/auth/refresh",
+      "/v1/vnpay/return",
+      "/v1/vnpay/ipn",
+      "/auth/forgot-password",
+      "/auth/reset-password",
+      "/api/v1/cleanup/**",
+      "/chat"
   };
 
   private final CustomUserDetailService userDetailsService;
@@ -50,45 +51,42 @@ public class SecurityConfig {
     http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(
-            (authorize) ->
-                authorize
-                    .requestMatchers(PUBLIC_ENDPOINT)
-                    .permitAll()
-                    .requestMatchers("/v1/cleanup/**")
-                    .permitAll()
-                    .requestMatchers("/ws/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/movie/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/showtime/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/ticket/showtime/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/genre/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/director/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/food/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/branch/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/room/**")
-                    .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/user")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
+            (authorize) -> authorize
+                .requestMatchers(PUBLIC_ENDPOINT)
+                .permitAll()
+                .requestMatchers("/v1/cleanup/**")
+                .permitAll()
+                .requestMatchers("/ws/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/movie/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/showtime/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/ticket/showtime/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/genre/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/director/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/food/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/branch/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/room/**")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/user")
+                .permitAll()
+                .anyRequest()
+                .authenticated())
         .exceptionHandling(
             (exception) -> exception.authenticationEntryPoint(authenticationEntryPoint))
         .oauth2ResourceServer(
-            (oauth2) ->
-                oauth2
-                    .authenticationEntryPoint(authenticationEntryPoint)
-                    .jwt(
-                        jwtConfigurer ->
-                            jwtConfigurer
-                                .decoder(jwtDecoderConfig)
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+            (oauth2) -> oauth2
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .jwt(
+                    jwtConfigurer -> jwtConfigurer
+                        .decoder(jwtDecoderConfig)
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter())));
     return http.build();
   }
 
@@ -105,8 +103,8 @@ public class SecurityConfig {
 
   @Bean
   public AuthenticationManager authenticationManager() {
-    DaoAuthenticationProvider authenticationProvider =
-        new DaoAuthenticationProvider(userDetailsService);
+    DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+    authenticationProvider.setUserDetailsService(userDetailsService);
     authenticationProvider.setPasswordEncoder(passwordEncoder());
     return new ProviderManager(authenticationProvider);
   }

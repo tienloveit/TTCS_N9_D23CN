@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { MailIcon, MapPinIcon, MoviePTITLogoIcon, PhoneIcon } from '../Common/CinemaIcons';
 
 const Footer = () => {
   return (
@@ -7,7 +8,10 @@ const Footer = () => {
         <div className="footer-grid">
           {/* Brand Column */}
           <div className="footer-col footer-col--brand">
-            <Link to="/" className="footer-logo">🎬 CinemaHub</Link>
+            <Link to="/" className="footer-logo">
+              <MoviePTITLogoIcon className="footer-logo-icon" />
+              MoviePTIT
+            </Link>
             <p className="footer-tagline">
               Trải nghiệm điện ảnh đỉnh cao với công nghệ chiếu phim hiện đại nhất Việt Nam.
             </p>
@@ -49,9 +53,18 @@ const Footer = () => {
           <div className="footer-col">
             <h4 className="footer-title">Liên hệ</h4>
             <ul className="footer-contact">
-              <li>📍 123 Đường ABC, Quận 1, TP. HCM</li>
-              <li>📞 Hotline: 1900 xxxx</li>
-              <li>✉️ Email: hỗ trợ@cinemahub.vn</li>
+              <li>
+                <MapPinIcon className="footer-contact-icon" />
+                <span>123 Đường ABC, Quận 1, TP. HCM</span>
+              </li>
+              <li>
+                <PhoneIcon className="footer-contact-icon" />
+                <span>Hotline: 1900 xxxx</span>
+              </li>
+              <li>
+                <MailIcon className="footer-contact-icon" />
+                <span>Email: hotro@movieptit.vn</span>
+              </li>
             </ul>
           </div>
         </div>
@@ -68,7 +81,7 @@ const Footer = () => {
             </div>
           </div>
           <p className="copyright">
-            © 2026 CinemaHub. All rights reserved. Developed with ❤️ for Movie Lovers.
+            © 2026 MoviePTIT. All rights reserved.
           </p>
         </div>
       </div>

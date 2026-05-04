@@ -1,12 +1,12 @@
 # Codex Project Context
 
-Last refreshed: 2026-04-27
+Last refreshed: 2026-04-29
 
-This file is the working context for the `cinema-huy` project. It is meant to help Codex or a developer quickly understand the repo before making changes.
+This file is the working context for the `cinema-ticket` / MoviePTIT project. It is meant to help Codex or a developer quickly understand the repo before making changes.
 
 ## Project Summary
 
-`cinema-huy` is a full-stack cinema booking app, branded in the UI as CinemaHub. It has:
+`cinema-huy` is a full-stack cinema booking app, branded in the UI as MoviePTIT. It has:
 
 - A Spring Boot backend under `backend/`.
 - A Vite + React frontend under `frontend/`.
@@ -280,7 +280,7 @@ Staff booking:
 
 - `POST /booking/staff` requires `ADMIN` or `STAFF`.
 - Staff uses `GET /showtime/today` to load all showtimes for the current day.
-- The counter-booking UI mirrors the customer booking flow: filter by CinemaHub branch, select today's showtime, select seats with realtime WebSocket updates, add food, enter customer/payment info, then complete the booking at the counter.
+- The counter-booking UI mirrors the customer booking flow: filter by MoviePTIT branch, select today's showtime, select seats with realtime WebSocket updates, add food, enter customer/payment info, then complete the booking at the counter.
 - `POST /booking/staff` creates or reuses a customer by email/phone, supports cash/card style counter sales, marks booking complete/paid immediately, books tickets, emits WebSocket updates, and sends ticket email.
 
 Check-in:
@@ -468,6 +468,36 @@ API files:
 - `frontend/src/api/axiosClient.js`: Axios instance, base URL, auth header, refresh-on-401.
 - `frontend/src/api/index.js`: grouped API helper objects.
 
+## Recent UI And Branding Context
+
+Latest frontend direction:
+
+- The public frontend, admin workspace, and staff workspace were moved toward a brighter, higher-contrast layout so Vietnamese text is easier to scan.
+- Avoid low-contrast gray-on-light combinations for labels, tabs, cards, and table text.
+- Keep the interface light and practical, especially in admin/staff screens. These are work surfaces, not marketing pages.
+- The previous AI-looking icons were replaced with simpler cinema-themed line icons in `frontend/src/components/Common/CinemaIcons.jsx`.
+- Shared brand icon component: `MoviePTITLogoIcon`.
+
+Branding:
+
+- User-facing name should be `MoviePTIT`, not `CinemaHub`.
+- The browser title is set in `frontend/index.html`.
+- The tab/favicon icon is `frontend/public/favicon.svg` and should stay visually aligned with `MoviePTITLogoIcon`.
+- Demo branch/code placeholders were renamed from `CH-*` style to `MPT-*` style where updated.
+
+User menu behavior:
+
+- In the navbar, clicking the user area should open a dropdown menu instead of navigating directly to the profile page.
+- Dropdown options include `Thông tin cá nhân` and `Đổi mật khẩu`.
+- `ProfilePage` reads the hash and shows only the selected section, e.g. `/profile#info` or `/profile#password`.
+- The separate tiny user chevron affordance was removed; clicking the relevant menu item should reveal the full target section.
+
+Visual/cursor notes:
+
+- Use a normal pointer only on genuinely clickable controls.
+- Avoid accidental text-input/I-beam cursor behavior on non-input page areas.
+- Inputs and editable fields should keep the expected text cursor.
+
 ## Frontend Routes
 
 Auth:
@@ -535,7 +565,7 @@ Because the backend already seeds on startup, use the script only when a full re
 - Existing verification commands are compile/build/lint oriented:
   - backend compile/package with Maven.
   - frontend build/lint with npm.
-- Latest verified after movie detail/director updates:
+- Latest verified after UI/branding updates:
   - `mvn -q -DskipTests compile`
   - `npm run build` (passes with the existing Vite large chunk warning)
 

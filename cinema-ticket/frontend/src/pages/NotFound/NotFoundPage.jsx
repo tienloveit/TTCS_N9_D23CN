@@ -21,7 +21,7 @@ const NotFoundPage = () => {
         </h1>
         <h2 style={{ fontSize: '2rem', marginBottom: '16px' }}>Trang không tồn tại</h2>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 32px' }}>
-          Có vẻ như bạn đã đi lạc vào một phòng chiếu không tồn tại trong hệ thống CinemaHub.
+          Có vẻ như bạn đã đi lạc vào một phòng chiếu không tồn tại trong hệ thống MoviePTIT.
         </p>
         <Link to="/" className="btn btn-primary btn-lg">
           Quay lại trang chủ

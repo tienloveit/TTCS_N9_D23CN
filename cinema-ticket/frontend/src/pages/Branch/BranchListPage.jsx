@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { branchApi } from '../../api';
+import { FilmIcon, MapPinIcon, PhoneIcon } from '../../components/Common/CinemaIcons';
 
 export default function BranchListPage() {
   const [branches, setBranches] = useState([]);
@@ -33,7 +34,10 @@ export default function BranchListPage() {
     <div className="page">
       <div className="container">
         <div className="page-header">
-          <h1 className="page-title">🏢 Rạp chiếu</h1>
+          <h1 className="page-title page-title-with-icon">
+            <FilmIcon className="page-title-icon" />
+            Rạp chiếu
+          </h1>
           <p className="page-subtitle">Chọn rạp để xem lịch chiếu phim</p>
         </div>
 
@@ -47,17 +51,23 @@ export default function BranchListPage() {
                 className="branch-card card"
                 onClick={() => navigate(`/branch/${branch.branchId}`)}
               >
-                <div className="branch-card-icon">🎬</div>
+                <div className="branch-card-icon">
+                  <FilmIcon />
+                </div>
                 <div className="branch-card-body">
                   <h3 className="branch-card-name">{branch.name}</h3>
                   {branch.address && (
                     <p className="branch-card-address">
-                      📍 {branch.address}
+                      <MapPinIcon className="inline-icon" />
+                      {branch.address}
                       {branch.city ? `, ${branch.city}` : ''}
                     </p>
                   )}
                   {branch.phone && (
-                    <p className="branch-card-phone">📞 {branch.phone}</p>
+                    <p className="branch-card-phone">
+                      <PhoneIcon className="inline-icon" />
+                      {branch.phone}
+                    </p>
                   )}
                 </div>
                 <div className="branch-card-arrow">→</div>

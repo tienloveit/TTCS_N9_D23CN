@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
+import { DownloadIcon, MoviePTITLogoIcon } from '../Common/CinemaIcons';
 import './DigitalTicket.css';
 
 const DigitalTicket = ({ booking }) => {
@@ -57,7 +58,7 @@ const DigitalTicket = ({ booking }) => {
     })
       .then((dataUrl) => {
         const link = document.createElement('a');
-        link.download = `CinemaHub-Ticket-${booking.bookingCode || 'booking'}.png`;
+        link.download = `MoviePTIT-Ticket-${booking.bookingCode || 'booking'}.png`;
         link.href = dataUrl;
         link.click();
       })
@@ -72,7 +73,10 @@ const DigitalTicket = ({ booking }) => {
         {/* Left Part: Movie Info */}
         <div className="ticket-main">
           <div className="ticket-header">
-            <span className="ticket-brand">🎬 CinemaHub</span>
+            <span className="ticket-brand">
+              <MoviePTITLogoIcon className="ticket-brand-icon" />
+              MoviePTIT
+            </span>
             <span className={`ticket-status-tag status-${booking.status?.toLowerCase()}`}>
               {booking.status === 'COMPLETED' ? 'VÉ HỢP LỆ' : 
                booking.status === 'PENDING' ? 'CHỜ THANH TOÁN' : 
@@ -104,7 +108,7 @@ const DigitalTicket = ({ booking }) => {
           <div className="ticket-footer">
             <div className="info-item">
               <label>Rạp</label>
-              <span>{booking.branchName || 'Chi nhánh CinemaHub'}</span>
+              <span>{booking.branchName || 'Chi nhánh MoviePTIT'}</span>
             </div>
             <div className="info-item" style={{ textAlign: 'right' }}>
               <label>Mã đơn hàng</label>
@@ -124,7 +128,7 @@ const DigitalTicket = ({ booking }) => {
         <div className="ticket-stub">
           <div className="qr-container">
             <QRCodeSVG 
-              value={booking.bookingCode || booking.bookingId || 'CinemaHub'} 
+              value={booking.bookingCode || booking.bookingId || 'MoviePTIT'} 
               size={120}
               level="H"
               includeMargin={true}
@@ -136,7 +140,8 @@ const DigitalTicket = ({ booking }) => {
 
       <div className="ticket-actions-row">
         <button className="btn-download-ticket" onClick={handleDownload}>
-          📥 Tải vé về máy
+          <DownloadIcon className="btn-icon" />
+          Tải vé về máy
         </button>
       </div>
     </div>
