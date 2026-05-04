@@ -77,6 +77,21 @@ export const SparkIcon = (props) => (
   </svg>
 );
 
+export const MessageIcon = (props) => (
+  <svg {...baseProps} {...props}>
+    <path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.5-5.4A8 8 0 1 1 21 12Z" />
+    <path d="M8 11h8" />
+    <path d="M8 15h5" />
+  </svg>
+);
+
+export const SendIcon = (props) => (
+  <svg {...baseProps} {...props}>
+    <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+    <path d="M22 2 11 13" />
+  </svg>
+);
+
 export const TicketIcon = (props) => (
   <svg {...baseProps} {...props}>
     <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a3 3 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a3 3 0 0 0 0-6V7Z" />

@@ -118,6 +118,11 @@ export const bookingApi = {
   cancel: (id) => axiosClient.delete(`/booking/${id}`),
 };
 
+// ==================== AI CHAT ====================
+export const chatApi = {
+  send: (data) => axiosClient.post('/chat', data),
+};
+
 // ==================== VNPAY ====================
 export const vnpayApi = {
   createPaymentUrl: (data) => axiosClient.post('/v1/vnpay/payment-url', data),

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { movieApi } from '../../api';
+import { motion as Motion } from 'framer-motion';
+import { chatApi, movieApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';
@@ -10,10 +10,18 @@ import {
   ChevronDownIcon,
   ClockIcon,
   GlobeIcon,
+  MessageIcon,
   SearchIcon,
+  SendIcon,
   SparkIcon,
   TicketIcon,
 } from '../../components/Common/CinemaIcons';
+
+const AI_SUGGESTIONS = [
+  'Hôm nay có phim nào đang chiếu?',
+  'Gợi ý phim phù hợp để đi cùng bạn bè',
+  'Có suất chiếu tối nay ở MoviePTIT không?',
+];
 
 export default function HomePage() {
   const [nowShowing, setNowShowing] = useState([]);
@@ -21,8 +29,27 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [aiInput, setAiInput] = useState('');
+  const [aiSending, setAiSending] = useState(false);
+  const [aiChatId] = useState(() => {
+    const storedChatId = localStorage.getItem('movieptit-ai-chat-id');
+    if (storedChatId) return storedChatId;
+
+    const nextChatId = `home-${crypto.randomUUID?.() || Date.now()}`;
+    localStorage.setItem('movieptit-ai-chat-id', nextChatId);
+    return nextChatId;
+  });
+  const [aiMessages, setAiMessages] = useState([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content:
+        'Xin chào, mình là trợ lý MoviePTIT. Bạn muốn tìm phim, xem suất chiếu hay hỏi giá vé hôm nay?',
+    },
+  ]);
   const navigate = useNavigate();
   const bannerTimer = useRef(null);
+  const aiMessagesRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +79,12 @@ export default function HomePage() {
     return () => clearInterval(bannerTimer.current);
   }, [bannerMovies.length]);
 
+  useEffect(() => {
+    const messagesEl = aiMessagesRef.current;
+    if (!messagesEl) return;
+    messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+  }, [aiMessages, aiSending]);
+
   // Search filter
   const filteredNowShowing = nowShowing.filter((f) =>
     f.movieName?.toLowerCase().includes(search.toLowerCase())
@@ -64,6 +97,61 @@ export default function HomePage() {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const sendAiMessage = async (messageText = aiInput) => {
+    const trimmedMessage = messageText.trim();
+    if (!trimmedMessage || aiSending) return;
+
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: trimmedMessage,
+    };
+
+    setAiInput('');
+    setAiMessages((prev) => [...prev, userMessage]);
+    setAiSending(true);
+
+    try {
+      const response = await chatApi.send({
+        chatId: aiChatId,
+        message: trimmedMessage,
+      });
+      const payload = response.data;
+
+      if (payload?.code && payload.code !== 200) {
+        throw new Error(payload.message || 'AI chưa thể phản hồi lúc này.');
+      }
+
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: payload?.result?.reply || 'Mình chưa có câu trả lời phù hợp, bạn thử hỏi lại nhé.',
+        },
+      ]);
+    } catch (error) {
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content:
+            error.response?.data?.message ||
+            error.message ||
+            'Không thể kết nối trợ lý AI. Vui lòng thử lại sau.',
+        },
+      ]);
+    } finally {
+      setAiSending(false);
+    }
+  };
+
+  const handleAiSubmit = (event) => {
+    event.preventDefault();
+    sendAiMessage();
   };
 
   if (loading) {
@@ -188,6 +276,82 @@ export default function HomePage() {
         </div>
       </div>
 
+      <section className="container ai-home-section" aria-labelledby="ai-home-title">
+        <div className="ai-assistant-panel">
+          <div className="ai-assistant-copy">
+            <span className="ai-assistant-kicker">
+              <SparkIcon className="inline-icon" />
+              AI MoviePTIT
+            </span>
+            <h2 id="ai-home-title">Hỏi nhanh trước khi đặt vé</h2>
+            <p>
+              Tìm phim đang chiếu, kiểm tra suất chiếu, hỏi rạp, ghế và combo bắp nước ngay trên
+              trang chủ.
+            </p>
+            <div className="ai-suggestion-list">
+              {AI_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  className="ai-suggestion-chip"
+                  onClick={() => sendAiMessage(suggestion)}
+                  disabled={aiSending}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ai-chat-window" aria-label="Trợ lý MoviePTIT">
+            <div className="ai-chat-header">
+              <span className="ai-chat-avatar">
+                <MessageIcon />
+              </span>
+              <div>
+                <strong>Trợ lý phim</strong>
+                <span>Đang dùng dữ liệu từ rạp</span>
+              </div>
+            </div>
+
+            <div className="ai-chat-messages" ref={aiMessagesRef}>
+              {aiMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`ai-message ai-message--${message.role}`}
+                >
+                  {message.content}
+                </div>
+              ))}
+              {aiSending && (
+                <div className="ai-message ai-message--assistant ai-message--typing">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              )}
+            </div>
+
+            <form className="ai-chat-form" onSubmit={handleAiSubmit}>
+              <input
+                type="text"
+                value={aiInput}
+                onChange={(event) => setAiInput(event.target.value)}
+                placeholder="Nhập câu hỏi về phim, suất chiếu..."
+                disabled={aiSending}
+              />
+              <button
+                type="submit"
+                aria-label="Gửi tin nhắn"
+                disabled={!aiInput.trim() || aiSending}
+              >
+                <SendIcon />
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
       {/* ==================== SEARCH ==================== */}
       <div className="container" style={{ marginTop: 32 }}>
         <div className="search-bar">
@@ -224,7 +388,7 @@ export default function HomePage() {
         ) : (
           <div className="movie-grid">
             {filteredNowShowing.map((movie) => (
-              <motion.div
+              <Motion.div
                 key={movie.movieId}
                 className="card movie-card"
                 onClick={() => navigate(`/movie/${movie.movieId}`)}
@@ -253,7 +417,7 @@ export default function HomePage() {
                     {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
                   </div>
                 </div>
-              </motion.div>
+              </Motion.div>
             ))}
           </div>
         )}
@@ -272,7 +436,7 @@ export default function HomePage() {
 
           <div className="movie-grid">
             {filteredUpcoming.map((movie) => (
-              <motion.div
+              <Motion.div
                 key={movie.movieId}
                 className="card movie-card movie-card--upcoming"
                 onClick={() => navigate(`/movie/${movie.movieId}`)}
@@ -299,7 +463,7 @@ export default function HomePage() {
                     {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
                   </div>
                 </div>
-              </motion.div>
+              </Motion.div>
             ))}
           </div>
         </section>
