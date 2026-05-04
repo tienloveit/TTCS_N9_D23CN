@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { branchApi, showtimeApi } from '../../api';
+import { ClockIcon, FilmIcon, GlobeIcon, MapPinIcon } from '../../components/Common/CinemaIcons';
 
 export default function BranchDetailPage() {
   const { branchId } = useParams();
@@ -72,9 +73,15 @@ export default function BranchDetailPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/branches')} style={{ marginBottom: 12 }}>
             ← Quay lại danh sách rạp
           </button>
-          <h1 className="page-title">🎬 {branch?.name || 'Đang tải...'}</h1>
+          <h1 className="page-title page-title-with-icon">
+            <FilmIcon className="page-title-icon" />
+            {branch?.name || 'Đang tải...'}
+          </h1>
           {branch?.address && (
-            <p className="page-subtitle">📍 {branch.address}{branch.city ? `, ${branch.city}` : ''}</p>
+            <p className="page-subtitle page-subtitle-with-icon">
+              <MapPinIcon className="inline-icon" />
+              {branch.address}{branch.city ? `, ${branch.city}` : ''}
+            </p>
           )}
         </div>
 
@@ -130,9 +137,19 @@ export default function BranchDetailPage() {
                       {movieGroup.movieName}
                     </h3>
                     <div className="branch-movie-meta">
-                      {movieGroup.durationMinutes && <span>🕐 {movieGroup.durationMinutes} phút</span>}
+                      {movieGroup.durationMinutes && (
+                        <span>
+                          <ClockIcon className="inline-icon" />
+                          {movieGroup.durationMinutes} phút
+                        </span>
+                      )}
                       {movieGroup.ageRating && <span className="movie-badge">{movieGroup.ageRating}</span>}
-                      {movieGroup.language && <span>🌐 {movieGroup.language}</span>}
+                      {movieGroup.language && (
+                        <span>
+                          <GlobeIcon className="inline-icon" />
+                          {movieGroup.language}
+                        </span>
+                      )}
                     </div>
 
                     {/* Showtimes grouped by room type */}

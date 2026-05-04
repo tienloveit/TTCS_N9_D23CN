@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { vnpayApi } from '../../api';
 import confetti from 'canvas-confetti';
+import { CheckCircleIcon, TicketIcon, XCircleIcon } from '../../components/Common/CinemaIcons';
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
@@ -54,7 +55,7 @@ export default function PaymentResultPage() {
       <div className="container" style={{ maxWidth: 500, textAlign: 'center' }}>
         {status === 'success' ? (
           <div className="card" style={{ padding: 48, borderTop: '8px solid var(--green)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ fontSize: '5rem', marginBottom: 24, animation: 'bounce 1s infinite' }}>🎉</div>
+            <CheckCircleIcon className="payment-result-icon payment-result-icon--success" />
             <h1 className="page-title" style={{ color: 'var(--green)', fontSize: '2.2rem', marginBottom: 16 }}>ĐẶT VÉ THÀNH CÔNG!</h1>
             <p className="page-subtitle" style={{ marginBottom: 40, lineHeight: 1.6, fontSize: '1.1rem' }}>
               Cảm ơn bạn! Hệ thống đã ghi nhận thanh toán của bạn. <br/>
@@ -62,7 +63,8 @@ export default function PaymentResultPage() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <button className="btn btn-primary btn-lg" onClick={() => navigate('/my-bookings')}>
-                🎟️ Xem vé của tôi
+                <TicketIcon className="btn-icon" />
+                Xem vé của tôi
               </button>
               <button className="btn btn-ghost" onClick={() => navigate('/')}>
                 Quay lại trang chủ
@@ -71,7 +73,7 @@ export default function PaymentResultPage() {
           </div>
         ) : status === 'error' ? (
           <div className="card" style={{ padding: 48, borderTop: '8px solid var(--accent)' }}>
-            <div style={{ fontSize: '4rem', marginBottom: 24 }}>❌</div>
+            <XCircleIcon className="payment-result-icon payment-result-icon--error" />
             <h1 className="page-title" style={{ color: 'var(--accent)', fontSize: '1.8rem' }}>Thanh toán thất bại</h1>
             <p className="page-subtitle" style={{ marginBottom: 40 }}>
               Đã có lỗi xảy ra hoặc giao dịch bị hủy. Đừng lo lắng, tiền của bạn vẫn an toàn nếu chưa bị trừ.

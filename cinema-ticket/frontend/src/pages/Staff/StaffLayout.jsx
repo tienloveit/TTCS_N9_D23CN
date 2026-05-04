@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { MoviePTITLogoIcon } from '../../components/Common/CinemaIcons';
 import '../Admin/Admin.css';
 
 const Icons = {
@@ -92,10 +93,10 @@ export default function StaffLayout() {
         <div className="admin-sidebar-header">
           <NavLink to="/staff" className="admin-logo">
             <div className="admin-logo-icon">
-              <Icons.Logo />
+              <MoviePTITLogoIcon />
             </div>
             <div className="admin-logo-text">
-              <strong>CinemaHub</strong>
+              <strong>MoviePTIT</strong>
               <small>Staff Portal</small>
             </div>
           </NavLink>

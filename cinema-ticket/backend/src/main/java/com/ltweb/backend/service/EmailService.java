@@ -74,7 +74,7 @@ public class EmailService {
     MimeMessage message = mailSender.createMimeMessage();
     MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
     helper.setTo(toEmail);
-    helper.setSubject("CinemaHub - Ve xem phim " + nullToEmpty(booking.getBookingCode()));
+    helper.setSubject("MoviePTIT - Ve xem phim " + nullToEmpty(booking.getBookingCode()));
     helper.setText(buildBookingTicketEmail(booking, tickets), true);
 
     for (int i = 0; i < tickets.size(); i++) {
@@ -91,7 +91,7 @@ public class EmailService {
   private String buildBookingTicketEmail(Booking booking, List<Ticket> tickets) {
     String movieName =
         booking.getShowtime() == null || booking.getShowtime().getMovie() == null
-            ? "CinemaHub"
+            ? "MoviePTIT"
             : booking.getShowtime().getMovie().getMovieName();
     String roomName =
         booking.getShowtime() == null || booking.getShowtime().getRoom() == null
@@ -146,7 +146,7 @@ public class EmailService {
                   <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%%;background:#ffffff;border:1px solid #e5e7eb;">
                     <tr>
                       <td style="padding:28px 32px 20px;background:#111827;color:#ffffff;">
-                        <div style="font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#cbd5e1;">CinemaHub</div>
+                        <div style="font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#cbd5e1;">MoviePTIT</div>
                         <h1 style="margin:8px 0 0;font-size:26px;line-height:1.25;">Thanh toan thanh cong</h1>
                         <p style="margin:8px 0 0;color:#d1d5db;">Ve dien tu cua ban da san sang. Vui long dua tung ma QR khi vao rap.</p>
                       </td>

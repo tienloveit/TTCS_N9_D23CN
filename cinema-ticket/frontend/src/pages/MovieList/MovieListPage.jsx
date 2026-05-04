@@ -5,6 +5,7 @@ import { movieApi, genreApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';
+import { CalendarIcon, ClockIcon, FilmIcon, SparkIcon } from '../../components/Common/CinemaIcons';
 
 export default function MovieListPage() {
   const [movies, setMovies] = useState([]);
@@ -118,12 +119,15 @@ export default function MovieListPage() {
     <div className="page">
       <div className="container">
         <div className="page-header" style={{ marginBottom: 24 }}>
-          <h1 className="page-title">
-            {statusFilter === 'NOW_SHOWING' ? '🔥 Phim đang chiếu'
-              : statusFilter === 'UPCOMING' ? '📅 Phim sắp chiếu'
-                : '🎬 Danh sách phim'}
+          <h1 className="page-title page-title-with-icon">
+            {statusFilter === 'NOW_SHOWING' ? <SparkIcon className="page-title-icon" />
+              : statusFilter === 'UPCOMING' ? <CalendarIcon className="page-title-icon" />
+                : <FilmIcon className="page-title-icon" />}
+            {statusFilter === 'NOW_SHOWING' ? 'Phim đang chiếu'
+              : statusFilter === 'UPCOMING' ? 'Phim sắp chiếu'
+                : 'Danh sách phim'}
           </h1>
-          <p className="page-subtitle">Khám phá toàn bộ phim tại CinemaHub</p>
+          <p className="page-subtitle">Khám phá toàn bộ phim tại MoviePTIT</p>
         </div>
 
         {/* ================= FILTERS ================= */}
@@ -181,7 +185,7 @@ export default function MovieListPage() {
                   key={movie.movieId}
                   className="card movie-card"
                   onClick={() => navigate(`/movie/${movie.movieId}`)}
-                  whileHover={{ y: -8, scale: 1.02 }}
+                  whileHover={{ y: -3, scale: 1.01 }}
                   transition={{ duration: 0.2 }}
                 >
                   <div className="movie-poster-wrap">
@@ -205,7 +209,12 @@ export default function MovieListPage() {
                       </div>
                     )}
                     <div className="movie-meta">
-                      {movie.durationMinutes && <span>🕐 {movie.durationMinutes}p</span>}
+                      {movie.durationMinutes && (
+                        <span>
+                          <ClockIcon className="inline-icon" />
+                          {movie.durationMinutes}p
+                        </span>
+                      )}
                       {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
                     </div>
                     <div className="movie-card-rating">
@@ -216,7 +225,8 @@ export default function MovieListPage() {
                     </div>
                     {movie.releaseDate && (
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 8 }}>
-                        📅 {formatDate(movie.releaseDate)}
+                        <CalendarIcon className="inline-icon" />
+                        {formatDate(movie.releaseDate)}
                       </div>
                     )}
                   </div>

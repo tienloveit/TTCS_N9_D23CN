@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { userApi, authApi } from '../../api';
 import { toast } from 'react-toastify';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 
 const ProfilePage = () => {
+  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -14,6 +16,7 @@ const ProfilePage = () => {
     newPassword: '',
     confirmPassword: ''
   });
+  const activeSection = location.hash === '#password' ? 'password' : 'info';
 
   const fetchProfile = async () => {
     try {
@@ -30,6 +33,15 @@ const ProfilePage = () => {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (loading || !location.hash) return;
+
+    const target = document.querySelector(location.hash);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading, location.hash]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -71,8 +83,7 @@ const ProfilePage = () => {
     return (
       <div className="page container">
         <SkeletonBox height="40px" width="200px" className="mb-8" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-          <SkeletonBox height="400px" borderRadius="16px" />
+        <div className="profile-section-wrap">
           <SkeletonBox height="400px" borderRadius="16px" />
         </div>
       </div>
@@ -81,11 +92,14 @@ const ProfilePage = () => {
 
   return (
     <div className="page container">
-      <h1 className="page-title mb-8">Trang cá nhân</h1>
+      <h1 className="page-title mb-8">
+        {activeSection === 'password' ? 'Đổi mật khẩu' : 'Thông tin cá nhân'}
+      </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px' }}>
+      <div className="profile-section-wrap">
         {/* Info Section */}
-        <div className="card" style={{ padding: '32px' }}>
+        {activeSection === 'info' && (
+        <div id="info" className="card profile-section-card" style={{ padding: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Thông tin cá nhân</h2>
             <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(!isEditing)}>
@@ -135,9 +149,11 @@ const ProfilePage = () => {
             )}
           </form>
         </div>
+        )}
 
         {/* Password Section */}
-        <div className="card" style={{ padding: '32px' }}>
+        {activeSection === 'password' && (
+        <div id="password" className="card profile-section-card" style={{ padding: '32px' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '24px' }}>Đổi mật khẩu</h2>
           <form onSubmit={handleChangePassword}>
             <div className="form-group">
@@ -176,6 +192,7 @@ const ProfilePage = () => {
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Cập nhật mật khẩu</button>
           </form> 
         </div>
+        )}
       </div>
     </div>
   );

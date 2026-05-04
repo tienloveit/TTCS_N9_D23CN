@@ -1,15 +1,17 @@
 spring:
   config:
-    import: optional:file:.env[.properties], optional:file:cinema-ticket/backend/.env[.properties]
+    import: optional:file:./.env[.properties], optional:file:./backend/.env[.properties], optional:file:./cinema-ticket/backend/.env[.properties]
+
   application:
     name: backend
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/movie
+    url: jdbc:mysql://localhost:3306/cinema
     username: root
-    password: tien
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -25,8 +27,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: nguyentu20905@gmail.com
-    password: ${MAIL_PASSWORD}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -37,7 +39,6 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
-
   ai:
     openai:
       # --- CẤU HÌNH CŨ (Giữ lại để phòng khi lỗi có thể quay lại) ---
@@ -49,25 +50,22 @@ spring:
       
       # --- CẤU HÌNH MỚI: GEMINI 2.5 PRO ---
       api-key: ${GEMINI_API_KEY} 
-      #api-key: ${GEMINI_API_KEY}
       base-url: https://generativelanguage.googleapis.com/v1beta/openai/ # URL tương thích OpenAI của Google (Nếu dùng OpenRouter thì đổi thành https://openrouter.ai/api/v1)
       chat:
         options:
           model: gemini-2.5-flash # Nếu dùng OpenRouter thì đổi thành google/gemini-2.5-pro gemini-2.0-flash
-                                  
-
-
+              
 server:
   port: 8081
   servlet:
     context-path: /api
 
 jwt:
-  secret-key: ${JWT_SECRET}
+  secret-key: ${JWT_SECRET_KEY}
 
 vnpay:
-  tmn-code: 4792TJ7Y
-  secret-key: ${VNPAY_SECRET}
+  tmn-code: ${VNPAY_TMN_CODE}
+  secret-key: ${VNPAY_SECRET_KEY}
   pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
   api-url: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
   return-url: http://localhost:5173/payment/vnpay-return

@@ -15,7 +15,7 @@ const SafeImage = ({ src, alt, className, style, fallback }) => {
   };
 
   return (
-    <div className={className} style={{ ...style, overflow: 'hidden', position: 'relative', backgroundColor: '#1a2235' }}>
+    <div className={className} style={{ ...style, overflow: 'hidden', position: 'relative', backgroundColor: 'var(--bg-secondary)' }}>
       <img
         src={imgSrc || fallback || defaultFallback}
         alt={alt}
@@ -38,7 +38,7 @@ const SafeImage = ({ src, alt, className, style, fallback }) => {
           padding: '10px',
           textTransform: 'uppercase'
         }}>
-          {alt || 'CinemaHub'}
+          {alt || 'MoviePTIT'}
         </div>
       )}
     </div>

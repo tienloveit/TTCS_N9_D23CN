@@ -2,42 +2,86 @@
 > frontend@0.0.0 dev
 > vite --host 127.0.0.1 --port 5173
 
-[2m9:04:58 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+[2m10:08:58 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
 
-  [32m[1mVITE[22m v8.0.8[39m  [2mready in [0m[1m245[22m[2m[0m ms[22m
+  [32m[1mVITE[22m v8.0.8[39m  [2mready in [0m[1m398[22m[2m[0m ms[22m
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
-[2m9:30:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/context/AuthContext.jsx, /src/pages/Register/RegisterPage.jsx, /src/pages/Home/HomePage.jsx, /src/pages/MovieList/MovieListPage.jsx, /src/pages/MyBookings/MyBookingsPage.jsx, /src/pages/Branch/BranchDetailPage.jsx, /src/pages/Branch/BranchListPage.jsx, /src/pages/Payment/PaymentPage.jsx, /src/pages/MovieDetail/MovieDetailPage.jsx, /src/pages/Payment/PaymentResultPage.jsx, /src/pages/Admin/AdminDashboard.jsx, /src/pages/Admin/BranchManagement.jsx, /src/pages/Admin/MovieManagement.jsx and 7 more[22m
-[2m9:30:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/context/AuthContext.jsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
-[2m9:30:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/AnimatedRoutes.jsx, /src/pages/Login/LoginPage.jsx, /src/pages/Admin/AdminLayout.jsx, /src/pages/MovieDetail/MovieDetailPage.jsx, /src/pages/Staff/StaffLayout.jsx, /src/components/Navbar/Navbar.jsx[22m
-[2m9:33:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/AnimatedRoutes.jsx[22m
-[2m9:33:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/StaffBookingPage.jsx[22m
-[2m9:33:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Staff/StaffBookingPage.jsx[22m
-[2m9:38:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Staff/StaffBookingPage.jsx[22m
-[2m9:38:56 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Staff/StaffBookingPage.jsx[22m
-[2m9:53:30 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/context/AuthContext.jsx, /src/pages/Register/RegisterPage.jsx, /src/pages/Home/HomePage.jsx, /src/pages/MovieList/MovieListPage.jsx, /src/pages/MyBookings/MyBookingsPage.jsx, /src/pages/Branch/BranchDetailPage.jsx, /src/pages/Branch/BranchListPage.jsx, /src/pages/Payment/PaymentPage.jsx, /src/pages/MovieDetail/MovieDetailPage.jsx, /src/pages/Payment/PaymentResultPage.jsx, /src/pages/Admin/AdminDashboard.jsx, /src/pages/Admin/BranchManagement.jsx, /src/pages/Admin/MovieManagement.jsx and 7 more[22m
-[2m9:53:31 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/context/AuthContext.jsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
-[2m9:53:31 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/AnimatedRoutes.jsx, /src/pages/Login/LoginPage.jsx, /src/pages/Admin/AdminLayout.jsx, /src/pages/MovieDetail/MovieDetailPage.jsx, /src/pages/Staff/StaffLayout.jsx, /src/components/Navbar/Navbar.jsx[22m
-[2m9:54:26 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:54:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:54:55 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:55:07 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:55:12 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:55:20 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:55:34 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:55:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:55:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:56:19 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:56:34 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieDetail/MovieDetailPage.jsx[22m
-[2m9:56:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieList/MovieListPage.jsx[22m
-[2m9:57:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:57:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieDetail/MovieDetailPage.jsx[22m
-[2m9:57:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieList/MovieListPage.jsx[22m
-[2m9:57:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m9:58:01 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/MovieManagement.jsx[22m
-[2m10:12:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieDetail/MovieDetailPage.jsx[22m
-[2m10:13:23 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
-[2m10:13:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
-[2m10:14:25 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieDetail/MovieDetailPage.jsx[22m
-[2m10:19:33 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieDetail/MovieDetailPage.jsx[22m
-[2m10:19:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:21:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx[22m
+[2m10:21:37 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Home/HomePage.jsx[22m
+[2m10:21:48 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Layout/Footer.jsx[22m
+[2m10:22:14 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Branch/BranchListPage.jsx[22m
+[2m10:22:29 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Branch/BranchDetailPage.jsx[22m
+[2m10:22:45 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieList/MovieListPage.jsx[22m
+[2m10:23:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Common/CinemaIcons.jsx[22m
+[2m10:23:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/Common/CinemaIcons.jsx[22m Could not Fast Refresh (new export)
+[2m10:23:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx, /src/pages/Home/HomePage.jsx, /src/components/Layout/Footer.jsx, /src/pages/Branch/BranchListPage.jsx, /src/pages/Branch/BranchDetailPage.jsx, /src/pages/MovieList/MovieListPage.jsx[22m
+[2m10:23:41 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MyBookings/MyBookingsPage.jsx[22m
+[2m10:24:23 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Payment/PaymentResultPage.jsx[22m
+[2m10:24:33 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Payment/PaymentResultPage.jsx[22m
+[2m10:24:43 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Ticket/DigitalTicket.jsx[22m
+[2m10:25:11 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:25:24 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:25:34 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:25:51 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:26:07 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:26:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:27:19 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:27:32 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:27:47 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:28:25 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:28:32 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:28:44 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:28:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Ticket/DigitalTicket.css[22m
+[2m10:28:59 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:29:08 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Home/HomePage.jsx[22m
+[2m10:29:14 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieList/MovieListPage.jsx[22m
+[2m10:30:12 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:30:18 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m10:30:25 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Ticket/DigitalTicket.css[22m
+[2m10:42:33 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Common/CinemaIcons.jsx[22m
+[2m10:42:33 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/Common/CinemaIcons.jsx[22m Could not Fast Refresh (new export)
+[2m10:42:33 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx, /src/pages/Home/HomePage.jsx, /src/components/Layout/Footer.jsx, /src/pages/Branch/BranchListPage.jsx, /src/pages/Branch/BranchDetailPage.jsx, /src/pages/MovieList/MovieListPage.jsx, /src/pages/MyBookings/MyBookingsPage.jsx, /src/pages/Payment/PaymentResultPage.jsx, /src/components/Ticket/DigitalTicket.jsx[22m
+[2m10:42:49 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx[22m
+[2m10:43:02 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:43:21 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:43:27 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:51:39 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx[22m
+[2m10:52:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:52:34 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:52:42 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:52:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:52:59 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:53:04 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:53:09 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m10:53:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:53:22 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:53:30 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Profile/ProfilePage.jsx[22m
+[2m11:05:56 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:06:05 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:06:12 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:06:19 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:06:25 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:06:32 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:06:56 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminDashboard.jsx[22m
+[2m11:07:02 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Staff/StaffBookingPage.jsx[22m
+[2m11:14:43 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Common/CinemaIcons.jsx[22m
+[2m11:14:43 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/Common/CinemaIcons.jsx[22m Could not Fast Refresh (new export)
+[2m11:14:43 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx, /src/pages/Home/HomePage.jsx, /src/components/Layout/Footer.jsx, /src/pages/Branch/BranchListPage.jsx, /src/pages/Branch/BranchDetailPage.jsx, /src/pages/MovieList/MovieListPage.jsx, /src/pages/MyBookings/MyBookingsPage.jsx, /src/pages/Payment/PaymentResultPage.jsx, /src/components/Ticket/DigitalTicket.jsx[22m
+[2m11:14:49 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Navbar/Navbar.jsx[22m
+[2m11:14:56 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Layout/Footer.jsx[22m
+[2m11:15:04 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Ticket/DigitalTicket.jsx[22m
+[2m11:15:10 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminLayout.jsx[22m
+[2m11:15:16 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Staff/StaffLayout.jsx[22m
+[2m11:15:23 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/Admin.css[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/BranchManagement.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MyBookings/MyBookingsPage.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Staff/StaffBookingPage.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MovieList/MovieListPage.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login/LoginPage.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/NotFound/NotFoundPage.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Register/RegisterPage.jsx[22m
+[2m11:15:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Common/SafeImage.jsx[22m
+[2m11:16:26 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/BranchManagement.jsx[22m
+[2m11:19:33 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/Common/CinemaIcons.jsx[22m

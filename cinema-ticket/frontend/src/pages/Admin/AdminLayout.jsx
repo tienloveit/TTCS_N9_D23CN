@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
+import { MoviePTITLogoIcon } from '../../components/Common/CinemaIcons';
 import './Admin.css';
 
 /* ── SVG Icon Components ── */
@@ -147,10 +148,10 @@ const AdminLayout = () => {
         <div className="admin-sidebar-header">
           <NavLink to="/admin" className="admin-logo">
             <div className="admin-logo-icon">
-              <Icons.Logo />
+              <MoviePTITLogoIcon />
             </div>
             <div className="admin-logo-text">
-              <strong>CinemaHub</strong>
+              <strong>MoviePTIT</strong>
               <small>Admin Panel</small>
             </div>
           </NavLink>

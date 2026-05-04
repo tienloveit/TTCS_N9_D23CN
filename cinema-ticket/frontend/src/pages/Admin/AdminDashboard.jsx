@@ -174,11 +174,12 @@ const AdminDashboard = () => {
           ) : (
             <ResponsiveContainer width="100%" height="85%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" vertical={false} />
-                <XAxis dataKey="name" stroke="#a0aec0" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#a0aec0" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v/1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbe4ef" vertical={false} />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v/1000}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a202c', border: '1px solid #2d3748', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #dbe4ef', borderRadius: '8px', color: '#0f172a' }}
+                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
                   formatter={(v) => formatCurrency(v)}
                 />
                 <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
@@ -212,7 +213,10 @@ const AdminDashboard = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #dbe4ef', borderRadius: '8px', color: '#0f172a' }}
+                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
+                />
                 <Legend layout="horizontal" verticalAlign="bottom" align="center" />
               </PieChart>
             </ResponsiveContainer>

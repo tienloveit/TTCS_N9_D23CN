@@ -3,6 +3,15 @@ import { useAuth } from '../../context/AuthContext';
 import { useState, useRef, useEffect } from 'react';
 import { movieApi } from '../../api';
 import SafeImage from '../Common/SafeImage';
+import {
+  CalendarIcon,
+  FilmIcon,
+  KeyIcon,
+  MoviePTITLogoIcon,
+  SearchIcon,
+  SparkIcon,
+  UserIcon,
+} from '../Common/CinemaIcons';
 
 export default function Navbar() {
   const { user, logout, isAuthenticated, isAdmin, isStaff } = useAuth();
@@ -12,8 +21,10 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   const handleLogout = async () => {
     await logout();
@@ -28,6 +39,9 @@ export default function Navbar() {
       }
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowSearch(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -59,22 +73,28 @@ export default function Navbar() {
   useEffect(() => {
     setShowScheduleMenu(false);
     setShowSearch(false);
+    setShowUserMenu(false);
     setSearchQuery('');
   }, [location.pathname]);
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const goToProfileSection = (hash) => {
+    setShowUserMenu(false);
+    navigate(`/profile${hash}`);
+  };
 
   return (
     <nav className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="navbar-logo">
-          🎬 <span>CinemaHub</span>
+          <MoviePTITLogoIcon className="nav-svg-icon" />
+          <span>MoviePTIT</span>
         </Link>
 
         {/* Global Search */}
         <div className="navbar-search-wrapper" ref={searchRef}>
           <div className="navbar-search-input-group">
-            <span className="navbar-search-icon">🔍</span>
+            <SearchIcon className="navbar-search-icon" />
             <input
               type="text"
               placeholder="Tìm phim..."
@@ -124,15 +144,15 @@ export default function Navbar() {
             {showScheduleMenu && (
               <div className="navbar-dropdown-menu">
                 <Link to="/movies?status=NOW_SHOWING" className="navbar-dropdown-item">
-                  <span className="navbar-dropdown-icon">🔥</span>
+                  <SparkIcon className="navbar-dropdown-icon" />
                   Phim đang chiếu
                 </Link>
                 <Link to="/movies?status=UPCOMING" className="navbar-dropdown-item">
-                  <span className="navbar-dropdown-icon">📅</span>
+                  <CalendarIcon className="navbar-dropdown-icon" />
                   Phim sắp chiếu
                 </Link>
                 <Link to="/movies" className="navbar-dropdown-item">
-                  <span className="navbar-dropdown-icon">🎞️</span>
+                  <FilmIcon className="navbar-dropdown-icon" />
                   Tất cả phim
                 </Link>
               </div>
@@ -151,9 +171,28 @@ export default function Navbar() {
 
           {isAuthenticated ? (
             <div className="navbar-user">
-               <Link to="/profile" className={`navbar-user-name ${isActive('/profile') ? 'navbar-link--active' : ''}`} style={{ textDecoration: 'none' }}>
-                 👤 {user?.username}
-               </Link>
+               <div className="navbar-user-menu" ref={userMenuRef}>
+                 <button
+                   type="button"
+                   className={`navbar-user-name navbar-user-trigger ${isActive('/profile') ? 'navbar-link--active' : ''}`}
+                   onClick={() => setShowUserMenu((open) => !open)}
+                 >
+                   <UserIcon className="navbar-user-icon" />
+                   <span>{user?.username}</span>
+                 </button>
+                 {showUserMenu && (
+                   <div className="navbar-user-dropdown">
+                     <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#info')}>
+                       <UserIcon className="navbar-dropdown-icon" />
+                       Thông tin cá nhân
+                     </button>
+                     <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#password')}>
+                       <KeyIcon className="navbar-dropdown-icon" />
+                       Đổi mật khẩu
+                     </button>
+                   </div>
+                 )}
+               </div>
                {isAdmin && (
                  <Link to="/admin" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
                    Quan tri

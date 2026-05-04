@@ -99,15 +99,15 @@ public class DataSeedService {
         "admin",
         "admin@123",
         UserRole.ADMIN,
-        "CinemaHub Admin",
-        "admin@cinemahub.vn",
+        "MoviePTIT Admin",
+        "admin@movieptit.vn",
         "0901000000");
     upsertUser(
         "staff",
         "staff@123",
         UserRole.STAFF,
         "Minh Anh - Quầy vé",
-        "staff@cinemahub.vn",
+        "staff@movieptit.vn",
         "0901000001");
     upsertUser(
         "user",
@@ -473,25 +473,25 @@ public class DataSeedService {
         List.of(
             new BranchSeed(
                 "CN-HCM-01",
-                "CinemaHub Nguyễn Huệ",
+                "MoviePTIT Nguyễn Huệ",
                 "10 Nguyễn Huệ, Quận 1",
                 "TP. Hồ Chí Minh",
                 "0901000001"),
             new BranchSeed(
                 "CN-HCM-02",
-                "CinemaHub Landmark",
+                "MoviePTIT Landmark",
                 "720A Điện Biên Phủ, Bình Thạnh",
                 "TP. Hồ Chí Minh",
                 "0901000002"),
             new BranchSeed(
                 "CN-HN-01",
-                "CinemaHub Hồ Gươm",
+                "MoviePTIT Hồ Gươm",
                 "20 Hàng Bài, Hoàn Kiếm",
                 "Hà Nội",
                 "0901000003"),
             new BranchSeed(
                 "CN-DN-01",
-                "CinemaHub Sông Hàn",
+                "MoviePTIT Sông Hàn",
                 "15 Bạch Đằng, Hải Châu",
                 "Đà Nẵng",
                 "0901000004"));

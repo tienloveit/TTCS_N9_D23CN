@@ -30,9 +30,17 @@
 }
 
 .ticket-brand {
-    font-weight: 800;
-    color: #2563eb; 
-    font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #0756a6;
+  font-size: 1.25rem;
+}
+
+.ticket-brand-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .ticket-status-tag {
@@ -84,7 +92,7 @@
   text-transform: uppercase;
   margin-bottom: 4px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .info-item span {
@@ -123,7 +131,7 @@
   position: absolute;
   width: 40px;
   height: 40px;
-  background-color: #0f172a; /* Match app background for "cutout" effect */
+  background-color: var(--bg-primary); /* Match app background for "cutout" effect */
   border-radius: 50%;
   left: 50%;
   transform: translateX(-50%);
@@ -157,7 +165,7 @@
   text-transform: uppercase;
   font-weight: 800;
   color: #9ca3af;
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
 }
 
 @media (max-width: 768px) {
@@ -184,9 +192,9 @@
 }
 
 .btn-download-ticket {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
   padding: 12px 28px;
   border-radius: 100px;
   font-size: 0.95rem;

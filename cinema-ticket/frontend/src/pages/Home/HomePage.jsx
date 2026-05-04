@@ -5,6 +5,15 @@ import { movieApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';
+import {
+  CalendarIcon,
+  ChevronDownIcon,
+  ClockIcon,
+  GlobeIcon,
+  SearchIcon,
+  SparkIcon,
+  TicketIcon,
+} from '../../components/Common/CinemaIcons';
 
 export default function HomePage() {
   const [nowShowing, setNowShowing] = useState([]);
@@ -71,6 +80,7 @@ export default function HomePage() {
   }
 
   const currentBanner = bannerMovies[bannerIndex];
+  const quickBookingSteps = ['Chọn Phim', 'Chọn Rạp', 'Chọn Ngày', 'Chọn Suất'];
 
   return (
     <div className="page" style={{ padding: 0 }}>
@@ -94,10 +104,16 @@ export default function HomePage() {
                   <span className="movie-badge">{currentBanner.ageRating}</span>
                 )}
                 {currentBanner.durationMinutes && (
-                  <span className="hero-meta-tag">🕐 {currentBanner.durationMinutes} phút</span>
+                  <span className="hero-meta-tag">
+                    <ClockIcon className="inline-icon" />
+                    {currentBanner.durationMinutes} phút
+                  </span>
                 )}
                 {currentBanner.language && (
-                  <span className="hero-meta-tag">🌐 {currentBanner.language}</span>
+                  <span className="hero-meta-tag">
+                    <GlobeIcon className="inline-icon" />
+                    {currentBanner.language}
+                  </span>
                 )}
               </div>
               <h1 className="hero-title">{currentBanner.movieName}</h1>
@@ -113,7 +129,8 @@ export default function HomePage() {
                     navigate(`/movie/${currentBanner.movieId}`);
                   }}
                 >
-                  🎟️ Đặt vé ngay
+                  <TicketIcon className="btn-icon" />
+                  Đặt vé ngay
                 </button>
               </div>
             </div>
@@ -145,10 +162,36 @@ export default function HomePage() {
         </div>
       )}
 
+      <div className={`quick-booking-shell container ${currentBanner ? '' : 'quick-booking-shell--standalone'}`}>
+        <div className="quick-booking-card" role="group" aria-label="Mua vé nhanh">
+          {quickBookingSteps.map((step, index) => (
+            <button
+              key={step}
+              type="button"
+              className="quick-booking-step"
+              onClick={() => navigate('/movies?status=NOW_SHOWING')}
+            >
+              <span className="quick-booking-label">
+                <span className="quick-booking-index">{index + 1}</span>
+                <span>{step}</span>
+              </span>
+              <ChevronDownIcon className="quick-booking-chevron" />
+            </button>
+          ))}
+          <button
+            type="button"
+            className="quick-booking-submit"
+            onClick={() => navigate('/movies?status=NOW_SHOWING')}
+          >
+            Mua vé nhanh
+          </button>
+        </div>
+      </div>
+
       {/* ==================== SEARCH ==================== */}
       <div className="container" style={{ marginTop: 32 }}>
         <div className="search-bar">
-          <span className="search-icon">🔍</span>
+          <SearchIcon className="search-icon" />
           <input
             className="search-input"
             type="text"
@@ -166,7 +209,7 @@ export default function HomePage() {
       <section className="container section">
         <div className="section-header">
           <h2 className="section-title">
-            <span className="section-icon">🔥</span>
+            <SparkIcon className="section-icon" />
             Phim đang chiếu
           </h2>
           <span className="section-count">{filteredNowShowing.length} phim</span>
@@ -185,7 +228,7 @@ export default function HomePage() {
                 key={movie.movieId}
                 className="card movie-card"
                 onClick={() => navigate(`/movie/${movie.movieId}`)}
-                whileHover={{ y: -8, scale: 1.02 }}
+                whileHover={{ y: -3, scale: 1.01 }}
                 transition={{ duration: 0.2 }}
               >
                 <div className="movie-poster-wrap">
@@ -201,7 +244,12 @@ export default function HomePage() {
                 <div className="movie-info">
                   <h3 className="movie-title">{movie.movieName}</h3>
                   <div className="movie-meta">
-                    {movie.durationMinutes && <span>🕐 {movie.durationMinutes}p</span>}
+                    {movie.durationMinutes && (
+                      <span>
+                        <ClockIcon className="inline-icon" />
+                        {movie.durationMinutes}p
+                      </span>
+                    )}
                     {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
                   </div>
                 </div>
@@ -216,7 +264,7 @@ export default function HomePage() {
         <section className="container section">
           <div className="section-header">
             <h2 className="section-title">
-              <span className="section-icon">📅</span>
+              <CalendarIcon className="section-icon" />
               Phim sắp chiếu
             </h2>
             <span className="section-count">{filteredUpcoming.length} phim</span>
@@ -228,7 +276,7 @@ export default function HomePage() {
                 key={movie.movieId}
                 className="card movie-card movie-card--upcoming"
                 onClick={() => navigate(`/movie/${movie.movieId}`)}
-                whileHover={{ y: -8, scale: 1.02 }}
+                whileHover={{ y: -3, scale: 1.01 }}
                 transition={{ duration: 0.2 }}
               >
                 <div className="movie-poster-wrap">
@@ -242,7 +290,12 @@ export default function HomePage() {
                 <div className="movie-info">
                   <h3 className="movie-title">{movie.movieName}</h3>
                   <div className="movie-meta">
-                    {movie.releaseDate && <span>📅 {formatDate(movie.releaseDate)}</span>}
+                    {movie.releaseDate && (
+                      <span>
+                        <CalendarIcon className="inline-icon" />
+                        {formatDate(movie.releaseDate)}
+                      </span>
+                    )}
                     {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
                   </div>
                 </div>
