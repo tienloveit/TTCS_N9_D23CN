@@ -1,12 +1,14 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: backend
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/cinema
+    url: jdbc:mysql://localhost:3306/movie
     username: root
-    password: Nguyentu205@
+    password: tien
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,7 +26,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: nguyentu20905@gmail.com
-    password: pmeadadilyulpupb
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -36,17 +38,36 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+  ai:
+    openai:
+      # --- CẤU HÌNH CŨ (Giữ lại để phòng khi lỗi có thể quay lại) ---
+      # api-key: ${GROQ_API_KEY}
+      # base-url: https://api.groq.com/openai
+      # chat:
+      #   options:
+      #     model: llama-3.3-70b-versatile
+      
+      # --- CẤU HÌNH MỚI: GEMINI 2.5 PRO ---
+      api-key: ${GEMINI_API_KEY} 
+      #api-key: ${GEMINI_API_KEY}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai/ # URL tương thích OpenAI của Google (Nếu dùng OpenRouter thì đổi thành https://openrouter.ai/api/v1)
+      chat:
+        options:
+          model: gemini-2.5-flash # Nếu dùng OpenRouter thì đổi thành google/gemini-2.5-pro gemini-2.0-flash
+                                  
+
+
 server:
   port: 8081
   servlet:
     context-path: /api
 
 jwt:
-  secret-key: 1fa10329547167709d24b3287b742dd287233b6bf4d36604e924dba849d05cf9b6b1d69d1f2493f1b26c5c28fd8e9366187decd7be4c4c90585235b7a5d79338
+  secret-key: ${JWT_SECRET}
 
 vnpay:
   tmn-code: 4792TJ7Y
-  secret-key: I86EACU6F7UDSGB3XT7A6SH5DEESDRYV
+  secret-key: ${VNPAY_SECRET}
   pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
   api-url: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
   return-url: http://localhost:5173/payment/vnpay-return

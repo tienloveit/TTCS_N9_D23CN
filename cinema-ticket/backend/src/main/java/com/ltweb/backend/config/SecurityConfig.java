@@ -38,7 +38,8 @@ public class SecurityConfig {
     "/v1/vnpay/ipn",
     "/auth/forgot-password",
     "/auth/reset-password",
-    "/api/v1/cleanup/**"
+    "/api/v1/cleanup/**",
+    "/chat/**"
   };
 
   private final CustomUserDetailService userDetailsService;
@@ -105,8 +106,8 @@ public class SecurityConfig {
 
   @Bean
   public AuthenticationManager authenticationManager() {
-    DaoAuthenticationProvider authenticationProvider =
-        new DaoAuthenticationProvider(userDetailsService);
+    DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+    authenticationProvider.setUserDetailsService(userDetailsService);
     authenticationProvider.setPasswordEncoder(passwordEncoder());
     return new ProviderManager(authenticationProvider);
   }
