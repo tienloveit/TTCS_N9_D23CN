@@ -4,8 +4,7 @@ const SafeImage = ({ src, alt, className, style, fallback }) => {
   const [imgSrc, setImgSrc] = useState(src);
   const [isError, setIsError] = useState(false);
 
-  // Modern, cinematic fallback image
-  const defaultFallback = 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2059&auto=format&fit=crop';
+  const defaultFallback = 'https://commons.wikimedia.org/wiki/Special:FilePath/Theater%20seats.jpg?width=1200';
 
   const handleError = () => {
     if (!isError) {
