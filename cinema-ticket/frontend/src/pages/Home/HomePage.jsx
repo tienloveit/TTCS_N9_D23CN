@@ -15,6 +15,7 @@ import {
   SendIcon,
   SparkIcon,
   TicketIcon,
+  XCircleIcon,
 } from '../../components/Common/CinemaIcons';
 
 const AI_SUGGESTIONS = [
@@ -31,6 +32,7 @@ export default function HomePage() {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [aiInput, setAiInput] = useState('');
   const [aiSending, setAiSending] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [aiChatId] = useState(() => {
     const storedChatId = localStorage.getItem('movieptit-ai-chat-id');
     if (storedChatId) return storedChatId;
@@ -83,7 +85,7 @@ export default function HomePage() {
     const messagesEl = aiMessagesRef.current;
     if (!messagesEl) return;
     messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-  }, [aiMessages, aiSending]);
+  }, [aiMessages, aiSending, aiOpen]);
 
   // Search filter
   const filteredNowShowing = nowShowing.filter((f) =>
@@ -102,6 +104,7 @@ export default function HomePage() {
   const sendAiMessage = async (messageText = aiInput) => {
     const trimmedMessage = messageText.trim();
     if (!trimmedMessage || aiSending) return;
+    setAiOpen(true);
 
     const userMessage = {
       id: `user-${Date.now()}`,
@@ -276,42 +279,25 @@ export default function HomePage() {
         </div>
       </div>
 
-      <section className="container ai-home-section" aria-labelledby="ai-home-title">
-        <div className="ai-assistant-panel">
-          <div className="ai-assistant-copy">
-            <span className="ai-assistant-kicker">
-              <SparkIcon className="inline-icon" />
-              AI MoviePTIT
-            </span>
-            <h2 id="ai-home-title">Hỏi nhanh trước khi đặt vé</h2>
-            <p>
-              Tìm phim đang chiếu, kiểm tra suất chiếu, hỏi rạp, ghế và combo bắp nước ngay trên
-              trang chủ.
-            </p>
-            <div className="ai-suggestion-list">
-              {AI_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className="ai-suggestion-chip"
-                  onClick={() => sendAiMessage(suggestion)}
-                  disabled={aiSending}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="ai-chat-window" aria-label="Trợ lý MoviePTIT">
+      <div className="ai-chat-widget">
+        {aiOpen && (
+          <div className="ai-chat-panel">
+            <div className="ai-chat-window" aria-label="Trợ lý MoviePTIT">
             <div className="ai-chat-header">
               <span className="ai-chat-avatar">
                 <MessageIcon />
               </span>
               <div>
-                <strong>Trợ lý phim</strong>
-                <span>Đang dùng dữ liệu từ rạp</span>
+                <strong className="ai-chat-title">Trợ lý MoviePTIT</strong>
               </div>
+              <button
+                type="button"
+                className="ai-chat-close"
+                aria-label="Đóng chatbot"
+                onClick={() => setAiOpen(false)}
+              >
+                <XCircleIcon />
+              </button>
             </div>
 
             <div className="ai-chat-messages" ref={aiMessagesRef}>
@@ -332,6 +318,20 @@ export default function HomePage() {
               )}
             </div>
 
+            <div className="ai-suggestion-list ai-suggestion-list--compact">
+              {AI_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  className="ai-suggestion-chip"
+                  onClick={() => sendAiMessage(suggestion)}
+                  disabled={aiSending}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+
             <form className="ai-chat-form" onSubmit={handleAiSubmit}>
               <input
                 type="text"
@@ -348,9 +348,23 @@ export default function HomePage() {
                 <SendIcon />
               </button>
             </form>
+            </div>
           </div>
-        </div>
-      </section>
+        )}
+
+        <button
+          type="button"
+          className={`ai-chat-toggle ${aiOpen ? 'ai-chat-toggle--open' : ''}`}
+          aria-label={aiOpen ? 'Đóng chatbot' : 'Mở chatbot'}
+          aria-expanded={aiOpen}
+          onClick={() => setAiOpen((open) => !open)}
+        >
+          <span className="ai-chat-toggle-icon">
+            {aiOpen ? <XCircleIcon /> : <MessageIcon />}
+          </span>
+          {!aiOpen && <span className="ai-chat-toggle-dot" />}
+        </button>
+      </div>
 
       {/* ==================== SEARCH ==================== */}
       <div className="container" style={{ marginTop: 32 }}>

@@ -317,7 +317,7 @@ public class DataSeedService {
                 today.minusDays(12),
                 today.plusDays(38),
                 MovieStatus.NOW_SHOWING,
-                "https://placehold.co/600x900/111827/FBBF24?text=Nguoi+Bao+Ve",
+                "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Hành động", "Tâm lý")),
             new MovieSeed(
@@ -331,7 +331,7 @@ public class DataSeedService {
                 today.minusDays(8),
                 today.plusDays(45),
                 MovieStatus.NOW_SHOWING,
-                "https://placehold.co/600x900/0F172A/38BDF8?text=Tram+Sao",
+                "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Khoa học viễn tưởng", "Phiêu lưu")),
             new MovieSeed(
@@ -345,7 +345,7 @@ public class DataSeedService {
                 today.minusDays(4),
                 today.plusDays(34),
                 MovieStatus.NOW_SHOWING,
-                "https://placehold.co/600x900/14532D/FDE68A?text=Gia+Dinh",
+                "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Hài", "Gia đình")),
             new MovieSeed(
@@ -359,7 +359,7 @@ public class DataSeedService {
                 today.minusDays(3),
                 today.plusDays(28),
                 MovieStatus.NOW_SHOWING,
-                "https://placehold.co/600x900/1F2937/F87171?text=Phong+So+7",
+                "https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Kinh dị", "Bí ẩn")),
             new MovieSeed(
@@ -373,7 +373,7 @@ public class DataSeedService {
                 today.minusDays(1),
                 today.plusDays(42),
                 MovieStatus.NOW_SHOWING,
-                "https://placehold.co/600x900/334155/F8FAFC?text=Pho+Cu",
+                "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Tình cảm", "Tâm lý")),
             new MovieSeed(
@@ -387,7 +387,7 @@ public class DataSeedService {
                 today.minusDays(5),
                 today.plusDays(30),
                 MovieStatus.NOW_SHOWING,
-                "https://placehold.co/600x900/7C3AED/FFFFFF?text=Dac+Vu",
+                "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Hài", "Hành động")),
             new MovieSeed(
@@ -401,7 +401,7 @@ public class DataSeedService {
                 today.plusDays(12),
                 today.plusDays(74),
                 MovieStatus.UPCOMING,
-                "https://placehold.co/600x900/7C2D12/FED7AA?text=Vu+Dieu",
+                "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Hoạt hình", "Gia đình")),
             new MovieSeed(
@@ -415,7 +415,7 @@ public class DataSeedService {
                 today.plusDays(20),
                 today.plusDays(80),
                 MovieStatus.UPCOMING,
-                "https://placehold.co/600x900/020617/22D3EE?text=Sau+Nua+Dem",
+                "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Bí ẩn", "Tâm lý")),
             new MovieSeed(
@@ -429,7 +429,7 @@ public class DataSeedService {
                 today.plusDays(26),
                 today.plusDays(88),
                 MovieStatus.UPCOMING,
-                "https://placehold.co/600x900/F97316/111827?text=Duong+Dua",
+                "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=600&h=900&q=85",
                 "dQw4w9WgXcQ",
                 Set.of("Hành động", "Gia đình")));
 
