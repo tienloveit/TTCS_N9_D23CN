@@ -76,7 +76,7 @@ export default function MovieListPage() {
     // 2. Genre
     const matchGenre = selectedGenre === 'ALL'
       ? true
-      : movie.genres?.some(g => g.id === selectedGenre || g.genreId === selectedGenre || g.name === selectedGenre);
+      : movie.genres?.some(g => String(g.id) === String(selectedGenre) || String(g.genreId) === String(selectedGenre) || g.name === selectedGenre);
     // Note: adjust the some() condition depending exactly on what GenreResponse returns
 
     // 3. Status

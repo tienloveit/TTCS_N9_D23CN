@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class BookingCleanupJob {
   private final BookingRepository bookingRepository;
   private final TicketRepository ticketRepository;
   private final SimpMessagingTemplate simpMessagingTemplate;
+  private final RedisTemplate<String, String> redisTemplate;
 
   /**
    * Chạy mỗi 2 phút để quét và giải phóng các booking PENDING đã hết hạn. Xử lý trường hợp người
@@ -68,6 +70,17 @@ public class BookingCleanupJob {
                 });
 
         bookingRepository.save(booking);
+
+        // Xóa Redis seat locks
+        try {
+          List<String> keys = booking.getTickets().stream()
+              .map(t -> "seat_hold:" + booking.getShowtime().getId() + ":" + t.getSeat().getId())
+              .toList();
+          redisTemplate.delete(keys);
+        } catch (Exception ex) {
+          log.warn("[BookingCleanupJob] Không thể xóa Redis seat lock: {}", ex.getMessage());
+        }
+
         log.info("[BookingCleanupJob] Đã giải phóng booking: {}", booking.getBookingCode());
 
       } catch (Exception e) {

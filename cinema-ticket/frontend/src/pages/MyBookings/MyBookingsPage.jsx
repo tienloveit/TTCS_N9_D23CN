@@ -178,7 +178,7 @@ export default function MyBookingsPage() {
                     <div style={{ marginTop: 12, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                       <button
                         className="btn btn-primary"
-                        onClick={() => navigate(`/payment/${booking.bookingId}`)}
+                        onClick={() => navigate(`/booking/${booking.bookingId}/payment`)}
                       > 💳 Thanh toán ngay </button>
                       <button
                         className="btn btn-secondary"

@@ -228,6 +228,7 @@ public class BookingService {
     return bookingMapper.toBookingResponse(booking);
   }
 
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   @Transactional(readOnly = true)
   public List<BookingResponse> getAllBookings() {
     return bookingRepository.findAll().stream().map(bookingMapper::toBookingResponse).toList();
@@ -236,6 +237,12 @@ public class BookingService {
   @Transactional(readOnly = true)
   public BookingResponse getBookingById(Long bookingId) {
     Booking booking = getBooking(bookingId);
+    User user = getUserCurrent();
+    boolean isOwner = booking.getUser().getId().equals(user.getId());
+    boolean isStaffOrAdmin = user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.STAFF;
+    if (!isOwner && !isStaffOrAdmin) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
     return bookingMapper.toBookingResponse(booking);
   }
 
@@ -261,6 +268,7 @@ public class BookingService {
         .toList();
   }
 
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   @Transactional
   public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
     Booking booking = getBooking(bookingId);
@@ -275,6 +283,12 @@ public class BookingService {
   @Transactional
   public void cancelBooking(Long bookingId) {
     Booking booking = getBooking(bookingId);
+    User user = getUserCurrent();
+    boolean isOwner = booking.getUser().getId().equals(user.getId());
+    boolean isStaffOrAdmin = user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.STAFF;
+    if (!isOwner && !isStaffOrAdmin) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
 
     // Chỉ cho phép huỷ khi trạng thái PENDING (đang chờ thanh toán)
     if (booking.getStatus() != BookingStatus.PENDING) {

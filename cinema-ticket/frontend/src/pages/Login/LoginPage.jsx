@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -8,8 +8,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +24,8 @@ export default function LoginPage() {
     try {
       await login(username, password);
       toast.success('Đăng nhập thành công!');
-      navigate('/');
+      const from = location.state?.from || '/';
+      navigate(from, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Đăng nhập thất bại';
       setError(msg);
