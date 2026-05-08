@@ -89,7 +89,7 @@ foreach ($name in $genreNames) {
 # 4. CREATE DIRECTORS
 # ==========================================
 Write-Host "`n========== CREATE DIRECTORS ==========" -ForegroundColor Cyan
-$directorNames = @("Ly Hai", "Anthony Russo", "Tran Thanh", "Pete Docter", "Michael Chaves")
+$directorNames = @("Ly Hai", "Joss Whedon", "Tran Thanh", "Kelsey Mann", "James Wan")
 $directorIds = @{}
 foreach ($name in $directorNames) {
     $res = Invoke-Api -Method POST -Uri "$BASE/director" -Body @{ name = $name } -Headers $headers
@@ -165,9 +165,9 @@ $movieData = @(
         genreIds = @($genreIds["Tam ly"], $genreIds["Hanh dong"])
     },
     @{
-        movieName = "Avengers: Secret Wars"
-        description = "The Avengers face their greatest threat yet as the multiverse collapses. Heroes from every reality must unite for the final battle."
-        durationMinutes = 165
+        movieName = "The Avengers"
+        description = "Earth's mightiest heroes learn to fight as a team when Loki and an alien army threaten New York."
+        durationMinutes = 143
         ageRating = "T13"
         language = "English"
         subtitle = "Vietnamese"
@@ -176,7 +176,7 @@ $movieData = @(
         trailerUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         releaseDate = "2026-04-01"
         endDate = "2026-07-01"
-        directorId = $directorIds["Anthony Russo"]
+        directorId = $directorIds["Joss Whedon"]
         genreIds = @($genreIds["Hanh dong"])
     },
     @{
@@ -194,33 +194,33 @@ $movieData = @(
         genreIds = @($genreIds["Lang man"], $genreIds["Tam ly"])
     },
     @{
-        movieName = "Inside Out 3"
-        description = "Riley is now in college! New emotions emerge as she navigates adulthood, friendship, and finding her place in the world."
-        durationMinutes = 105
+        movieName = "Inside Out 2"
+        description = "Riley enters her teenage years as new emotions arrive and shake up the familiar team inside her mind."
+        durationMinutes = 96
         ageRating = "P"
         language = "English"
         subtitle = "Vietnamese"
         status = "NOW_SHOWING"
-        thumbnailUrl = "https://upload.wikimedia.org/wikipedia/en/0/0a/Inside_Out_%282015_movie%29_poster.jpg"
+        thumbnailUrl = "https://upload.wikimedia.org/wikipedia/en/f/f7/Inside_Out_2_poster.jpg"
         trailerUrl = "https://www.youtube.com/watch?v=example4"
         releaseDate = "2026-03-15"
         endDate = "2026-06-15"
-        directorId = $directorIds["Pete Docter"]
+        directorId = $directorIds["Kelsey Mann"]
         genreIds = @($genreIds["Hoat hinh"], $genreIds["Hai huoc"])
     },
     @{
-        movieName = "The Conjuring 4: Last Rites"
-        description = "Ed and Lorraine Warren face their most terrifying case yet in the final chapter of the Conjuring series."
-        durationMinutes = 120
+        movieName = "The Conjuring"
+        description = "Paranormal investigators Ed and Lorraine Warren help a family haunted by a dark presence in their farmhouse."
+        durationMinutes = 112
         ageRating = "T18"
         language = "English"
         subtitle = "Vietnamese"
         status = "UPCOMING"
-        thumbnailUrl = "https://upload.wikimedia.org/wikipedia/en/1/1f/Conjuring_poster.jpg"
+        thumbnailUrl = "https://upload.wikimedia.org/wikipedia/en/8/8c/The_Conjuring_poster.jpg"
         trailerUrl = "https://www.youtube.com/watch?v=example5"
         releaseDate = "2026-05-20"
         endDate = "2026-08-20"
-        directorId = $directorIds["Michael Chaves"]
+        directorId = $directorIds["James Wan"]
         genreIds = @($genreIds["Kinh di"], $genreIds["Tam ly"])
     }
 )
@@ -302,7 +302,7 @@ if ($movieIds.Count -ge 3 -and $roomIds.Count -ge 1) {
     if ($res) { $showtimeIds += $res.result.showtimeId; Write-Host "  + Showtime: Mai | $date 16:30 - Room 1" -ForegroundColor Gray }
 }
 
-# Movie 4 (Inside Out 3) - Room 2: Tomorrow
+# Movie 4 (Inside Out 2) - Room 2: Tomorrow
 if ($movieIds.Count -ge 4 -and $roomIds.Count -ge 2) {
     $date = $today.AddDays(1).ToString("yyyy-MM-dd")
     $res = Invoke-Api -Method POST -Uri "$BASE/showtime" -Body @{
@@ -310,14 +310,14 @@ if ($movieIds.Count -ge 4 -and $roomIds.Count -ge 2) {
         startTime = "${date}T10:00:00"; endTime = "${date}T11:45:00"
         status = "OPEN"
     } -Headers $headers
-    if ($res) { $showtimeIds += $res.result.showtimeId; Write-Host "  + Showtime: Inside Out 3 | $date 10:00 - Room 2 (3D)" -ForegroundColor Gray }
+    if ($res) { $showtimeIds += $res.result.showtimeId; Write-Host "  + Showtime: Inside Out 2 | $date 10:00 - Room 2 (3D)" -ForegroundColor Gray }
 
     $res = Invoke-Api -Method POST -Uri "$BASE/showtime" -Body @{
         roomId = $roomIds[1]; movieId = $movieIds[3]
         startTime = "${date}T14:00:00"; endTime = "${date}T15:45:00"
         status = "OPEN"
     } -Headers $headers
-    if ($res) { $showtimeIds += $res.result.showtimeId; Write-Host "  + Showtime: Inside Out 3 | $date 14:00 - Room 2 (3D)" -ForegroundColor Gray }
+    if ($res) { $showtimeIds += $res.result.showtimeId; Write-Host "  + Showtime: Inside Out 2 | $date 14:00 - Room 2 (3D)" -ForegroundColor Gray }
 }
 
 # Branch 2 rooms - Showtimes
