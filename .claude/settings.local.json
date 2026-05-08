@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw spring-boot:run -Dspring-boot.run.arguments=\"--spring.profiles.active=dev\")",
+      "Bash(curl -s http://localhost:8080/showtime)",
+      "Bash(mysql -u root cinema)",
+      "Bash(curl -s http://localhost:8081/api/chat -X POST -H \"Content-Type: application/json\" -d '{\"message\":\"test\"}')"
+    ]
+  }
+}

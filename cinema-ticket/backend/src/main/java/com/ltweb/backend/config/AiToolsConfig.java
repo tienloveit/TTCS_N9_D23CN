@@ -5,12 +5,14 @@ import com.ltweb.backend.dto.response.FoodResponse;
 import com.ltweb.backend.dto.response.MovieResponse;
 import com.ltweb.backend.dto.response.ShowtimeResponse;
 import com.ltweb.backend.dto.response.TicketResponse;
+import com.ltweb.backend.dto.response.BookingResponse;
 import com.ltweb.backend.service.BranchService;
 import com.ltweb.backend.service.FoodService;
 import com.ltweb.backend.service.MovieService;
 import com.ltweb.backend.service.SeatTypePriceService;
 import com.ltweb.backend.service.ShowtimeService;
 import com.ltweb.backend.service.TicketService;
+import com.ltweb.backend.service.BookingService;
 import com.ltweb.backend.dto.response.SeatTypePriceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class AiToolsConfig {
     private final BranchService branchService;
     private final FoodService foodService;
     private final SeatTypePriceService seatTypePriceService;
+    private final BookingService bookingService;
 
     public record MovieSearchRequest(String title) {
     }
@@ -86,6 +89,12 @@ public class AiToolsConfig {
     public record TicketPriceResponse(String result) {
     }
 
+    public record BookingHistoryRequest(String userId) {
+    }
+
+    public record BookingHistoryResponse(String result) {
+    }
+
     @Bean
     @Description("Tìm kiếm thông tin phim đang chiếu hoặc sắp chiếu dựa trên tên phim hoặc từ khóa.")
     public Function<MovieSearchRequest, MovieSearchResponse> get_movie_info() {
@@ -117,7 +126,7 @@ public class AiToolsConfig {
     }
 
     @Bean
-    @Description("Lấy lịch chiếu phim của một rạp chiếu (branch) vào một ngày cụ thể (định dạng YYYY-MM-DD).")
+    @Description("Lấy lịch chiếu phim của một rạp chiếu (branch) vào một ngày cụ thể (định dạng YYYY-MM-DD). Ví dụ: date='2026-05-21', branchName='Nguyễn Huệ'.")
     public Function<ShowtimeRequest, ShowtimeResponseData> get_showtimes() {
         return request -> {
             log.info("AI Function getShowtimes called with params: date={}, branchName={}", request.date(),
@@ -125,6 +134,12 @@ public class AiToolsConfig {
             if (request.date() == null || request.branchName() == null) {
                 return new ShowtimeResponseData(
                         "Dữ liệu thiếu. Hãy yêu cầu người dùng cung cấp đủ tên rạp và ngày xem để tra cứu.");
+            }
+
+            // Validate date format YYYY-MM-DD
+            if (!request.date().matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return new ShowtimeResponseData(
+                        "Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21). Ngày nhận được: " + request.date());
             }
 
             // Lấy toàn bộ lịch chiếu và dùng filter để chắt lọc (tránh phải query bằng
@@ -184,7 +199,7 @@ public class AiToolsConfig {
     }
 
     @Bean
-    @Description("Kiểm tra danh sách ghế trống cho một suất chiếu cụ thể. BẮT BUỘC phải hỏi người dùng đủ 4 thông tin: Tên phim, Tên rạp, Ngày chiếu, Giờ chiếu trước khi gọi hàm này.")
+    @Description("Kiểm tra danh sách ghế trống cho một suất chiếu cụ thể. BẮT BUỘC phải hỏi người dùng đủ 4 thông tin: Tên phim, Tên rạp, Ngày chiếu (YYYY-MM-DD), Giờ chiếu (HH:mm) trước khi gọi hàm này.")
     public Function<SeatRequest, SeatResponse> getAvailableSeats() {
         return request -> {
             log.info("AI Function getAvailableSeats called with params: movie={}, branch={}, date={}, time={}",
@@ -194,6 +209,16 @@ public class AiToolsConfig {
                     || request.time() == null) {
                 return new SeatResponse(
                         "Chưa đủ thông tin (Tên phim, Tên rạp, Ngày chiếu, Giờ chiếu). Hãy hỏi lại người dùng để lấy đủ 4 thông tin này.");
+            }
+
+            // Validate date format
+            if (!request.date().matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return new SeatResponse("Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21).");
+            }
+
+            // Validate time format
+            if (!request.time().matches("\\d{2}:\\d{2}")) {
+                return new SeatResponse("Lỗi format giờ. Giờ phải có định dạng HH:mm (ví dụ: 19:30).");
             }
 
             // Tìm Showtime ID tương ứng
@@ -239,7 +264,7 @@ public class AiToolsConfig {
     }
 
     @Bean
-    @Description("Thực hiện ĐẶT VÉ (Booking). BẮT BUỘC phải có đủ 4 thông tin: Tên phim, Tên rạp, Ngày chiếu, Giờ chiếu.")
+    @Description("Thực hiện ĐẶT VÉ (Booking). BẮT BUỘC phải có đủ 4 thông tin: Tên phim, Tên rạp, Ngày chiếu (YYYY-MM-DD), Giờ chiếu (HH:mm).")
     public Function<BookTicketRequest, BookTicketResponse> book_ticket() {
         return request -> {
             log.info("AI Function bookTicket called with params: movie={}, branch={}, date={}, time={}",
@@ -249,6 +274,16 @@ public class AiToolsConfig {
                     || request.time() == null) {
                 return new BookTicketResponse(
                         "Chưa đủ thông tin để tìm suất chiếu. Vui lòng kiểm tra và hỏi người dùng cung cấp đủ: Tên phim, Rạp, Ngày, Giờ.");
+            }
+
+            // Validate date format
+            if (!request.date().matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return new BookTicketResponse("Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21).");
+            }
+
+            // Validate time format
+            if (!request.time().matches("\\d{2}:\\d{2}")) {
+                return new BookTicketResponse("Lỗi format giờ. Giờ phải có định dạng HH:mm (ví dụ: 19:30).");
             }
 
             // Tìm Showtime ID tương ứng
@@ -350,7 +385,7 @@ public class AiToolsConfig {
             if (movies.isEmpty()) {
                 return new UpcomingResponse("Hiện chưa có thông tin phim sắp chiếu.");
             }
-            StringBuilder sb = new StringBuilder("Các phim sắp ra mắt tại CinemaHub:\n");
+            StringBuilder sb = new StringBuilder("Các phim sắp ra mắt tại CinemaPTIT:\n");
             for (MovieResponse m : movies) {
                 sb.append("- ").append(m.getMovieName())
                         .append(" | Khởi chiếu: ").append(m.getReleaseDate())
@@ -379,7 +414,7 @@ public class AiToolsConfig {
     }
 
     @Bean
-    @Description("Tìm kiếm tất cả suất chiếu của một rạp chiếu cụ thể trong ngày hôm nay. Chỉ cần tên rạp (ví dụ: Cầu Giấy, Hà Đông).")
+    @Description("Tìm kiếm tất cả suất chiếu của một rạp chiếu cụ thể trong ngày hôm nay. Chỉ dùng khi người dùng hỏi 'hôm nay' hoặc 'today' mà KHÔNG nói rõ ngày cụ thể. Nếu người dùng nói rõ ngày (ví dụ: 21/5, ngày 15 tháng 6) thì dùng get_showtimes thay thế.")
     public Function<BranchShowtimeRequest, ShowtimeResponseData> get_showtimes_by_branch() {
         return request -> {
             log.info("AI Function get_showtimes_by_branch called with params: branchName={}", request.branchName());
@@ -459,6 +494,44 @@ public class AiToolsConfig {
             }
 
             return new ShowtimeResponseData(sb.toString());
+        };
+    }
+
+    @Bean
+    @Description("Lấy lịch sử đặt vé của người dùng hiện tại. Gọi khi người dùng hỏi 'vé của tôi', 'lịch sử đặt vé', 'tôi đã đặt vé gì', 'booking của tôi'.")
+    public Function<StatusRequest, BookingHistoryResponse> getMyBookingHistory() {
+        return request -> {
+            log.info("AI Function getMyBookingHistory called");
+            try {
+                List<BookingResponse> bookings = bookingService.getMyBookingsList();
+                if (bookings.isEmpty()) {
+                    return new BookingHistoryResponse("Bạn chưa có lịch sử đặt vé nào.");
+                }
+
+                StringBuilder sb = new StringBuilder("Lịch sử đặt vé của bạn:\n\n");
+                for (BookingResponse b : bookings) {
+                    sb.append("📋 Mã booking: ").append(b.getBookingCode()).append("\n");
+                    sb.append("   🎬 Phim: ").append(b.getMovieName() != null ? b.getMovieName() : "N/A").append("\n");
+                    sb.append("   🏢 Rạp: ").append(b.getBranchName() != null ? b.getBranchName() : "N/A").append("\n");
+                    sb.append("   🕐 Giờ chiếu: ").append(b.getShowtimeStart() != null
+                            ? b.getShowtimeStart().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "N/A").append("\n");
+                    sb.append("   💺 Ghế: ");
+                    if (b.getSeatCodes() != null && !b.getSeatCodes().isEmpty()) {
+                        sb.append(String.join(", ", b.getSeatCodes()));
+                    } else {
+                        sb.append("N/A");
+                    }
+                    sb.append("\n");
+                    sb.append("   💰 Tổng tiền: ").append(b.getTotalAmount() != null ? b.getTotalAmount() + " VNĐ" : "N/A").append("\n");
+                    sb.append("   📊 Trạng thái: ").append(b.getStatus()).append("\n");
+                    sb.append("   💳 Thanh toán: ").append(b.getPaymentStatus()).append("\n");
+                    sb.append("\n");
+                }
+                return new BookingHistoryResponse(sb.toString());
+            } catch (Exception e) {
+                log.error("Error getting booking history: {}", e.getMessage());
+                return new BookingHistoryResponse("Không thể lấy lịch sử đặt vé. Vui lòng đăng nhập để xem lịch sử.");
+            }
         };
     }
 }

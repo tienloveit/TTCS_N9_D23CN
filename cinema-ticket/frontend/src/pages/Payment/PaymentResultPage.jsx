@@ -3,29 +3,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { vnpayApi } from '../../api';
 import confetti from 'canvas-confetti';
 import { CheckCircleIcon, TicketIcon, XCircleIcon } from '../../components/Common/CinemaIcons';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('processing');
-
-  useEffect(() => {
-    const params = Object.fromEntries(searchParams.entries());
-    
-    vnpayApi.handleReturn(params)
-      .then((res) => {
-        if (res.data.code === 200) {
-          setStatus('success');
-          // Trigger celebration
-          handleCelebrate();
-        } else {
-          setStatus('error');
-        }
-      })
-      .catch(() => {
-        setStatus('error');
-      });
-  }, [searchParams]);
+  const { user } = useAuth();
+  const isStaffOrAdmin = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
   const handleCelebrate = () => {
     const duration = 5 * 1000;
@@ -50,6 +35,26 @@ export default function PaymentResultPage() {
     }, 250);
   };
 
+  useEffect(() => {
+    const params = Object.fromEntries(searchParams.entries());
+    
+    vnpayApi.handleReturn(params)
+      .then((res) => {
+        if (res.data.code === 200) {
+          setStatus('success');
+          // Trigger celebration
+          handleCelebrate();
+        } else {
+          setStatus('error');
+        }
+      })
+      .catch(() => {
+        setStatus('error');
+      });
+  }, [searchParams]);
+
+
+
   return (
     <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
       <div className="container" style={{ maxWidth: 500, textAlign: 'center' }}>
@@ -62,11 +67,18 @@ export default function PaymentResultPage() {
               Bạn có thể xem vé và mã QR trong phần lịch sử đặt vé.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <button className="btn btn-primary btn-lg" onClick={() => navigate('/my-bookings')}>
-                <TicketIcon className="btn-icon" />
-                Xem vé của tôi
-              </button>
-              <button className="btn btn-ghost" onClick={() => navigate('/')}>
+              {isStaffOrAdmin ? (
+                <button className="btn btn-primary btn-lg" onClick={() => navigate('/staff/booking')}>
+                  <TicketIcon className="btn-icon" />
+                  Tiếp tục bán vé
+                </button>
+              ) : (
+                <button className="btn btn-primary btn-lg" onClick={() => navigate('/my-bookings')}>
+                  <TicketIcon className="btn-icon" />
+                  Xem vé của tôi
+                </button>
+              )}
+              <button className="btn btn-ghost" onClick={() => navigate(isStaffOrAdmin ? '/admin/dashboard' : '/')}>
                 Quay lại trang chủ
               </button>
             </div>
@@ -79,7 +91,7 @@ export default function PaymentResultPage() {
               Đã có lỗi xảy ra hoặc giao dịch bị hủy. Đừng lo lắng, tiền của bạn vẫn an toàn nếu chưa bị trừ.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <button className="btn btn-primary" onClick={() => navigate('/')}>Quay lại Trang chủ</button>
+              <button className="btn btn-primary" onClick={() => navigate(isStaffOrAdmin ? '/staff/booking' : '/')}>Quay lại {isStaffOrAdmin ? 'đặt vé' : 'Trang chủ'}</button>
             </div>
           </div>
         ) : (

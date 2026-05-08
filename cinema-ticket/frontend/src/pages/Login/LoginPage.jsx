@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate, Link, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import { EyeIcon, EyeOffIcon } from '../../components/Common/CinemaIcons';
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -58,14 +60,36 @@ export default function LoginPage() {
 
           <div className="form-group">
             <label className="form-label">Mật khẩu</label>
-            <input
-              className="input"
-              type="password"
-              placeholder="Nhập mật khẩu"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                className="input"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Nhập mật khẩu"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{ paddingRight: '40px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+              >
+                {showPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
+              </button>
+            </div>
           </div>
 
           <button
