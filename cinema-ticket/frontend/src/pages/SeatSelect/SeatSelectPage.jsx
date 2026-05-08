@@ -171,7 +171,7 @@ export default function SeatSelectPage() {
 
   const handleBooking = async () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: `/showtime/${showtimeId}/seats` } });
       return;
     }
 

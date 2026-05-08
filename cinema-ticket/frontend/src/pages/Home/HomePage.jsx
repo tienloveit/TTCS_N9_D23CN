@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion } from 'framer-motion';
 import { chatApi, movieApi, showtimeApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import SafeImage from '../../components/Common/SafeImage';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';
@@ -100,6 +101,7 @@ export default function HomePage() {
     },
   ]);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const aiMessagesRef = useRef(null);
 
   useEffect(() => {
@@ -363,6 +365,10 @@ export default function HomePage() {
   const handleQuickBooking = (event) => {
     event.preventDefault();
     if (quickShowtimeId) {
+      if (!isAuthenticated) {
+        navigate('/login', { state: { from: `/showtime/${quickShowtimeId}/seats` } });
+        return;
+      }
       navigate(`/showtime/${quickShowtimeId}/seats`);
     }
   };

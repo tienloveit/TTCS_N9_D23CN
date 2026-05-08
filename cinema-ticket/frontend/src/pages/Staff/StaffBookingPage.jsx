@@ -19,12 +19,12 @@ const formatTime = (value) =>
 const formatDateTime = (value) =>
   value
     ? new Date(value).toLocaleString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
     : '';
 
 export default function StaffBookingPage() {
@@ -37,7 +37,7 @@ export default function StaffBookingPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [timeFilter, setTimeFilter] = useState('ALL');
-
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedFoods, setSelectedFoods] = useState({});
@@ -223,7 +223,7 @@ export default function StaffBookingPage() {
             return hour >= 22 || hour < 6;
           case 'UPCOMING': // Chưa chiếu (sau thời điểm hiện tại)
             return startTime > now;
-          case 'ONGOING': { // Đang chiếu
+          case 'ONGOING': {
             const endTime = showtime.endTime ? new Date(showtime.endTime) : null;
             return startTime <= now && (!endTime || endTime > now);
           }
@@ -233,8 +233,15 @@ export default function StaffBookingPage() {
       });
     }
 
-    // Chỉ hiển thị suất có thể bán
-    result = result.filter((showtime) => isShowtimeAvailable(showtime));
+    // Filter by status
+    if (statusFilter !== 'ALL') {
+      result = result.filter((showtime) => {
+        const available = isShowtimeAvailable(showtime);
+        if (statusFilter === 'AVAILABLE') return available;
+        if (statusFilter === 'UNAVAILABLE') return !available;
+        return true;
+      });
+    }
 
     // Filter by room type
     if (roomTypeFilter !== 'ALL') {
@@ -245,7 +252,7 @@ export default function StaffBookingPage() {
     }
 
     return result;
-  }, [branchFilter, showtimes, searchQuery, dateFilter, timeFilter, roomTypeFilter]);
+  }, [branchFilter, showtimes, searchQuery, dateFilter, timeFilter, statusFilter, roomTypeFilter]);
 
   const showtimeGroups = useMemo(() => {
     const grouped = filteredShowtimes.reduce((acc, showtime) => {
@@ -489,7 +496,14 @@ export default function StaffBookingPage() {
               </select>
             </label>
 
-
+            <label>
+              <span className="form-label">Trang thai</span>
+              <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="ALL">Tat ca</option>
+                <option value="AVAILABLE">Co the ban</option>
+                <option value="UNAVAILABLE">Khong ban</option>
+              </select>
+            </label>
 
             <label>
               <span className="form-label">Loai phong</span>
@@ -504,7 +518,7 @@ export default function StaffBookingPage() {
             </label>
 
             {/* Clear filters button */}
-            {(searchQuery || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || roomTypeFilter !== 'ALL') && (
+            {(searchQuery || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL') && (
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <button
                   type="button"
@@ -514,6 +528,7 @@ export default function StaffBookingPage() {
                     setDateFilter('');
                     setBranchFilter('ALL');
                     setTimeFilter('ALL');
+                    setStatusFilter('ALL');
                     setRoomTypeFilter('ALL');
                   }}
                   style={{ width: '100%' }}
@@ -527,7 +542,7 @@ export default function StaffBookingPage() {
 
         {filteredShowtimes.length === 0 ? (
           <div className="empty-state">
-            {searchQuery.trim() || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || roomTypeFilter !== 'ALL'
+            {searchQuery.trim() || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL'
               ? 'Khong tim thay suat chieu nao phu hop voi bo loc'
               : 'Khong co suat chieu phu hop voi MoviePTIT da chon.'}
           </div>
@@ -767,10 +782,10 @@ export default function StaffBookingPage() {
       {lastBooking && (
         <div className="admin-table-card" style={{ padding: 24, marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green)' }}>
-             <span style={{ fontSize: '1.8rem' }}>✓</span>
-             <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
+            <span style={{ fontSize: '1.8rem' }}>✓</span>
+            <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
           </div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
             <DigitalTicket booking={{
               ...lastBooking,
@@ -792,15 +807,15 @@ export default function StaffBookingPage() {
               </div>
             </div>
           )}
-          
+
           <div style={{ marginTop: 32, textAlign: 'center' }}>
-             <button 
-                type="button"
-                className="btn"
-                onClick={() => window.location.reload()}
-             >
-                Tạo đơn hàng mới
-             </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => window.location.reload()}
+            >
+              Tạo đơn hàng mới
+            </button>
           </div>
         </div>
       )}

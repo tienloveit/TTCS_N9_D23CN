@@ -297,7 +297,7 @@ export default function MovieDetailPage() {
 
   const handleRateMovie = async (score) => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: `/movie/${id}` } });
       return;
     }
 
@@ -561,7 +561,13 @@ export default function MovieDetailPage() {
                             key={showtime.showtimeId}
                             type="button"
                             className="cinema-showtime-btn"
-                            onClick={() => navigate(`/showtime/${showtime.showtimeId}/seats`)}
+                            onClick={() => {
+                              if (!isAuthenticated) {
+                                navigate('/login', { state: { from: `/movie/${id}` } });
+                                return;
+                              }
+                              navigate(`/showtime/${showtime.showtimeId}/seats`);
+                            }}
                             title={`${row.roomName} • ${formatTime(showtime.startTime)} - ${formatTime(
                               showtime.endTime
                             )}`}

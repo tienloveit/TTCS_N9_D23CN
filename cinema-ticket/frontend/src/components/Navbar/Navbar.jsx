@@ -195,12 +195,12 @@ export default function Navbar() {
                </div>
                {isAdmin && (
                  <Link to="/admin" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                   Quan tri
+                   Quản trị
                  </Link>
                )}
                {(isStaff || isAdmin) && (
                  <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                   {isStaff ? 'Nhan vien' : 'Quay ve'}
+                   {isStaff ? 'Nhân viên' : 'Quầy vé'}
                  </Link>
                )}
                <button className="btn-ghost" onClick={handleLogout} style={{ padding: '6px 12px' }}>Đăng xuất</button>

@@ -1,6 +1,6 @@
 spring:
   config:
-    import: optional:file:./.env[.properties], optional:file:./backend/.env[.properties], optional:file:./cinema-ticket/backend/.env[.properties]
+    import: optional:file:./.env[.properties], optional:file:./backend/.env[.properties], optional:file:./cinema-ticket/backend/.env[.properties], optional:file:./TTCS_N9_D23CN/cinema-ticket/backend/.env[.properties]
 
   application:
     name: backend

@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { userApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import { EyeIcon, EyeOffIcon } from '../../components/Common/CinemaIcons';
 
 export default function RegisterPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -15,6 +19,11 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -82,12 +91,72 @@ export default function RegisterPage() {
 
           <div className="form-group">
             <label className="form-label">Mật khẩu</label>
-            <input className="input" name="password" type="password" placeholder="Nhập mật khẩu" value={form.password} onChange={handleChange} required />
+            <div style={{ position: 'relative' }}>
+              <input 
+                className="input" 
+                name="password" 
+                type={showPassword ? 'text' : 'password'} 
+                placeholder="Nhập mật khẩu" 
+                value={form.password} 
+                onChange={handleChange} 
+                required 
+                style={{ paddingRight: '40px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+              >
+                {showPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">Xác nhận mật khẩu</label>
-            <input className="input" name="confirmPassword" type="password" placeholder="Nhập lại mật khẩu" value={form.confirmPassword} onChange={handleChange} required />
+            <div style={{ position: 'relative' }}>
+              <input 
+                className="input" 
+                name="confirmPassword" 
+                type={showConfirmPassword ? 'text' : 'password'} 
+                placeholder="Nhập lại mật khẩu" 
+                value={form.confirmPassword} 
+                onChange={handleChange} 
+                required 
+                style={{ paddingRight: '40px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+              >
+                {showConfirmPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
+              </button>
+            </div>
           </div>
 
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%', marginTop: 8 }}>

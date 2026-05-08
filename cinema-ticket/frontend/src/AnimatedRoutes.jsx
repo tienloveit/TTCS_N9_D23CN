@@ -52,6 +52,14 @@ const PageWrapper = ({ children }) => (
   </MotionDiv>
 );
 
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  return children;
+};
+
 const AdminRoute = ({ children }) => {
   const { user, loading, isAdmin, isStaff } = useAuth();
   if (loading) return <div className="loading"><div className="spinner" /></div>;
@@ -121,9 +129,9 @@ const AnimatedRoutes = () => {
           <Route path="/movie/:id" element={<PageWrapper><MovieDetailPage /></PageWrapper>} />
           <Route path="/branches" element={<PageWrapper><BranchListPage /></PageWrapper>} />
           <Route path="/branch/:branchId" element={<PageWrapper><BranchDetailPage /></PageWrapper>} />
-          <Route path="/profile" element={<PageWrapper><ProfilePage /></PageWrapper>} />
-          <Route path="/my-bookings" element={<PageWrapper><MyBookingsPage /></PageWrapper>} />
-          <Route path="/booking/:bookingId/payment" element={<PageWrapper><PaymentPage /></PageWrapper>} />
+          <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage /></PageWrapper></PrivateRoute>} />
+          <Route path="/my-bookings" element={<PrivateRoute><PageWrapper><MyBookingsPage /></PageWrapper></PrivateRoute>} />
+          <Route path="/booking/:bookingId/payment" element={<PrivateRoute><PageWrapper><PaymentPage /></PageWrapper></PrivateRoute>} />
           <Route path="/payment/vnpay-return" element={<PageWrapper><PaymentResultPage /></PageWrapper>} />
           <Route
             path="/showtime/:showtimeId/seats"
