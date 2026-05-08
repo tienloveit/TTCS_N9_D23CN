@@ -1,5 +1,6 @@
 package com.ltweb.backend.dto.request;
 
+import com.ltweb.backend.enums.UserRole;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
@@ -22,4 +23,5 @@ public class CreateUserRequest {
 
   private String gender;
   private LocalDate dob;
+  private UserRole role;  // optional – admin can assign role at creation
 }

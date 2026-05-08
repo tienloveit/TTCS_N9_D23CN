@@ -42,7 +42,7 @@ public class UserService {
       throw new AppException(ErrorCode.USER_EXISTED);
     }
     User user = userMapper.toUser(createUserRequest);
-    user.setRole(UserRole.USER);
+    user.setRole(createUserRequest.getRole() != null ? createUserRequest.getRole() : UserRole.USER);
     user.setStatus(UserStatus.ACTIVE);
     user.setPassword(passwordEncoder.encode(createUserRequest.getPassword()));
     User savedUser = userRepository.save(user);
