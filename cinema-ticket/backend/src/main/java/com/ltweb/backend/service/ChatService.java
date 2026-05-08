@@ -5,6 +5,9 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @Slf4j
 public class ChatService {
@@ -15,10 +18,12 @@ public class ChatService {
                 // Cấu hình ChatClient với system prompt, chat memory và các function beans
                 this.chatClient = chatClientBuilder
                                 .defaultSystem("Bạn là hệ thống AI thông minh của CinemaPTIT. " +
+                        "THÔNG TIN QUAN TRỌNG: Hôm nay là ngày {current_date} (năm 2026). " +
                         "QUY TẮC: " +
                         "1. Luôn ưu tiên dùng Tools để lấy dữ liệu thực tế. " +
-                        "2. Trả lời ngắn gọn, lịch sự, đúng trọng tâm. " +
-                        "3. Nếu khách muốn đặt vé, hãy hướng dẫn họ cung cấp đủ thông tin (Phim, Rạp, Ngày, Giờ).")
+                        "2. Khi người dùng hỏi về ngày mà không nói rõ năm, hãy hiểu là năm 2026. " +
+                        "3. Trả lời ngắn gọn, lịch sự, đúng trọng tâm. " +
+                        "4. Nếu khách muốn đặt vé, hãy hướng dẫn họ cung cấp đủ thông tin (Phim, Rạp, Ngày, Giờ).")
                                 // Thêm Chat Memory để lưu trữ lịch sử hội thoại
                                 .defaultAdvisors(new MessageChatMemoryAdvisor(redisChatMemory))
                                 // Đăng ký toàn bộ kho công cụ (Tools) cho AI
@@ -26,7 +31,7 @@ public class ChatService {
                                         "get_movie_info", "get_showtimes", "book_ticket", "get_now_showing_movies",
                                         "searchMoviesByGenre", "getAvailableSeats", "getBranchInfo", "getSnackMenu",
                                         "getUpcomingMovies", "get_ticket_prices", "get_showtimes_by_branch",
-                                        "get_upcoming_movies_by_branch"
+                                        "get_upcoming_movies_by_branch", "getMyBookingHistory"
                                 )
                                 .build();
         }
@@ -37,7 +42,11 @@ public class ChatService {
 
                 for (int attempt = 1; attempt <= maxRetries; attempt++) {
                         try {
+                                // Lấy ngày hiện tại để inject vào system prompt
+                                String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
                                 String result = this.chatClient.prompt()
+                                                .system(sp -> sp.param("current_date", currentDate))
                                                 .user(message)
                                                 .advisors(a -> a.param(
                                                                 MessageChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY,

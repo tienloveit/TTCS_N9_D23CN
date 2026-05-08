@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { bookingApi, foodApi, showtimeApi, ticketApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
+import DigitalTicket from '../../components/Ticket/DigitalTicket';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -26,14 +28,16 @@ const formatDateTime = (value) =>
     : '';
 
 export default function StaffBookingPage() {
+  const navigate = useNavigate();
   const [showtimes, setShowtimes] = useState([]);
   const [foods, setFoods] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [showtimeId, setShowtimeId] = useState('');
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [timeFilter, setTimeFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+
   const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedFoods, setSelectedFoods] = useState({});
@@ -54,14 +58,14 @@ export default function StaffBookingPage() {
   useEffect(() => {
     let mounted = true;
 
-    Promise.allSettled([showtimeApi.getToday(), foodApi.getAll()])
+    Promise.allSettled([showtimeApi.getAll(), foodApi.getAll()])
       .then(([showtimeResult, foodResult]) => {
         if (!mounted) return;
 
         if (showtimeResult.status === 'fulfilled') {
           setShowtimes(showtimeResult.value.data.result || []);
         } else {
-          setError('Khong tai duoc danh sach suat chieu hom nay');
+          setError('Khong tai duoc danh sach suat chieu');
         }
 
         if (foodResult.status === 'fulfilled') {
@@ -191,6 +195,15 @@ export default function StaffBookingPage() {
       });
     }
 
+    // Filter by date
+    if (dateFilter) {
+      result = result.filter((showtime) => {
+        if (!showtime.startTime) return false;
+        const showtimeDate = new Date(showtime.startTime).toISOString().split('T')[0];
+        return showtimeDate === dateFilter;
+      });
+    }
+
     // Filter by time
     if (timeFilter !== 'ALL') {
       const now = new Date();
@@ -210,24 +223,18 @@ export default function StaffBookingPage() {
             return hour >= 22 || hour < 6;
           case 'UPCOMING': // Chưa chiếu (sau thời điểm hiện tại)
             return startTime > now;
-          case 'ONGOING': // Đang chiếu
+          case 'ONGOING': { // Đang chiếu
             const endTime = showtime.endTime ? new Date(showtime.endTime) : null;
             return startTime <= now && (!endTime || endTime > now);
+          }
           default:
             return true;
         }
       });
     }
 
-    // Filter by status
-    if (statusFilter !== 'ALL') {
-      result = result.filter((showtime) => {
-        const available = isShowtimeAvailable(showtime);
-        if (statusFilter === 'AVAILABLE') return available;
-        if (statusFilter === 'UNAVAILABLE') return !available;
-        return true;
-      });
-    }
+    // Chỉ hiển thị suất có thể bán
+    result = result.filter((showtime) => isShowtimeAvailable(showtime));
 
     // Filter by room type
     if (roomTypeFilter !== 'ALL') {
@@ -238,7 +245,7 @@ export default function StaffBookingPage() {
     }
 
     return result;
-  }, [branchFilter, showtimes, searchQuery, timeFilter, statusFilter, roomTypeFilter]);
+  }, [branchFilter, showtimes, searchQuery, dateFilter, timeFilter, roomTypeFilter]);
 
   const showtimeGroups = useMemo(() => {
     const grouped = filteredShowtimes.reduce((acc, showtime) => {
@@ -313,11 +320,24 @@ export default function StaffBookingPage() {
   const foodQuantity = selectedFoodItems.reduce((sum, food) => sum + food.quantity, 0);
   const total = seatTotal + foodTotal;
 
-  const isShowtimeAvailable = (showtime) => {
+  function isShowtimeAvailable(showtime) {
     const now = new Date();
-    const ended = showtime.endTime && new Date(showtime.endTime) < now;
-    return showtime.status === 'OPEN' && !ended;
-  };
+    const startTime = showtime.startTime ? new Date(showtime.startTime) : null;
+
+    // Suất chiếu có thể bán nếu:
+    // 1. Có startTime và chưa chiếu (hoặc vừa mới bắt đầu trong vòng 15 phút)
+    // 2. Status là OPEN (nếu có)
+    if (!startTime) return false;
+
+    // Cho phép bán vé cho đến khi phim bắt đầu chiếu + 15 phút
+    const cutoffTime = new Date(startTime.getTime() + 15 * 60 * 1000);
+    const notExpired = now < cutoffTime;
+
+    // Nếu có status, kiểm tra status === 'OPEN', nếu không có status thì coi như OK
+    const statusOk = !showtime.status || showtime.status === 'OPEN';
+
+    return notExpired && statusOk;
+  }
 
   const toggleSeat = (ticket) => {
     const status = ticket.displayStatus || ticket.ticketStatus;
@@ -371,6 +391,11 @@ export default function StaffBookingPage() {
         ...customer,
       });
       const booking = res.data.result;
+      if (paymentMethod === 'CARD') {
+        toast.info('Đang chuyển hướng đến cổng thanh toán VNPay...');
+        navigate(`/booking/${booking.bookingId}/payment`);
+        return;
+      }
       setLastBooking(booking);
       setSelectedSeats([]);
       setSelectedFoods({});
@@ -409,7 +434,7 @@ export default function StaffBookingPage() {
         <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <h3>Suat chieu hom nay</h3>
+              <h3>Suat chieu</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
                 {filteredShowtimes.length}/{showtimes.length} suat chieu duoc lay tu he thong
               </p>
@@ -426,6 +451,16 @@ export default function StaffBookingPage() {
                 placeholder="Ten phim, rap, phong..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </label>
+
+            <label>
+              <span className="form-label">Ngay chieu</span>
+              <input
+                type="date"
+                className="input"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
               />
             </label>
 
@@ -454,14 +489,7 @@ export default function StaffBookingPage() {
               </select>
             </label>
 
-            <label>
-              <span className="form-label">Trang thai</span>
-              <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="ALL">Tat ca</option>
-                <option value="AVAILABLE">Co the ban</option>
-                <option value="UNAVAILABLE">Khong ban</option>
-              </select>
-            </label>
+
 
             <label>
               <span className="form-label">Loai phong</span>
@@ -476,16 +504,16 @@ export default function StaffBookingPage() {
             </label>
 
             {/* Clear filters button */}
-            {(searchQuery || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL') && (
+            {(searchQuery || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || roomTypeFilter !== 'ALL') && (
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <button
                   type="button"
                   className="btn"
                   onClick={() => {
                     setSearchQuery('');
+                    setDateFilter('');
                     setBranchFilter('ALL');
                     setTimeFilter('ALL');
-                    setStatusFilter('ALL');
                     setRoomTypeFilter('ALL');
                   }}
                   style={{ width: '100%' }}
@@ -499,7 +527,7 @@ export default function StaffBookingPage() {
 
         {filteredShowtimes.length === 0 ? (
           <div className="empty-state">
-            {searchQuery.trim() || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL'
+            {searchQuery.trim() || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || roomTypeFilter !== 'ALL'
               ? 'Khong tim thay suat chieu nao phu hop voi bo loc'
               : 'Khong co suat chieu phu hop voi MoviePTIT da chon.'}
           </div>
@@ -737,15 +765,42 @@ export default function StaffBookingPage() {
       )}
 
       {lastBooking && (
-        <div className="admin-table-card" style={{ padding: 20, marginBottom: 20 }}>
-          <h2 style={{ marginTop: 0 }}>Ve da tao: {lastBooking.bookingCode}</h2>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {(lastBooking.tickets || []).map((ticket) => (
-              <div key={ticket.id} style={{ background: 'var(--bg-input)', padding: 16, borderRadius: 8 }}>
-                <QRCodeSVG value={ticket.qrCode || lastBooking.bookingCode} size={128} />
-                <div style={{ marginTop: 8, fontWeight: 700 }}>Ghe {ticket.seatCode}</div>
+        <div className="admin-table-card" style={{ padding: 24, marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green)' }}>
+             <span style={{ fontSize: '1.8rem' }}>✓</span>
+             <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+            <DigitalTicket booking={{
+              ...lastBooking,
+              startTime: lastBooking.showtimeStart,
+              seatCodes: lastBooking.seatCodes || (lastBooking.tickets || []).map(t => t.seatCode),
+              status: 'COMPLETED'
+            }} />
+          </div>
+
+          {lastBooking.foods && lastBooking.foods.length > 0 && (
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: '2px dashed var(--border)' }}>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>🍿 Đồ ăn cần giao cho khách:</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                {lastBooking.foods.map((bf) => (
+                  <div key={bf.id} style={{ background: 'var(--bg-card)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--border)', fontSize: '0.95rem' }}>
+                    <strong style={{ color: 'var(--accent)' }}>{bf.quantity}x</strong> {bf.foodName}
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+          
+          <div style={{ marginTop: 32, textAlign: 'center' }}>
+             <button 
+                type="button"
+                className="btn"
+                onClick={() => window.location.reload()}
+             >
+                Tạo đơn hàng mới
+             </button>
           </div>
         </div>
       )}

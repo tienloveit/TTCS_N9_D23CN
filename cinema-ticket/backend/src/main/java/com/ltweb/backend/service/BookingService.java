@@ -200,11 +200,12 @@ public class BookingService {
             .user(customer)
             .showtime(showtime)
             .totalAmount(ticketTotal.add(foodTotal))
-            .status(BookingStatus.COMPLETED)
+            .status(request.getPaymentMethod() == PaymentMethod.CARD ? BookingStatus.PENDING : BookingStatus.COMPLETED)
             .paymentCreatedAt(now)
-            .paymentStatus(PaymentStatus.PAID)
+            .paymentStatus(request.getPaymentMethod() == PaymentMethod.CARD ? PaymentStatus.PENDING : PaymentStatus.PAID)
             .paymentMethod(request.getPaymentMethod() == null ? PaymentMethod.CASH : request.getPaymentMethod())
-            .paidAt(now)
+            .paidAt(request.getPaymentMethod() == PaymentMethod.CARD ? null : now)
+            .expiresAt(now.plusMinutes(6))
             .build();
     booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
@@ -213,16 +214,21 @@ public class BookingService {
     selectedTickets.forEach(
         ticket -> {
           ticket.setBooking(booking);
-          ticket.setTicketStatus(TicketStatus.BOOKED);
-          ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
+          ticket.setTicketStatus(request.getPaymentMethod() == PaymentMethod.CARD ? TicketStatus.HOLDING : TicketStatus.BOOKED);
+          if (request.getPaymentMethod() != PaymentMethod.CARD) {
+            ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
+          }
           ticketRepository.save(ticket);
+          String wsStatus = request.getPaymentMethod() == PaymentMethod.CARD ? "HOLDING" : "BOOKED";
           simpMessagingTemplate.convertAndSend(
               "/topic/showtime/" + showtime.getId() + "/seats",
-              SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status("BOOKED").build());
+              SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status(wsStatus).build());
         });
     booking.setTickets(selectedTickets);
-    unlockSeats(showtime.getId(), selectedTickets);
-    eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
+    if (request.getPaymentMethod() != PaymentMethod.CARD) {
+      unlockSeats(showtime.getId(), selectedTickets);
+      eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
+    }
 
     log.info("Staff booking created with code: {}", booking.getBookingCode());
     return bookingMapper.toBookingResponse(booking);
