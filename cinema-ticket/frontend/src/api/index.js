@@ -95,6 +95,13 @@ export const ticketApi = {
   getByShowtimeId: (showtimeId) => axiosClient.get(`/ticket/showtime/${showtimeId}`),
   update: (id, data) => axiosClient.put(`/ticket/${id}`, data),
   checkIn: (data) => axiosClient.post('/ticket/check-in', data),
+  checkInByQRImage: (file) => {
+    const formData = new FormData();
+    formData.append('qrImage', file);
+    return axiosClient.post('/ticket/check-in/qr-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // ==================== FOOD ====================

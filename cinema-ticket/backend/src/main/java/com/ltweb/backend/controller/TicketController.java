@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/ticket")
@@ -55,6 +57,16 @@ public class TicketController {
     ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Ticket checked in successfully!");
     apiResponse.setResult(ticketService.checkIn(request));
+    return apiResponse;
+  }
+
+  @PostMapping("/check-in/qr-image")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  public ApiResponse<TicketCheckInResponse> checkInByQRImage(
+      @RequestParam("qrImage") MultipartFile qrImage) {
+    ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setMessage("Ticket checked in successfully via QR image!");
+    apiResponse.setResult(ticketService.checkInByQRImage(qrImage));
     return apiResponse;
   }
 
