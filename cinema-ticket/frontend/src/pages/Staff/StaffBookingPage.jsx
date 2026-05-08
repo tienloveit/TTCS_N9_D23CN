@@ -31,6 +31,10 @@ export default function StaffBookingPage() {
   const [tickets, setTickets] = useState([]);
   const [showtimeId, setShowtimeId] = useState('');
   const [branchFilter, setBranchFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [timeFilter, setTimeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedFoods, setSelectedFoods] = useState({});
   const [customer, setCustomer] = useState({
@@ -155,13 +159,86 @@ export default function StaffBookingPage() {
     return [...branchMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [showtimes]);
 
-  const filteredShowtimes = useMemo(() => {
-    if (branchFilter === 'ALL') return showtimes;
-    return showtimes.filter((showtime) => {
-      const key = showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
-      return key === branchFilter;
+  const roomTypeOptions = useMemo(() => {
+    const types = new Set();
+    showtimes.forEach((showtime) => {
+      if (showtime.roomType) {
+        types.add(showtime.roomType.toUpperCase());
+      }
     });
-  }, [branchFilter, showtimes]);
+    return [...types].sort();
+  }, [showtimes]);
+
+  const filteredShowtimes = useMemo(() => {
+    let result = showtimes;
+
+    // Filter by branch
+    if (branchFilter !== 'ALL') {
+      result = result.filter((showtime) => {
+        const key = showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
+        return key === branchFilter;
+      });
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((showtime) => {
+        const movieName = (showtime.movieName || '').toLowerCase();
+        const branchName = (showtime.branchName || '').toLowerCase();
+        const roomName = (showtime.roomName || '').toLowerCase();
+        return movieName.includes(query) || branchName.includes(query) || roomName.includes(query);
+      });
+    }
+
+    // Filter by time
+    if (timeFilter !== 'ALL') {
+      const now = new Date();
+      result = result.filter((showtime) => {
+        if (!showtime.startTime) return false;
+        const startTime = new Date(showtime.startTime);
+        const hour = startTime.getHours();
+
+        switch (timeFilter) {
+          case 'MORNING': // 6h - 12h
+            return hour >= 6 && hour < 12;
+          case 'AFTERNOON': // 12h - 18h
+            return hour >= 12 && hour < 18;
+          case 'EVENING': // 18h - 22h
+            return hour >= 18 && hour < 22;
+          case 'NIGHT': // 22h - 6h
+            return hour >= 22 || hour < 6;
+          case 'UPCOMING': // Chưa chiếu (sau thời điểm hiện tại)
+            return startTime > now;
+          case 'ONGOING': // Đang chiếu
+            const endTime = showtime.endTime ? new Date(showtime.endTime) : null;
+            return startTime <= now && (!endTime || endTime > now);
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by status
+    if (statusFilter !== 'ALL') {
+      result = result.filter((showtime) => {
+        const available = isShowtimeAvailable(showtime);
+        if (statusFilter === 'AVAILABLE') return available;
+        if (statusFilter === 'UNAVAILABLE') return !available;
+        return true;
+      });
+    }
+
+    // Filter by room type
+    if (roomTypeFilter !== 'ALL') {
+      result = result.filter((showtime) => {
+        const roomType = (showtime.roomType || '').toUpperCase();
+        return roomType.includes(roomTypeFilter);
+      });
+    }
+
+    return result;
+  }, [branchFilter, showtimes, searchQuery, timeFilter, statusFilter, roomTypeFilter]);
 
   const showtimeGroups = useMemo(() => {
     const grouped = filteredShowtimes.reduce((acc, showtime) => {
@@ -329,28 +406,103 @@ export default function StaffBookingPage() {
       )}
 
       <div className="admin-table-card" style={{ padding: 24, marginBottom: 20 }}>
-        <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18 }}>
-          <div>
-            <h3>Suat chieu hom nay</h3>
-            <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
-              {filteredShowtimes.length}/{showtimes.length} suat chieu duoc lay tu he thong
-            </p>
+        <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <h3>Suat chieu hom nay</h3>
+              <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
+                {filteredShowtimes.length}/{showtimes.length} suat chieu duoc lay tu he thong
+              </p>
+            </div>
           </div>
-          <label style={{ minWidth: 260 }}>
-            <span className="form-label">MoviePTIT</span>
-            <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
-              <option value="ALL">Tat ca MoviePTIT</option>
-              {branchOptions.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </label>
+
+          {/* Filter row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <label>
+              <span className="form-label">Tim kiem</span>
+              <input
+                type="text"
+                className="input"
+                placeholder="Ten phim, rap, phong..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </label>
+
+            <label>
+              <span className="form-label">Rap</span>
+              <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
+                <option value="ALL">Tat ca rap</option>
+                {branchOptions.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className="form-label">Khung gio</span>
+              <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
+                <option value="ALL">Tat ca</option>
+                <option value="MORNING">Sang (6h-12h)</option>
+                <option value="AFTERNOON">Chieu (12h-18h)</option>
+                <option value="EVENING">Toi (18h-22h)</option>
+                <option value="NIGHT">Khuya (22h-6h)</option>
+                <option value="UPCOMING">Chua chieu</option>
+                <option value="ONGOING">Dang chieu</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="form-label">Trang thai</span>
+              <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="ALL">Tat ca</option>
+                <option value="AVAILABLE">Co the ban</option>
+                <option value="UNAVAILABLE">Khong ban</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="form-label">Loai phong</span>
+              <select className="input" value={roomTypeFilter} onChange={(e) => setRoomTypeFilter(e.target.value)}>
+                <option value="ALL">Tat ca</option>
+                {roomTypeOptions.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {/* Clear filters button */}
+            {(searchQuery || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL') && (
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setBranchFilter('ALL');
+                    setTimeFilter('ALL');
+                    setStatusFilter('ALL');
+                    setRoomTypeFilter('ALL');
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  Xoa bo loc
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {showtimeGroups.length === 0 ? (
-          <div className="empty-state">Khong co suat chieu phu hop voi MoviePTIT da chon.</div>
+        {filteredShowtimes.length === 0 ? (
+          <div className="empty-state">
+            {searchQuery.trim() || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL'
+              ? 'Khong tim thay suat chieu nao phu hop voi bo loc'
+              : 'Khong co suat chieu phu hop voi MoviePTIT da chon.'}
+          </div>
         ) : (
           <div style={{ display: 'grid', gap: 18 }}>
             {showtimeGroups.map((group) => (

@@ -34,6 +34,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +47,7 @@ public class TicketService {
   private final SeatTypePriceRepository seatTypePriceRepository;
   private final StringRedisTemplate redisTemplate;
   private final TicketMapper ticketMapper;
+  private final QRCodeReaderService qrCodeReaderService;
 
   @PreAuthorize("hasRole('ADMIN')")
   @Transactional
@@ -184,6 +186,18 @@ public class TicketService {
         .forEach(ticket -> alreadyCheckedIn.put(ticket.getId(), ticket.getCheckedInAt() != null));
     booking.getTickets().forEach(this::checkInTicket);
     return buildCheckInResponse(booking, booking.getTickets(), alreadyCheckedIn);
+  }
+
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @Transactional
+  public TicketCheckInResponse checkInByQRImage(MultipartFile qrImage) {
+    // Decode QR code from image
+    String code = qrCodeReaderService.decodeQRCode(qrImage);
+
+    // Reuse existing checkIn logic
+    CheckInTicketRequest request = new CheckInTicketRequest();
+    request.setCode(code);
+    return checkIn(request);
   }
 
   public void deleteTicket(Long ticketId) {

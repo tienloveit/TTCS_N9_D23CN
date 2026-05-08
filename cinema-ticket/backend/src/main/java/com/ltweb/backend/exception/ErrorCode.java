@@ -75,6 +75,8 @@ public enum ErrorCode {
   TICKET_NOT_AVAILABLE(
       400, "One or more selected tickets are not available", HttpStatus.BAD_REQUEST),
   INVALID_TICKET_CHECKIN(400, "Ticket is not valid for check-in", HttpStatus.BAD_REQUEST),
+  INVALID_QR_IMAGE(400, "Invalid QR code image file", HttpStatus.BAD_REQUEST),
+  QR_CODE_NOT_FOUND(400, "QR code not found in image", HttpStatus.BAD_REQUEST),
 
   // Payment Management
   PAYMENT_NOT_FOUND(400, "Payment does not exist", HttpStatus.BAD_REQUEST),
