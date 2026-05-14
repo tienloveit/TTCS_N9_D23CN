@@ -1,18 +1,22 @@
 # Codex Project Context
 
-Last refreshed: 2026-04-29
+Last refreshed: 2026-05-14
 
-This file is the working context for the `cinema-ticket` / MoviePTIT project. It is meant to help Codex or a developer quickly understand the repo before making changes.
+This file is the working context for the `cinema-ticket` / MoviePTIT project. It is meant to help Codex or a developer quickly understand the repo before making changes. The backend notes below were refreshed from the current source tree on 2026-05-14 and should be treated as the most authoritative part of this document.
 
 ## Project Summary
 
-`cinema-huy` is a full-stack cinema booking app, branded in the UI as MoviePTIT. It has:
+`cinema-ticket` is a full-stack cinema booking app branded in the UI as MoviePTIT. It has:
 
 - A Spring Boot backend under `backend/`.
 - A Vite + React frontend under `frontend/`.
-- MySQL persistence, Redis for token/session/seat-hold state, WebSocket/STOMP for realtime seat status, and VNPay sandbox integration for payment.
+- MySQL persistence.
+- Redis for refresh-token state, access-token blacklist state, OTPs, realtime seat holds, and AI chat memory.
+- WebSocket/STOMP for realtime seat status.
+- VNPay sandbox integration for online payment.
+- Spring AI chat integration pointed at an OpenAI-compatible Gemini endpoint.
 
-The app supports public movie/branch browsing, movie detail showtime filtering, seat selection, food combos, online booking/payment, user booking history, admin CRUD screens, staff counter booking, ticket QR/check-in, movie ratings, password reset OTP email, and seeded demo data.
+The app supports public movie/branch browsing, showtime lookup, seat selection, concession combos, online booking/payment, user booking history, admin CRUD screens, staff counter booking, ticket QR/check-in, movie ratings, password reset OTP email, seeded demo data, and a public AI chat helper backed by domain tools.
 
 ## Repository Layout
 
@@ -31,6 +35,7 @@ The app supports public movie/branch browsing, movie detail showtime filtering, 
 |       |-- dto/
 |       |-- entity/
 |       |-- enums/
+|       |-- event/
 |       |-- exception/
 |       |-- job/
 |       |-- mapper/
@@ -56,7 +61,8 @@ The app supports public movie/branch browsing, movie detail showtime filtering, 
 Backend:
 
 - Java 21.
-- Spring Boot parent version: `4.0.3`.
+- Spring Boot parent version: `3.4.0`.
+- Spring AI BOM version: `1.0.0-M5`.
 - Default server: `http://localhost:8081/api`.
 - Data stores expected locally:
   - MySQL database `cinema` on `localhost:3306`.
@@ -70,7 +76,7 @@ Backend:
 
 Frontend:
 
-- Vite + React 19.
+- Vite + React.
 - Default dev server: `http://localhost:5173`.
 - API base URL: `VITE_API_BASE_URL`, fallback `http://localhost:8081/api`.
 - Useful commands from `frontend/`:
@@ -79,34 +85,46 @@ Frontend:
   - `npm run build`
   - `npm run lint`
 
-Important config note:
+Configuration:
 
-- `backend/src/main/resources/application.yaml` currently contains local DB credentials, mail credentials, JWT secret, and VNPay sandbox keys. Do not copy those values into docs, commits, tickets, or chat unless explicitly needed for local debugging. Prefer moving them to env vars later.
+- `backend/src/main/resources/application.yaml` imports optional `.env` files from several local paths.
+- Secrets and credentials are expected from env vars:
+  - `SPRING_DATASOURCE_PASSWORD`
+  - `SPRING_MAIL_USERNAME`
+  - `SPRING_MAIL_PASSWORD`
+  - `JWT_SECRET_KEY`
+  - `VNPAY_TMN_CODE`
+  - `VNPAY_SECRET_KEY`
+  - `GEMINI_API_KEY`
+- Do not copy local secret values into docs, commits, tickets, or chat. The current YAML stores secret references, not literal secret values.
 
 ## Backend Stack
 
 Core dependencies:
 
 - Spring Boot Web MVC, Data JPA, JDBC, Validation.
-- Spring Security OAuth2 Resource Server with custom JWT decoder.
+- Spring Security OAuth2 Resource Server with a custom HS512 JWT decoder.
 - MySQL Connector/J.
 - Redis via Spring Data Redis.
 - WebSocket/STOMP.
 - Java Mail.
 - Lombok and MapStruct.
-- ZXing for QR code generation.
+- ZXing for QR code generation and QR image reading.
+- Spring AI OpenAI starter, configured to call Gemini through an OpenAI-compatible base URL.
 
 Backend package pattern:
 
 - `controller`: REST endpoints returning `ApiResponse<T>`.
-- `service`: business logic, transactions, auth checks.
-- `repository`: Spring Data repositories.
+- `service`: business logic, transactions, method security, auth checks.
+- `repository`: Spring Data repositories and entity graphs.
 - `entity`: JPA entities plus Redis token entity.
 - `dto/request` and `dto/response`: API payloads.
 - `mapper`: MapStruct mappers, usually `componentModel = "spring"`.
 - `exception`: `AppException`, `ErrorCode`, `GlobalExceptionHandler`.
-- `config`: security, CORS, WebSocket, Redis/JWT/VNPay properties, app init.
+- `config`: security, CORS, WebSocket, Redis, JWT, VNPay, AI, application init.
+- `event`: `BookingPaidEvent`.
 - `job`: scheduled cleanup for expired bookings.
+- `util`: VNPay helper functions.
 
 ## Backend Configuration
 
@@ -131,130 +149,175 @@ WebSocket:
 - Client application prefix: `/app`
 - Seat status topic: `/topic/showtime/{showtimeId}/seats`
 
-## Auth And Security
+Spring AI:
 
-Auth endpoints:
+- `spring.ai.openai.api-key = ${GEMINI_API_KEY}`
+- `spring.ai.openai.base-url = https://generativelanguage.googleapis.com/v1beta/openai/`
+- `spring.ai.openai.chat.options.model = gemini-2.5-flash`
 
-- `POST /auth/login`
-- `POST /auth/logout`
-- `POST /auth/refresh`
-- `POST /auth/change-password`
-- `POST /auth/forgot-password`
-- `POST /auth/reset-password`
-- `POST /sign-up`
+## Backend Domains
 
-JWT details:
+### Identity And Auth
 
-- Tokens are signed with HS512.
-- Access token lifetime: 30 minutes.
-- Refresh token lifetime: 30 days.
-- JWT claim `sub` is username.
-- JWT claim `role` is one of `ADMIN`, `STAFF`, `USER`.
-- Spring maps the `role` claim to authorities using prefix `ROLE_`.
+Entities:
 
-Redis token behavior:
+- `User`: login identity and profile. Implements `UserDetails`. Fields include username, bcrypt password, full name, email, phone, DOB, gender, role, status, timestamps, bookings.
+- `RedisToken`: Redis hash `redis_tokens` keyed by JWT ID with TTL. It is used both for refresh-token allow-list entries and blacklisted access-token IDs.
 
-- Refresh token JWT IDs are saved in Redis and consumed on refresh.
-- Logout saves the current access token JWT ID in Redis as a blacklist until expiry.
-- `JwtDecoderConfig` calls `JwtService.verifyToken()` before decoding.
+Enums:
 
-Frontend auth behavior:
+- `UserRole`: `ADMIN`, `STAFF`, `USER`
+- `UserStatus`: `ACTIVE`, `INACTIVE`, `BLOCKED`
+- `Gender`: `MALE`, `FEMALE`, `OTHER`
 
-- `frontend/src/context/AuthContext.jsx` decodes the access token from `localStorage`.
-- `accessToken` and `refreshToken` are stored in `localStorage`.
-- `frontend/src/api/axiosClient.js` attaches `Authorization: Bearer <token>`.
-- A 401 response triggers `/auth/refresh`, stores the new pair, retries the original request, and redirects to `/login` if refresh fails.
+Flow notes:
 
-Security rules:
+- JWTs are signed with HS512.
+- Access token lifetime is 30 minutes.
+- Refresh token lifetime is 30 days.
+- JWT `sub` is username.
+- JWT `role` is one of the `UserRole` values.
+- Spring maps JWT `role` into `ROLE_*` authorities.
+- `User.getAuthorities()` returns an empty list; API role checks use JWT authority mapping.
+- Login stores the refresh token JWT ID in Redis.
+- Refresh requires the refresh JWT ID to exist in Redis, consumes it, and issues a new pair.
+- Logout stores the access token JWT ID in Redis until token expiry, which makes future access-token verification fail.
+- `UserDetails` state matters for login: `BLOCKED` is locked, `INACTIVE` is disabled.
 
-- Public:
-  - `POST /auth/login`
-  - `POST /auth/refresh`
-  - VNPay return/IPN
-  - password reset endpoints
-  - WebSocket `/ws/**`
-  - public GET routes for movie, showtime, ticket by showtime, genre, director, food, branch, room
-  - `POST /user` is permitted, though frontend uses `POST /sign-up`
-- Admin/staff restrictions are enforced by `@PreAuthorize` in controllers/services.
-- Frontend `/admin` is admin-only.
-- Frontend `/staff` is the separate staff workspace for counter booking, check-in, and booking lookup. It allows `STAFF` and `ADMIN`.
-- Legacy staff URLs `/admin/staff-booking` and `/admin/check-in` redirect to `/staff/booking` and `/staff/check-in`.
+Password reset:
 
-## Domain Model
+- Forgot password checks email existence, creates Redis keys `otp:limit:{email}` and `otp:code:{email}`, and sends mail.
+- Rate limit is max 3 OTP generations per minute.
+- OTP code TTL is 5 minutes.
+- Reset verifies the Redis OTP, updates bcrypt password, then deletes the OTP key.
 
-Main JPA entities:
+### Movie Catalog
 
-- `User`: login identity and profile. Implements `UserDetails`. Has role/status and bookings.
-- `Movie`: title, description, image/trailer, duration, age rating, language/subtitle, release/end dates, status, one director, genres, average rating summary.
-- `Director`: one-to-many with movies. Each movie stores one `director_id`; a director can be attached to many movies.
-- `Genre`: many-to-many with movies.
-- `Branch`: cinema branch with code/name/address/city/phone/status.
-- `Room`: belongs to branch. Unique `(branch_id, code)`. Has type, capacity, status.
-- `Seat`: belongs to room. Unique `(room_id, seat_code)`. Has row/number/type/active.
-- `SeatTypePrice`: price per `SeatType`.
-- `Showtime`: room + movie + start/end/status.
-- `Ticket`: unique `(showtime_id, seat_id)`, price, status, QR code, check-in timestamp.
-- `Booking`: user + showtime + tickets + foods + amount/status/payment fields.
-- `BookingFood`: food line item on booking.
-- `Food`: concession item, price/image/active.
-- `MovieRating`: unique `(movie_id, user_id)`, integer score.
-- `RedisToken`: Redis hash for refresh token IDs and blacklisted access token IDs.
+Entities:
 
-Important enums:
+- `Movie`: title, description, thumbnail/trailer, duration, age rating, language/subtitle, release/end dates, status, one director, many genres.
+- `Director`: unique name, optional bio, one-to-many movies.
+- `Genre`: many-to-many movies.
+- `MovieRating`: unique `(movie_id, user_id)`, integer score with timestamps.
 
-- User roles: `ADMIN`, `STAFF`, `USER`
-- User status: `ACTIVE`, `INACTIVE`, `BLOCKED`
-- Movie status: `UPCOMING`, `NOW_SHOWING`, `ENDED`
-- Age rating: `P`, `K`, `T13`, `T16`, `T18`
-- Room type: `TWO_D`, `THREE_D`, `IMAX`, `FOUR_DX`
-- Seat type: `STANDARD`, `VIP`, `COUPLE`
-- Showtime status: `OPEN`, `CLOSED`
-- Ticket status: `AVAILABLE`, `HOLDING`, `BOOKED`
-- Booking status: `PENDING`, `CANCELLED`, `EXPIRED`, `COMPLETED`
-- Payment method: `CASH`, `CARD`, `VNPAY`
-- Payment status: `PENDING`, `PAID`, `CANCELLED`
+Enums:
 
-## Main Backend Flows
+- `MovieStatus`: `UPCOMING`, `NOW_SHOWING`, `ENDED`, `INACTIVE`
+- `AgeRating`: `P`, `K`, `T13`, `T16`, `T18`
 
-Initial seed:
+Flow notes:
 
-- `ApplicationInitConfig` runs `DataSeedService.seedInitialData()` at startup.
-- It upserts demo users, seat prices, foods, genres, directors, movies, branches, rooms, seats, showtimes, and tickets.
-- Demo users from code:
-  - `admin / admin@123`
-  - `staff / staff@123`
-  - `user / user@123`
-  - `user2 / user2@123`
+- `CreateMovieRequest.directorId` is required.
+- `UpdateMovieRequest.directorId` can change the director.
+- Movie reads use entity graphs for `genres` and `director`.
+- Movie responses include average rating and rating count computed from `MovieRatingRepository`.
+- Ratings are one per `(movie, user)` and are upserted.
+- Deleting a movie deletes its ratings first, then deletes the movie.
 
-Room and ticket generation:
+### Cinema Structure
 
-- `RoomService.createRoom()` saves a room and generates a grid of seats based on capacity.
-- `RoomService.updateRoom()` regenerates seats only when capacity changes and there are no showtimes.
-- `ShowtimeService.createShowtime()` rejects overlapping room schedules and creates tickets for all room seats.
+Entities:
+
+- `Branch`: branch code, name, address, city, phone, status.
+- `Room`: belongs to branch. Unique `(branch_id, code)`. Has code, name, room type, seat capacity, status.
+- `Seat`: belongs to room. Unique `(room_id, seat_code)`. Has row label, seat number, seat type, active flag.
+- `SeatTypePrice`: unique price row per `SeatType`.
+
+Enums:
+
+- `BranchStatus`: `ACTIVE`, `INACTIVE`
+- `RoomStatus`: `ACTIVE`, `INACTIVE`, `MAINTENANCE`
+- `RoomType`: `TWO_D`, `THREE_D`, `IMAX`, `FOUR_DX`
+- `SeatType`: `STANDARD`, `VIP`, `COUPLE`
+
+Flow notes:
+
+- `RoomService.createRoom()` saves a room and auto-generates seats from capacity.
+- Runtime room generation computes an approximate grid from capacity and assigns standard/VIP seats.
+- `DataSeedService` uses a fixed 5x10 layout per seeded room: rows A-B standard, C-D VIP, E couple.
+- `RoomService.updateRoom()` regenerates seats only if capacity changes and the room has no showtimes.
+- `RoomRepository` uses entity graphs for branch data.
+
+### Showtimes And Tickets
+
+Entities:
+
+- `Showtime`: room + movie + start/end time + status.
+- `Ticket`: booking optional, showtime, seat, price, ticket status, QR code, check-in timestamp. Unique `(showtime_id, seat_id)`.
+
+Enums:
+
+- `ShowtimeStatus`: `OPEN`, `CLOSED`, `CANCELLED`
+- `TicketStatus`: `AVAILABLE`, `HOLDING`, `BOOKED`
+
+Flow notes:
+
+- `ShowtimeService.createShowtime()` rejects overlapping schedules in the same room.
+- Creating a showtime generates one ticket per room seat.
 - Ticket price comes from `SeatTypePrice`.
+- `ShowtimeService.delete()` blocks deletion if completed bookings exist.
+- Deleting a showtime cancels pending bookings, releases their tickets, deletes all tickets for the showtime, then deletes the showtime.
+- `ShowtimeRepository` fetches `room`, `room.branch`, and `movie` for showtime reads.
+- `GET /showtime/branch/{branchId}?date=YYYY-MM-DD` returns a grouped list of maps by movie, not `ShowtimeResponse`.
 
-Booking:
+Realtime ticket state:
 
-- User booking endpoint creates a `PENDING` booking.
-- Selected seats must map to available tickets for the showtime.
+- `TicketService.getTicketsByShowtimeId()` reads DB tickets and Redis `seat_hold:{showtimeId}:{seatId}` keys.
+- `displayStatus` is derived so Redis-held seats show as `HOLDING` even if DB state is different.
+- `BOOKED` tickets always display as booked.
+
+### Booking, Food, And Payment
+
+Entities:
+
+- `Booking`: booking code, user, showtime, total amount, booking status, expiry, timestamps, payment fields, tickets, food line items.
+- `BookingFood`: booking, food, quantity, unit price, subtotal.
+- `Food`: concession item with name, description, price, image URL, active flag, timestamps.
+
+Enums:
+
+- `BookingStatus`: `PENDING`, `CANCELLED`, `EXPIRED`, `COMPLETED`
+- `PaymentMethod`: `CASH`, `CARD`, `VNPAY`
+- `PaymentStatus`: `PENDING`, `PAID`, `CANCELLED`
+
+Customer booking flow:
+
+- `POST /booking` requires an authenticated user.
+- Request contains `showtimeId`, `seatIds`, and optional food lines.
 - Duplicate seat IDs are rejected.
-- Food quantities are validated and included in `totalAmount`.
-- Each selected seat gets a Redis lock: `seat_hold:{showtimeId}:{seatId}` with 6 minute TTL.
-- Tickets are moved to `HOLDING`.
-- WebSocket broadcasts `HOLDING` events to `/topic/showtime/{showtimeId}/seats`.
-- Booking code format: `BK-YYYYMMDD-XXXXXX`.
+- Selected seats must map to `AVAILABLE` tickets for the showtime.
+- Food IDs must exist and be active; duplicate food IDs or non-positive quantities are rejected.
+- Each seat gets a Redis lock: `seat_hold:{showtimeId}:{seatId}` with a 6 minute TTL.
+- Tickets are moved to DB status `HOLDING`.
+- Booking is created as `PENDING`, `paymentStatus = PENDING`, `expiresAt = now + 6 minutes`.
+- Booking code format is `BK-YYYYMMDD-XXXXXX`.
+- WebSocket broadcasts `HOLDING` for every selected seat.
 
-Realtime seat status:
+Staff booking flow:
 
-- `TicketService.getTicketsByShowtimeId()` reads DB tickets and Redis seat-hold keys.
-- `displayStatus` is derived so held seats show as `HOLDING` even when the DB status has not been finalized.
-- `SeatSelectPage` subscribes to the showtime topic and updates seats as messages arrive.
+- `POST /booking/staff` requires `ADMIN` or `STAFF`.
+- The service rejects tickets that are not `AVAILABLE` or that have an active Redis hold.
+- It creates or reuses a customer by email or phone; otherwise it creates a `guest_*` user.
+- If `paymentMethod` is `CASH` or null:
+  - Booking is `COMPLETED`, payment is `PAID`, tickets become `BOOKED`, QR codes are generated, seat locks are deleted, WebSocket broadcasts `BOOKED`, and ticket email is published after commit.
+- If `paymentMethod` is `CARD`:
+  - Booking remains `PENDING`, payment is `PENDING`, tickets become `HOLDING`, no QR/email is generated, and expiry is 6 minutes. No separate card settlement endpoint was found.
 
-Payment:
+Cancel/cleanup:
 
-- `VnpayService.createPaymentUrl()` builds a VNPay sandbox payment URL.
-- VNPay return/IPN verify checksum, response code, and transaction status.
-- On success:
+- `DELETE /booking/{id}` cancels only `PENDING` bookings.
+- Owners, staff, and admins can cancel if authorized by `BookingService`.
+- Cancel sets booking `CANCELLED`, payment `CANCELLED` if it was pending, releases tickets to `AVAILABLE`, deletes Redis seat locks, and broadcasts `AVAILABLE`.
+- `BookingCleanupJob.releaseExpiredBookings()` runs every 2 minutes.
+- The cleanup job finds expired `PENDING` bookings, cancels them, releases tickets, broadcasts `AVAILABLE`, and now explicitly deletes Redis seat-hold keys.
+
+VNPay flow:
+
+- `VnpayService.createPaymentUrl()` builds a VNPay sandbox URL. Payment expiry is 6 minutes.
+- The transaction reference is the booking ID when `bookingId` is supplied; otherwise it falls back to `orderId` or a random numeric value.
+- VNPay return and IPN both verify checksum.
+- IPN also validates amount against booking total.
+- On payment success:
   - booking -> `COMPLETED`
   - payment -> `PAID`
   - payment method -> `VNPAY`
@@ -263,51 +326,115 @@ Payment:
   - Redis seat holds are deleted
   - WebSocket broadcasts `BOOKED`
   - `BookingPaidEvent` is published for ticket email
-- On failure/cancel:
+- On payment failure/cancel:
   - booking -> `CANCELLED`
   - payment -> `CANCELLED`
   - tickets detach from booking and go back to `AVAILABLE`
   - Redis seat holds are deleted
   - WebSocket broadcasts `AVAILABLE`
 
-Cleanup:
+Ticket email:
 
-- `BookingCleanupJob.releaseExpiredBookings()` runs every 2 minutes.
-- It finds expired `PENDING` bookings, cancels them, releases tickets to `AVAILABLE`, and broadcasts updates.
-- It does not explicitly delete Redis keys in this job; Redis TTL handles the lock expiry.
+- `BookingPaidEvent` is handled after transaction commit by `BookingTicketEmailListener`.
+- `EmailService.sendBookingTickets()` sends an HTML email with inline QR images.
+- QR payload format currently starts with `CINEMAHUB|BOOKING=...|TICKET=...|SEAT=...`, even though the visible brand is MoviePTIT.
 
-Staff booking:
+### Check-In
 
-- `POST /booking/staff` requires `ADMIN` or `STAFF`.
-- Staff uses `GET /showtime/today` to load all showtimes for the current day.
-- The counter-booking UI mirrors the customer booking flow: filter by MoviePTIT branch, select today's showtime, select seats with realtime WebSocket updates, add food, enter customer/payment info, then complete the booking at the counter.
-- `POST /booking/staff` creates or reuses a customer by email/phone, supports cash/card style counter sales, marks booking complete/paid immediately, books tickets, emits WebSocket updates, and sends ticket email.
-
-Check-in:
+Flow notes:
 
 - `POST /ticket/check-in` requires `ADMIN` or `STAFF`.
-- Accepts a ticket ID, QR value containing `TICKET=...`, raw QR code, or booking code.
+- `POST /ticket/check-in/qr-image` accepts multipart field `qrImage`, decodes it with ZXing, then reuses the normal check-in flow.
+- The plain check-in code can be:
+  - numeric ticket ID
+  - QR value containing `TICKET=...`
+  - exact stored `Ticket.qrCode`
+  - booking code
+- Booking-code check-in checks every ticket in that booking.
 - Only completed, paid bookings with booked tickets can check in.
-- Existing check-ins are reported as already checked in.
+- Existing check-ins are reported via `alreadyCheckedIn` while preserving `checkedInAt`.
 
-Movie rating:
+### AI Chat
 
-- Authenticated users can rate a movie.
-- Ratings are unique per `(movie, user)`.
-- Movie responses include average rating, rating count, genres, and director fields (`directorId`, `directorName`).
+Endpoint:
 
-Movie/director management:
+- `POST /chat`
+- Body: `chatId`, `message`
+- Public in `SecurityConfig`.
+- Empty messages return an `ApiResponse` with code `400`.
 
-- `CreateMovieRequest` requires `directorId`; `UpdateMovieRequest` can change `directorId`.
-- `MovieMapper` maps `Movie.director.id/name` into `MovieResponse.directorId/directorName`.
-- `DirectorService` exposes director CRUD; create/update/delete require `ADMIN`, while GET director endpoints are public.
-- `ShowtimeRepository` uses entity graphs with `room.branch` for showtime reads so movie detail can display branch, city, room, and room type without falling back to "Rạp khác".
+Implementation:
 
-Password reset:
+- `ChatService` builds a Spring AI `ChatClient`.
+- System prompt identifies the assistant as a CinemaPTIT AI helper and injects `current_date`.
+- Registered functions include movie search, showtimes, genre search, available seats, booking link helper, branch info, snack menu, now-showing/upcoming movies, ticket prices, branch showtimes, upcoming by branch, and current user booking history.
+- `RedisChatMemory` uses Redis key prefix `chat:memory:` with 24 hour TTL and falls back to in-memory storage if Redis is unavailable.
+- Chat retries AI calls up to 3 times for rate limit/quota errors.
 
-- Forgot password generates an OTP in Redis with 5 minute TTL.
-- OTP is sent by email.
-- Reset verifies OTP then updates the bcrypt password.
+Important caveats:
+
+- `getMyBookingHistory` calls `BookingService.getMyBookingsList()`, which expects an authenticated Spring Security user. Because `/chat` is public, this tool can fail or return the fallback message if no auth context exists.
+- The AI booking helper currently returns `http://localhost:5173/booking/{showtimeId}`. The known frontend seat route is `/showtime/:showtimeId/seats`, so verify the frontend route before relying on the generated link.
+
+## Auth And Security
+
+Security rules:
+
+- Public:
+  - `POST /sign-up`
+  - `POST /auth/login`
+  - `POST /auth/refresh`
+  - `POST /auth/forgot-password`
+  - `POST /auth/reset-password`
+  - `POST /chat`
+  - VNPay return/IPN
+  - `/v1/cleanup/**`
+  - WebSocket `/ws/**`
+  - public GET routes for movie, showtime, ticket by showtime, genre, director, food, branch, room
+  - `POST /user` is permitted, but no matching controller was found; frontend uses `POST /sign-up`.
+- All other requests require authentication unless method security allows/blocks more specifically.
+
+Role and method security notes:
+
+- User admin APIs are protected in `UserService`.
+- Movie create/update/delete are admin-only.
+- Genre, director, and food writes are admin-only through service-level `@PreAuthorize`.
+- Room create/read/update/delete are admin-only.
+- Showtime create/update are admin-only, today view is admin/staff, room showtimes are admin-only, delete is admin-only at service level.
+- Ticket all/update/delete are admin-only; check-in is admin/staff.
+- Booking list/update/staff create are admin/staff; customer create requires auth; booking read/cancel checks owner or staff/admin in service.
+- Branch create/getById/update are admin-only in controller, but `DELETE /branch/{id}` currently lacks a role annotation in both controller and service. With current security it is authenticated-only.
+- Seat type price create/update currently has no role annotation. With current security it is authenticated-only.
+
+## Domain Model Summary
+
+Main persistent objects:
+
+- `User` owns bookings and provides login identity.
+- `Movie` belongs to one `Director` and many `Genre` records.
+- `MovieRating` belongs to one movie and one user, unique per pair.
+- `Branch` has many rooms.
+- `Room` belongs to one branch and has many seats.
+- `Seat` belongs to one room and has a type.
+- `SeatTypePrice` defines base ticket price by seat type.
+- `Showtime` connects movie and room for a time interval.
+- `Ticket` connects showtime and seat; it optionally belongs to a booking.
+- `Booking` connects user and showtime; it owns booked tickets and food lines.
+- `BookingFood` snapshots food quantity and price at booking time.
+- `Food` is a soft-disabled concession catalog item.
+- `RedisToken` stores token IDs with TTL in Redis.
+
+Important uniqueness constraints:
+
+- `users.username`, `users.email`, `users.phoneNumber`
+- `directors.name`
+- `branches.branch_code`
+- `rooms`: `(branch_id, code)`
+- `seats`: `(room_id, seat_code)`
+- `seat_type_prices.seat_type`
+- `tickets`: `(showtime_id, seat_id)`
+- `movie_ratings`: `(movie_id, user_id)`
+- `bookings.bookingCode`
 
 ## API Surface
 
@@ -322,17 +449,17 @@ Auth/user:
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
 - `POST /sign-up`
-- `GET /users`
+- `GET /users?page=1&size=10&username=&email=&phone=`
 - `GET /users/{id}`
 - `PUT /users/{id}`
 - `DELETE /users/{id}`
-- `PUT /users/{id}/status`
+- `PUT /users/{id}/status?status=ACTIVE|INACTIVE|BLOCKED`
 - `GET /my-info`
 - `PUT /my-info`
 
 Movies/genres/directors:
 
-- `GET /movie`
+- `GET /movie?movieName=`
 - `GET /movie/now-showing`
 - `GET /movie/upcoming`
 - `GET /movie/{id}`
@@ -359,7 +486,7 @@ Cinema structure:
 - `POST /branch`
 - `PUT /branch/{id}`
 - `DELETE /branch/{id}`
-- `GET /room`
+- `GET /room?branchId=&status=`
 - `GET /room/{id}`
 - `POST /room`
 - `PUT /room/{id}`
@@ -390,6 +517,7 @@ Showtimes/tickets:
 - `PUT /ticket/{id}`
 - `DELETE /ticket/{id}`
 - `POST /ticket/check-in`
+- `POST /ticket/check-in/qr-image` with multipart field `qrImage`
 
 Booking/payment/food:
 
@@ -413,8 +541,9 @@ Booking/payment/food:
 - `GET /v1/vnpay/return`
 - `GET /v1/vnpay/ipn`
 
-Cleanup/dev:
+AI/dev:
 
+- `POST /chat`
 - `DELETE /v1/cleanup/database`
 
 ## API Response Shape
@@ -443,145 +572,98 @@ Errors use `ErrorResponse` with:
 
 `GlobalExceptionHandler` handles custom `AppException`, validation errors, auth errors, access denied, missing headers, data integrity, and catch-all errors.
 
-## Frontend Stack
-
-Dependencies:
-
-- React 19, React DOM 19.
-- React Router DOM 7.
-- Axios.
-- Framer Motion for page transitions.
-- React Toastify.
-- STOMP + SockJS for realtime seat updates.
-- Recharts for dashboard charts.
-- QR code and ticket image helpers: `qrcode.react`, `html-to-image`.
-- Canvas confetti for payment result.
-
-Frontend entry:
-
-- `frontend/src/main.jsx` renders `App`.
-- `App` wraps `AuthProvider`, `BrowserRouter`, `AnimatedRoutes`, Toastify, and ErrorBoundary.
-- Styling is centralized mostly in `frontend/src/index.css` plus component/page CSS files.
-
-API files:
-
-- `frontend/src/api/axiosClient.js`: Axios instance, base URL, auth header, refresh-on-401.
-- `frontend/src/api/index.js`: grouped API helper objects.
-
-## Recent UI And Branding Context
-
-Latest frontend direction:
-
-- The public frontend, admin workspace, and staff workspace were moved toward a brighter, higher-contrast layout so Vietnamese text is easier to scan.
-- Avoid low-contrast gray-on-light combinations for labels, tabs, cards, and table text.
-- Keep the interface light and practical, especially in admin/staff screens. These are work surfaces, not marketing pages.
-- The previous AI-looking icons were replaced with simpler cinema-themed line icons in `frontend/src/components/Common/CinemaIcons.jsx`.
-- Shared brand icon component: `MoviePTITLogoIcon`.
-
-Branding:
-
-- User-facing name should be `MoviePTIT`, not `CinemaHub`.
-- The browser title is set in `frontend/index.html`.
-- The tab/favicon icon is `frontend/public/favicon.svg` and should stay visually aligned with `MoviePTITLogoIcon`.
-- Demo branch/code placeholders were renamed from `CH-*` style to `MPT-*` style where updated.
-
-User menu behavior:
-
-- In the navbar, clicking the user area should open a dropdown menu instead of navigating directly to the profile page.
-- Dropdown options include `Thông tin cá nhân` and `Đổi mật khẩu`.
-- `ProfilePage` reads the hash and shows only the selected section, e.g. `/profile#info` or `/profile#password`.
-- The separate tiny user chevron affordance was removed; clicking the relevant menu item should reveal the full target section.
-
-Visual/cursor notes:
-
-- Use a normal pointer only on genuinely clickable controls.
-- Avoid accidental text-input/I-beam cursor behavior on non-input page areas.
-- Inputs and editable fields should keep the expected text cursor.
-
-## Frontend Routes
-
-Auth:
-
-- `/login`
-- `/register`
-
-Admin:
-
-- `/admin`
-- `/admin/movies`
-- `/admin/showtimes`
-- `/admin/branches`
-- `/admin/users`
-- `/admin/bookings`
-
-Staff:
-
-- `/staff`
-- `/staff/booking`
-- `/staff/check-in`
-- `/staff/bookings`
-
-Public/customer pages:
-
-- `/`
-- `/movies`
-- `/movie/:id`
-- `/branches`
-- `/branch/:branchId`
-- `/profile`
-- `/my-bookings`
-- `/showtime/:showtimeId/seats`
-- `/booking/:bookingId/payment`
-- `/payment/vnpay-return`
-- `*` not found
-
-Key pages:
-
-- `HomePage`: landing/home content.
-- `MovieListPage`, `MovieDetailPage`: movie browsing, rating, and showtime selection. Movie detail shows genre and director as pill-style facts, then groups showtimes by selected date, city, branch, room/format, and time.
-- `BranchListPage`, `BranchDetailPage`: branch browsing and showtimes by date.
-- `SeatSelectPage`: seat/food selection, STOMP subscription, booking creation.
-- `PaymentPage`, `PaymentResultPage`: VNPay checkout flow.
-- `MyBookingsPage`: user booking list and cancel pending bookings.
-- `ProfilePage`: personal info.
-- Admin pages manage movies, showtimes, branches, users, and bookings. Movie management loads directors, shows a director column, requires a director selection, and supports quick-create director from the movie modal.
-- Staff pages handle counter booking, ticket check-in, and booking lookup.
-
 ## Seed/Data Notes
 
-At startup `DataSeedService` seeds demo data automatically. It seeds directors and assigns every demo movie one director. There is also `backend/seed-data.ps1`, which:
+At startup `ApplicationInitConfig` runs `DataSeedService.seedInitialData()`.
 
-- Waits for backend readiness at `/movie/now-showing`.
-- Calls `DELETE /v1/cleanup/database`.
-- Logs in as admin.
-- Creates genres, directors, branches, rooms, movies with `directorId`, showtimes, a test user, and demo bookings.
+Seed behavior:
 
-Because the backend already seeds on startup, use the script only when a full reset/demo dataset is desired.
+- Alters `users.role` to `VARCHAR(20)` when possible so `STAFF` fits.
+- Upserts demo users.
+- Upserts seat prices.
+- Upserts foods.
+- Upserts genres.
+- Upserts directors.
+- Upserts movies and assigns directors/genres.
+- Upserts branches and rooms.
+- Seeds a 5x10 seat grid for each seeded room.
+- Seeds showtimes and tickets for now-showing movies from today through the next 3 days.
+
+Demo users:
+
+- `admin / admin@123`
+- `staff / staff@123`
+- `user / user@123`
+- `user2 / user2@123`
+
+Seed seat prices:
+
+- `STANDARD`: `75000`
+- `VIP`: `105000`
+- `COUPLE`: `180000`
+
+Seed branches:
+
+- `CN-HCM-01`
+- `CN-HCM-02`
+- `CN-HN-01`
+- `CN-DN-01`
+
+There is also `backend/seed-data.ps1`, which waits for backend readiness, calls `DELETE /v1/cleanup/database`, logs in as admin, and creates demo data through APIs. Because the backend already seeds on startup, use the script only when a full reset/demo dataset is desired.
+
+## Frontend Integration Notes
+
+Frontend auth behavior:
+
+- `frontend/src/context/AuthContext.jsx` decodes the access token from `localStorage`.
+- `accessToken` and `refreshToken` are stored in `localStorage`.
+- `frontend/src/api/axiosClient.js` attaches `Authorization: Bearer <token>`.
+- A 401 response triggers `/auth/refresh`, stores the new pair, retries the original request, and redirects to `/login` if refresh fails.
+
+Known frontend routes:
+
+- Auth: `/login`, `/register`
+- Admin: `/admin`, `/admin/movies`, `/admin/showtimes`, `/admin/branches`, `/admin/users`, `/admin/bookings`
+- Staff: `/staff`, `/staff/booking`, `/staff/check-in`, `/staff/bookings`
+- Public/customer: `/`, `/movies`, `/movie/:id`, `/branches`, `/branch/:branchId`, `/profile`, `/my-bookings`, `/showtime/:showtimeId/seats`, `/booking/:bookingId/payment`, `/payment/vnpay-return`
+
+Frontend/backend integration points:
+
+- Backend endpoints include `/api` due context path, but controller annotations are written without `/api`.
+- WebSocket URL from the frontend is `${API_BASE_URL}/ws`, so default is `http://localhost:8081/api/ws`.
+- Seat selection subscribes to `/topic/showtime/{showtimeId}/seats`.
+- Movie detail showtime rendering depends on `ShowtimeResponse.branchId`, `branchName`, `roomName`, and `roomType`.
+- Movie management requires `directorId` for create and supports director fields in responses.
 
 ## Current Testing State
 
 - No test files were found under `backend/src/test`.
-- No frontend test framework is configured in `frontend/package.json`.
-- Existing verification commands are compile/build/lint oriented:
-  - backend compile/package with Maven.
-  - frontend build/lint with npm.
-- Latest verified after UI/branding updates:
+- Existing backend verification is compile/package oriented:
   - `mvn -q -DskipTests compile`
-  - `npm run build` (passes with the existing Vite large chunk warning)
+  - `mvn -q -DskipTests package`
+- No frontend test framework is configured in `frontend/package.json`.
+- Existing frontend verification is build/lint oriented:
+  - `npm run build`
+  - `npm run lint`
 
 ## Implementation Notes And Pitfalls
 
 - Context path matters: backend endpoints include `/api`, but controllers are written without `/api`.
-- WebSocket URL from the frontend is `${API_BASE_URL}/ws`, so with default config it becomes `http://localhost:8081/api/ws`.
-- Keep Redis running for auth refresh/logout, OTPs, and realtime seat hold display.
+- Keep Redis running for auth refresh/logout, OTPs, AI chat memory, and realtime seat hold display.
 - Seat hold duration and VNPay payment expiry are both 6 minutes.
-- `BookingCleanupJob` cancels expired DB bookings every 2 minutes; Redis keys expire independently.
-- `TicketStatus.HOLDING` can remain in DB if a pending booking is cancelled incorrectly; use service flows that reset tickets and broadcast.
+- `BookingCleanupJob` cancels expired DB bookings every 2 minutes and deletes Redis keys.
+- `TicketStatus.HOLDING` can remain in DB if a pending booking is not cancelled through the service/job/payment paths.
+- `BookingService.createBooking()` deletes all selected seat-hold keys when any `setIfAbsent` lock fails. It does not check lock ownership before deletion, so be careful when changing seat-lock behavior.
+- Staff `CARD` bookings are left pending/holding; no card settlement endpoint was found.
+- Runtime room creation does not create `COUPLE` seats, while seed room creation does.
+- `OTPService.generateOTP()` currently uses `String.valueOf(Math.random() * 900000 + 100000)`, which can produce a decimal-looking string instead of a clean 6 digit integer.
+- The visible brand is MoviePTIT, but QR values still use the `CINEMAHUB|...` prefix.
+- The AI chat helper uses CinemaPTIT wording in prompts/tool text, while the rest of the app is MoviePTIT.
+- The AI booking helper link should be verified against the frontend route before use.
+- `BranchController.deleteBranch()` and seat type price writes currently require authentication but not an admin role.
+- `SecurityConfig.PUBLIC_ENDPOINT` includes `/api/v1/cleanup/**`, but the effective matcher under the context path is `/v1/cleanup/**`; both are currently present around cleanup.
 - MapStruct generated classes are build outputs; do not edit generated code.
 - When changing DTOs, check both backend mappers and frontend API/page usage.
-- When changing movie data, remember `CreateMovieRequest.directorId` is required and the admin movie modal must supply it.
-- Movie detail showtime rendering depends on `ShowtimeResponse.branchId`, `branchName`, `roomName`, and `roomType`; keep `ShowtimeRepository` fetching `room.branch` for movie showtime queries.
+- When changing movie data, remember `CreateMovieRequest.directorId` is required.
 - When adding admin-only behavior, enforce it in backend with `@PreAuthorize`; frontend route checks are UX only.
-- `User.getAuthorities()` returns an empty list, but JWT resource server authority mapping uses the JWT `role` claim for API requests.
-- Some source comments/text appear mojibake in terminal output due encoding, but source intent is Vietnamese. Avoid broad encoding rewrites unless specifically requested.
-- `application.yaml` contains secrets and local credentials. Treat them as sensitive even though they are already in the repo.
+- Some source comments/text appear mojibake in terminal output due encoding. Avoid broad encoding rewrites unless specifically requested.
