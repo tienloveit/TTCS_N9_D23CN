@@ -125,6 +125,11 @@ export const bookingApi = {
   cancel: (id) => axiosClient.delete(`/booking/${id}`),
 };
 
+// ==================== ADMIN ANALYTICS ====================
+export const analyticsApi = {
+  getDashboard: (params) => axiosClient.get('/admin/analytics/dashboard', { params }),
+};
+
 // ==================== AI CHAT ====================
 export const chatApi = {
   send: (data) => axiosClient.post('/chat', data),

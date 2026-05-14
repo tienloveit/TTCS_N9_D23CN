@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion } from 'framer-motion';
 import { chatApi, movieApi, showtimeApi } from '../../api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import SafeImage from '../../components/Common/SafeImage';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';

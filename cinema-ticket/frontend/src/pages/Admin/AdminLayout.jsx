@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { useState, useEffect } from 'react';
 import { MoviePTITLogoIcon } from '../../components/Common/CinemaIcons';
 import './Admin.css';
@@ -128,7 +128,11 @@ const AdminLayout = () => {
 
   // Close mobile sidebar on route change
   useEffect(() => {
-    setSidebarOpen(false);
+    const timer = window.setTimeout(() => {
+      setSidebarOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
   const handleLogout = () => {

@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { vnpayApi } from '../../api';
 import confetti from 'canvas-confetti';
 import { CheckCircleIcon, TicketIcon, XCircleIcon } from '../../components/Common/CinemaIcons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { branchApi, movieApi, roomApi, showtimeApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const DATE_WINDOW_SIZE = 5;
 

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+const MotionDiv = motion.div;
+
 const NotFoundPage = () => {
   return (
     <div className="page" style={{ 
@@ -11,7 +13,7 @@ const NotFoundPage = () => {
       textAlign: 'center',
       minHeight: '80vh'
     }}>
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -26,7 +28,7 @@ const NotFoundPage = () => {
         <Link to="/" className="btn btn-primary btn-lg">
           Quay lại trang chủ
         </Link>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

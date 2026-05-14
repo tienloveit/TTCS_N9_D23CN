@@ -4,7 +4,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { bookingApi, foodApi, ticketApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export default function SeatSelectPage() {
   const { showtimeId } = useParams();

@@ -40,7 +40,7 @@ const BranchManagement = () => {
       ]);
       setBranches(branchRes.status === 'fulfilled' ? branchRes.value.data.result : []);
       setRooms(roomRes.status === 'fulfilled' ? roomRes.value.data.result : []);
-    } catch (err) {
+    } catch {
       toast.error('Lỗi khi tải dữ liệu');
     } finally {
       setLoading(false);
@@ -85,7 +85,7 @@ const BranchManagement = () => {
       }
       setBranchModal(false);
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error('Thực hiện thất bại');
     }
   };
@@ -102,7 +102,7 @@ const BranchManagement = () => {
       }
       setRoomModal(false);
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error('Thực hiện thất bại');
     }
   };
@@ -113,7 +113,7 @@ const BranchManagement = () => {
       await branchApi.delete(id);
       toast.success('Xóa thành công');
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error('Xóa thất bại');
     }
   };
@@ -124,7 +124,7 @@ const BranchManagement = () => {
       await roomApi.delete(id);
       toast.success('Xóa thành công');
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error('Xóa thất bại');
     }
   };

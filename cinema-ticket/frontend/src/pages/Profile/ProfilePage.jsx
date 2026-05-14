@@ -23,7 +23,7 @@ const ProfilePage = () => {
       setLoading(true);
       const res = await userApi.getMyInfo();
       setProfile(res.data.result);
-    } catch (err) {
+    } catch {
       toast.error('Không thể tải thông tin cá nhân');
     } finally {
       setLoading(false);

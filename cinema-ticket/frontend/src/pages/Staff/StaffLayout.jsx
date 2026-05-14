@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { MoviePTITLogoIcon } from '../../components/Common/CinemaIcons';
 import '../Admin/Admin.css';
 

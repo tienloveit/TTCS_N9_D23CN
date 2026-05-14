@@ -1,28 +1,29 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState } from 'react';
 import { authApi } from '../api';
+import { AuthContext } from './authContextValue';
 
-const AuthContext = createContext(null);
+const getStoredUser = () => {
+  const token = localStorage.getItem('accessToken');
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      username: payload.sub,
+      role: payload.role,
+    };
+  } catch {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    return null;
+  }
+};
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser({
-          username: payload.sub,
-          role: payload.role,
-        });
-      } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      }
-    }
-    setLoading(false);
-  }, []);
+  const [user, setUser] = useState(getStoredUser);
+  const loading = false;
 
   const login = async (username, password) => {
     const res = await authApi.login({ username, password });
@@ -61,10 +62,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be inside AuthProvider');
-  return context;
 }

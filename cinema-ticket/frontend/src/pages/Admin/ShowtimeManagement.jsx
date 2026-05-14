@@ -61,7 +61,7 @@ const ShowtimeManagement = () => {
       setMovies(movieRes.data.result || []);
       setBranches(branchRes.data.result || []);
       setRooms(roomRes.data.result || []);
-    } catch (err) {
+    } catch {
       toast.error('Lỗi khi tải dữ liệu');
     } finally {
       setLoading(false);

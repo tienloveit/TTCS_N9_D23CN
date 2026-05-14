@@ -1,259 +1,386 @@
-import { useState, useEffect, useMemo } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { movieApi, bookingApi, branchApi } from '../../api';
-import { SkeletonBox } from '../../components/Common/Skeleton';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
+import { analyticsApi } from '../../api';
+import { FilmIcon, MapPinIcon, SparkIcon, TicketIcon } from '../../components/Common/CinemaIcons';
+import { SkeletonBox } from '../../components/Common/Skeleton';
 
-const AdminDashboard = () => {
-  const [stats, setStats] = useState({ movies: 0, bookings: 0, branches: 0, revenue: 0 });
-  const [recentBookings, setRecentBookings] = useState([]);
-  const [allData, setAllData] = useState({ movies: [], bookings: [] });
-  const [loading, setLoading] = useState(true);
+const emptyAnalytics = {
+  summary: {
+    revenue: 0,
+    ticketRevenue: 0,
+    foodRevenue: 0,
+    paidBookings: 0,
+    ticketsSold: 0,
+    totalCapacity: 0,
+    occupancyRate: 0,
+    averageOrderValue: 0,
+  },
+  revenueTrend: [],
+  topMovies: [],
+  foodSales: [],
+  occupancyByBranch: [],
+  recentBookings: [],
+};
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [moviesRes, bookingsRes, branchesRes] = await Promise.allSettled([
-          movieApi.getAll(),
-          bookingApi.getAll(),
-          branchApi.getAll(),
-        ]);
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(Number(amount || 0));
 
-        const movies = moviesRes.status === 'fulfilled' ? moviesRes.value.data.result : [];
-        const bookings = bookingsRes.status === 'fulfilled' ? bookingsRes.value.data.result : [];
-        const branches = branchesRes.status === 'fulfilled' ? branchesRes.value.data.result : [];
+const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 
-        setAllData({ movies, bookings });
+const formatDate = (value) =>
+  value ? new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '-';
 
-        const totalRevenue = bookings
-          .filter(b => b.paymentStatus === 'COMPLETED' || b.status === 'COMPLETED')
-          .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
 
-        setStats({
-          movies: movies.length,
-          bookings: bookings.length,
-          branches: branches.length,
-          revenue: totalRevenue,
-        });
+const getStatusLabel = (status) => {
+  if (status === 'COMPLETED') {
+    return 'Thanh cong';
+  }
+  if (status === 'CANCELLED') {
+    return 'Da huy';
+  }
+  return 'Cho thanh toan';
+};
 
-        setRecentBookings(
-          bookings
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 5)
-        );
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+const getStatusClass = (status) => {
+  if (status === 'COMPLETED') {
+    return 'status--active';
+  }
+  if (status === 'CANCELLED') {
+    return 'status--inactive';
+  }
+  return 'status--pending';
+};
 
-  // Process data for Line Chart (Revenue 7 days)
-  const chartData = useMemo(() => {
-    const last7Days = [...Array(7)].map((_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      return d.toISOString().split('T')[0];
-    });
+const StatCard = ({ icon, label, value, note, color, loading }) => {
+  const iconNode = createElement(icon, { width: 24, height: 24 });
 
-    return last7Days.map(date => {
-      const dayRevenue = allData.bookings
-        .filter(b => (b.paymentStatus === 'COMPLETED' || b.status === 'COMPLETED') && b.createdAt.startsWith(date))
-        .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-      
-      return {
-        name: new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-        revenue: dayRevenue
-      };
-    });
-  }, [allData.bookings]);
-
-  // Process data for Pie Chart (Genre Mix)
-  const genreData = useMemo(() => {
-    const genreMap = {};
-    allData.bookings.forEach(b => {
-      const movie = allData.movies.find(f => f.movieId === b.movieId || f.movieName === b.movieName);
-      if (movie && movie.genres) {
-        movie.genres.forEach(g => {
-          const name = g.name || g;
-          genreMap[name] = (genreMap[name] || 0) + 1;
-        });
-      }
-    });
-
-    return Object.entries(genreMap).map(([name, value]) => ({ name, value }));
-  }, [allData]);
-
-  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
-
-  const StatCard = ({ icon: Icon, label, value, color, loadingStat }) => (
+  return (
     <div className="stat-card">
-      <div className="stat-icon" style={{ backgroundColor: `${color}15`, color }}>
-        <Icon />
+      <div className="stat-icon" style={{ backgroundColor: `${color}18`, color }}>
+        {iconNode}
       </div>
       <div className="stat-info">
         <span className="stat-label">{label}</span>
-        {loadingStat ? (
-          <SkeletonBox width="100px" height="28px" borderRadius="4px" />
+        {loading ? (
+          <SkeletonBox width="120px" height="28px" borderRadius="4px" />
         ) : (
-          <h3 className="stat-value">{value}</h3>
+          <>
+            <h3 className="stat-value">{value}</h3>
+            {note && <span className="stat-note">{note}</span>}
+          </>
         )}
       </div>
     </div>
   );
+};
+
+const EmptyState = ({ children }) => <div className="analytics-empty">{children}</div>;
+
+const MoneyTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  return (
+    <div className="analytics-tooltip">
+      <strong>{label}</strong>
+      <span>{formatCurrency(payload[0].value)}</span>
+    </div>
+  );
+};
+
+const PercentTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  return (
+    <div className="analytics-tooltip">
+      <strong>{label}</strong>
+      <span>{formatPercent(payload[0].value)}</span>
+    </div>
+  );
+};
+
+const AdminDashboard = () => {
+  const [analytics, setAnalytics] = useState(emptyAnalytics);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchAnalytics = async () => {
+      try {
+        const response = await analyticsApi.getDashboard();
+        if (!active) {
+          return;
+        }
+        setAnalytics(response.data.result || emptyAnalytics);
+        setError('');
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+        setError(err.response?.data?.message || 'Khong the tai du lieu thong ke');
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchAnalytics();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const summary = analytics.summary || emptyAnalytics.summary;
+  const revenueTrend = useMemo(
+    () =>
+      (analytics.revenueTrend || []).map((item) => ({
+        ...item,
+        revenue: Number(item.revenue || 0),
+      })),
+    [analytics.revenueTrend]
+  );
+  const occupancyByBranch = useMemo(
+    () =>
+      (analytics.occupancyByBranch || []).map((item) => ({
+        ...item,
+        occupancyRate: Number(item.occupancyRate || 0),
+      })),
+    [analytics.occupancyByBranch]
+  );
+  const topMovies = analytics.topMovies || [];
+  const foodSales = analytics.foodSales || [];
+  const recentBookings = analytics.recentBookings || [];
+  const periodLabel =
+    analytics.fromDate && analytics.toDate
+      ? `${formatDate(analytics.fromDate)} - ${formatDate(analytics.toDate)}`
+      : '30 ngay gan nhat';
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h1 className="page-title">Tổng quan hệ thống</h1>
-        <p className="page-subtitle">Thống kê chi tiết doanh thu và hoạt động.</p>
+        <div>
+          <h1 className="page-title">Tong quan he thong</h1>
+          <p className="page-subtitle">Doanh thu, suc chua phong, phim ban chay va doanh so bap nuoc.</p>
+        </div>
+        <span className="analytics-period">{periodLabel}</span>
       </div>
+
+      {error && <div className="error-message">{error}</div>}
 
       <div className="stats-grid">
         <StatCard
-          icon={() => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-              <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-          )}
-          label="DOANH THU"
-          value={formatCurrency(stats.revenue)}
-          color="#10b981"
-          loadingStat={loading}
+          icon={SparkIcon}
+          label="Doanh thu"
+          value={formatCurrency(summary.revenue)}
+          note={`${formatNumber(summary.paidBookings)} don da thanh toan`}
+          color="#16a34a"
+          loading={loading}
         />
         <StatCard
-          icon={() => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
-            </svg>
-          )}
-          label="ĐƠN ĐẶT VÉ"
-          value={stats.bookings}
-          color="#6366f1"
-          loadingStat={loading}
+          icon={TicketIcon}
+          label="Ve da ban"
+          value={formatNumber(summary.ticketsSold)}
+          note={`AOV ${formatCurrency(summary.averageOrderValue)}`}
+          color="#0756a6"
+          loading={loading}
         />
         <StatCard
-          icon={() => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" />
-            </svg>
-          )}
-          label="PHIM"
-          value={stats.movies}
+          icon={MapPinIcon}
+          label="Lap day"
+          value={formatPercent(summary.occupancyRate)}
+          note={`${formatNumber(summary.totalCapacity)} ghe kha dung`}
           color="#f59e0b"
-          loadingStat={loading}
+          loading={loading}
         />
         <StatCard
-          icon={() => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-              <path d="M3 21h18" /><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4" /><path d="M5 21V10.85" /><path d="M19 21V10.85" /><path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" />
-            </svg>
-          )}
-          label="CHI NHÁNH"
-          value={stats.branches}
-          color="#8b5cf6"
-          loadingStat={loading}
+          icon={FilmIcon}
+          label="Doanh thu bap nuoc"
+          value={formatCurrency(summary.foodRevenue)}
+          note={`Ve ${formatCurrency(summary.ticketRevenue)}`}
+          color="#7c3aed"
+          loading={loading}
         />
       </div>
 
-      {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        {/* Line Chart */}
-        <div className="card" style={{ padding: '24px', height: '400px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '24px' }}>Doanh thu 7 ngày qua</h3>
+      <div className="analytics-grid analytics-grid--wide">
+        <section className="analytics-card">
+          <div className="analytics-card-header">
+            <h3>Doanh thu theo ngay</h3>
+            <span>{formatCurrency(summary.revenue)}</span>
+          </div>
           {loading ? (
-            <SkeletonBox height="300px" />
+            <SkeletonBox height="280px" />
+          ) : revenueTrend.length === 0 ? (
+            <EmptyState>Chua co doanh thu trong ky nay.</EmptyState>
           ) : (
-            <ResponsiveContainer width="100%" height="85%">
-              <LineChart data={chartData}>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={revenueTrend} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#dbe4ef" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v/1000}k`} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #dbe4ef', borderRadius: '8px', color: '#0f172a' }}
-                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
-                  formatter={(v) => formatCurrency(v)}
+                <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${Math.round(value / 1000)}k`}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
+                <Tooltip content={<MoneyTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#16a34a"
+                  strokeWidth={3}
+                  dot={{ r: 3, fill: '#16a34a' }}
+                  activeDot={{ r: 6 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           )}
-        </div>
+        </section>
 
-        {/* Pie Chart */}
-        <div className="card" style={{ padding: '24px', height: '400px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '24px' }}>Thị phần theo Thể loại</h3>
+        <section className="analytics-card">
+          <div className="analytics-card-header">
+            <h3>Ty le lap day theo chi nhanh</h3>
+            <span>{formatPercent(summary.occupancyRate)}</span>
+          </div>
           {loading ? (
-            <SkeletonBox height="300px" />
-          ) : genreData.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80%', color: 'var(--text-muted)' }}>
-              Chưa có dữ liệu thể loại.
-            </div>
+            <SkeletonBox height="280px" />
+          ) : occupancyByBranch.length === 0 ? (
+            <EmptyState>Chua co suat chieu trong ky nay.</EmptyState>
           ) : (
-            <ResponsiveContainer width="100%" height="85%">
-              <PieChart>
-                <Pie
-                  data={genreData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {genreData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #dbe4ef', borderRadius: '8px', color: '#0f172a' }}
-                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={occupancyByBranch} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbe4ef" vertical={false} />
+                <XAxis dataKey="branchName" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis
+                  stroke="#64748b"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}%`}
                 />
-                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
-              </PieChart>
+                <Tooltip content={<PercentTooltip />} />
+                <Bar dataKey="occupancyRate" fill="#0756a6" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           )}
-        </div>
+        </section>
+      </div>
+
+      <div className="analytics-grid">
+        <section className="analytics-card">
+          <div className="analytics-card-header">
+            <h3>Top phim</h3>
+            <Link to="/admin/movies" className="btn btn-ghost btn-sm">
+              Quan ly phim
+            </Link>
+          </div>
+          {loading ? (
+            <SkeletonList />
+          ) : topMovies.length === 0 ? (
+            <EmptyState>Chua co phim nao phat sinh doanh thu.</EmptyState>
+          ) : (
+            <div className="analytics-list">
+              {topMovies.map((movie) => (
+                <MetricRow
+                  key={movie.movieId}
+                  title={movie.movieName}
+                  meta={`${formatNumber(movie.ticketsSold)} ve - ${formatNumber(movie.showtimes)} suat`}
+                  value={formatCurrency(movie.revenue)}
+                  percent={movie.occupancyRate}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="analytics-card">
+          <div className="analytics-card-header">
+            <h3>Doanh so bap nuoc</h3>
+            <span>{formatCurrency(summary.foodRevenue)}</span>
+          </div>
+          {loading ? (
+            <SkeletonList />
+          ) : foodSales.length === 0 ? (
+            <EmptyState>Chua co mon an nao duoc ban.</EmptyState>
+          ) : (
+            <div className="analytics-list">
+              {foodSales.map((food) => (
+                <MetricRow
+                  key={food.foodId}
+                  title={food.foodName}
+                  meta={`${formatNumber(food.quantity)} san pham`}
+                  value={formatCurrency(food.revenue)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       <div className="admin-table-card">
         <div className="table-header">
-          <h3 className="section-title">Đơn hàng mới nhất</h3>
-          <Link to="/admin/bookings" className="btn btn-ghost btn-sm">Quản lý vé</Link>
+          <h3 className="section-title">Don hang moi nhat</h3>
+          <Link to="/admin/bookings" className="btn btn-ghost btn-sm">
+            Quan ly ve
+          </Link>
         </div>
         <table className="admin-table">
           <thead>
             <tr>
-              <th>MÃ ĐƠN</th>
-              <th>PHIM</th>
-              <th>NGÀY ĐẶT</th>
-              <th>TỔNG TIỀN</th>
-              <th>TRẠNG THÁI</th>
+              <th>Ma don</th>
+              <th>Phim</th>
+              <th>Ngay dat</th>
+              <th>Tong tien</th>
+              <th>Trang thai</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <SkeletonRows />
             ) : recentBookings.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>Chưa có đơn hàng nào</td></tr>
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>
+                  Chua co don hang nao
+                </td>
+              </tr>
             ) : (
-              recentBookings.map((b, idx) => (
-                <tr key={b.bookingId || idx}>
-                  <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{b.bookingCode || `#${b.bookingId?.slice(0, 8)}`}</td>
-                  <td>{b.movieName || '—'}</td>
-                  <td>{new Date(b.createdAt).toLocaleDateString('vi-VN')}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(b.totalAmount)}</td>
+              recentBookings.map((booking) => (
+                <tr key={booking.bookingId}>
+                  <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                    {booking.bookingCode || `#${booking.bookingId}`}
+                  </td>
+                  <td>{booking.movieName || '-'}</td>
+                  <td>{formatDate(booking.createdAt)}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {formatCurrency(booking.totalAmount)}
+                  </td>
                   <td>
-                    <span className={`status-badge ${b.status === 'COMPLETED' ? 'status--active' : 'status--pending'}`}>
-                      {b.status === 'COMPLETED' ? 'Thành công' : 'Chờ TT'}
+                    <span className={`status-badge ${getStatusClass(booking.status)}`}>
+                      {getStatusLabel(booking.status)}
                     </span>
                   </td>
                 </tr>
@@ -266,15 +393,57 @@ const AdminDashboard = () => {
   );
 };
 
+const MetricRow = ({ title, meta, value, percent }) => (
+  <div className="analytics-list-row">
+    <div className="analytics-list-main">
+      <strong>{title || '-'}</strong>
+      <span>{meta}</span>
+      {percent !== undefined && (
+        <div className="analytics-progress" aria-label={`Lap day ${formatPercent(percent)}`}>
+          <span style={{ width: `${Math.min(Number(percent || 0), 100)}%` }} />
+        </div>
+      )}
+    </div>
+    <div className="analytics-list-value">
+      <strong>{value}</strong>
+      {percent !== undefined && <span>{formatPercent(percent)}</span>}
+    </div>
+  </div>
+);
+
+const SkeletonList = () => (
+  <div className="analytics-list">
+    {[...Array(5)].map((_, index) => (
+      <div className="analytics-list-row" key={index}>
+        <div className="analytics-list-main">
+          <SkeletonBox width="70%" height="18px" />
+          <SkeletonBox width="42%" height="14px" />
+        </div>
+        <SkeletonBox width="92px" height="18px" />
+      </div>
+    ))}
+  </div>
+);
+
 const SkeletonRows = () => (
   <>
-    {[...Array(5)].map((_, i) => (
-      <tr key={i}>
-        <td><SkeletonBox width="100px" height="16px" /></td>
-        <td><SkeletonBox width="150px" height="16px" /></td>
-        <td><SkeletonBox width="90px" height="16px" /></td>
-        <td><SkeletonBox width="90px" height="16px" /></td>
-        <td><SkeletonBox width="100px" height="24px" borderRadius="100px" /></td>
+    {[...Array(5)].map((_, index) => (
+      <tr key={index}>
+        <td>
+          <SkeletonBox width="120px" height="16px" />
+        </td>
+        <td>
+          <SkeletonBox width="160px" height="16px" />
+        </td>
+        <td>
+          <SkeletonBox width="90px" height="16px" />
+        </td>
+        <td>
+          <SkeletonBox width="110px" height="16px" />
+        </td>
+        <td>
+          <SkeletonBox width="100px" height="24px" borderRadius="100px" />
+        </td>
       </tr>
     ))}
   </>

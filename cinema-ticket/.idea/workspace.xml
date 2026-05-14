@@ -7,16 +7,29 @@
     <list default="true" id="44bfda51-0bd8-4e56-8a78-05847a174f9b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/controller/AuthController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/dto/request/ForgotPasswordRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/dto/request/ForgotPasswordRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/dto/request/ResetPasswordRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/dto/request/ResetPasswordRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/exception/ErrorCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/exception/ErrorCode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/OTPService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/OTPService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/AnimatedRoutes.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/AnimatedRoutes.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/axiosClient.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/axiosClient.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/api/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Common/ErrorBoundary.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Common/ErrorBoundary.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Navbar/Navbar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Navbar/Navbar.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/Admin.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/Admin.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminDashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminLayout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/BranchManagement.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/BranchManagement.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/ShowtimeManagement.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/ShowtimeManagement.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/UserManagement.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/UserManagement.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home/HomePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login/ForgotPasswordPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login/ForgotPasswordPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login/LoginPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login/LoginPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MovieDetail/MovieDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MovieDetail/MovieDetailPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MovieList/MovieListPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MovieList/MovieListPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyBookings/MyBookingsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyBookings/MyBookingsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/NotFound/NotFoundPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/NotFound/NotFoundPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Payment/PaymentResultPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Payment/PaymentResultPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Profile/ProfilePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Profile/ProfilePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Register/RegisterPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Register/RegisterPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/SeatSelect/SeatSelectPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/SeatSelect/SeatSelectPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffLayout.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -117,7 +130,7 @@
       <option name="presentableId" value="Default" />
       <updated>1777252400505</updated>
       <workItem from="1777252401642" duration="3289000" />
-      <workItem from="1778763161555" duration="4512000" />
+      <workItem from="1778763161555" duration="6080000" />
     </task>
     <servers />
   </component>

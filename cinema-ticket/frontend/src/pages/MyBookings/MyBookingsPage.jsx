@@ -72,7 +72,7 @@ export default function MyBookingsPage() {
     return new Date(year, month - 1, day, hour, minute);
   };
 
-  const formatDateTime = (dateStr) => {
+  const FORMAT_DATE_TIME = (dateStr) => {
     const d = parseLocalDateTime(dateStr);
     if (!d) return '—';
     const dd = d.getDate().toString().padStart(2, '0');
@@ -83,7 +83,7 @@ export default function MyBookingsPage() {
     return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
   };
 
-  const formatTime = (dateStr) => {
+  const FORMAT_TIME = (dateStr) => {
     const d = parseLocalDateTime(dateStr);
     if (!d) return '';
     const hh = d.getHours().toString().padStart(2, '0');
@@ -91,7 +91,7 @@ export default function MyBookingsPage() {
     return `${hh}:${min}`;
   };
 
-  const formatDate = (dateStr) => {
+  const FORMAT_DATE = (dateStr) => {
     const d = parseLocalDateTime(dateStr);
     if (!d) return '';
     const dd = d.getDate().toString().padStart(2, '0');
@@ -100,7 +100,7 @@ export default function MyBookingsPage() {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  const formatCurrency = (amount) => {
+  const FORMAT_CURRENCY = (amount) => {
     if (!amount) return '0 đ';
     return Number(amount).toLocaleString('vi-VN') + ' đ';
   };

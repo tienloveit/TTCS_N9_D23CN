@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { authApi } from '../../api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { EyeIcon, EyeOffIcon, MailIcon, KeyIcon } from '../../components/Common/CinemaIcons';
 
 export default function ForgotPasswordPage() {

@@ -184,7 +184,7 @@ const UserManagement = () => {
       await userApi.updateStatus(user.id, newStatus);
       toast.success(newStatus === 'BLOCKED' ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản');
       fetchUsers();
-    } catch (err) {
+    } catch {
       toast.error('Cập nhật trạng thái thất bại');
     }
   };

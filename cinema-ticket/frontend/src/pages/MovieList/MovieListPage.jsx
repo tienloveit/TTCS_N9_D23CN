@@ -7,6 +7,8 @@ import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';
 import { CalendarIcon, ClockIcon, FilmIcon, SparkIcon } from '../../components/Common/CinemaIcons';
 
+const MotionDiv = motion.div;
+
 export default function MovieListPage() {
   const [movies, setMovies] = useState([]);
   const [genres, setGenres] = useState([]);
@@ -181,7 +183,7 @@ export default function MovieListPage() {
           <>
             <div className="movie-grid">
               {paginatedMovies.map((movie) => (
-                <motion.div
+                <MotionDiv
                   key={movie.movieId}
                   className="card movie-card"
                   onClick={() => navigate(`/movie/${movie.movieId}`)}
@@ -230,7 +232,7 @@ export default function MovieListPage() {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </MotionDiv>
               ))}
             </div>
 

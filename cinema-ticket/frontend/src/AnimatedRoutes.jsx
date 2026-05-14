@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
 import LoginPage from './pages/Login/LoginPage';
 import ForgotPasswordPage from './pages/Login/ForgotPasswordPage';

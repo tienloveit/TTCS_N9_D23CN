@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/genre")
 @RequiredArgsConstructor
-public class GenreController {
+public class  GenreController {
   private final GenreService genreService;
 
   @PostMapping

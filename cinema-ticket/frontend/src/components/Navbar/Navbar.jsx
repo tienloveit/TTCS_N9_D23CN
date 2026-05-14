@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { useState, useRef, useEffect } from 'react';
 import { movieApi } from '../../api';
 import SafeImage from '../Common/SafeImage';
@@ -31,6 +31,15 @@ export default function Navbar() {
     navigate('/login');
   };
 
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (value.trim().length < 2) {
+      setSearchResults([]);
+      setShowSearch(false);
+    }
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -51,8 +60,7 @@ export default function Navbar() {
   // Debounced search
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      return;
+      return undefined;
     }
 
     const timer = setTimeout(async () => {
@@ -71,10 +79,14 @@ export default function Navbar() {
 
   // Close menus on route change
   useEffect(() => {
-    setShowScheduleMenu(false);
-    setShowSearch(false);
-    setShowUserMenu(false);
-    setSearchQuery('');
+    const timer = window.setTimeout(() => {
+      setShowScheduleMenu(false);
+      setShowSearch(false);
+      setShowUserMenu(false);
+      setSearchQuery('');
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
@@ -99,7 +111,7 @@ export default function Navbar() {
               type="text"
               placeholder="Tìm phim..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
               onFocus={() => searchQuery.trim().length >= 2 && setShowSearch(true)}
             />
           </div>
