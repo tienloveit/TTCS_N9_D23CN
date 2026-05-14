@@ -8,6 +8,7 @@ import com.ltweb.backend.dto.request.ResetPasswordRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.LoginResponse;
 import com.ltweb.backend.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,22 +60,23 @@ public class AuthController {
 
   @PostMapping("/auth/forgot-password")
   public ApiResponse<Void> forgotPassword(
-      @RequestBody ForgotPasswordRequest forgotPasswordRequest) {
+      @RequestBody @Valid ForgotPasswordRequest forgotPasswordRequest) {
     ApiResponse<Void> apiResponse = new ApiResponse<>();
     apiResponse.setCode(200);
-    apiResponse.setMessage("OTP sent to email succesfully");
+    apiResponse.setMessage("OTP sent to email successfully");
     authService.forgotPassword(forgotPasswordRequest.getEmail());
     return apiResponse;
   }
 
   @PostMapping("/auth/reset-password")
-  public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+  public ApiResponse<Void> resetPassword(
+      @RequestBody @Valid ResetPasswordRequest resetPasswordRequest) {
     ApiResponse<Void> apiResponse = new ApiResponse<>();
     apiResponse.setCode(200);
     apiResponse.setMessage("Password reset successfully");
     authService.resetPassword(
         resetPasswordRequest.getEmail(),
-        resetPasswordRequest.getOTP(),
+        resetPasswordRequest.getOtp(),
         resetPasswordRequest.getNewPassword());
     return apiResponse;
   }

@@ -17,6 +17,7 @@ public enum ErrorCode {
   TOKEN_INVALID(401, "Invalid JWT token", HttpStatus.UNAUTHORIZED),
   TOKEN_SIGNING_FAILED(500, "Failed to sign JWT token", HttpStatus.INTERNAL_SERVER_ERROR),
   OTP_INVALID(401, "Invalid OTP", HttpStatus.UNAUTHORIZED),
+  OTP_RATE_LIMIT(429, "Too many OTP requests. Please try again later", HttpStatus.TOO_MANY_REQUESTS),
   PASSWORD_INCORRECT(401, "Password incorrect", HttpStatus.UNAUTHORIZED),
 
   // Price

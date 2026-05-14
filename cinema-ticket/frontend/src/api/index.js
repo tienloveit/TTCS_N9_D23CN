@@ -2,22 +2,22 @@ import axiosClient from './axiosClient';
 
 // ==================== AUTH ====================
 export const authApi = {
-  login: (data) => axiosClient.post('/auth/login', data),
+  login: (data) => axiosClient.post('/auth/login', data, { skipAuth: true }),
   logout: () => {
     const token = localStorage.getItem('accessToken');
     return axiosClient.post('/auth/logout', null, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
-  refresh: (refreshToken) => axiosClient.post('/auth/refresh', { refreshToken }),
+  refresh: (refreshToken) => axiosClient.post('/auth/refresh', { refreshToken }, { skipAuth: true }),
   changePassword: (data) => axiosClient.post('/auth/change-password', data),
-  forgotPassword: (email) => axiosClient.post('/auth/forgot-password', { email }),
-  resetPassword: (data) => axiosClient.post('/auth/reset-password', data),
+  forgotPassword: (email) => axiosClient.post('/auth/forgot-password', { email }, { skipAuth: true }),
+  resetPassword: (data) => axiosClient.post('/auth/reset-password', data, { skipAuth: true }),
 };
 
 // ==================== USER ====================
 export const userApi = {
-  create: (data) => axiosClient.post('/sign-up', data),
+  create: (data) => axiosClient.post('/sign-up', data, { skipAuth: true }),
   getAll: () => axiosClient.get('/users'),
   getById: (id) => axiosClient.get(`/users/${id}`),
   update: (id, data) => axiosClient.put(`/users/${id}`, data),

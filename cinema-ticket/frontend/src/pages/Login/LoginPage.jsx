@@ -102,6 +102,10 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className="auth-inline-action">
+          <Link to="/forgot-password">Quên mật khẩu?</Link>
+        </div>
+
         <div className="auth-footer">
           Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
         </div>

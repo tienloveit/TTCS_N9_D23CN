@@ -1,5 +1,8 @@
 package com.ltweb.backend.service;
 
+import com.ltweb.backend.exception.AppException;
+import com.ltweb.backend.exception.ErrorCode;
+import java.security.SecureRandom;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -8,6 +11,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class OTPService {
+  private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
   private final StringRedisTemplate stringRedisTemplate;
 
   public String generateOTP(String email) {
@@ -21,11 +26,11 @@ public class OTPService {
     }
 
     if (count > 3) {
-      throw new RuntimeException("Bạn thao tác quá nhanh. Vui lòng thử lại");
+      throw new AppException(ErrorCode.OTP_RATE_LIMIT);
     }
 
     // sinh OTP và lưu vào Redis
-    String generateOtp = String.valueOf(Math.random() * 900000 + 100000);
+    String generateOtp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     stringRedisTemplate.opsForValue().set(codeKey, generateOtp, Duration.ofMinutes(5));
     return generateOtp;
   }
