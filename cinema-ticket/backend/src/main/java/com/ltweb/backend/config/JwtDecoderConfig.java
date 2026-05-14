@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -43,7 +44,7 @@ public class JwtDecoderConfig implements JwtDecoder {
       if (ErrorCode.ACCESS_DENIED.equals(e.getErrorCode())) {
         throw new AccessDeniedException(e.getMessage(), e);
       }
-      throw new JwtException(e.getMessage(), e);
+      throw new BadJwtException(e.getMessage(), e);
     }
     return nimbusJwtDecoder.decode(token);
   }
