@@ -7,29 +7,16 @@
     <list default="true" id="44bfda51-0bd8-4e56-8a78-05847a174f9b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/exception/ErrorCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/exception/ErrorCode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/AnimatedRoutes.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/AnimatedRoutes.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/api/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Common/ErrorBoundary.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Common/ErrorBoundary.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Navbar/Navbar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Navbar/Navbar.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/Admin.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/Admin.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminDashboard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminLayout.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/BranchManagement.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/BranchManagement.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/ShowtimeManagement.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/ShowtimeManagement.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/UserManagement.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/UserManagement.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home/HomePage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login/ForgotPasswordPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login/ForgotPasswordPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/index.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login/LoginPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login/LoginPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MovieDetail/MovieDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MovieDetail/MovieDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MovieList/MovieListPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MovieList/MovieListPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyBookings/MyBookingsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyBookings/MyBookingsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/NotFound/NotFoundPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/NotFound/NotFoundPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Payment/PaymentResultPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Payment/PaymentResultPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Profile/ProfilePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Profile/ProfilePage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Register/RegisterPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Register/RegisterPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/SeatSelect/SeatSelectPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/SeatSelect/SeatSelectPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffLayout.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,23 +30,23 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="268" />
+    <option name="cachedIndexableFilesCount" value="275" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "ngthanhtu05"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;ngthanhtu05&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "git@github.com:tienloveit/TTCS_N9_D23CN.git",
-    "accountId": "eb1377bc-2800-4ec6-b379-53cd9a3dc94e"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:tienloveit/TTCS_N9_D23CN.git&quot;,
+    &quot;accountId&quot;: &quot;eb1377bc-2800-4ec6-b379-53cd9a3dc94e&quot;
   }
-}]]></component>
+}</component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -80,38 +67,38 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "Spring Boot.BackendApplication.executor": "Run",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/TTCS_N9_D23CN/cinema-ticket",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Global Libraries",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "preferences.lookFeel",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;Spring Boot.BackendApplication.executor&quot;: &quot;Run&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/TTCS_N9_D23CN/cinema-ticket&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Global Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="BackendApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
@@ -130,7 +117,8 @@
       <option name="presentableId" value="Default" />
       <updated>1777252400505</updated>
       <workItem from="1777252401642" duration="3289000" />
-      <workItem from="1778763161555" duration="6080000" />
+      <workItem from="1778763161555" duration="6637000" />
+      <workItem from="1778843656215" duration="1878000" />
     </task>
     <servers />
   </component>

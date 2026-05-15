@@ -39,6 +39,17 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:google-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
   ai:
     openai:
       # --- CẤU HÌNH CŨ (Giữ lại để phòng khi lỗi có thể quay lại) ---
@@ -62,6 +73,11 @@ server:
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
+
+app:
+  oauth2:
+    redirect-success-url: ${APP_OAUTH2_SUCCESS_URL:http://localhost:5173/oauth2/callback}
+    redirect-failure-url: ${APP_OAUTH2_FAILURE_URL:http://localhost:5173/login}
 
 vnpay:
   tmn-code: ${VNPAY_TMN_CODE}

@@ -19,6 +19,8 @@ public enum ErrorCode {
   OTP_INVALID(401, "Invalid OTP", HttpStatus.UNAUTHORIZED),
   OTP_RATE_LIMIT(429, "Too many OTP requests. Please try again later", HttpStatus.TOO_MANY_REQUESTS),
   PASSWORD_INCORRECT(401, "Password incorrect", HttpStatus.UNAUTHORIZED),
+  OAUTH2_EMAIL_MISSING(400, "Google account does not provide an email", HttpStatus.BAD_REQUEST),
+  OAUTH2_EMAIL_NOT_VERIFIED(401, "Google email is not verified", HttpStatus.UNAUTHORIZED),
 
   // Price
   SEATTYPE_EXIST(401, "Seat type already exist", HttpStatus.BAD_REQUEST),

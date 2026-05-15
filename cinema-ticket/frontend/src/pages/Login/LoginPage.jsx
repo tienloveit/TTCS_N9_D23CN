@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation, Navigate } from 'react-router-dom';
+import { authApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 import { toast } from 'react-toastify';
 import { EyeIcon, EyeOffIcon } from '../../components/Common/CinemaIcons';
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const oauth2Error = new URLSearchParams(location.search).get('oauth2Error');
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -37,13 +39,17 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href = authApi.getGoogleLoginUrl();
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">Đăng nhập</h1>
         <p className="auth-subtitle">Chào mừng bạn trở lại MoviePTIT</p>
 
-        {error && <div className="error-message">{error}</div>}
+        {(error || oauth2Error) && <div className="error-message">{error || oauth2Error}</div>}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -101,6 +107,19 @@ export default function LoginPage() {
             {loading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>hoặc</span>
+        </div>
+
+        <button
+          className="btn btn-secondary auth-google-button"
+          type="button"
+          onClick={handleGoogleLogin}
+        >
+          <span className="auth-google-mark">G</span>
+          Tiếp tục với Google
+        </button>
 
         <div className="auth-inline-action">
           <Link to="/forgot-password">Quên mật khẩu?</Link>

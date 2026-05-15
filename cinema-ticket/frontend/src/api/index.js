@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient, { API_BASE_URL } from './axiosClient';
 
 // ==================== AUTH ====================
 export const authApi = {
@@ -13,6 +13,7 @@ export const authApi = {
   changePassword: (data) => axiosClient.post('/auth/change-password', data),
   forgotPassword: (email) => axiosClient.post('/auth/forgot-password', { email }, { skipAuth: true }),
   resetPassword: (data) => axiosClient.post('/auth/reset-password', data, { skipAuth: true }),
+  getGoogleLoginUrl: () => `${API_BASE_URL}/oauth2/authorization/google`,
 };
 
 // ==================== USER ====================

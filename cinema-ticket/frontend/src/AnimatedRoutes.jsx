@@ -4,6 +4,7 @@ import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
 import LoginPage from './pages/Login/LoginPage';
 import ForgotPasswordPage from './pages/Login/ForgotPasswordPage';
+import OAuth2CallbackPage from './pages/Login/OAuth2CallbackPage';
 import RegisterPage from './pages/Register/RegisterPage';
 import HomePage from './pages/Home/HomePage';
 import MovieListPage from './pages/MovieList/MovieListPage';
@@ -85,6 +86,7 @@ const AnimatedRoutes = () => {
       <Routes location={location} key={location.pathname}>
         {/* Auth pages */}
         <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
+        <Route path="/oauth2/callback" element={<PageWrapper><OAuth2CallbackPage /></PageWrapper>} />
         <Route path="/forgot-password" element={<PageWrapper><ForgotPasswordPage /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><RegisterPage /></PageWrapper>} />
 

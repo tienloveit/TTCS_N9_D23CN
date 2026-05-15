@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { authApi } from '../api';
 import { AuthContext } from './authContextValue';
 
-const getStoredUser = () => {
-  const token = localStorage.getItem('accessToken');
-  if (!token) {
-    return null;
-  }
-
+const decodeUserFromToken = (token) => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return {
@@ -15,28 +10,43 @@ const getStoredUser = () => {
       role: payload.role,
     };
   } catch {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     return null;
   }
+};
+
+const getStoredUser = () => {
+  const token = localStorage.getItem('accessToken');
+  if (!token) {
+    return null;
+  }
+
+  const user = decodeUserFromToken(token);
+  if (!user) {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  }
+  return user;
 };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser);
   const loading = false;
 
+  const applyLoginTokens = (accessToken, refreshToken) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    setUser(decodeUserFromToken(accessToken));
+  };
+
   const login = async (username, password) => {
     const res = await authApi.login({ username, password });
     const { accessToken, refreshToken } = res.data.result;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-
-    const payload = JSON.parse(atob(accessToken.split('.')[1]));
-    setUser({
-      username: payload.sub,
-      role: payload.role,
-    });
+    applyLoginTokens(accessToken, refreshToken);
     return res.data;
+  };
+
+  const loginWithTokens = (accessToken, refreshToken) => {
+    applyLoginTokens(accessToken, refreshToken);
   };
 
   const logout = async () => {
@@ -57,7 +67,17 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, loading, isAuthenticated, isAdmin, isStaff, isStaffOrAdmin }}
+      value={{
+        user,
+        login,
+        loginWithTokens,
+        logout,
+        loading,
+        isAuthenticated,
+        isAdmin,
+        isStaff,
+        isStaffOrAdmin,
+      }}
     >
       {children}
     </AuthContext.Provider>

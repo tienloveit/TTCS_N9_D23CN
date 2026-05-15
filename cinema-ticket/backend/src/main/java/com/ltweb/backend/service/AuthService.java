@@ -6,6 +6,8 @@ import com.ltweb.backend.dto.request.LoginRequest;
 import com.ltweb.backend.dto.response.LoginResponse;
 import com.ltweb.backend.entity.RedisToken;
 import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.UserRole;
+import com.ltweb.backend.enums.UserStatus;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.repository.RedisTokenRepository;
@@ -14,14 +16,17 @@ import com.nimbusds.jwt.SignedJWT;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -125,6 +130,93 @@ public class AuthService {
     userRepository.save(user);
 
     otpService.deleteOTP(email);
+  }
+
+  public LoginResponse loginWithGoogle(OAuth2User oAuth2User) {
+    String email = oAuth2User.getAttribute("email");
+    if (!StringUtils.hasText(email)) {
+      throw new AppException(ErrorCode.OAUTH2_EMAIL_MISSING);
+    }
+
+    Boolean emailVerified = oAuth2User.getAttribute("email_verified");
+    if (Boolean.FALSE.equals(emailVerified)) {
+      throw new AppException(ErrorCode.OAUTH2_EMAIL_NOT_VERIFIED);
+    }
+
+    User user =
+        userRepository
+            .findByEmail(email)
+            .map(existingUser -> updateGoogleProfile(existingUser, oAuth2User))
+            .orElseGet(() -> createGoogleUser(email, oAuth2User));
+
+    if (!user.isAccountNonLocked() || !user.isEnabled()) {
+      throw new AppException(ErrorCode.ACCESS_DENIED);
+    }
+
+    return getLoginResponse(user);
+  }
+
+  private User createGoogleUser(String email, OAuth2User oAuth2User) {
+    String fullName = resolveFullName(oAuth2User, email);
+    return userRepository.save(
+        User.builder()
+            .username(generateUniqueUsername(email))
+            .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+            .fullName(fullName)
+            .email(email)
+            .role(UserRole.USER)
+            .status(UserStatus.ACTIVE)
+            .build());
+  }
+
+  private User updateGoogleProfile(User user, OAuth2User oAuth2User) {
+    boolean changed = false;
+    String fullName = resolveFullName(oAuth2User, user.getEmail());
+    if (!StringUtils.hasText(user.getFullName()) && StringUtils.hasText(fullName)) {
+      user.setFullName(fullName);
+      changed = true;
+    }
+    if (user.getRole() == null) {
+      user.setRole(UserRole.USER);
+      changed = true;
+    }
+    if (user.getStatus() == null) {
+      user.setStatus(UserStatus.ACTIVE);
+      changed = true;
+    }
+    return changed ? userRepository.save(user) : user;
+  }
+
+  private String resolveFullName(OAuth2User oAuth2User, String email) {
+    String name = oAuth2User.getAttribute("name");
+    if (StringUtils.hasText(name)) {
+      return name;
+    }
+    return emailLocalPart(email);
+  }
+
+  private String generateUniqueUsername(String email) {
+    String localPart = emailLocalPart(email);
+    String baseUsername = localPart.replaceAll("[^A-Za-z0-9_]", "_");
+    if (!StringUtils.hasText(baseUsername)) {
+      baseUsername = "google_user";
+    }
+
+    String username = baseUsername;
+    int suffix = 1;
+    while (userRepository.existsByUsername(username)) {
+      username = baseUsername + suffix;
+      suffix++;
+    }
+    return username;
+  }
+
+  private String emailLocalPart(String email) {
+    int atIndex = email.indexOf('@');
+    if (atIndex <= 0) {
+      return email;
+    }
+    return email.substring(0, atIndex);
   }
 
   private LoginResponse getLoginResponse(User user) {

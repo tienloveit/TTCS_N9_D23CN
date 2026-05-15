@@ -38,6 +38,8 @@ public class SecurityConfig {
       "/v1/vnpay/ipn",
       "/auth/forgot-password",
       "/auth/reset-password",
+      "/oauth2/**",
+      "/login/oauth2/**",
       "/api/v1/cleanup/**",
       "/chat"
   };
@@ -45,6 +47,8 @@ public class SecurityConfig {
   private final CustomUserDetailService userDetailsService;
   private final JwtDecoderConfig jwtDecoderConfig;
   private final AuthenticationEntryPoint authenticationEntryPoint;
+  private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+  private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -78,6 +82,10 @@ public class SecurityConfig {
                 .permitAll()
                 .anyRequest()
                 .authenticated())
+        .oauth2Login(
+            oauth2 -> oauth2
+                .successHandler(oAuth2LoginSuccessHandler)
+                .failureHandler(oAuth2LoginFailureHandler))
         .exceptionHandling(
             (exception) -> exception.authenticationEntryPoint(authenticationEntryPoint))
         .oauth2ResourceServer(
