@@ -25,7 +25,7 @@ export default function CheckInPage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        toast.error('Vui long chon file anh');
+        toast.error('Vui lòng chọn file ảnh');
         return;
       }
       setSelectedFile(file);
@@ -37,7 +37,7 @@ export default function CheckInPage() {
     event.preventDefault();
     const value = code.trim();
     if (!value) {
-      toast.error('Nhap ma ve hoac quet QR');
+      toast.error('Nhập mã vé hoặc quét QR');
       return;
     }
 
@@ -46,10 +46,10 @@ export default function CheckInPage() {
       const res = await ticketApi.checkIn({ code: value });
       setResult(res.data.result);
       setCode('');
-      toast.success('Check-in thanh cong');
+      toast.success('Check-in thành công');
     } catch (err) {
       setResult(null);
-      toast.error(err.response?.data?.message || 'Check-in that bai');
+      toast.error(err.response?.data?.message || 'Check-in thất bại');
     } finally {
       setChecking(false);
     }
@@ -58,7 +58,7 @@ export default function CheckInPage() {
   const handleImageSubmit = async (event) => {
     event.preventDefault();
     if (!selectedFile) {
-      toast.error('Vui long chon anh QR code');
+      toast.error('Vui lòng chọn ảnh QR code');
       return;
     }
 
@@ -68,10 +68,10 @@ export default function CheckInPage() {
       setResult(res.data.result);
       setSelectedFile(null);
       setPreviewUrl(null);
-      toast.success('Check-in thanh cong');
+      toast.success('Check-in thành công');
     } catch (err) {
       setResult(null);
-      toast.error(err.response?.data?.message || 'Check-in that bai');
+      toast.error(err.response?.data?.message || 'Check-in thất bại');
     } finally {
       setChecking(false);
     }
@@ -85,16 +85,16 @@ export default function CheckInPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Check-in ve</h1>
-        <p className="page-subtitle">Quet QR hoac nhap ma ve de xac nhan khach vao rap.</p>
+        <h1 className="page-title">Check-in vé</h1>
+        <p className="page-subtitle">Quét QR hoặc nhập mã vé để xác nhận khách vào rạp.</p>
       </div>
 
       <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' }}>
         {/* Form nhập mã */}
         <form className="admin-table-card" style={{ padding: 24, display: 'grid', gap: 16 }} onSubmit={handleSubmit}>
-          <h3 style={{ margin: 0 }}>Nhap ma QR</h3>
+          <h3 style={{ margin: 0 }}>Nhập mã QR</h3>
           <label>
-            <span className="form-label">Ma QR / ma ve</span>
+            <span className="form-label">Mã QR / mã vé</span>
             <textarea
               className="input"
               rows="4"
@@ -107,16 +107,16 @@ export default function CheckInPage() {
           </label>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" disabled={checking}>
-              {checking ? 'Dang check-in...' : 'Check-in'}
+              {checking ? 'Đang check-in...' : 'Check-in'}
             </button>
           </div>
         </form>
 
         {/* Form upload ảnh */}
         <form className="admin-table-card" style={{ padding: 24, display: 'grid', gap: 16 }} onSubmit={handleImageSubmit}>
-          <h3 style={{ margin: 0 }}>Tai anh QR code</h3>
+          <h3 style={{ margin: 0 }}>Tải ảnh QR code</h3>
           <label>
-            <span className="form-label">Chon anh QR code</span>
+            <span className="form-label">Chọn ảnh QR code</span>
             <input
               type="file"
               accept="image/*"
@@ -155,14 +155,14 @@ export default function CheckInPage() {
                   fontSize: '12px'
                 }}
               >
-                Xoa
+                Xóa
               </button>
             </div>
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" disabled={checking || !selectedFile}>
-              {checking ? 'Dang check-in...' : 'Check-in bang anh'}
+              {checking ? 'Đang check-in...' : 'Check-in bằng ảnh'}
             </button>
           </div>
         </form>
@@ -172,9 +172,9 @@ export default function CheckInPage() {
         <div className="admin-table-card" style={{ padding: 24, marginTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ margin: '0 0 8px' }}>{result.movieName || 'Ve xem phim'}</h2>
+              <h2 style={{ margin: '0 0 8px' }}>{result.movieName || 'Vé xem phim'}</h2>
               <div style={{ color: 'var(--text-muted)' }}>
-                {result.bookingCode} - {result.customerName || 'Khach hang'}
+                {result.bookingCode} - {result.customerName || 'Khách hàng'}
               </div>
             </div>
             <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>
@@ -187,9 +187,9 @@ export default function CheckInPage() {
             <thead>
               <tr>
                 <th>Ticket</th>
-                <th>Ghe</th>
-                <th>Trang thai</th>
-                <th>Thoi gian</th>
+                <th>Ghế</th>
+                <th>Trạng thái</th>
+                <th>Thời gian</th>
               </tr>
             </thead>
             <tbody>
@@ -199,7 +199,7 @@ export default function CheckInPage() {
                   <td><span className="movie-badge">{ticket.seatCode}</span></td>
                   <td>
                     <span className={`status-badge ${ticket.alreadyCheckedIn ? 'status--pending' : 'status--active'}`}>
-                      {ticket.alreadyCheckedIn ? 'Da check-in truoc do' : 'Hop le'}
+                      {ticket.alreadyCheckedIn ? 'Đã check-in trước đó' : 'Hợp lệ'}
                     </span>
                   </td>
                   <td>{formatShowtime(ticket.checkedInAt)}</td>

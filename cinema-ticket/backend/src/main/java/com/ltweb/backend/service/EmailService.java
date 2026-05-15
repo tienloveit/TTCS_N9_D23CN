@@ -74,7 +74,7 @@ public class EmailService {
     MimeMessage message = mailSender.createMimeMessage();
     MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
     helper.setTo(toEmail);
-    helper.setSubject("MoviePTIT - Ve xem phim " + nullToEmpty(booking.getBookingCode()));
+    helper.setSubject("MoviePTIT - Vé xem phim " + nullToEmpty(booking.getBookingCode()));
     helper.setText(buildBookingTicketEmail(booking, tickets), true);
 
     for (int i = 0; i < tickets.size(); i++) {
@@ -115,13 +115,13 @@ public class EmailService {
           .append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">")
           .append("<tr>")
           .append("<td style=\"vertical-align:top;padding-right:16px;\">")
-          .append("<div style=\"font-size:13px;color:#64748b;text-transform:uppercase;\">Ve ")
+          .append("<div style=\"font-size:13px;color:#64748b;text-transform:uppercase;\">Vé ")
           .append(i + 1)
           .append("</div>")
-          .append("<div style=\"font-size:22px;font-weight:800;color:#111827;margin-top:4px;\">Ghe ")
+          .append("<div style=\"font-size:22px;font-weight:800;color:#111827;margin-top:4px;\">Ghế ")
           .append(escapeHtml(seatCode))
           .append("</div>")
-          .append("<div style=\"font-size:13px;color:#64748b;margin-top:8px;\">Ma ve</div>")
+          .append("<div style=\"font-size:13px;color:#64748b;margin-top:8px;\">Mã vé</div>")
           .append("<div style=\"font-family:monospace;font-size:14px;color:#111827;\">")
           .append(escapeHtml(getTicketQrValue(booking, ticket)))
           .append("</div>")
@@ -129,7 +129,7 @@ public class EmailService {
           .append("<td width=\"150\" style=\"text-align:right;vertical-align:top;\">")
           .append("<img src=\"cid:")
           .append(getQrContentId(i))
-          .append("\" width=\"140\" height=\"140\" alt=\"QR ve ")
+          .append("\" width=\"140\" height=\"140\" alt=\"QR vé ")
           .append(escapeHtml(seatCode))
           .append("\" style=\"display:inline-block;border:1px solid #e5e7eb;\"/>")
           .append("</td>")
@@ -147,19 +147,19 @@ public class EmailService {
                     <tr>
                       <td style="padding:28px 32px 20px;background:#111827;color:#ffffff;">
                         <div style="font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#cbd5e1;">MoviePTIT</div>
-                        <h1 style="margin:8px 0 0;font-size:26px;line-height:1.25;">Thanh toan thanh cong</h1>
-                        <p style="margin:8px 0 0;color:#d1d5db;">Ve dien tu cua ban da san sang. Vui long dua tung ma QR khi vao rap.</p>
+                        <h1 style="margin:8px 0 0;font-size:26px;line-height:1.25;">Thanh toán thành công</h1>
+                        <p style="margin:8px 0 0;color:#d1d5db;">Vé điện tử của bạn đã sẵn sàng. Vui lòng đưa từng mã QR khi vào rạp.</p>
                       </td>
                     </tr>
                     <tr>
                       <td style="padding:24px 32px;">
                         <h2 style="font-size:24px;line-height:1.25;margin:0 0 16px;color:#111827;">%s</h2>
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.7;">
-                          <tr><td style="color:#64748b;">Ma dat ve</td><td align="right" style="font-family:monospace;font-weight:700;">%s</td></tr>
-                          <tr><td style="color:#64748b;">Suat chieu</td><td align="right">%s</td></tr>
-                          <tr><td style="color:#64748b;">Rap</td><td align="right">%s</td></tr>
-                          <tr><td style="color:#64748b;">Phong</td><td align="right">%s</td></tr>
-                          <tr><td style="color:#64748b;">Tong tien</td><td align="right" style="font-weight:700;">%s</td></tr>
+                          <tr><td style="color:#64748b;">Mã đặt vé</td><td align="right" style="font-family:monospace;font-weight:700;">%s</td></tr>
+                          <tr><td style="color:#64748b;">Suất chiếu</td><td align="right">%s</td></tr>
+                          <tr><td style="color:#64748b;">Rạp</td><td align="right">%s</td></tr>
+                          <tr><td style="color:#64748b;">Phòng</td><td align="right">%s</td></tr>
+                          <tr><td style="color:#64748b;">Tổng tiền</td><td align="right" style="font-weight:700;">%s</td></tr>
                         </table>
                         <div style="height:12px;"></div>
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">

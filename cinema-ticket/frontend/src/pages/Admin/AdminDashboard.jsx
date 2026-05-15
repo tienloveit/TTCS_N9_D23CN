@@ -49,12 +49,12 @@ const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
 
 const getStatusLabel = (status) => {
   if (status === 'COMPLETED') {
-    return 'Thanh cong';
+    return 'Thành công';
   }
   if (status === 'CANCELLED') {
-    return 'Da huy';
+    return 'Đã hủy';
   }
-  return 'Cho thanh toan';
+  return 'Chờ thanh toán';
 };
 
 const getStatusClass = (status) => {
@@ -138,7 +138,7 @@ const AdminDashboard = () => {
         if (!active) {
           return;
         }
-        setError(err.response?.data?.message || 'Khong the tai du lieu thong ke');
+        setError(err.response?.data?.message || 'Không thể tải dữ liệu thống kê');
       } finally {
         if (active) {
           setLoading(false);
@@ -176,14 +176,14 @@ const AdminDashboard = () => {
   const periodLabel =
     analytics.fromDate && analytics.toDate
       ? `${formatDate(analytics.fromDate)} - ${formatDate(analytics.toDate)}`
-      : '30 ngay gan nhat';
+      : '30 ngày gần nhất';
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
         <div>
-          <h1 className="page-title">Tong quan he thong</h1>
-          <p className="page-subtitle">Doanh thu, suc chua phong, phim ban chay va doanh so bap nuoc.</p>
+          <h1 className="page-title">Tổng quan hệ thống</h1>
+          <p className="page-subtitle">Doanh thu, sức chứa phòng, phim bán chạy và doanh số bắp nước.</p>
         </div>
         <span className="analytics-period">{periodLabel}</span>
       </div>
@@ -195,13 +195,13 @@ const AdminDashboard = () => {
           icon={SparkIcon}
           label="Doanh thu"
           value={formatCurrency(summary.revenue)}
-          note={`${formatNumber(summary.paidBookings)} don da thanh toan`}
+          note={`${formatNumber(summary.paidBookings)} đơn đã thanh toán`}
           color="#16a34a"
           loading={loading}
         />
         <StatCard
           icon={TicketIcon}
-          label="Ve da ban"
+          label="Vé đã bán"
           value={formatNumber(summary.ticketsSold)}
           note={`AOV ${formatCurrency(summary.averageOrderValue)}`}
           color="#0756a6"
@@ -209,17 +209,17 @@ const AdminDashboard = () => {
         />
         <StatCard
           icon={MapPinIcon}
-          label="Lap day"
+          label="Lấp đầy"
           value={formatPercent(summary.occupancyRate)}
-          note={`${formatNumber(summary.totalCapacity)} ghe kha dung`}
+          note={`${formatNumber(summary.totalCapacity)} ghế khả dụng`}
           color="#f59e0b"
           loading={loading}
         />
         <StatCard
           icon={FilmIcon}
-          label="Doanh thu bap nuoc"
+          label="Doanh thu bắp nước"
           value={formatCurrency(summary.foodRevenue)}
-          note={`Ve ${formatCurrency(summary.ticketRevenue)}`}
+          note={`Vé ${formatCurrency(summary.ticketRevenue)}`}
           color="#7c3aed"
           loading={loading}
         />
@@ -228,13 +228,13 @@ const AdminDashboard = () => {
       <div className="analytics-grid analytics-grid--wide">
         <section className="analytics-card">
           <div className="analytics-card-header">
-            <h3>Doanh thu theo ngay</h3>
+            <h3>Doanh thu theo ngày</h3>
             <span>{formatCurrency(summary.revenue)}</span>
           </div>
           {loading ? (
             <SkeletonBox height="280px" />
           ) : revenueTrend.length === 0 ? (
-            <EmptyState>Chua co doanh thu trong ky nay.</EmptyState>
+            <EmptyState>Chưa có doanh thu trong kỳ này.</EmptyState>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={revenueTrend} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
@@ -263,13 +263,13 @@ const AdminDashboard = () => {
 
         <section className="analytics-card">
           <div className="analytics-card-header">
-            <h3>Ty le lap day theo chi nhanh</h3>
+            <h3>Tỷ lệ lấp đầy theo chi nhánh</h3>
             <span>{formatPercent(summary.occupancyRate)}</span>
           </div>
           {loading ? (
             <SkeletonBox height="280px" />
           ) : occupancyByBranch.length === 0 ? (
-            <EmptyState>Chua co suat chieu trong ky nay.</EmptyState>
+            <EmptyState>Chưa có suất chiếu trong kỳ này.</EmptyState>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={occupancyByBranch} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
@@ -295,20 +295,20 @@ const AdminDashboard = () => {
           <div className="analytics-card-header">
             <h3>Top phim</h3>
             <Link to="/admin/movies" className="btn btn-ghost btn-sm">
-              Quan ly phim
+              Quản lý phim
             </Link>
           </div>
           {loading ? (
             <SkeletonList />
           ) : topMovies.length === 0 ? (
-            <EmptyState>Chua co phim nao phat sinh doanh thu.</EmptyState>
+            <EmptyState>Chưa có phim nào phát sinh doanh thu.</EmptyState>
           ) : (
             <div className="analytics-list">
               {topMovies.map((movie) => (
                 <MetricRow
                   key={movie.movieId}
                   title={movie.movieName}
-                  meta={`${formatNumber(movie.ticketsSold)} ve - ${formatNumber(movie.showtimes)} suat`}
+                  meta={`${formatNumber(movie.ticketsSold)} vé - ${formatNumber(movie.showtimes)} suất`}
                   value={formatCurrency(movie.revenue)}
                   percent={movie.occupancyRate}
                 />
@@ -319,20 +319,20 @@ const AdminDashboard = () => {
 
         <section className="analytics-card">
           <div className="analytics-card-header">
-            <h3>Doanh so bap nuoc</h3>
+            <h3>Doanh số bắp nước</h3>
             <span>{formatCurrency(summary.foodRevenue)}</span>
           </div>
           {loading ? (
             <SkeletonList />
           ) : foodSales.length === 0 ? (
-            <EmptyState>Chua co mon an nao duoc ban.</EmptyState>
+            <EmptyState>Chưa có món ăn nào được bán.</EmptyState>
           ) : (
             <div className="analytics-list">
               {foodSales.map((food) => (
                 <MetricRow
                   key={food.foodId}
                   title={food.foodName}
-                  meta={`${formatNumber(food.quantity)} san pham`}
+                  meta={`${formatNumber(food.quantity)} sản phẩm`}
                   value={formatCurrency(food.revenue)}
                 />
               ))}
@@ -343,19 +343,19 @@ const AdminDashboard = () => {
 
       <div className="admin-table-card">
         <div className="table-header">
-          <h3 className="section-title">Don hang moi nhat</h3>
+          <h3 className="section-title">Đơn hàng mới nhất</h3>
           <Link to="/admin/bookings" className="btn btn-ghost btn-sm">
-            Quan ly ve
+            Quản lý vé
           </Link>
         </div>
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Ma don</th>
+              <th>Mã đơn</th>
               <th>Phim</th>
-              <th>Ngay dat</th>
-              <th>Tong tien</th>
-              <th>Trang thai</th>
+              <th>Ngày đặt</th>
+              <th>Tổng tiền</th>
+              <th>Trạng thái</th>
             </tr>
           </thead>
           <tbody>
@@ -364,7 +364,7 @@ const AdminDashboard = () => {
             ) : recentBookings.length === 0 ? (
               <tr>
                 <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>
-                  Chua co don hang nao
+                  Chưa có đơn hàng nào
                 </td>
               </tr>
             ) : (
@@ -399,7 +399,7 @@ const MetricRow = ({ title, meta, value, percent }) => (
       <strong>{title || '-'}</strong>
       <span>{meta}</span>
       {percent !== undefined && (
-        <div className="analytics-progress" aria-label={`Lap day ${formatPercent(percent)}`}>
+        <div className="analytics-progress" aria-label={`Lấp đầy ${formatPercent(percent)}`}>
           <span style={{ width: `${Math.min(Number(percent || 0), 100)}%` }} />
         </div>
       )}

@@ -55,19 +55,19 @@ const Icons = {
 };
 
 const TITLE_MAP = {
-  '/staff': 'Dat ve tai quay',
-  '/staff/booking': 'Dat ve tai quay',
-  '/staff/check-in': 'Check-in ve',
-  '/staff/bookings': 'Don dat ve',
+  '/staff': 'Đặt vé tại quầy',
+  '/staff/booking': 'Đặt vé tại quầy',
+  '/staff/check-in': 'Check-in vé',
+  '/staff/bookings': 'Đơn đặt vé',
 };
 
 const NAV_SECTIONS = [
   {
-    label: 'Nghiep vu',
+    label: 'Nghiệp vụ',
     items: [
-      { path: '/staff/booking', label: 'Dat ve tai quay', Icon: Icons.Ticket },
+      { path: '/staff/booking', label: 'Đặt vé tại quầy', Icon: Icons.Ticket },
       { path: '/staff/check-in', label: 'Check-in', Icon: Icons.Scan },
-      { path: '/staff/bookings', label: 'Don dat ve', Icon: Icons.List },
+      { path: '/staff/bookings', label: 'Đơn đặt vé', Icon: Icons.List },
     ],
   },
 ];
@@ -83,9 +83,9 @@ export default function StaffLayout() {
     navigate('/login');
   };
 
-  const pageTitle = TITLE_MAP[location.pathname] || 'Nhan vien';
+  const pageTitle = TITLE_MAP[location.pathname] || 'Nhân viên';
   const initials = (user?.username || 'S').charAt(0).toUpperCase();
-  const roleLabel = isAdmin ? 'Quan tri vien' : 'Nhan vien';
+  const roleLabel = isAdmin ? 'Quản trị viên' : 'Nhân viên';
 
   return (
     <div className="admin-layout">
@@ -134,7 +134,7 @@ export default function StaffLayout() {
           </div>
           <button className="admin-logout-btn" onClick={handleLogout}>
             <Icons.Logout />
-            <span>Dang xuat</span>
+            <span>Đăng xuất</span>
           </button>
         </div>
       </aside>
@@ -162,7 +162,7 @@ export default function StaffLayout() {
             )}
             <a href="/" className="admin-header-link" target="_blank" rel="noopener noreferrer">
               <Icons.ExternalLink />
-              Xem trang chu
+              Xem trang chủ
             </a>
 
             <div className="admin-header-divider" />

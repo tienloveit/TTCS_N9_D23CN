@@ -91,7 +91,7 @@ public class VnpayService {
     params.put(
         "vnp_OrderInfo",
         (req.getOrderInfo() == null || req.getOrderInfo().isBlank())
-            ? "Thanh toan don hang:" + txnRef
+            ? "Thanh toán đơn hàng:" + txnRef
             : req.getOrderInfo());
     params.put("vnp_OrderType", orderType);
     params.put(
@@ -138,7 +138,7 @@ public class VnpayService {
     String version = "2.1.0";
     String command = "querydr";
     String tmnCode = props.getTmnCode();
-    String orderInfo = "Kiem tra ket qua GD OrderId:" + req.getOrderId();
+    String orderInfo = "Kiểm tra kết quả GD OrderId:" + req.getOrderId();
     String ipAddr = VnpayUtil.getClientIp(servletRequest);
 
     String createDate = ZonedDateTime.now(VN_ZONE).format(VNPAY_TIME_FORMATTER);
@@ -180,7 +180,7 @@ public class VnpayService {
     String tmnCode = props.getTmnCode();
     String transactionNo = "";
     String amount = String.valueOf(req.getAmount() * 100);
-    String orderInfo = "Hoan tien GD OrderId:" + req.getOrderId();
+    String orderInfo = "Hoàn tiền GD OrderId:" + req.getOrderId();
     String ipAddr = VnpayUtil.getClientIp(servletRequest);
 
     String createDate = ZonedDateTime.now(VN_ZONE).format(VNPAY_TIME_FORMATTER);
@@ -258,7 +258,7 @@ public class VnpayService {
     if (!validSignature) {
       return ApiResponse.<Map<String, Object>>builder()
           .code(97)
-          .message("Chu ky khong hop le")
+          .message("Chữ ký không hợp lệ")
           .result(verify)
           .build();
     }
@@ -266,10 +266,10 @@ public class VnpayService {
     String responseCode = String.valueOf(verify.getOrDefault("vnp_ResponseCode", ""));
     String transactionStatus = String.valueOf(verify.getOrDefault("vnp_TransactionStatus", ""));
 
-    verify.put("vnp_ResponseCodeDesc", RESPONSE_CODE_DESC.getOrDefault(responseCode, "Loi khac"));
+    verify.put("vnp_ResponseCodeDesc", RESPONSE_CODE_DESC.getOrDefault(responseCode, "Lỗi khác"));
     verify.put(
         "vnp_TransactionStatusDesc",
-        TRANSACTION_STATUS_DESC.getOrDefault(transactionStatus, "Khong xac dinh"));
+        TRANSACTION_STATUS_DESC.getOrDefault(transactionStatus, "Không xác định"));
 
     boolean success = "00".equals(responseCode) && "00".equals(transactionStatus);
 
@@ -352,14 +352,14 @@ public class VnpayService {
     if (success) {
       return ApiResponse.<Map<String, Object>>builder()
           .code(200)
-          .message("GD Thanh cong")
+          .message("GD Thành công")
           .result(verify)
           .build();
     }
 
     return ApiResponse.<Map<String, Object>>builder()
         .code(99)
-        .message("GD Khong thanh cong")
+        .message("GD Không thành công")
         .result(verify)
         .build();
   }
@@ -525,32 +525,32 @@ public class VnpayService {
 
   private static Map<String, String> createTransactionStatusDesc() {
     Map<String, String> map = new HashMap<>();
-    map.put("00", "Giao dich thanh cong");
-    map.put("01", "Giao dich chua hoan tat");
-    map.put("02", "Giao dich bi loi");
-    map.put("04", "Giao dich dao");
-    map.put("05", "VNPAY dang xu ly giao dich nay");
-    map.put("06", "VNPAY da gui yeu cau hoan tien sang Ngan hang");
-    map.put("07", "Giao dich bi nghi ngo gian lan");
-    map.put("09", "GD Hoan tra bi tu choi");
+    map.put("00", "Giao dịch thành công");
+    map.put("01", "Giao dịch chưa hoàn tất");
+    map.put("02", "Giao dịch bị lỗi");
+    map.put("04", "Giao dịch đảo");
+    map.put("05", "VNPAY đang xử lý giao dịch này");
+    map.put("06", "VNPAY đã gửi yêu cầu hoàn tiền sang Ngân hàng");
+    map.put("07", "Giao dịch bị nghi ngờ gian lận");
+    map.put("09", "GD Hoàn trả bị từ chối");
     return map;
   }
 
   private static Map<String, String> createResponseCodeDesc() {
     Map<String, String> map = new HashMap<>();
-    map.put("00", "Giao dich thanh cong");
-    map.put("07", "Tru tien thanh cong. Giao dich bi nghi ngo");
-    map.put("09", "The/Tai khoan chua dang ky InternetBanking");
-    map.put("10", "Xac thuc thong tin the/tai khoan khong dung qua 3 lan");
-    map.put("11", "Da het han cho thanh toan");
-    map.put("12", "The/Tai khoan bi khoa");
-    map.put("13", "Nhap sai OTP");
-    map.put("24", "Khach hang huy giao dich");
-    map.put("51", "Tai khoan khong du so du");
-    map.put("65", "Tai khoan vuot qua han muc giao dich trong ngay");
-    map.put("75", "Ngan hang thanh toan dang bao tri");
-    map.put("79", "Nhap sai mat khau thanh toan qua so lan quy dinh");
-    map.put("99", "Loi khac");
+    map.put("00", "Giao dịch thành công");
+    map.put("07", "Trừ tiền thành công. Giao dịch bị nghi ngờ");
+    map.put("09", "Thẻ/Tài khoản chưa đăng ký InternetBanking");
+    map.put("10", "Xác thực thông tin thẻ/tài khoản không đúng quá 3 lần");
+    map.put("11", "Đã hết hạn chờ thanh toán");
+    map.put("12", "Thẻ/Tài khoản bị khóa");
+    map.put("13", "Nhập sai OTP");
+    map.put("24", "Khách hàng hủy giao dịch");
+    map.put("51", "Tài khoản không đủ số dư");
+    map.put("65", "Tài khoản vượt quá hạn mức giao dịch trong ngày");
+    map.put("75", "Ngân hàng thanh toán đang bảo trì");
+    map.put("79", "Nhập sai mật khẩu thanh toán quá số lần quy định");
+    map.put("99", "Lỗi khác");
     return map;
   }
 

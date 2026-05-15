@@ -65,13 +65,13 @@ export default function StaffBookingPage() {
         if (showtimeResult.status === 'fulfilled') {
           setShowtimes(showtimeResult.value.data.result || []);
         } else {
-          setError('Khong tai duoc danh sach suat chieu');
+          setError('Không tải được danh sách suất chiếu');
         }
 
         if (foodResult.status === 'fulfilled') {
           setFoods((foodResult.value.data.result || []).filter((food) => food.active !== false));
         } else {
-          setFoodError('Khong tai duoc menu do an');
+          setFoodError('Không tải được menu đồ ăn');
         }
       })
       .finally(() => {
@@ -106,7 +106,7 @@ export default function StaffBookingPage() {
         if (mounted) setTickets(res.data.result || []);
       })
       .catch(() => {
-        if (mounted) setError('Khong tai duoc so do ghe');
+        if (mounted) setError('Không tải được sơ đồ ghế');
       })
       .finally(() => {
         if (mounted) setLoadingTickets(false);
@@ -155,7 +155,7 @@ export default function StaffBookingPage() {
       if (!branchMap.has(key)) {
         branchMap.set(key, {
           id: key,
-          name: showtime.branchName || 'MoviePTIT chua xac dinh',
+          name: showtime.branchName || 'MoviePTIT chưa xác định',
         });
       }
     });
@@ -256,7 +256,7 @@ export default function StaffBookingPage() {
 
   const showtimeGroups = useMemo(() => {
     const grouped = filteredShowtimes.reduce((acc, showtime) => {
-      const branch = showtime.branchName || 'Rap chua xac dinh';
+      const branch = showtime.branchName || 'Rạp chưa xác định';
       if (!acc[branch]) acc[branch] = [];
       acc[branch].push(showtime);
       return acc;
@@ -379,11 +379,11 @@ export default function StaffBookingPage() {
     event.preventDefault();
 
     if (!showtimeId) {
-      toast.error('Chon suat chieu');
+      toast.error('Chọn suất chiếu');
       return;
     }
     if (selectedSeats.length === 0) {
-      toast.error('Chon it nhat 1 ghe');
+      toast.error('Chọn ít nhất 1 ghế');
       return;
     }
 
@@ -410,9 +410,9 @@ export default function StaffBookingPage() {
 
       const ticketRes = await ticketApi.getByShowtimeId(showtimeId);
       setTickets(ticketRes.data.result || []);
-      toast.success('Dat ve tai quay thanh cong');
+      toast.success('Đặt vé tại quầy thành công');
     } catch (err) {
-      const message = err.response?.data?.message || 'Dat ve that bai';
+      const message = err.response?.data?.message || 'Đặt vé thất bại';
       setError(message);
       toast.error(message);
     } finally {
@@ -425,9 +425,9 @@ export default function StaffBookingPage() {
   return (
     <form onSubmit={handleSubmit}>
       <div className="page-header">
-        <h1 className="page-title">Dat ve tai quay</h1>
+        <h1 className="page-title">Đặt vé tại quầy</h1>
         <p className="page-subtitle">
-          Chon suat chieu hom nay, ghe, do an va hoan tat thanh toan truc tiep cho khach.
+          Chọn suất chiếu hôm nay, ghế, đồ ăn và hoàn tất thanh toán trực tiếp cho khách.
         </p>
       </div>
 
@@ -441,9 +441,9 @@ export default function StaffBookingPage() {
         <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <h3>Suat chieu</h3>
+              <h3>Suất chiếu</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
-                {filteredShowtimes.length}/{showtimes.length} suat chieu duoc lay tu he thong
+                {filteredShowtimes.length}/{showtimes.length} suất chiếu được lấy từ hệ thống
               </p>
             </div>
           </div>
@@ -451,18 +451,18 @@ export default function StaffBookingPage() {
           {/* Filter row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
             <label>
-              <span className="form-label">Tim kiem</span>
+              <span className="form-label">Tìm kiếm</span>
               <input
                 type="text"
                 className="input"
-                placeholder="Ten phim, rap, phong..."
+                placeholder="Tên phim, rạp, phòng..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </label>
 
             <label>
-              <span className="form-label">Ngay chieu</span>
+              <span className="form-label">Ngày chiếu</span>
               <input
                 type="date"
                 className="input"
@@ -472,9 +472,9 @@ export default function StaffBookingPage() {
             </label>
 
             <label>
-              <span className="form-label">Rap</span>
+              <span className="form-label">Rạp</span>
               <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
-                <option value="ALL">Tat ca rap</option>
+                <option value="ALL">Tất cả rạp</option>
                 {branchOptions.map((branch) => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
@@ -484,31 +484,31 @@ export default function StaffBookingPage() {
             </label>
 
             <label>
-              <span className="form-label">Khung gio</span>
+              <span className="form-label">Khung giờ</span>
               <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
-                <option value="ALL">Tat ca</option>
-                <option value="MORNING">Sang (6h-12h)</option>
-                <option value="AFTERNOON">Chieu (12h-18h)</option>
-                <option value="EVENING">Toi (18h-22h)</option>
+                <option value="ALL">Tất cả</option>
+                <option value="MORNING">Sáng (6h-12h)</option>
+                <option value="AFTERNOON">Chiều (12h-18h)</option>
+                <option value="EVENING">Tối (18h-22h)</option>
                 <option value="NIGHT">Khuya (22h-6h)</option>
-                <option value="UPCOMING">Chua chieu</option>
-                <option value="ONGOING">Dang chieu</option>
+                <option value="UPCOMING">Chưa chiếu</option>
+                <option value="ONGOING">Đang chiếu</option>
               </select>
             </label>
 
             <label>
-              <span className="form-label">Trang thai</span>
+              <span className="form-label">Trạng thái</span>
               <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="ALL">Tat ca</option>
-                <option value="AVAILABLE">Co the ban</option>
-                <option value="UNAVAILABLE">Khong ban</option>
+                <option value="ALL">Tất cả</option>
+                <option value="AVAILABLE">Có thể bán</option>
+                <option value="UNAVAILABLE">Không bán</option>
               </select>
             </label>
 
             <label>
-              <span className="form-label">Loai phong</span>
+              <span className="form-label">Loại phòng</span>
               <select className="input" value={roomTypeFilter} onChange={(e) => setRoomTypeFilter(e.target.value)}>
-                <option value="ALL">Tat ca</option>
+                <option value="ALL">Tất cả</option>
                 {roomTypeOptions.map((type) => (
                   <option key={type} value={type}>
                     {type}
@@ -533,7 +533,7 @@ export default function StaffBookingPage() {
                   }}
                   style={{ width: '100%' }}
                 >
-                  Xoa bo loc
+                  Xóa bộ lọc
                 </button>
               </div>
             )}
@@ -543,8 +543,8 @@ export default function StaffBookingPage() {
         {filteredShowtimes.length === 0 ? (
           <div className="empty-state">
             {searchQuery.trim() || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL'
-              ? 'Khong tim thay suat chieu nao phu hop voi bo loc'
-              : 'Khong co suat chieu phu hop voi MoviePTIT da chon.'}
+              ? 'Không tìm thấy suất chiếu nào phù hợp với bộ lọc'
+              : 'Không có suất chiếu phù hợp với MoviePTIT đã chọn.'}
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 18 }}>
@@ -575,7 +575,7 @@ export default function StaffBookingPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                           <strong style={{ color: 'var(--text-primary)' }}>{formatTime(showtime.startTime)}</strong>
                           <span className={`status-badge ${available ? 'status--active' : 'status--inactive'}`}>
-                            {available ? 'Co the ban' : 'Khong ban'}
+                            {available ? 'Có thể bán' : 'Không bán'}
                           </span>
                         </div>
                         <div style={{ marginTop: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -599,14 +599,14 @@ export default function StaffBookingPage() {
           <div className="admin-table-card" style={{ padding: 20, marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <span className="form-label">Suat dang ban</span>
+                <span className="form-label">Suất đang bán</span>
                 <h2 style={{ margin: '4px 0 0', fontSize: 20 }}>{selectedShowtime.movieName}</h2>
                 <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
                   {selectedShowtime.branchName} - {selectedShowtime.roomName}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span className="form-label">Thoi gian</span>
+                <span className="form-label">Thời gian</span>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--green)' }}>
                   {formatDateTime(selectedShowtime.startTime)}
                 </div>
@@ -647,19 +647,19 @@ export default function StaffBookingPage() {
                 <div className="seat-legend">
                   <div className="seat-legend-item">
                     <div className="seat-legend-dot" style={{ background: 'rgba(16,185,129,0.15)', borderColor: 'var(--seat-available)' }} />
-                    Trong
+                    Trống
                   </div>
                   <div className="seat-legend-item">
                     <div className="seat-legend-dot" style={{ background: 'rgba(59,130,246,0.3)', borderColor: 'var(--seat-selected)' }} />
-                    Dang chon
+                    Đang chọn
                   </div>
                   <div className="seat-legend-item">
                     <div className="seat-legend-dot" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'var(--seat-holding)' }} />
-                    Dang giu
+                    Đang giữ
                   </div>
                   <div className="seat-legend-item">
                     <div className="seat-legend-dot" style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'var(--seat-booked)' }} />
-                    Da dat
+                    Đã đặt
                   </div>
                 </div>
               </>
@@ -670,8 +670,8 @@ export default function StaffBookingPage() {
             <div className="admin-table-card food-select-card" style={{ marginBottom: 20 }}>
               <div className="food-select-header">
                 <div>
-                  <h2>Chon do an</h2>
-                  <p>Them bap nuoc va combo vao don tai quay.</p>
+                  <h2>Chọn đồ ăn</h2>
+                  <p>Thêm bắp nước và combo vào đơn tại quầy.</p>
                 </div>
                 {foodTotal > 0 && <strong>{formatCurrency(foodTotal)}</strong>}
               </div>
@@ -710,7 +710,7 @@ export default function StaffBookingPage() {
                           type="button"
                           onClick={() => updateFoodQuantity(food.id, -1)}
                           disabled={quantity === 0 || submitting}
-                          aria-label={`Giam ${food.name}`}
+                          aria-label={`Giảm ${food.name}`}
                         >
                           -
                         </button>
@@ -719,7 +719,7 @@ export default function StaffBookingPage() {
                           type="button"
                           onClick={() => updateFoodQuantity(food.id, 1)}
                           disabled={submitting}
-                          aria-label={`Tang ${food.name}`}
+                          aria-label={`Tăng ${food.name}`}
                         >
                           +
                         </button>
@@ -734,23 +734,23 @@ export default function StaffBookingPage() {
           <div className="admin-table-card" style={{ padding: 20, marginBottom: selectedSeats.length > 0 ? 96 : 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
               <div>
-                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thong tin khach</h2>
+                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thông tin khách</h2>
                 <div style={{ display: 'grid', gap: 12 }}>
                   <input
                     className="input"
-                    placeholder="Ho ten"
+                    placeholder="Họ tên"
                     value={customer.customerName}
                     onChange={(e) => setCustomer({ ...customer, customerName: e.target.value })}
                   />
                   <input
                     className="input"
-                    placeholder="Email de gui ve"
+                    placeholder="Email để gửi vé"
                     value={customer.customerEmail}
                     onChange={(e) => setCustomer({ ...customer, customerEmail: e.target.value })}
                   />
                   <input
                     className="input"
-                    placeholder="So dien thoai"
+                    placeholder="Số điện thoại"
                     value={customer.customerPhone}
                     onChange={(e) => setCustomer({ ...customer, customerPhone: e.target.value })}
                   />
@@ -758,17 +758,17 @@ export default function StaffBookingPage() {
               </div>
 
               <div>
-                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thanh toan tai quay</h2>
+                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thanh toán tại quầy</h2>
                 <select
                   className="input"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                 >
-                  <option value="CASH">Tien mat</option>
-                  <option value="CARD">The</option>
+                  <option value="CASH">Tiền mặt</option>
+                  <option value="CARD">Thẻ</option>
                 </select>
                 <div style={{ marginTop: 16 }}>
-                  <span className="form-label">Tong tien</span>
+                  <span className="form-label">Tổng tiền</span>
                   <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 6 }}>
                     {formatCurrency(total)}
                   </div>
@@ -823,16 +823,16 @@ export default function StaffBookingPage() {
       {selectedSeats.length > 0 && (
         <div className="booking-bar">
           <span>
-            <strong>{selectedSeats.length}</strong> ghe
+            <strong>{selectedSeats.length}</strong> ghế
           </span>
           {foodQuantity > 0 && (
             <span>
-              <strong>{foodQuantity}</strong> mon
+              <strong>{foodQuantity}</strong> món
             </span>
           )}
           <span className="booking-bar-total">{formatCurrency(total)}</span>
           <button className="btn btn-primary" type="submit" disabled={submitting}>
-            {submitting ? 'Dang xu ly...' : 'Hoan tat tai quay'}
+            {submitting ? 'Đang xử lý...' : 'Hoàn tất tại quầy'}
           </button>
         </div>
       )}

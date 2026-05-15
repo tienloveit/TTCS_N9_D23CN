@@ -142,7 +142,7 @@ const AdminLayout = () => {
 
   const pageTitle = TITLE_MAP[location.pathname] || 'Quản trị';
   const initials = (user?.username || 'A').charAt(0).toUpperCase();
-  const roleLabel = 'Quan tri vien';
+  const roleLabel = 'Quản trị viên';
 
   return (
     <div className="admin-layout">

@@ -7,16 +7,13 @@
     <list default="true" id="44bfda51-0bd8-4e56-8a78-05847a174f9b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/exception/ErrorCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/exception/ErrorCode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/AuthService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/AnimatedRoutes.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/AnimatedRoutes.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/AuthContext.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/index.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login/LoginPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login/LoginPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/EmailService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/EmailService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/VnpayService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/VnpayService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminDashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/AdminLayout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Admin/CheckInPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Admin/CheckInPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffBookingPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffBookingPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Staff/StaffLayout.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -118,7 +115,7 @@
       <updated>1777252400505</updated>
       <workItem from="1777252401642" duration="3289000" />
       <workItem from="1778763161555" duration="6637000" />
-      <workItem from="1778843656215" duration="1878000" />
+      <workItem from="1778843656215" duration="4221000" />
     </task>
     <servers />
   </component>
