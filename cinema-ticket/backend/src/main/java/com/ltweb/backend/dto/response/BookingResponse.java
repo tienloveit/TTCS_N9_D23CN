@@ -61,4 +61,10 @@ public class BookingResponse {
   private List<TicketResponse> tickets;
 
   private List<BookingFoodResponse> foods;
+
+  private String refundReason;
+
+  private LocalDateTime refundedAt;
+
+  private BigDecimal refundAmount;
 }

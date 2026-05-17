@@ -51,6 +51,9 @@ export default function StaffBookingPage() {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoError, setPromoError] = useState('');
   const [validatingPromo, setValidatingPromo] = useState(false);
+  const [availablePromos, setAvailablePromos] = useState([]);
+  const [showPromos, setShowPromos] = useState(false);
+  const [loadingPromos, setLoadingPromos] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -373,6 +376,21 @@ export default function StaffBookingPage() {
       setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
     } finally {
       setValidatingPromo(false);
+    }
+  };
+
+  const handleShowPromos = async () => {
+    setShowPromos(!showPromos);
+    if (availablePromos.length === 0 && !showPromos) {
+      setLoadingPromos(true);
+      try {
+        const res = await promotionApi.getAvailable();
+        setAvailablePromos(res.data.result || []);
+      } catch (err) {
+        console.error('Failed to fetch promotions', err);
+      } finally {
+        setLoadingPromos(false);
+      }
     }
   };
 
@@ -804,7 +822,12 @@ export default function StaffBookingPage() {
 
                 {/* Mã khuyến mãi — hiện với cả CASH và CARD */}
                 <div style={{ marginTop: 16 }}>
-                    <span className="form-label">Mã khuyến mãi</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="form-label" style={{ margin: 0 }}>Mã khuyến mãi</span>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
+                        {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                       <input
                         type="text"
@@ -824,6 +847,34 @@ export default function StaffBookingPage() {
                         {validatingPromo ? '...' : 'Áp dụng'}
                       </button>
                     </div>
+                    {showPromos && (
+                      <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
+                        {loadingPromos ? (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
+                        ) : availablePromos.length === 0 ? (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {availablePromos.map(promo => (
+                              <div key={promo.id} 
+                                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                                 onClick={() => {
+                                   setPromoCode(promo.code);
+                                   setShowPromos(false);
+                                 }}>
+                                <div>
+                                  <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {promo.description || `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {promoError && (
                       <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>
                     )}

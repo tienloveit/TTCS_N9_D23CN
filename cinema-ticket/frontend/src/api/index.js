@@ -128,6 +128,10 @@ export const bookingApi = {
   cancel: (id) => axiosClient.delete(`/booking/${id}`),
   applyPromotion: (id, promotionCode) =>
     axiosClient.patch(`/booking/${id}/apply-promotion`, { promotionCode }),
+  requestRefund: (id, reason) =>
+    axiosClient.post(`/booking/${id}/refund-request`, { reason }),
+  processRefund: (id, approved) =>
+    axiosClient.post(`/booking/${id}/refund-process`, { approved }),
 };
 
 // ==================== ADMIN ANALYTICS ====================

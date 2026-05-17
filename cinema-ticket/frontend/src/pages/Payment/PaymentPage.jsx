@@ -14,6 +14,9 @@ export default function PaymentPage() {
   const [promoCode, setPromoCode] = useState('');
   const [promoError, setPromoError] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [availablePromos, setAvailablePromos] = useState([]);
+  const [showPromos, setShowPromos] = useState(false);
+  const [loadingPromos, setLoadingPromos] = useState(false);
 
   const handleCancel = useCallback(
     async (auto = false) => {
@@ -104,10 +107,26 @@ export default function PaymentPage() {
       const res = await bookingApi.applyPromotion(bookingId, promoCode);
       setBooking(res.data.result);
       setPromoCode('');
+      setShowPromos(false);
     } catch (err) {
       setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
     } finally {
       setApplyingPromo(false);
+    }
+  };
+
+  const handleShowPromos = async () => {
+    setShowPromos(!showPromos);
+    if (availablePromos.length === 0 && !showPromos) {
+      setLoadingPromos(true);
+      try {
+        const res = await promotionApi.getAvailable();
+        setAvailablePromos(res.data.result || []);
+      } catch (err) {
+        console.error('Failed to fetch promotions', err);
+      } finally {
+        setLoadingPromos(false);
+      }
     }
   };
 
@@ -239,12 +258,21 @@ export default function PaymentPage() {
 
           {/* Mã khuyến mãi */}
           <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-            <h3 style={{ marginBottom: 12 }}>Mã khuyến mãi</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>Mã khuyến mãi</h3>
+              {!booking.promotionCode && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
+                  {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
+                </button>
+              )}
+            </div>
 
             {booking.promotionCode ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)',
-                borderRadius: 8, padding: '10px 14px' }}>
+                borderRadius: 8, padding: '10px 14px'
+              }}>
                 <div>
                   <div style={{ fontWeight: 700, color: 'var(--seat-available)', letterSpacing: 1 }}>
                     {booking.promotionCode}
@@ -275,11 +303,39 @@ export default function PaymentPage() {
                     onClick={handleApplyPromo}
                     disabled={applyingPromo || !promoCode.trim()}>
                     {
-applyingPromo ? '...' : 'Áp dụng'}
+                      applyingPromo ? '...' : 'Áp dụng'}
                   </button>
                 </div>
                 {promoError && (
                   <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>
+                )}
+                {showPromos && (
+                  <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
+                    {loadingPromos ? (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
+                    ) : availablePromos.length === 0 ? (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {availablePromos.map(promo => (
+                          <div key={promo.id} 
+                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                             onClick={() => {
+                               setPromoCode(promo.code);
+                               setShowPromos(false);
+                             }}>
+                            <div>
+                              <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                {promo.description || `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -296,8 +352,10 @@ applyingPromo ? '...' : 'Áp dụng'}
                 <span>-{formatCurrency(booking.discountAmount)}</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              paddingTop: 12, borderTop: '1px dashed var(--border)'
+            }}>
               <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Tổng tiền:</span>
               <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--gold)' }}>
                 {formatCurrency(booking.totalAmount)}

@@ -99,4 +99,24 @@ public class BookingController {
     apiResponse.setMessage(code != null && !code.isBlank() ? "Promotion applied!" : "Promotion removed!");
     return apiResponse;
   }
+
+  @PostMapping("/{id}/refund-request")
+  public ApiResponse<BookingResponse> requestRefund(
+      @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+    String reason = body.getOrDefault("reason", "");
+    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.requestRefund(id, reason));
+    apiResponse.setMessage("Refund request submitted successfully!");
+    return apiResponse;
+  }
+
+  @PostMapping("/{id}/refund-process")
+  public ApiResponse<BookingResponse> processRefund(
+      @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
+    boolean approved = Boolean.TRUE.equals(body.get("approved"));
+    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.processRefund(id, approved));
+    apiResponse.setMessage(approved ? "Refund approved!" : "Refund rejected!");
+    return apiResponse;
+  }
 }

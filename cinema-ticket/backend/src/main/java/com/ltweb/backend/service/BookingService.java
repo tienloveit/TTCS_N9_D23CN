@@ -642,4 +642,112 @@ public class BookingService {
         user.getTotalSpending(),
         user.getMembershipTier());
   }
+
+  // ===== REFUND =====
+  private static final int REFUND_WINDOW_HOURS = 24;
+
+  /**
+   * User yêu cầu hoàn tiền.
+   * Chỉ cho phép trong vòng 24 giờ sau khi thanh toán, booking phải ở trạng thái COMPLETED.
+   */
+  @Transactional
+  public BookingResponse requestRefund(Long bookingId, String reason) {
+    Booking booking = getBooking(bookingId);
+    User user = getUserCurrent();
+
+    // Chỉ chủ booking mới được yêu cầu hoàn tiền
+    if (!booking.getUser().getId().equals(user.getId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    // Kiểm tra trạng thái
+    if (booking.getStatus() == BookingStatus.REFUND_REQUESTED) {
+      throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
+    }
+    if (booking.getStatus() == BookingStatus.REFUNDED) {
+      throw new AppException(ErrorCode.BOOKING_ALREADY_REFUNDED);
+    }
+    if (booking.getStatus() != BookingStatus.COMPLETED) {
+      throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
+    }
+
+    // Kiểm tra cửa sổ hoàn tiền: trong vòng 24h sau khi thanh toán
+    LocalDateTime paidAt = booking.getPaidAt();
+    if (paidAt == null) {
+      throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
+    }
+    if (LocalDateTime.now().isAfter(paidAt.plusHours(REFUND_WINDOW_HOURS))) {
+      throw new AppException(ErrorCode.REFUND_WINDOW_EXPIRED);
+    }
+
+    booking.setStatus(BookingStatus.REFUND_REQUESTED);
+    booking.setRefundReason(reason);
+    booking.setRefundAmount(booking.getTotalAmount());
+    bookingRepository.save(booking);
+
+    log.info("Refund requested for booking {}: reason={}", bookingId, reason);
+    return bookingMapper.toBookingResponse(booking);
+  }
+
+  /**
+   * Admin/Staff duyệt hoặc từ chối yêu cầu hoàn tiền.
+   */
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @Transactional
+  public BookingResponse processRefund(Long bookingId, boolean approved) {
+    Booking booking = getBooking(bookingId);
+
+    if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
+      throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
+    }
+
+    if (approved) {
+      booking.setStatus(BookingStatus.REFUNDED);
+      booking.setPaymentStatus(PaymentStatus.REFUNDED);
+      booking.setRefundedAt(LocalDateTime.now());
+      booking.setRefundAmount(booking.getTotalAmount());
+
+      // Trả ghế về AVAILABLE
+      booking
+          .getTickets()
+          .forEach(
+              ticket -> {
+                ticket.setBooking(null);
+                ticket.setTicketStatus(TicketStatus.AVAILABLE);
+                ticket.setQrCode(null);
+                ticketRepository.save(ticket);
+
+                simpMessagingTemplate.convertAndSend(
+                    "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
+                    SeatStatusEvent.builder()
+                        .seatId(ticket.getSeat().getId())
+                        .status("AVAILABLE")
+                        .build());
+              });
+
+      // Trừ lại spending nếu cần
+      User user = booking.getUser();
+      if (user != null && user.getTotalSpending() != null) {
+        BigDecimal newSpending = user.getTotalSpending().subtract(booking.getTotalAmount());
+        if (newSpending.compareTo(BigDecimal.ZERO) < 0) newSpending = BigDecimal.ZERO;
+        user.setTotalSpending(newSpending);
+        user.setMembershipTier(
+            com.ltweb.backend.enums.MembershipTier.fromSpending(user.getTotalSpending()));
+        userRepository.save(user);
+      }
+
+      log.info("Refund APPROVED for booking {}", bookingId);
+    } else {
+      // Từ chối → quay lại COMPLETED
+      booking.setStatus(BookingStatus.COMPLETED);
+      booking.setRefundReason(null);
+      booking.setRefundAmount(BigDecimal.ZERO);
+
+      log.info("Refund REJECTED for booking {}", bookingId);
+    }
+
+    bookingRepository.save(booking);
+    return bookingMapper.toBookingResponse(booking);
+  }
 }
+

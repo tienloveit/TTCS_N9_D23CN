@@ -82,6 +82,12 @@ public class Booking {
 
   private LocalDateTime paymentCreatedAt;
 
+  private String refundReason;
+
+  private LocalDateTime refundedAt;
+
+  @Builder.Default private BigDecimal refundAmount = BigDecimal.ZERO;
+
   @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   private List<Ticket> tickets = new ArrayList<>();
