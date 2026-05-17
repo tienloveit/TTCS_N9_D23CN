@@ -17,15 +17,13 @@ public class OTPService {
 
   public String generateOTP(String email) {
     String limitKey = "otp:limit:" + email;
-    String codeKey =
-        "otp:code:" + email; // lưu lại cái mã đó để đối chiếu với người dùng khi nhập vào
+    String codeKey = "otp:code:" + email;
 
     Long count = stringRedisTemplate.opsForValue().increment(limitKey);
-    if (count == 1) {
-      stringRedisTemplate.expire(limitKey, Duration.ofMinutes(1));
-    }
+    // Luôn reset TTL về 1 phút sau mỗi lần increment
+    stringRedisTemplate.expire(limitKey, Duration.ofMinutes(1));
 
-    if (count > 3) {
+    if (count > 5) {
       throw new AppException(ErrorCode.OTP_RATE_LIMIT);
     }
 

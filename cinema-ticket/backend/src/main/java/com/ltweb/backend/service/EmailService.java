@@ -30,8 +30,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class EmailService {
 
-  private static final DateTimeFormatter SHOWTIME_FORMATTER =
-      DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+  private static final DateTimeFormatter SHOWTIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
   private static final int QR_SIZE = 240;
 
   private final JavaMailSender mailSender;
@@ -56,17 +55,15 @@ public class EmailService {
       return;
     }
 
-    List<Ticket> tickets =
-        booking.getTickets() == null
-            ? List.of()
-            : booking.getTickets().stream()
-                .sorted(
-                    Comparator.comparing(
-                        ticket ->
-                            ticket.getSeat() == null
-                                ? ""
-                                : nullToEmpty(ticket.getSeat().getSeatCode())))
-                .toList();
+    List<Ticket> tickets = booking.getTickets() == null
+        ? List.of()
+        : booking.getTickets().stream()
+            .sorted(
+                Comparator.comparing(
+                    ticket -> ticket.getSeat() == null
+                        ? ""
+                        : nullToEmpty(ticket.getSeat().getSeatCode())))
+            .toList();
     if (tickets.isEmpty()) {
       return;
     }
@@ -89,22 +86,18 @@ public class EmailService {
   }
 
   private String buildBookingTicketEmail(Booking booking, List<Ticket> tickets) {
-    String movieName =
-        booking.getShowtime() == null || booking.getShowtime().getMovie() == null
-            ? "MoviePTIT"
-            : booking.getShowtime().getMovie().getMovieName();
-    String roomName =
-        booking.getShowtime() == null || booking.getShowtime().getRoom() == null
-            ? ""
-            : booking.getShowtime().getRoom().getName();
-    String branchName =
-        booking.getShowtime() == null
-                || booking.getShowtime().getRoom() == null
-                || booking.getShowtime().getRoom().getBranch() == null
+    String movieName = booking.getShowtime() == null || booking.getShowtime().getMovie() == null
+        ? "MoviePTIT"
+        : booking.getShowtime().getMovie().getMovieName();
+    String roomName = booking.getShowtime() == null || booking.getShowtime().getRoom() == null
+        ? ""
+        : booking.getShowtime().getRoom().getName();
+    String branchName = booking.getShowtime() == null
+        || booking.getShowtime().getRoom() == null
+        || booking.getShowtime().getRoom().getBranch() == null
             ? ""
             : booking.getShowtime().getRoom().getBranch().getName();
-    String showtime =
-        booking.getShowtime() == null ? "" : formatDateTime(booking.getShowtime().getStartTime());
+    String showtime = booking.getShowtime() == null ? "" : formatDateTime(booking.getShowtime().getStartTime());
 
     StringBuilder ticketRows = new StringBuilder();
     for (int i = 0; i < tickets.size(); i++) {
