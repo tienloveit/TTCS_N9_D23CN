@@ -128,7 +128,7 @@ public class ShowtimeService {
   @Transactional(readOnly = true)
   public ShowtimeResponse getById(Long showtimeId) {
     Showtime showtime = getShowtime(showtimeId);
-    return showtimeMapper.toResponse(showtime);
+    return enrichWithSeatCount(showtimeMapper.toResponse(showtime));
   }
 
   @Transactional(readOnly = true)
@@ -136,6 +136,7 @@ public class ShowtimeService {
     return showtimeRepository.findAll().stream()
         .sorted(Comparator.comparing(Showtime::getStartTime).reversed())
         .map(showtimeMapper::toResponse)
+        .map(this::enrichWithSeatCount)
         .toList();
   }
 
@@ -151,6 +152,7 @@ public class ShowtimeService {
             startOfDay, endOfDay)
         .stream()
         .map(showtimeMapper::toResponse)
+        .map(this::enrichWithSeatCount)
         .toList();
   }
 
@@ -158,6 +160,7 @@ public class ShowtimeService {
   public List<ShowtimeResponse> getByRoom(Long roomId) {
     return showtimeRepository.findByRoomId(roomId).stream()
         .map(showtimeMapper::toResponse)
+        .map(this::enrichWithSeatCount)
         .toList();
   }
 
@@ -165,6 +168,7 @@ public class ShowtimeService {
   public List<ShowtimeResponse> getByMovie(Long movieId) {
     return showtimeRepository.findByMovieId(movieId).stream()
         .map(showtimeMapper::toResponse)
+        .map(this::enrichWithSeatCount)
         .toList();
   }
 
@@ -210,6 +214,12 @@ public class ShowtimeService {
                     st.put("startTime", s.getStartTime());
                     st.put("endTime", s.getEndTime());
                     st.put("status", s.getStatus());
+                    int total = ticketRepository.countByShowtimeId(s.getId());
+                    int available =
+                        ticketRepository.countByShowtimeIdAndTicketStatus(
+                            s.getId(), TicketStatus.AVAILABLE);
+                    st.put("availableSeats", available);
+                    st.put("totalSeats", total);
                     return st;
                   })
               .toList();
@@ -226,5 +236,15 @@ public class ShowtimeService {
     return showtimeRepository
         .findById(showtimeId)
         .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
+  }
+
+  private ShowtimeResponse enrichWithSeatCount(ShowtimeResponse response) {
+    int total = ticketRepository.countByShowtimeId(response.getShowtimeId());
+    int available =
+        ticketRepository.countByShowtimeIdAndTicketStatus(
+            response.getShowtimeId(), TicketStatus.AVAILABLE);
+    response.setTotalSeats(total);
+    response.setAvailableSeats(available);
+    return response;
   }
 }

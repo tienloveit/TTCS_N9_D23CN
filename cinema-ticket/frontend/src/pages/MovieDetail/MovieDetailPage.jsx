@@ -41,9 +41,11 @@ export default function MovieDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
   const [userRating, setUserRating] = useState(null);
+  const [userComment, setUserComment] = useState('');
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [ratingMessage, setRatingMessage] = useState('');
+  const [reviews, setReviews] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey());
   const [dateWindowOffset, setDateWindowOffset] = useState(0);
   const [selectedCity, setSelectedCity] = useState('ALL');
@@ -81,14 +83,25 @@ export default function MovieDetailPage() {
   useEffect(() => {
     if (!isAuthenticated) {
       setUserRating(null);
+      setUserComment('');
       return;
     }
 
     movieApi
       .getMyRating(id)
-      .then((res) => setUserRating(res.data.result?.score || null))
-      .catch(() => setUserRating(null));
+      .then((res) => {
+        setUserRating(res.data.result?.score || null);
+        setUserComment(res.data.result?.comment || '');
+      })
+      .catch(() => { setUserRating(null); setUserComment(''); });
   }, [id, isAuthenticated]);
+
+  useEffect(() => {
+    movieApi
+      .getRatings(id)
+      .then((res) => setReviews(res.data.result || []))
+      .catch(() => setReviews([]));
+  }, [id]);
 
   const branchById = useMemo(() => {
     const map = new Map();
@@ -305,7 +318,7 @@ export default function MovieDetailPage() {
     setRatingMessage('');
 
     try {
-      const res = await movieApi.rate(id, score);
+      const res = await movieApi.rate(id, score, userComment);
       const rating = res.data.result;
 
       setUserRating(score);
@@ -319,11 +332,28 @@ export default function MovieDetailPage() {
           : prev
       );
       setRatingMessage('Đã lưu đánh giá của bạn.');
+      // Refresh reviews list
+      movieApi.getRatings(id).then((r) => setReviews(r.data.result || [])).catch(() => {});
     } catch {
       setRatingMessage('Không thể lưu đánh giá. Vui lòng thử lại.');
     } finally {
       setRatingSaving(false);
     }
+  };
+
+  const formatRelativeTime = (dateStr) => {
+    if (!dateStr) return '';
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Vừa xong';
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `${diffDays} ngày trước`;
+    return date.toLocaleDateString('vi-VN');
   };
 
   const handleCityChange = (event) => {
@@ -396,6 +426,24 @@ export default function MovieDetailPage() {
             </button>
           ))}
         </div>
+        <textarea
+          className="movie-rating-comment"
+          placeholder="Viết nhận xét của bạn (không bắt buộc)..."
+          value={userComment}
+          onChange={(e) => setUserComment(e.target.value)}
+          maxLength={500}
+          rows={3}
+        />
+        {userRating && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => handleRateMovie(userRating)}
+            disabled={ratingSaving}
+            style={{ marginTop: '8px' }}
+          >
+            {ratingSaving ? 'Đang lưu...' : 'Lưu đánh giá'}
+          </button>
+        )}
         {ratingMessage && <small>{ratingMessage}</small>}
       </div>
     </div>
@@ -572,7 +620,12 @@ export default function MovieDetailPage() {
                               showtime.endTime
                             )}`}
                           >
-                            {formatTime(showtime.startTime)}
+                            <span>{formatTime(showtime.startTime)}</span>
+                            {showtime.availableSeats != null && (
+                              <small className="showtime-seats-info">
+                                {showtime.availableSeats} ghế trống
+                              </small>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -585,6 +638,33 @@ export default function MovieDetailPage() {
         </section>
 
         <div className="movie-detail-rating">{ratingPanel}</div>
+
+        {reviews.length > 0 && (
+          <section className="movie-reviews-section">
+            <h2 className="movie-section-title">Đánh giá từ khán giả ({reviews.length})</h2>
+            <div className="movie-reviews-list">
+              {reviews.map((review) => (
+                <div key={`${review.userId}-${review.movieId}`} className="movie-review-card">
+                  <div className="movie-review-header">
+                    <div className="movie-review-avatar">
+                      {(review.username || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="movie-review-meta">
+                      <strong>{review.username || 'Ẩn danh'}</strong>
+                      <div className="movie-review-stars">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <span key={s} className={s <= review.score ? 'is-active' : ''}>★</span>
+                        ))}
+                        <span className="movie-review-time">{formatRelativeTime(review.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {review.comment && <p className="movie-review-comment">{review.comment}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {showTrailer && movie.trailerUrl && (

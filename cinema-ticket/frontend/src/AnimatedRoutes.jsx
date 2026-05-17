@@ -25,6 +25,7 @@ import ShowtimeManagement from './pages/Admin/ShowtimeManagement';
 import BranchManagement from './pages/Admin/BranchManagement';
 import UserManagement from './pages/Admin/UserManagement';
 import BookingManagement from './pages/Admin/BookingManagement';
+import FoodManagement from './pages/Admin/FoodManagement';
 import StaffLayout from './pages/Staff/StaffLayout';
 import StaffBookingPage from './pages/Staff/StaffBookingPage';
 import CheckInPage from './pages/Staff/CheckInPage';
@@ -124,6 +125,7 @@ const AnimatedRoutes = () => {
           <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
           <Route path="users" element={<PageWrapper><UserManagement /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
+          <Route path="foods" element={<PageWrapper><FoodManagement /></PageWrapper>} />
         </Route>
 
         {/* Main pages */}

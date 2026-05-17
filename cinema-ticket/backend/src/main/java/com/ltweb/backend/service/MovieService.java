@@ -116,22 +116,38 @@ public class MovieService {
             .orElseGet(() -> MovieRating.builder().movie(movie).user(user).build());
 
     rating.setScore(request.getScore());
+    rating.setComment(request.getComment());
     movieRatingRepository.save(rating);
 
-    return toMovieRatingResponse(movieId, user.getId(), rating.getScore());
+    return toMovieRatingResponse(rating);
+  }
+
+  @Transactional(readOnly = true)
+  public List<MovieRatingResponse> getMovieRatings(Long movieId) {
+    getMovie(movieId);
+    return movieRatingRepository.findByMovieIdOrderByCreatedAtDesc(movieId).stream()
+        .map(this::toMovieRatingResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)
   public MovieRatingResponse getMyRating(Long movieId) {
     getMovie(movieId);
     User user = getUserCurrent();
-    Integer score =
+    MovieRating rating =
         movieRatingRepository
             .findByMovieIdAndUserId(movieId, user.getId())
-            .map(MovieRating::getScore)
             .orElse(null);
 
-    return toMovieRatingResponse(movieId, user.getId(), score);
+    if (rating == null) {
+      return MovieRatingResponse.builder()
+          .movieId(movieId)
+          .userId(user.getId())
+          .averageRating(getAverageRating(movieId))
+          .ratingCount(movieRatingRepository.countByMovieId(movieId))
+          .build();
+    }
+    return toMovieRatingResponse(rating);
   }
 
   // ===== PRIVATE HELPER =====
@@ -164,13 +180,16 @@ public class MovieService {
     return response;
   }
 
-  private MovieRatingResponse toMovieRatingResponse(Long movieId, Long userId, Integer score) {
+  private MovieRatingResponse toMovieRatingResponse(MovieRating rating) {
     return MovieRatingResponse.builder()
-        .movieId(movieId)
-        .userId(userId)
-        .score(score)
-        .averageRating(getAverageRating(movieId))
-        .ratingCount(movieRatingRepository.countByMovieId(movieId))
+        .movieId(rating.getMovie().getId())
+        .userId(rating.getUser().getId())
+        .username(rating.getUser().getUsername())
+        .score(rating.getScore())
+        .comment(rating.getComment())
+        .createdAt(rating.getCreatedAt())
+        .averageRating(getAverageRating(rating.getMovie().getId()))
+        .ratingCount(movieRatingRepository.countByMovieId(rating.getMovie().getId()))
         .build();
   }
 

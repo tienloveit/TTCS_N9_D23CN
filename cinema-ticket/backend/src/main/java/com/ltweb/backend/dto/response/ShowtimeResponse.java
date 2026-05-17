@@ -19,4 +19,6 @@ public class ShowtimeResponse {
   private LocalDateTime startTime;
   private LocalDateTime endTime;
   private ShowtimeStatus status;
+  private Integer availableSeats;
+  private Integer totalSeats;
 }

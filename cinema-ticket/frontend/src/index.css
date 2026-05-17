@@ -946,7 +946,7 @@ select:disabled {
 .cinema-showtime-btn {
   min-width: 128px;
   min-height: 50px;
-  padding: 0 22px;
+  padding: 8px 22px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   background: var(--bg-input);
@@ -954,6 +954,11 @@ select:disabled {
   font-size: 1rem;
   font-weight: 700;
   transition: all var(--transition);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .cinema-showtime-btn:hover {
@@ -963,8 +968,118 @@ select:disabled {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
+.showtime-seats-info {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.cinema-showtime-btn:hover .showtime-seats-info {
+  color: var(--accent);
+}
+
 .movie-detail-rating {
   margin-top: 36px;
+}
+
+.movie-rating-comment {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 72px;
+  margin-top: 8px;
+  transition: border-color 0.2s;
+}
+
+.movie-rating-comment:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.movie-reviews-section {
+  margin-top: 36px;
+}
+
+.movie-reviews-list {
+  display: grid;
+  gap: 16px;
+}
+
+.movie-review-card {
+  padding: 18px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: box-shadow 0.2s;
+}
+
+.movie-review-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.movie-review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.movie-review-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), #20b875);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.movie-review-meta {
+  flex: 1;
+}
+
+.movie-review-meta strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.movie-review-stars {
+  display: inline-flex;
+  gap: 1px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  align-items: center;
+}
+
+.movie-review-stars .is-active {
+  color: var(--gold);
+}
+
+.movie-review-time {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.movie-review-comment {
+  margin: 10px 0 0;
+  padding-left: 50px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.6;
 }
 
 /* ==================== SEAT MAP ==================== */

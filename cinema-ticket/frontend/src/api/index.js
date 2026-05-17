@@ -36,7 +36,8 @@ export const movieApi = {
   getUpcoming: () => axiosClient.get('/movie/upcoming'),
   getById: (id) => axiosClient.get(`/movie/${id}`),
   getMyRating: (id) => axiosClient.get(`/movie/${id}/rating/my`),
-  rate: (id, score) => axiosClient.post(`/movie/${id}/rating`, { score }),
+  getRatings: (id) => axiosClient.get(`/movie/${id}/ratings`),
+  rate: (id, score, comment) => axiosClient.post(`/movie/${id}/rating`, { score, comment }),
   update: (id, data) => axiosClient.put(`/movie/${id}`, data),
   delete: (id) => axiosClient.delete(`/movie/${id}`),
 };
@@ -108,6 +109,7 @@ export const ticketApi = {
 // ==================== FOOD ====================
 export const foodApi = {
   getAll: () => axiosClient.get('/food'),
+  getAllAdmin: () => axiosClient.get('/food/all'),
   getById: (id) => axiosClient.get(`/food/${id}`),
   create: (data) => axiosClient.post('/food', data),
   update: (id, data) => axiosClient.put(`/food/${id}`, data),

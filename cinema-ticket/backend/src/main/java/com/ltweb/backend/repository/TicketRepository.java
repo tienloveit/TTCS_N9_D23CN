@@ -5,8 +5,17 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
+
+  @Query(
+      "SELECT COUNT(t) FROM Ticket t"
+          + " WHERE t.booking.user.id = :userId"
+          + " AND t.showtime.movie.id = :movieId"
+          + " AND t.booking.status <> com.ltweb.backend.enums.BookingStatus.CANCELLED")
+  int countTicketsByUserAndMovie(@Param("userId") Long userId, @Param("movieId") Long movieId);
 
   @EntityGraph(attributePaths = {"seat", "showtime"})
   List<Ticket> findAll();
@@ -46,4 +55,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
   Optional<Ticket> findByQrCode(String qrCode);
 
   void deleteByShowtimeId(Long showtimeId);
+
+  int countByShowtimeId(Long showtimeId);
+
+  int countByShowtimeIdAndTicketStatus(Long showtimeId, com.ltweb.backend.enums.TicketStatus status);
 }

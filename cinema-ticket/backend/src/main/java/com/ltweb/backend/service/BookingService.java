@@ -56,6 +56,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class BookingService {
 
+  private static final int MAX_TICKETS_PER_MOVIE = 8;
+
   private final BookingRepository bookingRepository;
   private final ShowtimeRepository showtimeRepository;
   private final TicketRepository ticketRepository;
@@ -72,10 +74,23 @@ public class BookingService {
     // người dùng hiện tại
     User user = getUserCurrent();
 
+    // Kiểm tra số lượng vé trong 1 lần giao dịch không vượt quá 8
+    int requestedCount = request.getSeatIds().size();
+    if (requestedCount > MAX_TICKETS_PER_MOVIE) {
+      throw new AppException(ErrorCode.MAX_TICKET_PER_TRANSACTION);
+    }
+
     Showtime showtime =
         showtimeRepository
             .findById(request.getShowtimeId())
             .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
+
+    // Kiểm tra tổng số vé người dùng đã đặt cho bộ phim này không vượt quá 8
+    Long movieId = showtime.getMovie().getId();
+    int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(user.getId(), movieId);
+    if (alreadyBooked + requestedCount > MAX_TICKETS_PER_MOVIE) {
+      throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
+    }
 
     Set<Long> uniqueSeatIds = new HashSet<>(request.getSeatIds());
     if (uniqueSeatIds.size() != request.getSeatIds().size()) {
@@ -157,6 +172,12 @@ public class BookingService {
   @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   @Transactional
   public BookingResponse createStaffBooking(StaffBookingRequest request) {
+    // Kiểm tra số lượng vé trong 1 lần giao dịch không vượt quá 8
+    int requestedCount = request.getSeatIds().size();
+    if (requestedCount > MAX_TICKETS_PER_MOVIE) {
+      throw new AppException(ErrorCode.MAX_TICKET_PER_TRANSACTION);
+    }
+
     Showtime showtime =
         showtimeRepository
             .findById(request.getShowtimeId())
@@ -193,6 +214,14 @@ public class BookingService {
         selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
 
     User customer = getOrCreateStaffCustomer(request);
+
+    // Kiểm tra tổng số vé khách hàng đã đặt cho bộ phim này không vượt quá 8
+    Long movieId = showtime.getMovie().getId();
+    int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(customer.getId(), movieId);
+    if (alreadyBooked + requestedCount > MAX_TICKETS_PER_MOVIE) {
+      throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
+    }
+
     LocalDateTime now = LocalDateTime.now();
     Booking booking =
         Booking.builder()

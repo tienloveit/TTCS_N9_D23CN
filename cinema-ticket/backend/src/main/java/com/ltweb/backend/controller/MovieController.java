@@ -100,4 +100,11 @@ public class MovieController {
     apiResponse.setResult(movieService.getMyRating(id));
     return apiResponse;
   }
+
+  @GetMapping("/{id}/ratings")
+  public ApiResponse<List<MovieRatingResponse>> getMovieRatings(@PathVariable("id") Long id) {
+    ApiResponse<List<MovieRatingResponse>> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(movieService.getMovieRatings(id));
+    return apiResponse;
+  }
 }

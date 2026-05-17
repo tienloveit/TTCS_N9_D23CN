@@ -45,6 +45,9 @@ public class MovieRating {
   @Column(nullable = false)
   private Integer score;
 
+  @Column(columnDefinition = "TEXT")
+  private String comment;
+
   @Column(name = "created_at", updatable = false)
   @CreationTimestamp
   private LocalDateTime createdAt;
