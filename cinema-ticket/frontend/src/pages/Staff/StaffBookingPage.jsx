@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { bookingApi, foodApi, showtimeApi, ticketApi } from '../../api';
+import { bookingApi, foodApi, showtimeApi, ticketApi, promotionApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
 import DigitalTicket from '../../components/Ticket/DigitalTicket';
 
@@ -47,6 +47,10 @@ export default function StaffBookingPage() {
     customerPhone: '',
   });
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoError, setPromoError] = useState('');
+  const [validatingPromo, setValidatingPromo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -326,6 +330,16 @@ export default function StaffBookingPage() {
 
   const foodQuantity = selectedFoodItems.reduce((sum, food) => sum + food.quantity, 0);
   const total = seatTotal + foodTotal;
+  const finalPrice = Math.max(0, total - promoDiscount);
+
+  // Reset giảm giá khi giỏ hàng thay đổi
+  useEffect(() => {
+    if (promoDiscount > 0) {
+      setPromoDiscount(0);
+      setPromoError('Giỏ hàng thay đổi, vui lòng áp dụng lại mã');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
 
   function isShowtimeAvailable(showtime) {
     const now = new Date();
@@ -345,6 +359,22 @@ export default function StaffBookingPage() {
 
     return notExpired && statusOk;
   }
+
+  const handleValidatePromo = async () => {
+    if (!promoCode.trim()) { setPromoDiscount(0); setPromoError(''); return; }
+    if (total === 0) { setPromoError('Vui lòng chọn ghế trước khi áp dụng mã'); return; }
+    setValidatingPromo(true);
+    setPromoError('');
+    try {
+      const res = await promotionApi.validate({ code: promoCode, orderAmount: total });
+      setPromoDiscount(Number(res.data.result.discountAmount));
+    } catch (err) {
+      setPromoDiscount(0);
+      setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
 
   const toggleSeat = (ticket) => {
     const status = ticket.displayStatus || ticket.ticketStatus;
@@ -395,6 +425,7 @@ export default function StaffBookingPage() {
         seatIds: selectedSeats,
         foods: selectedFoodItems.map((food) => ({ foodId: food.id, quantity: food.quantity })),
         paymentMethod,
+        promotionCode: promoDiscount > 0 ? promoCode : undefined,
         ...customer,
       });
       const booking = res.data.result;
@@ -407,6 +438,9 @@ export default function StaffBookingPage() {
       setSelectedSeats([]);
       setSelectedFoods({});
       setCustomer({ customerName: '', customerEmail: '', customerPhone: '' });
+      setPromoCode('');
+      setPromoDiscount(0);
+      setPromoError('');
 
       const ticketRes = await ticketApi.getByShowtimeId(showtimeId);
       setTickets(ticketRes.data.result || []);
@@ -767,10 +801,48 @@ export default function StaffBookingPage() {
                   <option value="CASH">Tiền mặt</option>
                   <option value="CARD">Thẻ</option>
                 </select>
+
+                {/* Mã khuyến mãi — hiện với cả CASH và CARD */}
+                <div style={{ marginTop: 16 }}>
+                    <span className="form-label">Mã khuyến mãi</span>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="Nhập mã giảm giá..."
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        style={{ textTransform: 'uppercase', flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleValidatePromo}
+                        disabled={validatingPromo || !promoCode.trim()}
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
+                        {validatingPromo ? '...' : 'Áp dụng'}
+                      </button>
+                    </div>
+                    {promoError && (
+                      <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>
+                    )}
+                    {promoDiscount > 0 && (
+                      <div style={{ color: 'var(--seat-available)', fontSize: '0.85rem', marginTop: 6, fontWeight: 600 }}>
+                        ✓ Giảm: {formatCurrency(promoDiscount)}
+                      </div>
+                    )}
+                </div>
+
                 <div style={{ marginTop: 16 }}>
                   <span className="form-label">Tổng tiền</span>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 6 }}>
-                    {formatCurrency(total)}
+                  {promoDiscount > 0 && (
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)', textDecoration: 'line-through', marginTop: 4 }}>
+                      {formatCurrency(total)}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: promoDiscount > 0 ? 2 : 6 }}>
+                    {formatCurrency(finalPrice)}
                   </div>
                 </div>
               </div>
@@ -830,7 +902,7 @@ export default function StaffBookingPage() {
               <strong>{foodQuantity}</strong> món
             </span>
           )}
-          <span className="booking-bar-total">{formatCurrency(total)}</span>
+          <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
           <button className="btn btn-primary" type="submit" disabled={submitting}>
             {submitting ? 'Đang xử lý...' : 'Hoàn tất tại quầy'}
           </button>

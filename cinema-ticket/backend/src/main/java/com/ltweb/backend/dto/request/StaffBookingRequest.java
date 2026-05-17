@@ -32,4 +32,6 @@ public class StaffBookingRequest {
   private String customerPhone;
 
   private PaymentMethod paymentMethod = PaymentMethod.CASH;
+
+  private String promotionCode;
 }

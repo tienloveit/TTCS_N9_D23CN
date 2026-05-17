@@ -8,9 +8,11 @@ import com.ltweb.backend.dto.response.BookingResponse;
 import com.ltweb.backend.service.BookingService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -85,6 +87,16 @@ public class BookingController {
     bookingService.cancelBooking(id);
     ApiResponse<String> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Booking cancelled successfully!");
+    return apiResponse;
+  }
+
+  @PatchMapping("/{id}/apply-promotion")
+  public ApiResponse<BookingResponse> applyPromotion(
+      @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+    String code = body.get("promotionCode");
+    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.applyPromotion(id, code));
+    apiResponse.setMessage(code != null && !code.isBlank() ? "Promotion applied!" : "Promotion removed!");
     return apiResponse;
   }
 }

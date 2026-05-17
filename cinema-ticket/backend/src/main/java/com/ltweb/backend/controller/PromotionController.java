@@ -3,6 +3,10 @@ package com.ltweb.backend.controller;
 import com.ltweb.backend.dto.request.CreatePromotionRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.PromotionResponse;
+import com.ltweb.backend.entity.User;
+import com.ltweb.backend.exception.AppException;
+import com.ltweb.backend.exception.ErrorCode;
+import com.ltweb.backend.repository.UserRepository;
 import com.ltweb.backend.service.PromotionService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -10,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PromotionController {
 
   private final PromotionService promotionService;
+  private final UserRepository userRepository;
 
   @PostMapping
   @PreAuthorize("hasRole('ADMIN')")
@@ -78,8 +84,13 @@ public class PromotionController {
     BigDecimal orderAmount = new BigDecimal(String.valueOf(body.get("orderAmount")));
     Long branchId = body.get("branchId") != null ? Long.valueOf(String.valueOf(body.get("branchId"))) : null;
 
-    // userId lấy từ user hiện tại qua service
-    BigDecimal discount = promotionService.validatePromotion(code, orderAmount, null, branchId);
+    // Lấy userId từ SecurityContext của user đang đăng nhập
+    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+    User currentUser = userRepository
+        .findByUsername(username)
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+    BigDecimal discount = promotionService.validatePromotion(code, orderAmount, currentUser.getId(), branchId);
 
     ApiResponse<Map<String, Object>> apiResponse = new ApiResponse<>();
     apiResponse.setResult(Map.of("discountAmount", discount, "code", code));

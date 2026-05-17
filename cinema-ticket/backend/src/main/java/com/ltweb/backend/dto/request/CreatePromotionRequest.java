@@ -1,6 +1,7 @@
 package com.ltweb.backend.dto.request;
 
 import com.ltweb.backend.enums.MembershipTier;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -35,8 +36,10 @@ public class CreatePromotionRequest {
 
   private Long branchId;
 
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
   private LocalDateTime startDate;
 
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
   private LocalDateTime endDate;
 
   private Integer usageLimit;

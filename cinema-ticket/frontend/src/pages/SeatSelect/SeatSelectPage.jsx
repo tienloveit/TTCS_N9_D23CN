@@ -164,7 +164,7 @@ export default function SeatSelectPage() {
         code: promoCode,
         orderAmount: totalPrice,
       });
-      setPromoDiscount(res.data.result.discountAmount);
+      setPromoDiscount(Number(res.data.result.discountAmount));
       setPromoError('');
     } catch (err) {
       setPromoDiscount(0);

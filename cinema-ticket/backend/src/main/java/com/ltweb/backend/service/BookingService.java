@@ -240,13 +240,31 @@ public class BookingService {
       throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
     }
 
+    BigDecimal totalAmount = ticketTotal.add(foodTotal);
+
+    // Áp dụng mã giảm giá (cả CASH và CARD)
+    BigDecimal discountAmount = BigDecimal.ZERO;
+    String appliedPromoCode = null;
+    if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+      Long branchId = showtime.getRoom().getBranch().getBranchId();
+      discountAmount = promotionService.validatePromotion(
+          request.getPromotionCode(), totalAmount, customer.getId(), branchId);
+      appliedPromoCode = request.getPromotionCode().trim().toUpperCase();
+      totalAmount = totalAmount.subtract(discountAmount);
+      if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
+        totalAmount = BigDecimal.ZERO;
+      }
+    }
+
     LocalDateTime now = LocalDateTime.now();
     Booking booking =
         Booking.builder()
             .bookingCode(generateBookingCode())
             .user(customer)
             .showtime(showtime)
-            .totalAmount(ticketTotal.add(foodTotal))
+            .totalAmount(totalAmount)
+            .promotionCode(appliedPromoCode)
+            .discountAmount(discountAmount)
             .status(request.getPaymentMethod() == PaymentMethod.CARD ? BookingStatus.PENDING : BookingStatus.COMPLETED)
             .paymentCreatedAt(now)
             .paymentStatus(request.getPaymentMethod() == PaymentMethod.CARD ? PaymentStatus.PENDING : PaymentStatus.PAID)
@@ -376,6 +394,52 @@ public class BookingService {
     }
 
     log.info("Booking cancelled: {}", bookingId);
+  }
+
+  /**
+   * Áp dụng hoặc xóa mã khuyến mại cho booking đang PENDING.
+   * Tính lại totalAmount từ giá gốc (trước giảm giá) để tránh stacking discount.
+   */
+  @Transactional
+  public BookingResponse applyPromotion(Long bookingId, String promotionCode) {
+    Booking booking = getBooking(bookingId);
+    User user = getUserCurrent();
+
+    // Chỉ chủ booking mới được áp mã
+    if (!booking.getUser().getId().equals(user.getId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    // Chỉ áp dụng cho booking PENDING (chưa thanh toán)
+    if (booking.getStatus() != BookingStatus.PENDING) {
+      throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
+    }
+
+    // Tính lại giá gốc (cộng lại discount cũ nếu có)
+    BigDecimal originalAmount = booking.getTotalAmount()
+        .add(booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO);
+
+    if (promotionCode == null || promotionCode.isBlank()) {
+      // Xóa mã — khôi phục giá gốc
+      booking.setPromotionCode(null);
+      booking.setDiscountAmount(BigDecimal.ZERO);
+      booking.setTotalAmount(originalAmount);
+    } else {
+      // Áp mã mới
+      Long branchId = booking.getShowtime().getRoom().getBranch().getBranchId();
+      BigDecimal discountAmount = promotionService.validatePromotion(
+          promotionCode, originalAmount, user.getId(), branchId);
+      BigDecimal newTotal = originalAmount.subtract(discountAmount);
+      if (newTotal.compareTo(BigDecimal.ZERO) < 0) newTotal = BigDecimal.ZERO;
+
+      booking.setPromotionCode(promotionCode.trim().toUpperCase());
+      booking.setDiscountAmount(discountAmount);
+      booking.setTotalAmount(newTotal);
+    }
+
+    bookingRepository.save(booking);
+    log.info("Promotion {} applied to booking {}", promotionCode, bookingId);
+    return bookingMapper.toBookingResponse(booking);
   }
 
   private String getSeatKey(Long showTimeId, Long seatId) {

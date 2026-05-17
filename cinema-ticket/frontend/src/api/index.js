@@ -126,6 +126,8 @@ export const bookingApi = {
   getMyBookingById: (id) => axiosClient.get(`/booking/my-bookings/${id}`),
   update: (id, data) => axiosClient.put(`/booking/${id}`, data),
   cancel: (id) => axiosClient.delete(`/booking/${id}`),
+  applyPromotion: (id, promotionCode) =>
+    axiosClient.patch(`/booking/${id}/apply-promotion`, { promotionCode }),
 };
 
 // ==================== ADMIN ANALYTICS ====================
