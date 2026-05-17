@@ -89,6 +89,15 @@ public enum ErrorCode {
   PAYMENT_NOT_FOUND(400, "Payment does not exist", HttpStatus.BAD_REQUEST),
   INVALID_PAYMENT_STATUS(400, "Invalid payment status for this operation", HttpStatus.BAD_REQUEST),
 
+  // Promotion Management
+  PROMOTION_NOT_FOUND(400, "Promotion code does not exist", HttpStatus.BAD_REQUEST),
+  PROMOTION_EXPIRED(400, "Promotion code has expired or is inactive", HttpStatus.BAD_REQUEST),
+  PROMOTION_USAGE_LIMIT(400, "Promotion code has reached its usage limit", HttpStatus.BAD_REQUEST),
+  PROMOTION_TIER_NOT_MET(
+      400, "Your membership tier does not meet the requirement", HttpStatus.BAD_REQUEST),
+  PROMOTION_MIN_ORDER(
+      400, "Order amount does not meet minimum requirement for this promotion", HttpStatus.BAD_REQUEST),
+
   // Database
   DATA_INTEGRITY_VIOLATION(400, "Database constraint violated", HttpStatus.BAD_REQUEST);
   private final int code;

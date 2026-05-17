@@ -23,4 +23,6 @@ public class CreateBookingRequest {
   private List<Long> seatIds;
 
   @Valid private List<CreateBookingFoodRequest> foods = new ArrayList<>();
+
+  private String promotionCode;
 }

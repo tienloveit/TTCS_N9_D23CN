@@ -133,6 +133,16 @@ export const analyticsApi = {
   getDashboard: (params) => axiosClient.get('/admin/analytics/dashboard', { params }),
 };
 
+// ==================== PROMOTION ====================
+export const promotionApi = {
+  getAll: () => axiosClient.get('/promotion'),
+  getAvailable: () => axiosClient.get('/promotion/available'),
+  create: (data) => axiosClient.post('/promotion', data),
+  update: (id, data) => axiosClient.put(`/promotion/${id}`, data),
+  delete: (id) => axiosClient.delete(`/promotion/${id}`),
+  validate: (data) => axiosClient.post('/promotion/validate', data),
+};
+
 // ==================== AI CHAT ====================
 export const chatApi = {
   send: (data) => axiosClient.post('/chat', data),

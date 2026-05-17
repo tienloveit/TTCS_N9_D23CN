@@ -1,6 +1,7 @@
 package com.ltweb.backend.entity;
 
 import com.ltweb.backend.enums.Gender;
+import com.ltweb.backend.enums.MembershipTier;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.enums.UserStatus;
 import jakarta.persistence.CascadeType;
@@ -15,6 +16,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -67,6 +69,15 @@ public class User implements UserDetails {
 
   @Enumerated(EnumType.STRING)
   private UserStatus status;
+
+  @Enumerated(EnumType.STRING)
+  @Column(length = 20)
+  @Builder.Default
+  private MembershipTier membershipTier = MembershipTier.BRONZE;
+
+  @Column(precision = 15, scale = 2)
+  @Builder.Default
+  private BigDecimal totalSpending = BigDecimal.ZERO;
 
   private LocalDateTime createdAt;
 

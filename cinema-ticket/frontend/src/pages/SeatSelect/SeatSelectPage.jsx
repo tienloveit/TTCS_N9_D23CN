@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { bookingApi, foodApi, ticketApi } from '../../api';
+import { bookingApi, foodApi, ticketApi, promotionApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
 import { useAuth } from '../../context/useAuth';
 
@@ -19,6 +19,10 @@ export default function SeatSelectPage() {
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
   const [foodError, setFoodError] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoError, setPromoError] = useState('');
+  const [validatingPromo, setValidatingPromo] = useState(false);
   const stompClient = useRef(null);
 
   useEffect(() => {
@@ -130,8 +134,45 @@ export default function SeatSelectPage() {
 
   const foodQuantity = selectedFoodItems.reduce((sum, food) => sum + food.quantity, 0);
   const totalPrice = seatTotal + foodTotal;
+  const finalPrice = Math.max(0, totalPrice - promoDiscount);
 
   const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
+
+  // Reset promo discount if total price changes and becomes less than promo criteria
+  useEffect(() => {
+    if (promoDiscount > 0) {
+      setPromoDiscount(0);
+      setPromoError('Giỏ hàng thay đổi, vui lòng áp dụng lại mã (nếu có)');
+    }
+  }, [totalPrice]);
+
+  const handleValidatePromo = async () => {
+    if (!promoCode.trim()) {
+      setPromoDiscount(0);
+      setPromoError('');
+      return;
+    }
+    if (totalPrice === 0) {
+      setPromoError('Vui lòng chọn ghế trước khi áp dụng mã');
+      return;
+    }
+
+    setValidatingPromo(true);
+    setPromoError('');
+    try {
+      const res = await promotionApi.validate({
+        code: promoCode,
+        orderAmount: totalPrice,
+      });
+      setPromoDiscount(res.data.result.discountAmount);
+      setPromoError('');
+    } catch (err) {
+      setPromoDiscount(0);
+      setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
 
   const toggleSeat = (ticket) => {
     const status = ticket.displayStatus || ticket.ticketStatus;
@@ -188,6 +229,7 @@ export default function SeatSelectPage() {
           foodId: food.id,
           quantity: food.quantity,
         })),
+        promotionCode: promoDiscount > 0 ? promoCode : undefined,
       });
       const bookingData = res.data.result;
       navigate(`/booking/${bookingData.bookingId}/payment`);
@@ -360,20 +402,72 @@ export default function SeatSelectPage() {
         )}
 
         {selectedSeats.length > 0 && (
-          <div className="booking-bar">
-            <span>
-              <strong>{selectedSeats.length}</strong> ghế
-            </span>
-            {foodQuantity > 0 && (
+          <>
+            <div className="card" style={{ padding: '24px 32px', marginBottom: 120 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 300px' }}>
+                  <h3 style={{ marginBottom: 12, fontSize: '1.1rem' }}>Mã khuyến mãi</h3>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="Nhập mã giảm giá..."
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      style={{ textTransform: 'uppercase', maxWidth: 300 }}
+                    />
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={handleValidatePromo}
+                      disabled={validatingPromo || !promoCode.trim()}
+                    >
+                      {validatingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: 8 }}>{promoError}</div>
+                  )}
+                  {promoDiscount > 0 && (
+                    <div style={{ color: 'var(--seat-available)', fontSize: '0.9rem', marginTop: 8, fontWeight: 600 }}>
+                      Đã giảm: {formatCurrency(promoDiscount)}
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ flex: '1 1 300px', background: 'var(--bg-secondary)', padding: 20, borderRadius: 'var(--radius-md)', minWidth: 280 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Tạm tính:</span>
+                    <span>{formatCurrency(totalPrice)}</span>
+                  </div>
+                  {promoDiscount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, color: 'var(--seat-available)', fontWeight: 600 }}>
+                      <span>Khuyến mãi:</span>
+                      <span>-{formatCurrency(promoDiscount)}</span>
+                    </div>
+                  )}
+                  <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600 }}>Tổng cộng:</span>
+                    <strong style={{ fontSize: '1.4rem', color: 'var(--gold)' }}>{formatCurrency(finalPrice)}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="booking-bar">
               <span>
-                <strong>{foodQuantity}</strong> món
+                <strong>{selectedSeats.length}</strong> ghế
               </span>
-            )}
-            <span className="booking-bar-total">{formatCurrency(totalPrice)}</span>
-            <button className="btn btn-primary" onClick={handleBooking} disabled={booking}>
-              {booking ? 'Đang xử lý...' : 'Đặt vé'}
-            </button>
-          </div>
+              {foodQuantity > 0 && (
+                <span>
+                  <strong>{foodQuantity}</strong> món
+                </span>
+              )}
+              <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
+              <button className="btn btn-primary" onClick={handleBooking} disabled={booking}>
+                {booking ? 'Đang xử lý...' : 'Đặt vé'}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

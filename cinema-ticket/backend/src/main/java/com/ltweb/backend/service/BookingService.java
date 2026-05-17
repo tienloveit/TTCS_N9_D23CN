@@ -68,6 +68,7 @@ public class BookingService {
   private final BookingMapper bookingMapper;
   private final PasswordEncoder passwordEncoder;
   private final ApplicationEventPublisher eventPublisher;
+  private final PromotionService promotionService;
 
   @Transactional
   public BookingResponse createBooking(CreateBookingRequest request) {
@@ -140,6 +141,21 @@ public class BookingService {
         selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
     totalAmount = totalAmount.add(foodTotal);
 
+    // Áp dụng mã giảm giá nếu có
+    BigDecimal discountAmount = BigDecimal.ZERO;
+    String appliedPromoCode = null;
+    if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+      Long branchId = showtime.getRoom().getBranch().getBranchId();
+      discountAmount =
+          promotionService.validatePromotion(
+              request.getPromotionCode(), totalAmount, user.getId(), branchId);
+      appliedPromoCode = request.getPromotionCode().trim().toUpperCase();
+      totalAmount = totalAmount.subtract(discountAmount);
+      if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
+        totalAmount = BigDecimal.ZERO;
+      }
+    }
+
     String bookingCode = generateBookingCode();
     Booking booking =
         Booking.builder()
@@ -147,6 +163,8 @@ public class BookingService {
             .user(user)
             .showtime(showtime)
             .totalAmount(totalAmount)
+            .promotionCode(appliedPromoCode)
+            .discountAmount(discountAmount)
             .status(BookingStatus.PENDING)
             .paymentCreatedAt(LocalDateTime.now())
             .paymentStatus(PaymentStatus.PENDING)
@@ -531,5 +549,33 @@ public class BookingService {
                   .build();
             })
         .collect(Collectors.toCollection(ArrayList::new));
+  }
+
+  /**
+   * Cộng tổng chi tiêu và nâng hạng thành viên sau khi thanh toán thành công.
+   */
+  @Transactional
+  public void updateMembershipAfterPayment(Long bookingId) {
+    Booking booking = getBooking(bookingId);
+    User user = booking.getUser();
+    if (user == null) return;
+
+    BigDecimal currentSpending =
+        user.getTotalSpending() != null ? user.getTotalSpending() : BigDecimal.ZERO;
+    user.setTotalSpending(currentSpending.add(booking.getTotalAmount()));
+    user.setMembershipTier(
+        com.ltweb.backend.enums.MembershipTier.fromSpending(user.getTotalSpending()));
+    userRepository.save(user);
+
+    // Tăng usedCount của promotion nếu có
+    if (booking.getPromotionCode() != null) {
+      promotionService.incrementUsage(booking.getPromotionCode());
+    }
+
+    log.info(
+        "Updated membership for user {}: spending={}, tier={}",
+        user.getUsername(),
+        user.getTotalSpending(),
+        user.getMembershipTier());
   }
 }

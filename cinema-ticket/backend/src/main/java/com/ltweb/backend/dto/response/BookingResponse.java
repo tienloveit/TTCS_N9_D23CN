@@ -27,6 +27,10 @@ public class BookingResponse {
 
   private BookingStatus status;
 
+  private String promotionCode;
+
+  private BigDecimal discountAmount;
+
   private LocalDateTime expiresAt;
 
   private LocalDateTime createdAt;

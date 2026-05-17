@@ -53,6 +53,10 @@ public class Booking {
 
   @Builder.Default private BigDecimal totalAmount = BigDecimal.ZERO;
 
+  private String promotionCode;
+
+  @Builder.Default private BigDecimal discountAmount = BigDecimal.ZERO;
+
   @Enumerated(EnumType.STRING)
   private BookingStatus status;
 

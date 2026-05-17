@@ -1,7 +1,9 @@
 package com.ltweb.backend.dto.response;
 
+import com.ltweb.backend.enums.MembershipTier;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.enums.UserStatus;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,4 +27,6 @@ public class UserResponse {
   private String gender;
   private UserStatus status;
   private java.time.LocalDateTime createdAt;
+  private MembershipTier membershipTier;
+  private BigDecimal totalSpending;
 }

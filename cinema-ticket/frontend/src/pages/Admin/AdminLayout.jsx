@@ -75,6 +75,15 @@ const Icons = {
       <line x1="14" y1="1" x2="14" y2="4" />
     </svg>
   ),
+  Gift: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 12 20 22 4 22 4 12" />
+      <rect x="2" y="7" width="20" height="5" />
+      <line x1="12" y1="22" x2="12" y2="7" />
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </svg>
+  ),
   Menu: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
       <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
@@ -102,6 +111,7 @@ const TITLE_MAP = {
   '/admin/users': 'Quản lý Người dùng',
   '/admin/bookings': 'Quản lý Đơn đặt vé',
   '/admin/foods': 'Quản lý Bắp & Nước',
+  '/admin/promotions': 'Quản lý Khuyến mãi',
 };
 
 /* ── Navigation definition ── */
@@ -120,6 +130,7 @@ const NAV_SECTIONS = [
       { path: '/admin/branches', label: 'Rạp & Phòng', Icon: Icons.Building },
       { path: '/admin/bookings', label: 'Đơn đặt vé', Icon: Icons.Ticket },
       { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
+      { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
     ],
   },
   {
