@@ -28,7 +28,7 @@ public enum ErrorCode {
 
   // User Management
   USER_EXISTED(400, "User already exists", HttpStatus.BAD_REQUEST),
-  USER_NOT_FOUND(400, "User does not exist", HttpStatus.BAD_REQUEST),
+  USER_NOT_FOUND(400, "Email không tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
 
   // Request Validation
   VALIDATION_ERROR(400, "Request validation failed", HttpStatus.BAD_REQUEST),

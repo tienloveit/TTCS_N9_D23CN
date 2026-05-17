@@ -19,7 +19,7 @@ export const authApi = {
 // ==================== USER ====================
 export const userApi = {
   create: (data) => axiosClient.post('/sign-up', data, { skipAuth: true }),
-  getAll: () => axiosClient.get('/users'),
+  getAll: (params) => axiosClient.get('/users', { params: { size: 1000, ...params } }),
   getById: (id) => axiosClient.get(`/users/${id}`),
   update: (id, data) => axiosClient.put(`/users/${id}`, data),
   delete: (id) => axiosClient.delete(`/users/${id}`),

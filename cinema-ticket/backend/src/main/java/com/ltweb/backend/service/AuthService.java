@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,6 +31,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
   private final AuthenticationManager authenticationManager;
   private final JwtService jwtService;
@@ -113,7 +115,13 @@ public class AuthService {
 
     String otp = otpService.generateOTP(email);
 
-    emailService.sendOtp(email, otp);
+    try {
+      emailService.sendOtp(email, otp);
+      log.info("OTP sent successfully to: {}", email);
+    } catch (Exception e) {
+      log.error("Failed to send OTP to {}: {}", email, e.getMessage(), e);
+      throw new AppException(ErrorCode.INTERNAL_ERROR);
+    }
   }
 
   public void resetPassword(String email, String otp, String newPassword) {
