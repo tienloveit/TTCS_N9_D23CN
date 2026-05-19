@@ -72,7 +72,7 @@ public class DataSeedService {
 
   @Transactional
   public void seedInitialData() {
-    ensureUserRoleColumnSupportsStaff();
+    ensureUserRoleColumnSupportsAllRoles();
     seedUsers();
     seedSeatTypePrices();
     seedFoods();
@@ -86,7 +86,7 @@ public class DataSeedService {
     log.info("Demo seed data has been checked and refreshed.");
   }
 
-  private void ensureUserRoleColumnSupportsStaff() {
+  private void ensureUserRoleColumnSupportsAllRoles() {
     try {
       jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN role VARCHAR(20)");
     } catch (Exception ex) {
@@ -109,6 +109,13 @@ public class DataSeedService {
         "Minh Anh - Quầy vé",
         "staff@movieptit.vn",
         "0901000001");
+    upsertUser(
+        "manager",
+        "manager@123",
+        UserRole.MANAGER,
+        "MoviePTIT Manager",
+        "manager@movieptit.vn",
+        "0901000002");
     upsertUser(
         "user",
         "user@123",
@@ -500,8 +507,26 @@ public class DataSeedService {
 
     List<Room> rooms = new ArrayList<>();
     branches.values().forEach(branch -> rooms.addAll(seedRooms(branch)));
+    branches.values().stream().findFirst().ifPresent(this::assignDemoStaffToBranch);
     rooms.forEach(this::seedSeats);
     return rooms;
+  }
+
+  private void assignDemoStaffToBranch(Branch branch) {
+    userRepository
+        .findByUsername("manager")
+        .ifPresent(
+            manager -> {
+              manager.setBranchId(branch.getBranchId());
+              userRepository.save(manager);
+            });
+    userRepository
+        .findByUsername("staff")
+        .ifPresent(
+            staff -> {
+              staff.setBranchId(branch.getBranchId());
+              userRepository.save(staff);
+            });
   }
 
   private List<Room> seedRooms(Branch branch) {

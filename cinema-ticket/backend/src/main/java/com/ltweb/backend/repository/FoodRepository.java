@@ -10,5 +10,9 @@ import org.springframework.stereotype.Repository;
 public interface FoodRepository extends JpaRepository<Food, Long> {
   List<Food> findByActiveTrueOrderByNameAsc();
 
+  List<Food> findByBranchIdAndActiveTrueOrderByNameAsc(Long branchId);
+
+  List<Food> findByBranchId(Long branchId);
+
   Optional<Food> findFirstByNameIgnoreCase(String name);
 }

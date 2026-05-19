@@ -27,5 +27,7 @@ public class CreateFoodRequest {
 
   private String imageUrl;
 
+  private Long branchId;
+
   private Boolean active;
 }

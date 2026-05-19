@@ -40,6 +40,8 @@ public class Food {
 
   private String imageUrl;
 
+  private Long branchId;
+
   @Builder.Default private Boolean active = true;
 
   @Column(name = "created_at", updatable = false)

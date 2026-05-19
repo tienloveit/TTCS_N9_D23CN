@@ -164,7 +164,27 @@ const AdminLayout = () => {
 
   const pageTitle = TITLE_MAP[location.pathname] || 'Quản trị';
   const initials = (user?.username || 'A').charAt(0).toUpperCase();
-  const roleLabel = 'Quản trị viên';
+  const basePath = user?.role === 'MANAGER' ? '/manager' : '/admin';
+  const managerPaths = [
+    '/admin',
+    '/admin/movies',
+    '/admin/showtimes',
+    '/admin/branches',
+    '/admin/bookings',
+    '/admin/users',
+    '/admin/foods',
+    '/admin/promotions',
+  ];
+  const visibleSections = NAV_SECTIONS
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => user?.role === 'ADMIN' || managerPaths.includes(item.path)
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+  const displayRoleLabel =
+    user?.role === 'MANAGER' ? 'Manager' : 'Admin';
 
   return (
     <div className="admin-layout">
@@ -172,7 +192,7 @@ const AdminLayout = () => {
       <aside className={`admin-sidebar ${sidebarOpen ? 'admin-sidebar--open' : ''}`}>
         {/* Logo */}
         <div className="admin-sidebar-header">
-          <NavLink to="/admin" className="admin-logo">
+          <NavLink to={basePath} className="admin-logo">
             <div className="admin-logo-icon">
               <MoviePTITLogoIcon />
             </div>
@@ -185,13 +205,13 @@ const AdminLayout = () => {
 
         {/* Nav Items */}
         <nav className="admin-nav">
-          {NAV_SECTIONS.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.label}>
               <div className="admin-nav-label">{section.label}</div>
               {section.items.map((item) => (
                 <NavLink
                   key={item.path}
-                  to={item.path}
+                  to={item.path.replace('/admin', basePath)}
                   end={item.end}
                   className={({ isActive }) =>
                     `admin-nav-item ${isActive ? 'admin-nav-item--active' : ''}`
@@ -211,7 +231,7 @@ const AdminLayout = () => {
             <div className="admin-sidebar-avatar">{initials}</div>
             <div className="admin-sidebar-user-info">
               <strong>{user?.username || 'Admin'}</strong>
-              <span>{roleLabel}</span>
+              <span>{displayRoleLabel}</span>
             </div>
           </div>
           <button className="admin-logout-btn" onClick={handleLogout}>
@@ -250,7 +270,7 @@ const AdminLayout = () => {
             <div className="admin-header-user">
               <div className="admin-header-user-text">
                 <strong>{user?.username || 'Admin'}</strong>
-                <span>{roleLabel}</span>
+                <span>{displayRoleLabel}</span>
               </div>
               <div className="admin-header-avatar">{initials}</div>
             </div>

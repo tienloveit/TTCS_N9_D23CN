@@ -65,10 +65,18 @@ const PrivateRoute = ({ children }) => {
 };
 
 const AdminRoute = ({ children }) => {
-  const { user, loading, isAdmin, isStaff } = useAuth();
+  const { user, loading, isAdmin, isManager, isStaff } = useAuth();
   if (loading) return <div className="loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to={isStaff ? '/staff' : '/'} replace />;
+  if (!isAdmin && !isManager) return <Navigate to={isStaff ? '/staff' : '/'} replace />;
+  return children;
+};
+
+const AdminOnlyRoute = ({ children }) => {
+  const { user, loading, isAdmin, isManager } = useAuth();
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to={isManager ? '/manager' : '/'} replace />;
   return children;
 };
 
@@ -114,6 +122,25 @@ const AnimatedRoutes = () => {
         {/* Admin routes */}
         <Route
           path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminOnlyRoute><PageWrapper><AdminDashboard /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="movies" element={<AdminOnlyRoute><PageWrapper><MovieManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="showtimes" element={<AdminOnlyRoute><PageWrapper><ShowtimeManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
+          <Route path="users" element={<AdminOnlyRoute><PageWrapper><UserManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="bookings" element={<AdminOnlyRoute><PageWrapper><BookingManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="foods" element={<AdminOnlyRoute><PageWrapper><FoodManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="promotions" element={<AdminOnlyRoute><PageWrapper><PromotionManagement /></PageWrapper></AdminOnlyRoute>} />
+        </Route>
+
+        {/* Manager routes */}
+        <Route
+          path="/manager"
           element={
             <AdminRoute>
               <AdminLayout />

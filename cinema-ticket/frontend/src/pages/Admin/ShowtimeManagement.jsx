@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/useAuth';
 
 const EditIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
@@ -26,6 +27,8 @@ const STATUS_MAP = {
 };
 
 const ShowtimeManagement = () => {
+  const { isAdmin, isManager, isAdminOrManager } = useAuth();
+  const canEditShowtime = isAdminOrManager;
   const [showtimes, setShowtimes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,14 +54,22 @@ const ShowtimeManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [stRes, movieRes, branchRes, roomRes] = await Promise.all([
+      const [stRes, branchRes, roomRes] = await Promise.all([
         showtimeApi.getAll(),
-        movieApi.getAll(),
         branchApi.getAll(),
         roomApi.getAll()
       ]);
+      const movieList = isManager
+        ? await Promise.all([movieApi.getNowShowing(), movieApi.getUpcoming()]).then(([nowRes, upcomingRes]) => {
+            const moviesById = new Map();
+            [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach(movie => {
+              moviesById.set(movie.movieId, movie);
+            });
+            return [...moviesById.values()];
+          })
+        : (await movieApi.getAll()).data.result || [];
       setShowtimes(stRes.data.result || []);
-      setMovies(movieRes.data.result || []);
+      setMovies(movieList);
       setBranches(branchRes.data.result || []);
       setRooms(roomRes.data.result || []);
     } catch {
@@ -85,6 +96,7 @@ const ShowtimeManagement = () => {
   }, [formData.branchId, rooms]);
 
   const handleOpenModal = (st = null) => {
+    if (!canEditShowtime) return;
     if (st) {
       setIsEditing(true);
       setFormData({
@@ -101,7 +113,7 @@ const ShowtimeManagement = () => {
       setFormData({
         showtimeId: null,
         movieId: '',
-        branchId: '',
+        branchId: branches.length === 1 ? String(branches[0].branchId) : '',
         roomId: '',
         startTime: '',
         endTime: '',
@@ -113,6 +125,7 @@ const ShowtimeManagement = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!canEditShowtime) return;
     try {
       const payload = { ...formData };
       if (isEditing) {
@@ -130,6 +143,7 @@ const ShowtimeManagement = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!isAdmin) return;
     if (!window.confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')) return;
     try {
       await showtimeApi.delete(id);
@@ -168,7 +182,7 @@ const ShowtimeManagement = () => {
           <h1 className="page-title">Quản lý Suất chiếu</h1>
           <p className="page-subtitle">Tổng cộng <strong>{showtimes.length}</strong> suất chiếu.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+        <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!canEditShowtime} style={!canEditShowtime ? { display: 'none' } : undefined}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -205,13 +219,13 @@ const ShowtimeManagement = () => {
               <th>Bắt đầu</th>
               <th>Kết thúc</th>
               <th>Trạng thái</th>
-              <th style={{ width: '100px' }}>Hành động</th>
+              {canEditShowtime && <th style={{ width: '100px' }}>Hành động</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <td colSpan={canEditShowtime ? 8 : 7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   {searchTerm ? 'Không tìm thấy suất chiếu nào' : 'Chưa có suất chiếu nào'}
                 </td>
               </tr>
@@ -238,12 +252,14 @@ const ShowtimeManagement = () => {
                     <td>
                       <span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span>
                     </td>
-                    <td>
+                    {canEditShowtime && <td>
                       <div className="action-btns">
                         <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(st)}><EditIcon /></button>
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(st.showtimeId)}><TrashIcon /></button>
+                        {isAdmin && (
+                          <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(st.showtimeId)}><TrashIcon /></button>
+                        )}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 );
               })

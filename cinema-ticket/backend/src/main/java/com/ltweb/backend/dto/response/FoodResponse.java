@@ -18,5 +18,6 @@ public class FoodResponse {
   private String description;
   private BigDecimal price;
   private String imageUrl;
+  private Long branchId;
   private Boolean active;
 }

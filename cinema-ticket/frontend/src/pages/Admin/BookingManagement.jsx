@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { bookingApi } from '../../api';
+import { useAuth } from '../../context/useAuth';
 
 const BookingManagement = () => {
+  const { isAdmin, isStaff, isManager } = useAuth();
+  const canProcessRefund = isAdmin || isStaff || isManager;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,6 +29,7 @@ const BookingManagement = () => {
   }, []);
 
   const handleProcessRefund = async (bookingId, approved) => {
+    if (!canProcessRefund) return;
     const action = approved ? 'duyệt hoàn tiền' : 'từ chối hoàn tiền';
     if (!window.confirm(`Bạn có chắc muốn ${action} cho đơn này?`)) return;
     setProcessingRefund(bookingId);
@@ -163,13 +167,13 @@ const BookingManagement = () => {
               <th>Tổng tiền</th>
               <th>Đơn hàng</th>
               <th>Thanh toán</th>
-              <th>Thao tác</th>
+              {canProcessRefund && <th>Thao tác</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <td colSpan={canProcessRefund ? 10 : 9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   {searchTerm || statusFilter !== 'ALL' ? 'Không tìm thấy đơn hàng nào' : 'Chưa có đơn hàng'}
                 </td>
               </tr>
@@ -225,33 +229,35 @@ const BookingManagement = () => {
                       )}
                     </td>
                     <td><span className={`status-badge ${payInfo.className}`}>{payInfo.label}</span></td>
-                    <td>
-                      {b.status === 'REFUND_REQUESTED' && (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '4px 10px' }}
-                            onClick={() => handleProcessRefund(b.bookingId, true)}
-                            disabled={processingRefund === b.bookingId}
-                          >
-                            ✓ Duyệt
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '4px 10px' }}
-                            onClick={() => handleProcessRefund(b.bookingId, false)}
-                            disabled={processingRefund === b.bookingId}
-                          >
-                            ✕ Từ chối
-                          </button>
-                        </div>
-                      )}
-                      {b.status === 'REFUNDED' && (
-                        <span style={{ fontSize: '0.78rem', color: '#8b5cf6', fontWeight: 600 }}>
-                          Đã hoàn {formatCurrency(b.refundAmount)}
-                        </span>
-                      )}
-                    </td>
+                    {canProcessRefund && (
+                      <td>
+                        {b.status === 'REFUND_REQUESTED' && (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                              onClick={() => handleProcessRefund(b.bookingId, true)}
+                              disabled={processingRefund === b.bookingId}
+                            >
+                              ✓ Duyệt
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                              onClick={() => handleProcessRefund(b.bookingId, false)}
+                              disabled={processingRefund === b.bookingId}
+                            >
+                              ✕ Từ chối
+                            </button>
+                          </div>
+                        )}
+                        {b.status === 'REFUNDED' && (
+                          <span style={{ fontSize: '0.78rem', color: '#8b5cf6', fontWeight: 600 }}>
+                            Đã hoàn {formatCurrency(b.refundAmount)}
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })

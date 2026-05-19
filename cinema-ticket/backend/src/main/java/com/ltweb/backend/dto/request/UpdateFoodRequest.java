@@ -23,5 +23,7 @@ public class UpdateFoodRequest {
 
   private String imageUrl;
 
+  private Long branchId;
+
   private Boolean active;
 }

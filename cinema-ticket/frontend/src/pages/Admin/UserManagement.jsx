@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { userApi } from '../../api';
+import { branchApi, userApi } from '../../api';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/useAuth';
 
 /* ─── Icons ─────────────────────────────────────────────── */
 const LockIcon = () => (
@@ -39,6 +40,7 @@ const PlusIcon = () => (
 
 /* ─── Constants ──────────────────────────────────────────── */
 const ROLE_OPTIONS = [
+  { value: 'MANAGER', label: 'Manager' },
   { value: 'USER',  label: 'Khách hàng' },
   { value: 'STAFF', label: 'Nhân viên'  },
   { value: 'ADMIN', label: 'Admin'       },
@@ -59,11 +61,14 @@ const EMPTY_FORM = {
   gender:      'MALE',
   dob:         '',
   role:        'USER',
+  branchId:    '',
 };
 
 /* ─── Component ──────────────────────────────────────────── */
 const UserManagement = () => {
+  const { isManager, user } = useAuth();
   const [users,       setUsers]       = useState([]);
+  const [branches,    setBranches]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [searchTerm,  setSearchTerm]  = useState('');
 
@@ -72,6 +77,9 @@ const UserManagement = () => {
   const [editingUser,  setEditingUser]  = useState(null);   // null = add mode
   const [formData,     setFormData]     = useState(EMPTY_FORM);
   const [submitting,   setSubmitting]   = useState(false);
+  const roleOptions = isManager
+    ? ROLE_OPTIONS.filter((option) => option.value === 'STAFF')
+    : ROLE_OPTIONS;
 
   /* ── Fetch ── */
   const fetchUsers = async () => {
@@ -87,12 +95,25 @@ const UserManagement = () => {
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchBranches = async () => {
+    try {
+      const res = await branchApi.getAll();
+      setBranches(res.data.result || []);
+    } catch {
+      setBranches([]);
+    }
+  };
+
+  useEffect(() => { fetchUsers(); fetchBranches(); }, []);
 
   /* ── Modal helpers ── */
   const openAddModal = () => {
     setEditingUser(null);
-    setFormData(EMPTY_FORM);
+    setFormData({
+      ...EMPTY_FORM,
+      role: isManager ? 'STAFF' : EMPTY_FORM.role,
+      branchId: isManager ? String(user?.branchId || '') : '',
+    });
     setIsModalOpen(true);
   };
 
@@ -107,6 +128,7 @@ const UserManagement = () => {
       gender:      user.gender      || 'MALE',
       dob:         user.dob         || '',
       role:        user.role        || 'CUSTOMER',
+      branchId:    user.branchId ? String(user.branchId) : '',
     });
     setIsModalOpen(true);
   };
@@ -134,7 +156,8 @@ const UserManagement = () => {
           phoneNumber: formData.phoneNumber,
           gender:      formData.gender,
           dob:         formData.dob || null,
-          role:        formData.role,
+          role:        isManager ? 'STAFF' : formData.role,
+          branchId:    ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.update(editingUser.id, payload);
         toast.success(`Cập nhật người dùng "${formData.username}" thành công!`);
@@ -148,6 +171,8 @@ const UserManagement = () => {
           password:    formData.password,
           gender:      formData.gender,
           dob:         formData.dob || null,
+          role:        isManager ? 'STAFF' : formData.role,
+          branchId:    ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.create(payload);
         toast.success(`Tạo tài khoản "${formData.username}" thành công!`);
@@ -194,6 +219,7 @@ const UserManagement = () => {
 
   const getRoleInfo = (role) => {
     const map = {
+      MANAGER: { label: 'Manager', color: 'rgba(139,92,246,0.1)', text: 'var(--purple)' },
       ADMIN: { label: 'Admin',      color: 'rgba(229,9,20,0.1)',    text: 'var(--accent)' },
       STAFF: { label: 'Nhân viên',  color: 'rgba(59,130,246,0.1)', text: 'var(--blue)'   },
       USER:  { label: 'Khách hàng', color: 'rgba(16,185,129,0.1)', text: 'var(--green)'  },
@@ -445,7 +471,7 @@ const UserManagement = () => {
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Vai trò</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  {ROLE_OPTIONS.map(o => (
+                  {roleOptions.map(o => (
                     <label key={o.value} style={{
                       display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                       flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-md)',
@@ -469,6 +495,26 @@ const UserManagement = () => {
                   ))}
                 </div>
               </div>
+
+              {['MANAGER', 'STAFF'].includes(formData.role) && (
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="form-label">Chi nhánh quản lý</label>
+                  <select
+                    name="branchId"
+                    className="input"
+                    value={formData.branchId}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">-- Chọn chi nhánh --</option>
+                    {branches.map((branch) => (
+                      <option key={branch.branchId} value={branch.branchId}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Buttons */}
               <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '8px' }}>

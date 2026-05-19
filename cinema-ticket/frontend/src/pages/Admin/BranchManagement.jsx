@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/useAuth';
 
 const BranchManagement = () => {
+  const { isAdmin } = useAuth();
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -150,12 +152,12 @@ const BranchManagement = () => {
             </svg>
             Thêm phòng
           </button>
-          <button className="btn btn-primary" onClick={() => openBranchModal()}>
+          {isAdmin && <button className="btn btn-primary" onClick={() => openBranchModal()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Thêm chi nhánh
-          </button>
+          </button>}
         </div>
       </div>
 

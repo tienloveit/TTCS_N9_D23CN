@@ -45,7 +45,7 @@ public class ShowtimeController {
   }
 
   @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<ShowtimeResponse> create(@Valid @RequestBody CreateShowtimeRequest request) {
     ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Create showtime successfully!");
@@ -54,7 +54,7 @@ public class ShowtimeController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<ShowtimeResponse> update(
       @PathVariable Long id, @RequestBody UpdateShowtimeRequest request) {
     ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
@@ -79,7 +79,7 @@ public class ShowtimeController {
   }
 
   @GetMapping("/room/{roomId}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<List<ShowtimeResponse>> getByRoom(@PathVariable Long roomId) {
     ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
     apiResponse.setResult(showtimeService.getByRoom(roomId));

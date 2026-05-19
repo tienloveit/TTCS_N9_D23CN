@@ -36,6 +36,24 @@ public class BackendApplication {
       } catch (Exception e) {
         log.warn("Could not alter bookings.payment_status: " + e.getMessage());
       }
+      try {
+        jdbcTemplate.execute("ALTER TABLE users MODIFY role VARCHAR(20)");
+        log.info("Successfully altered users.role to VARCHAR(20)");
+      } catch (Exception e) {
+        log.warn("Could not alter users.role: " + e.getMessage());
+      }
+      try {
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN branch_id BIGINT");
+        log.info("Successfully added users.branch_id");
+      } catch (Exception e) {
+        log.warn("Could not add users.branch_id: " + e.getMessage());
+      }
+      try {
+        jdbcTemplate.execute("ALTER TABLE foods ADD COLUMN branch_id BIGINT");
+        log.info("Successfully added foods.branch_id");
+      } catch (Exception e) {
+        log.warn("Could not add foods.branch_id: " + e.getMessage());
+      }
     };
   }
 }

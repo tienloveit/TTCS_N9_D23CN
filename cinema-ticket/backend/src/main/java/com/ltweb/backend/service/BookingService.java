@@ -117,6 +117,7 @@ public class BookingService {
 
     Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
     List<Food> selectedFoods = getSelectedFoods(foodQuantities);
+    requireFoodsAvailableForShowtime(selectedFoods, showtime);
     BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
 
     // khoá ghế bằng Redis
@@ -200,6 +201,7 @@ public class BookingService {
         showtimeRepository
             .findById(request.getShowtimeId())
             .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
+    requireStaffBookingAccess(showtime);
 
     Set<Long> uniqueSeatIds = new HashSet<>(request.getSeatIds());
     if (uniqueSeatIds.size() != request.getSeatIds().size()) {
@@ -227,6 +229,7 @@ public class BookingService {
 
     Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
     List<Food> selectedFoods = getSelectedFoods(foodQuantities);
+    requireFoodsAvailableForShowtime(selectedFoods, showtime);
     BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
     BigDecimal ticketTotal =
         selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -299,10 +302,12 @@ public class BookingService {
     return bookingMapper.toBookingResponse(booking);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional(readOnly = true)
   public List<BookingResponse> getAllBookings() {
-    return bookingRepository.findAll().stream().map(bookingMapper::toBookingResponse).toList();
+    return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
+        .map(bookingMapper::toBookingResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -310,8 +315,12 @@ public class BookingService {
     Booking booking = getBooking(bookingId);
     User user = getUserCurrent();
     boolean isOwner = booking.getUser().getId().equals(user.getId());
-    boolean isStaffOrAdmin = user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.STAFF;
-    if (!isOwner && !isStaffOrAdmin) {
+    boolean isAdmin = user.getRole() == UserRole.ADMIN;
+    boolean isBranchManager =
+        isBranchOperator(user)
+            && user.getBranchId() != null
+            && isBookingInBranch(booking, user.getBranchId());
+    if (!isOwner && !isAdmin && !isBranchManager) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
     return bookingMapper.toBookingResponse(booking);
@@ -343,6 +352,7 @@ public class BookingService {
   @Transactional
   public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
     Booking booking = getBooking(bookingId);
+    requireBookingManagementAccess(booking);
 
     if (request.getStatus() != null) {
       booking.setStatus(request.getStatus());
@@ -356,8 +366,12 @@ public class BookingService {
     Booking booking = getBooking(bookingId);
     User user = getUserCurrent();
     boolean isOwner = booking.getUser().getId().equals(user.getId());
-    boolean isStaffOrAdmin = user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.STAFF;
-    if (!isOwner && !isStaffOrAdmin) {
+    boolean canManageBooking =
+        user.getRole() == UserRole.ADMIN
+            || (user.getRole() == UserRole.STAFF
+                && user.getBranchId() != null
+                && isBookingInBranch(booking, user.getBranchId()));
+    if (!isOwner && !canManageBooking) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
@@ -552,6 +566,60 @@ public class BookingService {
         .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
   }
 
+  private List<Booking> scopeBookingsForBranchOperator(List<Booking> bookings) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return bookings;
+    }
+    if (!isBranchOperator(currentUser)) {
+      return List.of();
+    }
+    Long branchId = currentUser.getBranchId();
+    if (branchId == null) {
+      return List.of();
+    }
+    return bookings.stream().filter(booking -> isBookingInBranch(booking, branchId)).toList();
+  }
+
+  private boolean isBookingInBranch(Booking booking, Long branchId) {
+    return booking.getShowtime() != null
+        && booking.getShowtime().getRoom() != null
+        && booking.getShowtime().getRoom().getBranch() != null
+        && Objects.equals(booking.getShowtime().getRoom().getBranch().getBranchId(), branchId);
+  }
+
+  private void requireBookingManagementAccess(Booking booking) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (isBranchOperator(currentUser)
+        && currentUser.getBranchId() != null
+        && isBookingInBranch(booking, currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private void requireStaffBookingAccess(Showtime showtime) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (currentUser.getRole() == UserRole.STAFF
+        && currentUser.getBranchId() != null
+        && showtime.getRoom() != null
+        && showtime.getRoom().getBranch() != null
+        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private boolean isBranchOperator(User user) {
+    return user.getRole() == UserRole.STAFF || user.getRole() == UserRole.MANAGER;
+  }
+
   private Map<Long, Integer> getFoodQuantities(List<CreateBookingFoodRequest> foods) {
     if (foods == null || foods.isEmpty()) {
       return Map.of();
@@ -588,6 +656,23 @@ public class BookingService {
     }
 
     return selectedFoods;
+  }
+
+  private void requireFoodsAvailableForShowtime(List<Food> foods, Showtime showtime) {
+    if (foods.isEmpty()) {
+      return;
+    }
+    Long branchId =
+        showtime.getRoom() == null || showtime.getRoom().getBranch() == null
+            ? null
+            : showtime.getRoom().getBranch().getBranchId();
+    boolean hasFoodFromOtherBranch =
+        foods.stream()
+            .anyMatch(
+                food -> food.getBranchId() != null && !Objects.equals(food.getBranchId(), branchId));
+    if (hasFoodFromOtherBranch) {
+      throw new AppException(ErrorCode.FOOD_NOT_FOUND);
+    }
   }
 
   private BigDecimal calculateFoodTotal(
@@ -692,10 +777,11 @@ public class BookingService {
   /**
    * Admin/Staff duyệt hoặc từ chối yêu cầu hoàn tiền.
    */
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional
   public BookingResponse processRefund(Long bookingId, boolean approved) {
     Booking booking = getBooking(bookingId);
+    requireBookingManagementAccess(booking);
 
     if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
       throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);

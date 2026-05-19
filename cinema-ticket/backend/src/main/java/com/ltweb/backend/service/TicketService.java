@@ -10,10 +10,12 @@ import com.ltweb.backend.entity.Seat;
 import com.ltweb.backend.entity.SeatTypePrice;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
+import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.SeatType;
 import com.ltweb.backend.enums.TicketStatus;
+import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.TicketMapper;
@@ -22,16 +24,19 @@ import com.ltweb.backend.repository.SeatRepository;
 import com.ltweb.backend.repository.SeatTypePriceRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
+import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,11 +50,12 @@ public class TicketService {
   private final ShowtimeRepository showtimeRepository;
   private final SeatRepository seatRepository;
   private final SeatTypePriceRepository seatTypePriceRepository;
+  private final UserRepository userRepository;
   private final StringRedisTemplate redisTemplate;
   private final TicketMapper ticketMapper;
   private final QRCodeReaderService qrCodeReaderService;
 
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public void createTicket(Showtime showtime) {
     List<Seat> seats = seatRepository.findByRoomId(showtime.getRoom().getId());
@@ -80,7 +86,9 @@ public class TicketService {
   }
 
   // Không dùng @Cacheable vì cần đọc Redis seat lock real-time mỗi request
+  @Transactional(readOnly = true)
   public List<TicketResponse> getTicketsByShowtimeId(Long showtimeId) {
+    requireShowtimeAccessForCurrentBranchOperator(showtimeId);
 
     // Bước 1: Lấy toàn bộ ticket của suất chiếu từ DB
     List<Ticket> dbTickets = ticketRepository.findByShowtimeId(showtimeId);
@@ -122,8 +130,10 @@ public class TicketService {
     return tickets;
   }
 
+  @Transactional(readOnly = true)
   public TicketResponse getTicketById(Long ticketId) {
     Ticket ticket = getTicket(ticketId);
+    requireTicketViewAccess(ticket);
     return ticketMapper.toTicketResponse(ticket);
   }
 
@@ -167,6 +177,7 @@ public class TicketService {
 
     if (ticketOpt.isPresent()) {
       Ticket ticket = ticketOpt.get();
+      requireBookingCheckInAccess(ticket.getBooking());
       Map<Long, Boolean> alreadyCheckedIn = Map.of(ticket.getId(), ticket.getCheckedInAt() != null);
       checkInTicket(ticket);
       return buildCheckInResponse(ticket.getBooking(), List.of(ticket), alreadyCheckedIn);
@@ -179,6 +190,7 @@ public class TicketService {
     if (booking.getTickets() == null || booking.getTickets().isEmpty()) {
       throw new AppException(ErrorCode.TICKET_NOT_FOUND);
     }
+    requireBookingCheckInAccess(booking);
 
     Map<Long, Boolean> alreadyCheckedIn = new HashMap<>();
     booking
@@ -215,6 +227,101 @@ public class TicketService {
     return ticketRepository
         .findById(ticketId)
         .orElseThrow(() -> new AppException(ErrorCode.TICKET_NOT_FOUND));
+  }
+
+  private void requireShowtimeAccessForCurrentBranchOperator(Long showtimeId) {
+    User currentUser = getCurrentUserOrNull();
+    if (currentUser == null
+        || currentUser.getRole() == UserRole.ADMIN
+        || currentUser.getRole() == UserRole.USER) {
+      return;
+    }
+    if (!isBranchOperator(currentUser) || currentUser.getBranchId() == null) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+    Showtime showtime =
+        showtimeRepository
+            .findById(showtimeId)
+            .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
+    if (!isShowtimeInBranch(showtime, currentUser.getBranchId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+  }
+
+  private void requireTicketViewAccess(Ticket ticket) {
+    User currentUser = getCurrentUserOrNull();
+    if (currentUser == null) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    Booking booking = ticket.getBooking();
+    if (booking != null
+        && booking.getUser() != null
+        && Objects.equals(booking.getUser().getId(), currentUser.getId())) {
+      return;
+    }
+    if (isBranchOperator(currentUser)
+        && currentUser.getBranchId() != null
+        && isTicketInBranch(ticket, currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private void requireBookingCheckInAccess(Booking booking) {
+    if (booking == null) {
+      throw new AppException(ErrorCode.INVALID_TICKET_CHECKIN);
+    }
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (currentUser.getRole() == UserRole.STAFF
+        && currentUser.getBranchId() != null
+        && isBookingInBranch(booking, currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private boolean isBookingInBranch(Booking booking, Long branchId) {
+    return booking.getShowtime() != null && isShowtimeInBranch(booking.getShowtime(), branchId);
+  }
+
+  private boolean isTicketInBranch(Ticket ticket, Long branchId) {
+    return ticket.getShowtime() != null && isShowtimeInBranch(ticket.getShowtime(), branchId);
+  }
+
+  private boolean isShowtimeInBranch(Showtime showtime, Long branchId) {
+    return showtime.getRoom() != null
+        && showtime.getRoom().getBranch() != null
+        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
+  }
+
+  private boolean isBranchOperator(User user) {
+    return user.getRole() == UserRole.STAFF || user.getRole() == UserRole.MANAGER;
+  }
+
+  private User getUserCurrent() {
+    String username =
+        Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
+    return userRepository
+        .findByUsername(username)
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+  }
+
+  private User getCurrentUserOrNull() {
+    var authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()) {
+      return null;
+    }
+    String username = authentication.getName();
+    if (username == null || "anonymousUser".equals(username)) {
+      return null;
+    }
+    return userRepository.findByUsername(username).orElse(null);
   }
 
   private Optional<Ticket> findTicketByCheckInCode(String code) {

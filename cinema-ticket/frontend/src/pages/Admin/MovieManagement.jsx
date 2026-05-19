@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { movieApi, genreApi, directorApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
+import { useAuth } from '../../context/useAuth';
 
 const MovieManagement = () => {
+  const { isAdmin } = useAuth();
   const [movies, setMovies] = useState([]);
   const [genres, setGenres] = useState([]);
   const [directors, setDirectors] = useState([]);
@@ -67,6 +69,7 @@ const MovieManagement = () => {
   }, []);
 
   const handleOpenModal = (movie = null) => {
+    if (!isAdmin) return;
     setNewDirectorName('');
     if (movie) {
       setEditingMovie(movie);
@@ -130,6 +133,7 @@ const MovieManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isAdmin) return;
     try {
       const payload = {
         ...formData,
@@ -152,6 +156,7 @@ const MovieManagement = () => {
   };
 
   const handleCreateDirector = async () => {
+    if (!isAdmin) return;
     const name = newDirectorName.trim();
     if (!name) {
       toast.warn('Vui lòng nhập tên đạo diễn.');
@@ -171,6 +176,7 @@ const MovieManagement = () => {
   };
 
   const handleDelete = async (movieId, movieName) => {
+    if (!isAdmin) return;
     if (window.confirm(`Bạn có chắc chắn muốn xoá phim "${movieName}"?`)) {
       try {
         await movieApi.delete(movieId);
@@ -209,7 +215,7 @@ const MovieManagement = () => {
             Tổng cộng <strong>{movies.length}</strong> phim trong hệ thống.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+        <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!isAdmin} style={!isAdmin ? { display: 'none' } : undefined}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -247,13 +253,13 @@ const MovieManagement = () => {
               <th>Thời lượng</th>
               <th>Ngày chiếu</th>
               <th>Trạng thái</th>
-              <th style={{ width: '120px' }}>Hành động</th>
+              {isAdmin && <th style={{ width: '120px' }}>Hành động</th>}
             </tr>
           </thead>
           <tbody>
             {filteredMovies.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   {searchTerm ? 'Không tìm thấy phim nào' : 'Chưa có phim nào trong hệ thống'}
                 </td>
               </tr>
@@ -302,22 +308,22 @@ const MovieManagement = () => {
                         {statusInfo.label}
                       </span>
                     </td>
-                    <td>
+                    {isAdmin && <td>
                       <div className="action-btns">
-                        <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(movie)}>
+                        <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(movie)} disabled={!isAdmin} style={!isAdmin ? { display: 'none' } : undefined}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                           </svg>
                         </button>
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(movie.movieId, movie.movieName)}>
+                        <button className="btn btn-ghost btn-sm" title="Xóa" style={isAdmin ? { color: '#ef4444' } : { display: 'none' }} onClick={() => handleDelete(movie.movieId, movie.movieName)} disabled={!isAdmin}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                           </svg>
                         </button>
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 );
               })
