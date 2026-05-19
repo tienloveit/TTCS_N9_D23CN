@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
@@ -32,9 +32,9 @@ const ROOM_TYPE_LABELS = {
 };
 
 const STATUS_MAP = {
-  OPEN: { label: 'Äang má»Ÿ', className: 'status--active' },
-  CLOSED: { label: 'ÄÃ£ Ä‘Ã³ng', className: 'status--inactive' },
-  CANCELLED: { label: 'ÄÃ£ há»§y', className: 'status--inactive' },
+  OPEN: { label: 'Đang mở', className: 'status--active' },
+  CLOSED: { label: 'Đã đóng', className: 'status--inactive' },
+  CANCELLED: { label: 'Đã hủy', className: 'status--inactive' },
 };
 
 const SLOT_COLORS = ['#0756a6', '#0f766e', '#7c3aed', '#be123c', '#b45309', '#4338ca'];
@@ -115,7 +115,7 @@ const ShowtimeManagement = () => {
       setRooms(roomRes.data.result || []);
       setSelectedBranchId((current) => current || (branchList.length === 1 ? String(branchList[0].branchId) : ''));
     } catch {
-      toast.error('Lá»—i khi táº£i dá»¯ liá»‡u');
+      toast.error('Lỗi khi tải dữ liệu');
     } finally {
       setLoading(false);
     }
@@ -196,27 +196,27 @@ const ShowtimeManagement = () => {
       const payload = { ...formData };
       if (isEditing) {
         await showtimeApi.update(formData.showtimeId, payload);
-        toast.success('Cáº­p nháº­t suáº¥t chiáº¿u thÃ nh cÃ´ng!');
+        toast.success('Cập nhật suất chiếu thành công!');
       } else {
         await showtimeApi.create(payload);
-        toast.success('ThÃªm suáº¥t chiáº¿u thÃ nh cÃ´ng!');
+        toast.success('Thêm suất chiếu thành công!');
       }
       setShowModal(false);
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'CÃ³ lá»—i xáº£y ra');
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   const handleDelete = async (id) => {
     if (!isAdmin) return;
-    if (!window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a suáº¥t chiáº¿u nÃ y?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')) return;
     try {
       await showtimeApi.delete(id);
-      toast.success('XÃ³a thÃ nh cÃ´ng!');
+      toast.success('Xóa thành công!');
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'XÃ³a tháº¥t báº¡i');
+      toast.error(err.response?.data?.message || 'Xóa thất bại');
     }
   };
 
@@ -262,16 +262,16 @@ const ShowtimeManagement = () => {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18 }}>
         <div>
-          <h1 className="page-title">Quáº£n lÃ½ Suáº¥t chiáº¿u</h1>
+          <h1 className="page-title">Quản lý Suất chiếu</h1>
           <p className="page-subtitle">
-            <strong>{dayStats.total}</strong> suáº¥t trong ngÃ y Ä‘ang chá»n Â· <strong>{dayStats.usedRooms}</strong> phÃ²ng cÃ³ lá»‹ch
+            <strong>{dayStats.total}</strong> suất trong ngày đang chọn · <strong>{dayStats.usedRooms}</strong> phòng có lịch
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!canEditShowtime} style={!canEditShowtime ? { display: 'none' } : undefined}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          ThÃªm suáº¥t chiáº¿u
+          Thêm suất chiếu
         </button>
       </div>
 
@@ -293,14 +293,14 @@ const ShowtimeManagement = () => {
               onClick={() => setViewMode('list')}
               style={{ flex: 1, justifyContent: 'center' }}
             >
-              Danh sÃ¡ch
+              Danh sách
             </button>
           </div>
 
           <input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
 
           <select className="input" value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}>
-            <option value="">Táº¥t cáº£ chi nhÃ¡nh</option>
+            <option value="">Tất cả chi nhánh</option>
             {branches.map((branch) => (
               <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
             ))}
@@ -308,10 +308,10 @@ const ShowtimeManagement = () => {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() - 1))))}>
-              TrÆ°á»›c
+              Trước
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue())}>
-              HÃ´m nay
+              Hôm nay
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1))))}>
               Sau
@@ -324,22 +324,22 @@ const ShowtimeManagement = () => {
         <div className="admin-table-card" style={{ overflow: 'hidden' }}>
           <div className="table-header">
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Lá»‹ch chiáº¿u theo phÃ²ng</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Lịch chiếu theo phòng</h3>
               <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                {dayStats.openCount} suáº¥t Ä‘ang má»Ÿ bÃ¡n Â· timeline {DAY_START_HOUR}:00 - {DAY_END_HOUR}:00
+                {dayStats.openCount} suất đang mở bán · timeline {DAY_START_HOUR}:00 - {DAY_END_HOUR}:00
               </p>
             </div>
           </div>
 
           {calendarRooms.length === 0 ? (
             <div style={{ padding: 44, textAlign: 'center', color: 'var(--text-muted)' }}>
-              KhÃ´ng cÃ³ suáº¥t chiáº¿u nÃ o trong ngÃ y/chi nhÃ¡nh Ä‘ang chá»n.
+              Không có suất chiếu nào trong ngày/chi nhánh đang chọn.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <div style={{ minWidth: 240 + timelineHours.length * HOUR_WIDTH }}>
                 <div style={{ display: 'grid', gridTemplateColumns: `220px ${timelineHours.length * HOUR_WIDTH}px`, borderBottom: '1px solid var(--border)', background: 'var(--bg-card-hover)' }}>
-                  <div style={{ padding: '12px 16px', fontWeight: 800 }}>PhÃ²ng</div>
+                  <div style={{ padding: '12px 16px', fontWeight: 800 }}>Phòng</div>
                   <div style={{ position: 'relative', height: 44 }}>
                     {timelineHours.map((hour) => (
                       <div key={hour} style={{ position: 'absolute', left: (hour - DAY_START_HOUR) * HOUR_WIDTH, top: 0, width: HOUR_WIDTH, height: 44, borderLeft: '1px solid var(--border)', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)' }}>
@@ -357,7 +357,7 @@ const ShowtimeManagement = () => {
                         <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{room.name}</div>
                         <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className="movie-badge">{ROOM_TYPE_LABELS[room.roomType] || room.roomType}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{room.seatCapacity || 0} gháº¿</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{room.seatCapacity || 0} ghế</span>
                         </div>
                       </div>
                       <div style={{ position: 'relative', height: 92, background: '#f8fafc' }}>
@@ -370,7 +370,7 @@ const ShowtimeManagement = () => {
                             <button
                               key={showtime.showtimeId}
                               type="button"
-                              title={`${showtime.movieName} Â· ${formatTime(showtime.startTime)} - ${formatTime(showtime.endTime)}`}
+                              title={`${showtime.movieName} · ${formatTime(showtime.startTime)} - ${formatTime(showtime.endTime)}`}
                               onClick={() => handleOpenModal(showtime)}
                               style={{
                                 position: 'absolute',
@@ -413,13 +413,13 @@ const ShowtimeManagement = () => {
               <input
                 type="text"
                 className="input"
-                placeholder="TÃ¬m phim, phÃ²ng, chi nhÃ¡nh..."
+                placeholder="Tìm phim, phòng, chi nhánh..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: 40, background: 'var(--bg-input)' }}
               />
             </div>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{filtered.length} káº¿t quáº£</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{filtered.length} kết quả</span>
           </div>
 
           <table className="admin-table">
@@ -427,19 +427,19 @@ const ShowtimeManagement = () => {
               <tr>
                 <th style={{ width: 40 }}>#</th>
                 <th>Phim</th>
-                <th>PhÃ²ng chiáº¿u</th>
-                <th>Chi nhÃ¡nh</th>
-                <th>Báº¯t Ä‘áº§u</th>
-                <th>Káº¿t thÃºc</th>
-                <th>Tráº¡ng thÃ¡i</th>
-                {canEditShowtime && <th style={{ width: 100 }}>HÃ nh Ä‘á»™ng</th>}
+                <th>Phòng chiếu</th>
+                <th>Chi nhánh</th>
+                <th>Bắt đầu</th>
+                <th>Kết thúc</th>
+                <th>Trạng thái</th>
+                {canEditShowtime && <th style={{ width: 100 }}>Hành động</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={canEditShowtime ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                    {searchTerm ? 'KhÃ´ng tÃ¬m tháº¥y suáº¥t chiáº¿u nÃ o' : 'ChÆ°a cÃ³ suáº¥t chiáº¿u nÃ o'}
+                    {searchTerm ? 'Không tìm thấy suất chiếu nào' : 'Chưa có suất chiếu nào'}
                   </td>
                 </tr>
               ) : (
@@ -466,9 +466,9 @@ const ShowtimeManagement = () => {
                       {canEditShowtime && (
                         <td>
                           <div className="action-btns">
-                            <button className="btn btn-ghost btn-sm" title="Sá»­a" onClick={() => handleOpenModal(showtime)}><EditIcon /></button>
+                            <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(showtime)}><EditIcon /></button>
                             {isAdmin && (
-                              <button className="btn btn-ghost btn-sm" title="XÃ³a" style={{ color: '#ef4444' }} onClick={() => handleDelete(showtime.showtimeId)}><TrashIcon /></button>
+                              <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(showtime.showtimeId)}><TrashIcon /></button>
                             )}
                           </div>
                         </td>
@@ -494,28 +494,28 @@ const ShowtimeManagement = () => {
             padding: '28px 32px',
             borderRadius: 'var(--radius-lg)',
           }}>
-            <h2 style={{ marginBottom: 20, fontSize: '1.4rem', fontWeight: 700 }}>{isEditing ? 'Chá»‰nh sá»­a suáº¥t chiáº¿u' : 'ThÃªm suáº¥t chiáº¿u má»›i'}</h2>
+            <h2 style={{ marginBottom: 20, fontSize: '1.4rem', fontWeight: 700 }}>{isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}</h2>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div className="form-group">
-                <label className="form-label">Chá»n phim</label>
+                <label className="form-label">Chọn phim</label>
                 <select className="input" value={formData.movieId} onChange={(e) => setFormData({ ...formData, movieId: e.target.value })} required>
-                  <option value="">-- Chá»n phim --</option>
+                  <option value="">-- Chọn phim --</option>
                   {movies.map((movie) => <option key={movie.movieId} value={movie.movieId}>{movie.movieName}</option>)}
                 </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
-                  <label className="form-label">Chi nhÃ¡nh</label>
+                  <label className="form-label">Chi nhánh</label>
                   <select className="input" value={formData.branchId} onChange={(e) => setFormData({ ...formData, branchId: e.target.value, roomId: '' })} required>
-                    <option value="">-- Chá»n ráº¡p --</option>
+                    <option value="">-- Chọn rạp --</option>
                     {branches.map((branch) => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">PhÃ²ng chiáº¿u</label>
+                  <label className="form-label">Phòng chiếu</label>
                   <select className="input" value={formData.roomId} onChange={(e) => setFormData({ ...formData, roomId: e.target.value })} required disabled={!formData.branchId}>
-                    <option value="">-- Chá»n phÃ²ng --</option>
+                    <option value="">-- Chọn phòng --</option>
                     {filteredRooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({ROOM_TYPE_LABELS[room.roomType] || room.roomType})</option>)}
                   </select>
                 </div>
@@ -523,27 +523,27 @@ const ShowtimeManagement = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
-                  <label className="form-label">Báº¯t Ä‘áº§u</label>
+                  <label className="form-label">Bắt đầu</label>
                   <input type="datetime-local" className="input" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Káº¿t thÃºc</label>
+                  <label className="form-label">Kết thúc</label>
                   <input type="datetime-local" className="input" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required />
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Tráº¡ng thÃ¡i</label>
+                <label className="form-label">Trạng thái</label>
                 <select className="input" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                  <option value="OPEN">Má»Ÿ bÃ¡n</option>
-                  <option value="CLOSED">ÄÃ³ng</option>
-                  <option value="CANCELLED">ÄÃ£ há»§y</option>
+                  <option value="OPEN">Mở bán</option>
+                  <option value="CLOSED">Đóng</option>
+                  <option value="CANCELLED">Đã hủy</option>
                 </select>
               </div>
 
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Há»§y</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>LÆ°u láº¡i</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Hủy</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Lưu lại</button>
               </div>
             </form>
           </div>

@@ -822,6 +822,7 @@ select:disabled {
   border: 0;
   background: transparent;
   color: var(--text-primary);
+  font-family: inherit;
   font-size: 2rem;
   line-height: 1;
 }
@@ -845,6 +846,7 @@ select:disabled {
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-secondary);
+  font-family: inherit;
   transition: all var(--transition);
 }
 
@@ -2914,6 +2916,7 @@ select:disabled {
   background: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text-secondary);
+  font-family: inherit;
   cursor: pointer;
   transition: all var(--transition);
   position: relative;
