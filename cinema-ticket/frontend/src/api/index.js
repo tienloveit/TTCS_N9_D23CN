@@ -78,6 +78,12 @@ export const roomApi = {
   delete: (id) => axiosClient.delete(`/room/${id}`),
 };
 
+// ==================== SEAT ====================
+export const seatApi = {
+  getByRoom: (roomId) => axiosClient.get(`/seat/room/${roomId}`),
+  updateLayout: (roomId, data) => axiosClient.put(`/seat/room/${roomId}/layout`, data),
+};
+
 // ==================== SHOWTIME ====================
 export const showtimeApi = {
   getAll: () => axiosClient.get('/showtime'),

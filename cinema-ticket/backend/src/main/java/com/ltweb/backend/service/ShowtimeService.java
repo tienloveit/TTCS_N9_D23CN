@@ -9,6 +9,8 @@ import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
+import com.ltweb.backend.enums.RoomStatus;
+import com.ltweb.backend.enums.ShowtimeStatus;
 import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
@@ -41,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ShowtimeService {
+  private static final int CLEANUP_BUFFER_MINUTES = 15;
 
   private final ShowtimeRepository showtimeRepository;
   private final RoomRepository roomRepository;
@@ -59,14 +62,18 @@ public class ShowtimeService {
             .findById(request.getRoomId())
             .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
     requireRoomAccess(room);
+    requireRoomAvailable(room);
 
     Movie movie =
         movieRepository
             .findById(request.getMovieId())
             .orElseThrow(() -> new AppException(ErrorCode.MOVIE_NOT_FOUND));
 
+    validateScheduleWindow(request.getStartTime(), request.getEndTime());
     if (showtimeRepository.existsOverlappingShowtime(
-        request.getRoomId(), request.getStartTime(), request.getEndTime())) {
+        request.getRoomId(),
+        request.getStartTime().minusMinutes(CLEANUP_BUFFER_MINUTES),
+        request.getEndTime().plusMinutes(CLEANUP_BUFFER_MINUTES))) {
       throw new AppException(ErrorCode.SHOWTIME_TIME_OVERLAP);
     }
 
@@ -87,11 +94,18 @@ public class ShowtimeService {
     requireShowtimeAccess(showtime);
 
     showtimeMapper.updateShowtime(showtime, request);
+    if (showtime.getStatus() == null || showtime.getStatus() == ShowtimeStatus.OPEN) {
+      requireRoomAvailable(showtime.getRoom());
+    }
 
     // Check overlap nếu thời gian thay đổi
     if (request.getStartTime() != null || request.getEndTime() != null) {
+      validateScheduleWindow(showtime.getStartTime(), showtime.getEndTime());
       if (showtimeRepository.existsOverlappingShowtimeExcluding(
-          showtime.getRoom().getId(), showtime.getStartTime(), showtime.getEndTime(), showtimeId)) {
+          showtime.getRoom().getId(),
+          showtime.getStartTime().minusMinutes(CLEANUP_BUFFER_MINUTES),
+          showtime.getEndTime().plusMinutes(CLEANUP_BUFFER_MINUTES),
+          showtimeId)) {
         throw new AppException(ErrorCode.SHOWTIME_TIME_OVERLAP);
       }
     }
@@ -299,6 +313,18 @@ public class ShowtimeService {
     return showtime.getRoom() != null
         && showtime.getRoom().getBranch() != null
         && java.util.Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
+  }
+
+  private void requireRoomAvailable(Room room) {
+    if (room == null || room.getStatus() != RoomStatus.ACTIVE) {
+      throw new AppException(ErrorCode.ROOM_NOT_AVAILABLE);
+    }
+  }
+
+  private void validateScheduleWindow(LocalDateTime startTime, LocalDateTime endTime) {
+    if (startTime == null || endTime == null || !endTime.isAfter(startTime)) {
+      throw new AppException(ErrorCode.VALIDATION_ERROR);
+    }
   }
 
   private boolean isBranchOperator(User user) {

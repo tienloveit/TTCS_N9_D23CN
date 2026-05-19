@@ -108,6 +108,11 @@ public class TicketService {
     for (int i = 0; i < tickets.size(); i++) {
       TicketResponse ticket = tickets.get(i);
 
+      if (Boolean.FALSE.equals(dbTickets.get(i).getSeat().getIsActive())) {
+        ticket.setDisplayStatus(TicketStatus.BOOKED);
+        continue;
+      }
+
       // Ghế đã thanh toán thành công -> luôn BOOKED, không override
       if (ticket.getTicketStatus() == TicketStatus.BOOKED) {
         ticket.setDisplayStatus(TicketStatus.BOOKED);

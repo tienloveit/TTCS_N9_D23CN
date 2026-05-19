@@ -39,6 +39,7 @@ public enum ErrorCode {
 
   // Room Management
   ROOM_NOT_FOUND(400, "Room does not exist", HttpStatus.BAD_REQUEST),
+  ROOM_NOT_AVAILABLE(400, "Room is not available for scheduling", HttpStatus.BAD_REQUEST),
   ROOM_HAS_SHOWTIMES(
       400,
       "Cannot change room structure because it has scheduled showtimes",

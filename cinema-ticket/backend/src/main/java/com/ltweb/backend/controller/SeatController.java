@@ -1,6 +1,7 @@
 package com.ltweb.backend.controller;
 
 import com.ltweb.backend.dto.request.CreateSeatRequest;
+import com.ltweb.backend.dto.request.UpdateSeatLayoutRequest;
 import com.ltweb.backend.dto.request.UpdateSeatRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.SeatResponse;
@@ -26,7 +27,7 @@ public class SeatController {
   private final SeatService seatService;
 
   @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<SeatResponse> createSeat(@RequestBody @Valid CreateSeatRequest request) {
     ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Create seat successfully!");
@@ -35,7 +36,7 @@ public class SeatController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<SeatResponse> update(
       @PathVariable Long id, @RequestBody UpdateSeatRequest request) {
     ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
@@ -45,11 +46,21 @@ public class SeatController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> delete(@PathVariable Long id) {
     ApiResponse<String> apiResponse = new ApiResponse<>();
     seatService.deleteSeat(id);
     apiResponse.setMessage("Seat has been deleted successfully!");
+    return apiResponse;
+  }
+
+  @PutMapping("/room/{roomId}/layout")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ApiResponse<List<SeatResponse>> updateLayout(
+      @PathVariable Long roomId, @RequestBody UpdateSeatLayoutRequest request) {
+    ApiResponse<List<SeatResponse>> apiResponse = new ApiResponse<>();
+    apiResponse.setMessage("Seat layout has been updated successfully!");
+    apiResponse.setResult(seatService.updateSeatLayout(roomId, request));
     return apiResponse;
   }
 

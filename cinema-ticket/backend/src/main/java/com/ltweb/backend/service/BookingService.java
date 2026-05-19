@@ -109,7 +109,10 @@ public class BookingService {
 
     boolean hasUnavailableTicket =
         selectedTickets.stream()
-            .anyMatch(ticket -> ticket.getTicketStatus() != TicketStatus.AVAILABLE);
+            .anyMatch(
+                ticket ->
+                    ticket.getTicketStatus() != TicketStatus.AVAILABLE
+                        || Boolean.FALSE.equals(ticket.getSeat().getIsActive()));
 
     if (hasUnavailableTicket) {
       throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
@@ -222,6 +225,7 @@ public class BookingService {
             .anyMatch(
                 ticket ->
                     ticket.getTicketStatus() != TicketStatus.AVAILABLE
+                        || Boolean.FALSE.equals(ticket.getSeat().getIsActive())
                         || hasActiveSeatHold(showtime.getId(), ticket));
     if (hasUnavailableTicket) {
       throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
