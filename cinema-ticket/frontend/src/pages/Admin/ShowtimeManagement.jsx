@@ -1,8 +1,4 @@
-<<<<<<< ours
-import { useState, useEffect } from 'react';
-=======
-import { useEffect, useMemo, useState } from 'react';
->>>>>>> theirs
+﻿import { useEffect, useMemo, useState } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
@@ -13,10 +9,7 @@ const EditIcon = () => (
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
-<<<<<<< ours
-=======
 
->>>>>>> theirs
 const TrashIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
     <polyline points="3 6 5 6 21 6" />
@@ -24,18 +17,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-<<<<<<< ours
-const ROOM_TYPE_LABELS = {
-  TWO_D: '2D', THREE_D: '3D', IMAX: 'IMAX', FOUR_DX: '4DX',
-};
-
-const STATUS_MAP = {
-  OPEN:      { label: 'Đang mở',  className: 'status--active' },
-  CLOSED:    { label: 'Đã đóng', className: 'status--inactive' },
-  CANCELLED: { label: 'Đã hủy',  className: 'status--inactive' },
-};
-
-=======
 const CalendarIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -51,9 +32,9 @@ const ROOM_TYPE_LABELS = {
 };
 
 const STATUS_MAP = {
-  OPEN: { label: 'Đang mở', className: 'status--active' },
-  CLOSED: { label: 'Đã đóng', className: 'status--inactive' },
-  CANCELLED: { label: 'Đã hủy', className: 'status--inactive' },
+  OPEN: { label: 'Äang má»Ÿ', className: 'status--active' },
+  CLOSED: { label: 'ÄÃ£ Ä‘Ã³ng', className: 'status--inactive' },
+  CANCELLED: { label: 'ÄÃ£ há»§y', className: 'status--inactive' },
 };
 
 const SLOT_COLORS = ['#0756a6', '#0f766e', '#7c3aed', '#be123c', '#b45309', '#4338ca'];
@@ -83,33 +64,23 @@ const formatTime = (dateStr) =>
     ? new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '--:--';
 
->>>>>>> theirs
 const ShowtimeManagement = () => {
   const { isAdmin, isManager, isAdminOrManager } = useAuth();
   const canEditShowtime = isAdminOrManager;
   const [showtimes, setShowtimes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-<<<<<<< ours
-  
-  // Modal states
-=======
   const [viewMode, setViewMode] = useState('calendar');
   const [selectedDate, setSelectedDate] = useState(toDateInputValue());
   const [selectedBranchId, setSelectedBranchId] = useState('');
 
->>>>>>> theirs
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [movies, setMovies] = useState([]);
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [filteredRooms, setFilteredRooms] = useState([]);
-<<<<<<< ours
-  
-=======
 
->>>>>>> theirs
   const [formData, setFormData] = useState({
     showtimeId: null,
     movieId: '',
@@ -117,11 +88,7 @@ const ShowtimeManagement = () => {
     roomId: '',
     startTime: '',
     endTime: '',
-<<<<<<< ours
-    status: 'OPEN'
-=======
     status: 'OPEN',
->>>>>>> theirs
   });
 
   const fetchData = async () => {
@@ -130,40 +97,25 @@ const ShowtimeManagement = () => {
       const [stRes, branchRes, roomRes] = await Promise.all([
         showtimeApi.getAll(),
         branchApi.getAll(),
-<<<<<<< ours
-        roomApi.getAll()
-=======
         roomApi.getAll(),
->>>>>>> theirs
       ]);
       const movieList = isManager
         ? await Promise.all([movieApi.getNowShowing(), movieApi.getUpcoming()]).then(([nowRes, upcomingRes]) => {
             const moviesById = new Map();
-<<<<<<< ours
-            [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach(movie => {
-=======
             [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach((movie) => {
->>>>>>> theirs
               moviesById.set(movie.movieId, movie);
             });
             return [...moviesById.values()];
           })
         : (await movieApi.getAll()).data.result || [];
-<<<<<<< ours
-      setShowtimes(stRes.data.result || []);
-      setMovies(movieList);
-      setBranches(branchRes.data.result || []);
-      setRooms(roomRes.data.result || []);
-=======
       const branchList = branchRes.data.result || [];
       setShowtimes(stRes.data.result || []);
       setMovies(movieList);
       setBranches(branchList);
       setRooms(roomRes.data.result || []);
       setSelectedBranchId((current) => current || (branchList.length === 1 ? String(branchList[0].branchId) : ''));
->>>>>>> theirs
     } catch {
-      toast.error('Lỗi khi tải dữ liệu');
+      toast.error('Lá»—i khi táº£i dá»¯ liá»‡u');
     } finally {
       setLoading(false);
     }
@@ -175,34 +127,12 @@ const ShowtimeManagement = () => {
 
   useEffect(() => {
     if (formData.branchId) {
-<<<<<<< ours
-      // Dùng so sánh lỏng hoặc ép kiểu sang String để tránh lỗi type mismatch (String vs Number)
-      // Và kiểm tra cả camelCase/snake_case cho chắc chắn
-      setFilteredRooms(rooms.filter(r => 
-        String(r.branchId || r.branch_id) === String(formData.branchId)
-      ));
-=======
       setFilteredRooms(rooms.filter((room) => String(room.branchId || room.branch_id) === String(formData.branchId)));
->>>>>>> theirs
     } else {
       setFilteredRooms([]);
     }
   }, [formData.branchId, rooms]);
 
-<<<<<<< ours
-  const handleOpenModal = (st = null) => {
-    if (!canEditShowtime) return;
-    if (st) {
-      setIsEditing(true);
-      setFormData({
-        showtimeId: st.showtimeId,
-        movieId: st.movieId,
-        branchId: st.branchId || '', // Đã được bổ sung vào ShowtimeResponse
-        roomId: st.roomId,
-        startTime: st.startTime ? new Date(st.startTime).toISOString().slice(0, 16) : '',
-        endTime: st.endTime ? new Date(st.endTime).toISOString().slice(0, 16) : '',
-        status: st.status || 'OPEN'
-=======
   const calendarShowtimes = useMemo(
     () =>
       showtimes
@@ -243,26 +173,17 @@ const ShowtimeManagement = () => {
         startTime: showtime.startTime ? new Date(showtime.startTime).toISOString().slice(0, 16) : '',
         endTime: showtime.endTime ? new Date(showtime.endTime).toISOString().slice(0, 16) : '',
         status: showtime.status || 'OPEN',
->>>>>>> theirs
       });
     } else {
       setIsEditing(false);
       setFormData({
         showtimeId: null,
         movieId: '',
-<<<<<<< ours
-        branchId: branches.length === 1 ? String(branches[0].branchId) : '',
-        roomId: '',
-        startTime: '',
-        endTime: '',
-        status: 'OPEN'
-=======
         branchId: selectedBranchId || (branches.length === 1 ? String(branches[0].branchId) : ''),
         roomId: '',
         startTime: `${selectedDate}T08:00`,
         endTime: `${selectedDate}T10:00`,
         status: 'OPEN',
->>>>>>> theirs
       });
     }
     setShowModal(true);
@@ -275,47 +196,30 @@ const ShowtimeManagement = () => {
       const payload = { ...formData };
       if (isEditing) {
         await showtimeApi.update(formData.showtimeId, payload);
-        toast.success('Cập nhật suất chiếu thành công!');
+        toast.success('Cáº­p nháº­t suáº¥t chiáº¿u thÃ nh cÃ´ng!');
       } else {
         await showtimeApi.create(payload);
-        toast.success('Thêm suất chiếu thành công!');
+        toast.success('ThÃªm suáº¥t chiáº¿u thÃ nh cÃ´ng!');
       }
       setShowModal(false);
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(err.response?.data?.message || 'CÃ³ lá»—i xáº£y ra');
     }
   };
 
   const handleDelete = async (id) => {
     if (!isAdmin) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')) return;
+    if (!window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a suáº¥t chiáº¿u nÃ y?')) return;
     try {
       await showtimeApi.delete(id);
-      toast.success('Xóa thành công!');
+      toast.success('XÃ³a thÃ nh cÃ´ng!');
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Xóa thất bại');
+      toast.error(err.response?.data?.message || 'XÃ³a tháº¥t báº¡i');
     }
   };
 
-<<<<<<< ours
-  const filtered = showtimes.filter(st =>
-    [st.movieName, st.roomName, st.branchName].some(f =>
-      f?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
-
-  const formatDT = (dateStr) => {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    return (
-      <div>
-        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{time}</div>
-        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{date}</div>
-=======
   const filtered = showtimes.filter((showtime) =>
     [showtime.movieName, showtime.roomName, showtime.branchName].some((field) =>
       field?.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -348,7 +252,6 @@ const ShowtimeManagement = () => {
         <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
           {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </div>
->>>>>>> theirs
       </div>
     );
   };
@@ -357,147 +260,21 @@ const ShowtimeManagement = () => {
 
   return (
     <div>
-<<<<<<< ours
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 className="page-title">Quản lý Suất chiếu</h1>
-          <p className="page-subtitle">Tổng cộng <strong>{showtimes.length}</strong> suất chiếu.</p>
-=======
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18 }}>
         <div>
-          <h1 className="page-title">Quản lý Suất chiếu</h1>
+          <h1 className="page-title">Quáº£n lÃ½ Suáº¥t chiáº¿u</h1>
           <p className="page-subtitle">
-            <strong>{dayStats.total}</strong> suất trong ngày đang chọn · <strong>{dayStats.usedRooms}</strong> phòng có lịch
+            <strong>{dayStats.total}</strong> suáº¥t trong ngÃ y Ä‘ang chá»n Â· <strong>{dayStats.usedRooms}</strong> phÃ²ng cÃ³ lá»‹ch
           </p>
->>>>>>> theirs
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!canEditShowtime} style={!canEditShowtime ? { display: 'none' } : undefined}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Thêm suất chiếu
+          ThÃªm suáº¥t chiáº¿u
         </button>
       </div>
 
-<<<<<<< ours
-      <div className="admin-table-card">
-        <div className="table-header">
-          <div style={{ position: 'relative', maxWidth: '320px', flex: 1 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="text"
-              className="input"
-              placeholder="Tìm phim, phòng, chi nhánh..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', background: 'var(--bg-input)' }}
-            />
-          </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{filtered.length} kết quả</span>
-        </div>
-
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th style={{ width: '40px' }}>#</th>
-              <th>Phim</th>
-              <th>Phòng chiếu</th>
-              <th>Chi nhánh</th>
-              <th>Bắt đầu</th>
-              <th>Kết thúc</th>
-              <th>Trạng thái</th>
-              {canEditShowtime && <th style={{ width: '100px' }}>Hành động</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={canEditShowtime ? 8 : 7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  {searchTerm ? 'Không tìm thấy suất chiếu nào' : 'Chưa có suất chiếu nào'}
-                </td>
-              </tr>
-            ) : (
-              filtered.map((st, idx) => {
-                const statusInfo = STATUS_MAP[st.status] || { label: st.status || '—', className: '' };
-                return (
-                  <tr key={st.showtimeId || idx}>
-                    <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{st.movieName || '—'}</td>
-                    <td>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)' }}>{st.roomName || '—'}</div>
-                        {st.roomType && (
-                          <span className="movie-badge" style={{ marginTop: '3px', display: 'inline-block' }}>
-                            {ROOM_TYPE_LABELS[st.roomType] || st.roomType}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>{st.branchName || '—'}</td>
-                    <td>{formatDT(st.startTime)}</td>
-                    <td>{formatDT(st.endTime)}</td>
-                    <td>
-                      <span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span>
-                    </td>
-                    {canEditShowtime && <td>
-                      <div className="action-btns">
-                        <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(st)}><EditIcon /></button>
-                        {isAdmin && (
-                          <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(st.showtimeId)}><TrashIcon /></button>
-                        )}
-                      </div>
-                    </td>}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* MODAL */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ 
-            maxWidth: '650px', 
-            height: 'auto', 
-            aspectRatio: 'unset', 
-            overflowY: 'auto', 
-            maxHeight: '90vh',
-            background: 'var(--bg-card)', 
-            padding: '28px 32px', 
-            borderRadius: 'var(--radius-lg)' 
-          }}>
-            <h2 style={{ marginBottom: '20px', fontSize: '1.4rem', fontWeight: 700 }}>{isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}</h2>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="form-group">
-                <label className="form-label">Chọn phim</label>
-                <select 
-                  className="input" 
-                  value={formData.movieId} 
-                  onChange={e => setFormData({...formData, movieId: e.target.value})}
-                  required
-                >
-                  <option value="">-- Chọn phim --</option>
-                  {movies.map(f => <option key={f.movieId} value={f.movieId}>{f.movieName}</option>)}
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Chi nhánh</label>
-                  <select 
-                    className="input" 
-                    value={formData.branchId} 
-                    onChange={e => setFormData({...formData, branchId: e.target.value, roomId: ''})}
-                    required
-                  >
-                    <option value="">-- Chọn rạp --</option>
-                    {branches.map(b => <option key={b.branchId} value={b.branchId}>{b.name}</option>)}
-=======
       <div className="admin-table-card" style={{ padding: 18, marginBottom: 18 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 180px minmax(220px, 1fr) auto', gap: 12, alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 8, padding: 4, background: 'var(--bg-card-hover)', borderRadius: 8 }}>
@@ -516,14 +293,14 @@ const ShowtimeManagement = () => {
               onClick={() => setViewMode('list')}
               style={{ flex: 1, justifyContent: 'center' }}
             >
-              Danh sách
+              Danh sÃ¡ch
             </button>
           </div>
 
           <input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
 
           <select className="input" value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}>
-            <option value="">Tất cả chi nhánh</option>
+            <option value="">Táº¥t cáº£ chi nhÃ¡nh</option>
             {branches.map((branch) => (
               <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
             ))}
@@ -531,10 +308,10 @@ const ShowtimeManagement = () => {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() - 1))))}>
-              Trước
+              TrÆ°á»›c
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue())}>
-              Hôm nay
+              HÃ´m nay
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1))))}>
               Sau
@@ -547,22 +324,22 @@ const ShowtimeManagement = () => {
         <div className="admin-table-card" style={{ overflow: 'hidden' }}>
           <div className="table-header">
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Lịch chiếu theo phòng</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Lá»‹ch chiáº¿u theo phÃ²ng</h3>
               <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                {dayStats.openCount} suất đang mở bán · timeline {DAY_START_HOUR}:00 - {DAY_END_HOUR}:00
+                {dayStats.openCount} suáº¥t Ä‘ang má»Ÿ bÃ¡n Â· timeline {DAY_START_HOUR}:00 - {DAY_END_HOUR}:00
               </p>
             </div>
           </div>
 
           {calendarRooms.length === 0 ? (
             <div style={{ padding: 44, textAlign: 'center', color: 'var(--text-muted)' }}>
-              Không có suất chiếu nào trong ngày/chi nhánh đang chọn.
+              KhÃ´ng cÃ³ suáº¥t chiáº¿u nÃ o trong ngÃ y/chi nhÃ¡nh Ä‘ang chá»n.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <div style={{ minWidth: 240 + timelineHours.length * HOUR_WIDTH }}>
                 <div style={{ display: 'grid', gridTemplateColumns: `220px ${timelineHours.length * HOUR_WIDTH}px`, borderBottom: '1px solid var(--border)', background: 'var(--bg-card-hover)' }}>
-                  <div style={{ padding: '12px 16px', fontWeight: 800 }}>Phòng</div>
+                  <div style={{ padding: '12px 16px', fontWeight: 800 }}>PhÃ²ng</div>
                   <div style={{ position: 'relative', height: 44 }}>
                     {timelineHours.map((hour) => (
                       <div key={hour} style={{ position: 'absolute', left: (hour - DAY_START_HOUR) * HOUR_WIDTH, top: 0, width: HOUR_WIDTH, height: 44, borderLeft: '1px solid var(--border)', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)' }}>
@@ -580,7 +357,7 @@ const ShowtimeManagement = () => {
                         <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{room.name}</div>
                         <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className="movie-badge">{ROOM_TYPE_LABELS[room.roomType] || room.roomType}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{room.seatCapacity || 0} ghế</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{room.seatCapacity || 0} gháº¿</span>
                         </div>
                       </div>
                       <div style={{ position: 'relative', height: 92, background: '#f8fafc' }}>
@@ -593,7 +370,7 @@ const ShowtimeManagement = () => {
                             <button
                               key={showtime.showtimeId}
                               type="button"
-                              title={`${showtime.movieName} · ${formatTime(showtime.startTime)} - ${formatTime(showtime.endTime)}`}
+                              title={`${showtime.movieName} Â· ${formatTime(showtime.startTime)} - ${formatTime(showtime.endTime)}`}
                               onClick={() => handleOpenModal(showtime)}
                               style={{
                                 position: 'absolute',
@@ -636,13 +413,13 @@ const ShowtimeManagement = () => {
               <input
                 type="text"
                 className="input"
-                placeholder="Tìm phim, phòng, chi nhánh..."
+                placeholder="TÃ¬m phim, phÃ²ng, chi nhÃ¡nh..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: 40, background: 'var(--bg-input)' }}
               />
             </div>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{filtered.length} kết quả</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{filtered.length} káº¿t quáº£</span>
           </div>
 
           <table className="admin-table">
@@ -650,19 +427,19 @@ const ShowtimeManagement = () => {
               <tr>
                 <th style={{ width: 40 }}>#</th>
                 <th>Phim</th>
-                <th>Phòng chiếu</th>
-                <th>Chi nhánh</th>
-                <th>Bắt đầu</th>
-                <th>Kết thúc</th>
-                <th>Trạng thái</th>
-                {canEditShowtime && <th style={{ width: 100 }}>Hành động</th>}
+                <th>PhÃ²ng chiáº¿u</th>
+                <th>Chi nhÃ¡nh</th>
+                <th>Báº¯t Ä‘áº§u</th>
+                <th>Káº¿t thÃºc</th>
+                <th>Tráº¡ng thÃ¡i</th>
+                {canEditShowtime && <th style={{ width: 100 }}>HÃ nh Ä‘á»™ng</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={canEditShowtime ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                    {searchTerm ? 'Không tìm thấy suất chiếu nào' : 'Chưa có suất chiếu nào'}
+                    {searchTerm ? 'KhÃ´ng tÃ¬m tháº¥y suáº¥t chiáº¿u nÃ o' : 'ChÆ°a cÃ³ suáº¥t chiáº¿u nÃ o'}
                   </td>
                 </tr>
               ) : (
@@ -689,9 +466,9 @@ const ShowtimeManagement = () => {
                       {canEditShowtime && (
                         <td>
                           <div className="action-btns">
-                            <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(showtime)}><EditIcon /></button>
+                            <button className="btn btn-ghost btn-sm" title="Sá»­a" onClick={() => handleOpenModal(showtime)}><EditIcon /></button>
                             {isAdmin && (
-                              <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(showtime.showtimeId)}><TrashIcon /></button>
+                              <button className="btn btn-ghost btn-sm" title="XÃ³a" style={{ color: '#ef4444' }} onClick={() => handleDelete(showtime.showtimeId)}><TrashIcon /></button>
                             )}
                           </div>
                         </td>
@@ -717,104 +494,56 @@ const ShowtimeManagement = () => {
             padding: '28px 32px',
             borderRadius: 'var(--radius-lg)',
           }}>
-            <h2 style={{ marginBottom: 20, fontSize: '1.4rem', fontWeight: 700 }}>{isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}</h2>
+            <h2 style={{ marginBottom: 20, fontSize: '1.4rem', fontWeight: 700 }}>{isEditing ? 'Chá»‰nh sá»­a suáº¥t chiáº¿u' : 'ThÃªm suáº¥t chiáº¿u má»›i'}</h2>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div className="form-group">
-                <label className="form-label">Chọn phim</label>
+                <label className="form-label">Chá»n phim</label>
                 <select className="input" value={formData.movieId} onChange={(e) => setFormData({ ...formData, movieId: e.target.value })} required>
-                  <option value="">-- Chọn phim --</option>
+                  <option value="">-- Chá»n phim --</option>
                   {movies.map((movie) => <option key={movie.movieId} value={movie.movieId}>{movie.movieName}</option>)}
                 </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
-                  <label className="form-label">Chi nhánh</label>
+                  <label className="form-label">Chi nhÃ¡nh</label>
                   <select className="input" value={formData.branchId} onChange={(e) => setFormData({ ...formData, branchId: e.target.value, roomId: '' })} required>
-                    <option value="">-- Chọn rạp --</option>
+                    <option value="">-- Chá»n ráº¡p --</option>
                     {branches.map((branch) => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
->>>>>>> theirs
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Phòng chiếu</label>
-<<<<<<< ours
-                  <select 
-                    className="input" 
-                    value={formData.roomId} 
-                    onChange={e => setFormData({...formData, roomId: e.target.value})}
-                    required
-                    disabled={!formData.branchId}
-                  >
-                    <option value="">-- Chọn phòng --</option>
-                    {filteredRooms.map(r => <option key={r.id} value={r.id}>{r.name} ({ROOM_TYPE_LABELS[r.roomType] || r.roomType})</option>)}
-=======
+                  <label className="form-label">PhÃ²ng chiáº¿u</label>
                   <select className="input" value={formData.roomId} onChange={(e) => setFormData({ ...formData, roomId: e.target.value })} required disabled={!formData.branchId}>
-                    <option value="">-- Chọn phòng --</option>
+                    <option value="">-- Chá»n phÃ²ng --</option>
                     {filteredRooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({ROOM_TYPE_LABELS[room.roomType] || room.roomType})</option>)}
->>>>>>> theirs
                   </select>
                 </div>
               </div>
 
-<<<<<<< ours
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Bắt đầu</label>
-                  <input 
-                    type="datetime-local" 
-                    className="input" 
-                    value={formData.startTime}
-                    onChange={e => setFormData({...formData, startTime: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Kết thúc</label>
-                  <input 
-                    type="datetime-local" 
-                    className="input" 
-                    value={formData.endTime}
-                    onChange={e => setFormData({...formData, endTime: e.target.value})}
-                    required
-                  />
-=======
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
-                  <label className="form-label">Bắt đầu</label>
+                  <label className="form-label">Báº¯t Ä‘áº§u</label>
                   <input type="datetime-local" className="input" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Kết thúc</label>
+                  <label className="form-label">Káº¿t thÃºc</label>
                   <input type="datetime-local" className="input" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required />
->>>>>>> theirs
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Trạng thái</label>
-<<<<<<< ours
-                <select 
-                  className="input" 
-                  value={formData.status}
-                  onChange={e => setFormData({...formData, status: e.target.value})}
-                >
-=======
+                <label className="form-label">Tráº¡ng thÃ¡i</label>
                 <select className="input" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
->>>>>>> theirs
-                  <option value="OPEN">Mở bán</option>
-                  <option value="CLOSED">Đóng</option>
-                  <option value="CANCELLED">Đã hủy</option>
+                  <option value="OPEN">Má»Ÿ bÃ¡n</option>
+                  <option value="CLOSED">ÄÃ³ng</option>
+                  <option value="CANCELLED">ÄÃ£ há»§y</option>
                 </select>
               </div>
 
-<<<<<<< ours
-              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-=======
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
->>>>>>> theirs
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Lưu lại</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Há»§y</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>LÆ°u láº¡i</button>
               </div>
             </form>
           </div>
