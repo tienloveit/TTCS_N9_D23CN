@@ -92,6 +92,40 @@ public class DataSeedService {
     } catch (Exception ex) {
       log.debug("Could not adjust users.role column: {}", ex.getMessage());
     }
+
+    List<String> roleCheckConstraints =
+        jdbcTemplate.queryForList(
+            """
+            SELECT tc.CONSTRAINT_NAME
+            FROM information_schema.TABLE_CONSTRAINTS tc
+            JOIN information_schema.CHECK_CONSTRAINTS cc
+              ON tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA
+             AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+            WHERE tc.TABLE_SCHEMA = DATABASE()
+              AND tc.TABLE_NAME = 'users'
+              AND tc.CONSTRAINT_TYPE = 'CHECK'
+              AND LOWER(cc.CHECK_CLAUSE) LIKE '%role%'
+            """,
+            String.class);
+
+    for (String constraintName : roleCheckConstraints) {
+      try {
+        jdbcTemplate.execute("ALTER TABLE users DROP CHECK " + constraintName);
+      } catch (Exception ex) {
+        log.debug("Could not drop users.role check constraint {}: {}", constraintName, ex.getMessage());
+      }
+    }
+
+    try {
+      jdbcTemplate.execute(
+          """
+          ALTER TABLE users
+          ADD CONSTRAINT users_role_chk
+          CHECK (role IS NULL OR role IN ('ADMIN', 'MANAGER', 'STAFF', 'USER'))
+          """);
+    } catch (Exception ex) {
+      log.debug("Could not add users.role check constraint: {}", ex.getMessage());
+    }
   }
 
   private void seedUsers() {
