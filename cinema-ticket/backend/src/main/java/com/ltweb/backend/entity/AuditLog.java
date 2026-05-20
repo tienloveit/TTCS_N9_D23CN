@@ -38,6 +38,8 @@ public class AuditLog {
   @Enumerated(EnumType.STRING)
   private UserRole actorRole;
 
+  private Long branchId;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private AuditAction action;

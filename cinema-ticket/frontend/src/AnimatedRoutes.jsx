@@ -27,6 +27,9 @@ import UserManagement from './pages/Admin/UserManagement';
 import BookingManagement from './pages/Admin/BookingManagement';
 import FoodManagement from './pages/Admin/FoodManagement';
 import PromotionManagement from './pages/Admin/PromotionManagement';
+import OperationsReportPage from './pages/Admin/OperationsReportPage';
+import AuditLogPage from './pages/Admin/AuditLogPage';
+import SystemSettingsPage from './pages/Admin/SystemSettingsPage';
 import StaffLayout from './pages/Staff/StaffLayout';
 import StaffDashboardPage from './pages/Staff/StaffDashboardPage';
 import StaffBookingPage from './pages/Staff/StaffBookingPage';
@@ -140,6 +143,9 @@ const AnimatedRoutes = () => {
           <Route path="bookings" element={<AdminOnlyRoute><PageWrapper><BookingManagement /></PageWrapper></AdminOnlyRoute>} />
           <Route path="foods" element={<AdminOnlyRoute><PageWrapper><FoodManagement /></PageWrapper></AdminOnlyRoute>} />
           <Route path="promotions" element={<AdminOnlyRoute><PageWrapper><PromotionManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
+          <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
+          <Route path="settings" element={<AdminOnlyRoute><PageWrapper><SystemSettingsPage /></PageWrapper></AdminOnlyRoute>} />
         </Route>
 
         {/* Manager routes */}
@@ -152,13 +158,16 @@ const AnimatedRoutes = () => {
           }
         >
           <Route index element={<PageWrapper><AdminDashboard /></PageWrapper>} />
-          <Route path="movies" element={<PageWrapper><MovieManagement /></PageWrapper>} />
+          <Route path="movies" element={<Navigate to="/manager" replace />} />
           <Route path="showtimes" element={<PageWrapper><ShowtimeManagement /></PageWrapper>} />
           <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
           <Route path="users" element={<PageWrapper><UserManagement /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
           <Route path="foods" element={<PageWrapper><FoodManagement /></PageWrapper>} />
           <Route path="promotions" element={<PageWrapper><PromotionManagement /></PageWrapper>} />
+          <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
+          <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
+          <Route path="settings" element={<Navigate to="/manager" replace />} />
         </Route>
 
         {/* Main pages */}

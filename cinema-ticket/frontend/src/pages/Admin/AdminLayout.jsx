@@ -84,6 +84,26 @@ const Icons = {
       <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
     </svg>
   ),
+  Report: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v18h18" />
+      <rect x="7" y="12" width="3" height="5" />
+      <rect x="12" y="8" width="3" height="9" />
+      <rect x="17" y="5" width="3" height="12" />
+    </svg>
+  ),
+  Shield: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+  Settings: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.61.77 1 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" />
+    </svg>
+  ),
   Menu: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
       <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
@@ -112,6 +132,18 @@ const TITLE_MAP = {
   '/admin/bookings': 'Quản lý Đơn đặt vé',
   '/admin/foods': 'Quản lý Bắp & Nước',
   '/admin/promotions': 'Quản lý Khuyến mãi',
+  '/admin/operations': 'Báo cáo vận hành',
+  '/admin/audit-logs': 'Nhật ký hệ thống',
+  '/admin/settings': 'Cấu hình hệ thống',
+  '/manager': 'Dashboard',
+  '/manager/showtimes': 'Quản lý Suất chiếu',
+  '/manager/branches': 'Quản lý Rạp & Phòng',
+  '/manager/users': 'Quản lý Nhân viên',
+  '/manager/bookings': 'Quản lý Đơn đặt vé',
+  '/manager/foods': 'Quản lý Bắp & Nước',
+  '/manager/promotions': 'Quản lý Khuyến mãi',
+  '/manager/operations': 'Báo cáo vận hành',
+  '/manager/audit-logs': 'Nhật ký hệ thống',
 };
 
 /* ── Navigation definition ── */
@@ -131,12 +163,15 @@ const NAV_SECTIONS = [
       { path: '/admin/bookings', label: 'Đơn đặt vé', Icon: Icons.Ticket },
       { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
       { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
+      { path: '/admin/operations', label: 'Báo cáo vận hành', Icon: Icons.Report },
     ],
   },
   {
     label: 'Hệ thống',
     items: [
       { path: '/admin/users', label: 'Người dùng', Icon: Icons.Users },
+      { path: '/admin/audit-logs', label: 'Nhật ký hệ thống', Icon: Icons.Shield },
+      { path: '/admin/settings', label: 'Cấu hình', Icon: Icons.Settings },
     ],
   },
 ];
@@ -167,13 +202,14 @@ const AdminLayout = () => {
   const basePath = user?.role === 'MANAGER' ? '/manager' : '/admin';
   const managerPaths = [
     '/admin',
-    '/admin/movies',
     '/admin/showtimes',
     '/admin/branches',
     '/admin/bookings',
     '/admin/users',
     '/admin/foods',
     '/admin/promotions',
+    '/admin/operations',
+    '/admin/audit-logs',
   ];
   const visibleSections = NAV_SECTIONS
     .map((section) => ({

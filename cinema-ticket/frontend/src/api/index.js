@@ -146,6 +146,19 @@ export const analyticsApi = {
   getDashboard: (params) => axiosClient.get('/admin/analytics/dashboard', { params }),
 };
 
+export const operationsApi = {
+  getDailyReport: (params) => axiosClient.get('/admin/operations/daily-report', { params }),
+};
+
+export const auditLogApi = {
+  getRecent: () => axiosClient.get('/admin/audit-logs'),
+};
+
+export const systemSettingsApi = {
+  getAll: () => axiosClient.get('/admin/settings'),
+  update: (settingKey, data) => axiosClient.put(`/admin/settings/${settingKey}`, data),
+};
+
 // ==================== STAFF OPERATIONS ====================
 export const staffApi = {
   getDashboard: () => axiosClient.get('/staff/dashboard'),

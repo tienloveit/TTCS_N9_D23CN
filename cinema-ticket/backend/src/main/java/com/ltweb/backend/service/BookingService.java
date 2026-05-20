@@ -58,6 +58,8 @@ import org.springframework.util.StringUtils;
 public class BookingService {
 
   private static final int MAX_TICKETS_PER_MOVIE = 8;
+  private static final int DEFAULT_BOOKING_HOLD_MINUTES = 6;
+  private static final int DEFAULT_REFUND_WINDOW_HOURS = 24;
 
   private final BookingRepository bookingRepository;
   private final ShowtimeRepository showtimeRepository;
@@ -72,6 +74,7 @@ public class BookingService {
   private final PromotionService promotionService;
   private final FoodInventoryService foodInventoryService;
   private final AuditLogService auditLogService;
+  private final SystemSettingService systemSettingService;
 
   @Transactional
   public BookingResponse createBooking(CreateBookingRequest request) {
@@ -80,7 +83,7 @@ public class BookingService {
 
     // Kiểm tra số lượng vé trong 1 lần giao dịch không vượt quá 8
     int requestedCount = request.getSeatIds().size();
-    if (requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (requestedCount > getMaxTicketsPerTransaction()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_TRANSACTION);
     }
 
@@ -92,7 +95,7 @@ public class BookingService {
     // Kiểm tra tổng số vé người dùng đã đặt cho bộ phim này không vượt quá 8
     Long movieId = showtime.getMovie().getId();
     int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(user.getId(), movieId);
-    if (alreadyBooked + requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (alreadyBooked + requestedCount > getMaxTicketsPerMovie()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
     }
 
@@ -129,10 +132,11 @@ public class BookingService {
 
     // khoá ghế bằng Redis
     String bookingUserId = String.valueOf(user.getId());
+    int holdMinutes = getBookingHoldMinutes();
     for (Ticket ticket : selectedTickets) {
       String seatKey = getSeatKey(showtime.getId(), ticket.getSeat().getId());
       Boolean locked =
-          redisTemplate.opsForValue().setIfAbsent(seatKey, bookingUserId, 6, TimeUnit.MINUTES);
+          redisTemplate.opsForValue().setIfAbsent(seatKey, bookingUserId, holdMinutes, TimeUnit.MINUTES);
 
       if (Boolean.FALSE.equals(locked)) {
         unlockSeats(showtime.getId(), selectedTickets);
@@ -176,7 +180,7 @@ public class BookingService {
             .status(BookingStatus.PENDING)
             .paymentCreatedAt(LocalDateTime.now())
             .paymentStatus(PaymentStatus.PENDING)
-            .expiresAt(LocalDateTime.now().plusMinutes(6))
+            .expiresAt(LocalDateTime.now().plusMinutes(holdMinutes))
             .build();
     booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
@@ -200,7 +204,7 @@ public class BookingService {
   public BookingResponse createStaffBooking(StaffBookingRequest request) {
     // Kiểm tra số lượng vé trong 1 lần giao dịch không vượt quá 8
     int requestedCount = request.getSeatIds().size();
-    if (requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (requestedCount > getMaxTicketsPerTransaction()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_TRANSACTION);
     }
 
@@ -249,7 +253,7 @@ public class BookingService {
     // Kiểm tra tổng số vé khách hàng đã đặt cho bộ phim này không vượt quá 8
     Long movieId = showtime.getMovie().getId();
     int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(customer.getId(), movieId);
-    if (alreadyBooked + requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (alreadyBooked + requestedCount > getMaxTicketsPerMovie()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
     }
 
@@ -284,7 +288,7 @@ public class BookingService {
             .paymentStatus(request.getPaymentMethod() == PaymentMethod.CARD ? PaymentStatus.PENDING : PaymentStatus.PAID)
             .paymentMethod(request.getPaymentMethod() == null ? PaymentMethod.CASH : request.getPaymentMethod())
             .paidAt(request.getPaymentMethod() == PaymentMethod.CARD ? null : now)
-            .expiresAt(now.plusMinutes(6))
+            .expiresAt(now.plusMinutes(getBookingHoldMinutes()))
             .build();
     booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
@@ -761,7 +765,6 @@ public class BookingService {
   }
 
   // ===== REFUND =====
-  private static final int REFUND_WINDOW_HOURS = 24;
 
   /**
    * User yêu cầu hoàn tiền.
@@ -793,7 +796,7 @@ public class BookingService {
     if (paidAt == null) {
       throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
     }
-    if (LocalDateTime.now().isAfter(paidAt.plusHours(REFUND_WINDOW_HOURS))) {
+    if (LocalDateTime.now().isAfter(paidAt.plusHours(getRefundWindowHours()))) {
       throw new AppException(ErrorCode.REFUND_WINDOW_EXPIRED);
     }
 
@@ -877,6 +880,34 @@ public class BookingService {
 
     bookingRepository.save(booking);
     return bookingMapper.toBookingResponse(booking);
+  }
+
+  private int getBookingHoldMinutes() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.BOOKING_HOLD_MINUTES, DEFAULT_BOOKING_HOLD_MINUTES));
+  }
+
+  private int getMaxTicketsPerTransaction() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.BOOKING_MAX_TICKETS_PER_TRANSACTION, MAX_TICKETS_PER_MOVIE));
+  }
+
+  private int getMaxTicketsPerMovie() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.BOOKING_MAX_TICKETS_PER_MOVIE, MAX_TICKETS_PER_MOVIE));
+  }
+
+  private int getRefundWindowHours() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.REFUND_WINDOW_HOURS, DEFAULT_REFUND_WINDOW_HOURS));
   }
 }
 
