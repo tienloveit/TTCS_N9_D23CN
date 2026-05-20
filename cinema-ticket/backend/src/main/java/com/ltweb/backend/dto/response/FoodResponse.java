@@ -19,5 +19,9 @@ public class FoodResponse {
   private BigDecimal price;
   private String imageUrl;
   private Long branchId;
+  private Integer stockQuantity;
+  private Integer lowStockThreshold;
+  private Boolean inStock;
+  private Boolean lowStock;
   private Boolean active;
 }

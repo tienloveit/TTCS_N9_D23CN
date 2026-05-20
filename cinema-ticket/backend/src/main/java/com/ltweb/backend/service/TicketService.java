@@ -11,6 +11,7 @@ import com.ltweb.backend.entity.SeatTypePrice;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.SeatType;
@@ -54,6 +55,7 @@ public class TicketService {
   private final StringRedisTemplate redisTemplate;
   private final TicketMapper ticketMapper;
   private final QRCodeReaderService qrCodeReaderService;
+  private final AuditLogService auditLogService;
 
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
@@ -185,6 +187,11 @@ public class TicketService {
       requireBookingCheckInAccess(ticket.getBooking());
       Map<Long, Boolean> alreadyCheckedIn = Map.of(ticket.getId(), ticket.getCheckedInAt() != null);
       checkInTicket(ticket);
+      auditLogService.record(
+          AuditAction.TICKET_CHECKED_IN,
+          "Ticket",
+          ticket.getId(),
+          "Checked in ticket " + ticket.getId() + " for booking " + ticket.getBooking().getBookingCode());
       return buildCheckInResponse(ticket.getBooking(), List.of(ticket), alreadyCheckedIn);
     }
 
@@ -202,6 +209,11 @@ public class TicketService {
         .getTickets()
         .forEach(ticket -> alreadyCheckedIn.put(ticket.getId(), ticket.getCheckedInAt() != null));
     booking.getTickets().forEach(this::checkInTicket);
+    auditLogService.record(
+        AuditAction.TICKET_CHECKED_IN,
+        "Booking",
+        booking.getId(),
+        "Checked in booking " + booking.getBookingCode() + " with " + booking.getTickets().size() + " tickets");
     return buildCheckInResponse(booking, booking.getTickets(), alreadyCheckedIn);
   }
 

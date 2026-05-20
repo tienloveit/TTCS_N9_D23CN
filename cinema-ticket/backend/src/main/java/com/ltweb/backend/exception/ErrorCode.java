@@ -60,6 +60,7 @@ public enum ErrorCode {
 
   // Food Management
   FOOD_NOT_FOUND(400, "Food does not exist", HttpStatus.BAD_REQUEST),
+  FOOD_OUT_OF_STOCK(400, "One or more food items are out of stock", HttpStatus.BAD_REQUEST),
 
   // Showtime Management
   SHOWTIME_NOT_FOUND(400, "Showtime does not exist", HttpStatus.BAD_REQUEST),

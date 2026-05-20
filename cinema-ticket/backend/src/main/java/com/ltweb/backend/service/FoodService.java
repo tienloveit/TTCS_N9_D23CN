@@ -5,6 +5,7 @@ import com.ltweb.backend.dto.request.UpdateFoodRequest;
 import com.ltweb.backend.dto.response.FoodResponse;
 import com.ltweb.backend.entity.Food;
 import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
@@ -25,6 +26,7 @@ public class FoodService {
 
   private final FoodRepository foodRepository;
   private final UserRepository userRepository;
+  private final AuditLogService auditLogService;
 
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public FoodResponse createFood(CreateFoodRequest request) {
@@ -36,10 +38,14 @@ public class FoodService {
             .price(request.getPrice())
             .imageUrl(request.getImageUrl())
             .branchId(branchId)
+            .stockQuantity(normalizeStockQuantity(request.getStockQuantity()))
+            .lowStockThreshold(normalizeLowStockThreshold(request.getLowStockThreshold()))
             .active(request.getActive() == null || request.getActive())
             .build();
 
-    return toFoodResponse(foodRepository.save(food));
+    Food saved = foodRepository.save(food);
+    auditLogService.record(AuditAction.FOOD_CREATED, "Food", saved.getId(), "Created food " + saved.getName());
+    return toFoodResponse(saved);
   }
 
   public List<FoodResponse> getAvailableFoods() {
@@ -50,6 +56,7 @@ public class FoodService {
             : null;
     return foodRepository.findByActiveTrueOrderByNameAsc().stream()
         .filter(food -> branchId == null || food.getBranchId() == null || Objects.equals(food.getBranchId(), branchId))
+        .filter(this::isInStock)
         .map(this::toFoodResponse)
         .toList();
   }
@@ -94,11 +101,19 @@ public class FoodService {
     if (request.getBranchId() != null) {
       food.setBranchId(resolveWritableBranchId(request.getBranchId()));
     }
+    if (request.getStockQuantity() != null) {
+      food.setStockQuantity(normalizeStockQuantity(request.getStockQuantity()));
+    }
+    if (request.getLowStockThreshold() != null) {
+      food.setLowStockThreshold(normalizeLowStockThreshold(request.getLowStockThreshold()));
+    }
     if (request.getActive() != null) {
       food.setActive(request.getActive());
     }
 
-    return toFoodResponse(foodRepository.save(food));
+    Food saved = foodRepository.save(food);
+    auditLogService.record(AuditAction.FOOD_UPDATED, "Food", saved.getId(), "Updated food " + saved.getName());
+    return toFoodResponse(saved);
   }
 
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
@@ -106,7 +121,8 @@ public class FoodService {
     Food food = getFood(foodId);
     requireFoodAccess(food);
     food.setActive(false);
-    foodRepository.save(food);
+    Food saved = foodRepository.save(food);
+    auditLogService.record(AuditAction.FOOD_DISABLED, "Food", saved.getId(), "Disabled food " + saved.getName());
   }
 
   private Food getFood(Long foodId) {
@@ -123,8 +139,35 @@ public class FoodService {
         .price(food.getPrice())
         .imageUrl(food.getImageUrl())
         .branchId(food.getBranchId())
+        .stockQuantity(food.getStockQuantity())
+        .lowStockThreshold(food.getLowStockThreshold())
+        .inStock(isInStock(food))
+        .lowStock(isLowStock(food))
         .active(food.getActive())
         .build();
+  }
+
+  private Integer normalizeStockQuantity(Integer quantity) {
+    if (quantity == null) {
+      return null;
+    }
+    return Math.max(quantity, 0);
+  }
+
+  private Integer normalizeLowStockThreshold(Integer threshold) {
+    if (threshold == null) {
+      return 5;
+    }
+    return Math.max(threshold, 0);
+  }
+
+  private boolean isInStock(Food food) {
+    return food.getStockQuantity() == null || food.getStockQuantity() > 0;
+  }
+
+  private boolean isLowStock(Food food) {
+    return food.getStockQuantity() != null
+        && food.getStockQuantity() <= Objects.requireNonNullElse(food.getLowStockThreshold(), 5);
   }
 
   private Long resolveWritableBranchId(Long requestedBranchId) {

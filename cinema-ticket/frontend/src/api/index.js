@@ -146,6 +146,20 @@ export const analyticsApi = {
   getDashboard: (params) => axiosClient.get('/admin/analytics/dashboard', { params }),
 };
 
+// ==================== STAFF OPERATIONS ====================
+export const staffApi = {
+  getDashboard: () => axiosClient.get('/staff/dashboard'),
+  getActiveShift: () => axiosClient.get('/staff/shift/active'),
+  getShiftHistory: () => axiosClient.get('/staff/shift/history'),
+  getMySchedules: () => axiosClient.get('/staff/schedules/my'),
+  getStaffDetail: (staffId) => axiosClient.get(`/staff/manager/staff/${staffId}/detail`),
+  createSchedule: (data) => axiosClient.post('/staff/manager/schedules', data),
+  updateSchedule: (scheduleId, data) => axiosClient.put(`/staff/manager/schedules/${scheduleId}`, data),
+  cancelSchedule: (scheduleId) => axiosClient.delete(`/staff/manager/schedules/${scheduleId}`),
+  openShift: (data) => axiosClient.post('/staff/shift/open', data),
+  closeShift: (data) => axiosClient.post('/staff/shift/close', data),
+};
+
 // ==================== PROMOTION ====================
 export const promotionApi = {
   getAll: () => axiosClient.get('/promotion'),

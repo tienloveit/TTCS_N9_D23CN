@@ -28,7 +28,9 @@ import BookingManagement from './pages/Admin/BookingManagement';
 import FoodManagement from './pages/Admin/FoodManagement';
 import PromotionManagement from './pages/Admin/PromotionManagement';
 import StaffLayout from './pages/Staff/StaffLayout';
+import StaffDashboardPage from './pages/Staff/StaffDashboardPage';
 import StaffBookingPage from './pages/Staff/StaffBookingPage';
+import StaffSchedulePage from './pages/Staff/StaffSchedulePage';
 import CheckInPage from './pages/Staff/CheckInPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 
@@ -113,7 +115,9 @@ const AnimatedRoutes = () => {
             </StaffRoute>
           }
         >
-          <Route index element={<Navigate to="/staff/booking" replace />} />
+          <Route index element={<Navigate to="/staff/dashboard" replace />} />
+          <Route path="dashboard" element={<PageWrapper><StaffDashboardPage /></PageWrapper>} />
+          <Route path="schedules" element={<PageWrapper><StaffSchedulePage /></PageWrapper>} />
           <Route path="booking" element={<PageWrapper><StaffBookingPage /></PageWrapper>} />
           <Route path="check-in" element={<PageWrapper><CheckInPage /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />

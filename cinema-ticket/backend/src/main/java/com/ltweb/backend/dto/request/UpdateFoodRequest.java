@@ -25,5 +25,9 @@ public class UpdateFoodRequest {
 
   private Long branchId;
 
+  private Integer stockQuantity;
+
+  private Integer lowStockThreshold;
+
   private Boolean active;
 }

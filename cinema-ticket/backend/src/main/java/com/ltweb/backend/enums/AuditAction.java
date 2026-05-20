@@ -1,0 +1,11 @@
+package com.ltweb.backend.enums;
+
+public enum AuditAction {
+  STAFF_BOOKING_CREATED,
+  TICKET_CHECKED_IN,
+  REFUND_APPROVED,
+  REFUND_REJECTED,
+  FOOD_CREATED,
+  FOOD_UPDATED,
+  FOOD_DISABLED
+}

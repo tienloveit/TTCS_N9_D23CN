@@ -12,6 +12,7 @@ import com.ltweb.backend.entity.Food;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
@@ -69,6 +70,8 @@ public class BookingService {
   private final PasswordEncoder passwordEncoder;
   private final ApplicationEventPublisher eventPublisher;
   private final PromotionService promotionService;
+  private final FoodInventoryService foodInventoryService;
+  private final AuditLogService auditLogService;
 
   @Transactional
   public BookingResponse createBooking(CreateBookingRequest request) {
@@ -121,6 +124,7 @@ public class BookingService {
     Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
     List<Food> selectedFoods = getSelectedFoods(foodQuantities);
     requireFoodsAvailableForShowtime(selectedFoods, showtime);
+    foodInventoryService.requireAvailable(selectedFoods, foodQuantities);
     BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
 
     // khoá ghế bằng Redis
@@ -205,6 +209,7 @@ public class BookingService {
             .findById(request.getShowtimeId())
             .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
     requireStaffBookingAccess(showtime);
+    User staffUser = getUserCurrent();
 
     Set<Long> uniqueSeatIds = new HashSet<>(request.getSeatIds());
     if (uniqueSeatIds.size() != request.getSeatIds().size()) {
@@ -234,6 +239,7 @@ public class BookingService {
     Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
     List<Food> selectedFoods = getSelectedFoods(foodQuantities);
     requireFoodsAvailableForShowtime(selectedFoods, showtime);
+    foodInventoryService.requireAvailable(selectedFoods, foodQuantities);
     BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
     BigDecimal ticketTotal =
         selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -268,6 +274,7 @@ public class BookingService {
         Booking.builder()
             .bookingCode(generateBookingCode())
             .user(customer)
+            .staffUser(staffUser)
             .showtime(showtime)
             .totalAmount(totalAmount)
             .promotionCode(appliedPromoCode)
@@ -282,6 +289,9 @@ public class BookingService {
     booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
     bookingRepository.save(booking);
+    if (request.getPaymentMethod() != PaymentMethod.CARD) {
+      foodInventoryService.deductForBooking(booking);
+    }
 
     selectedTickets.forEach(
         ticket -> {
@@ -303,6 +313,11 @@ public class BookingService {
     }
 
     log.info("Staff booking created with code: {}", booking.getBookingCode());
+    auditLogService.record(
+        AuditAction.STAFF_BOOKING_CREATED,
+        "Booking",
+        booking.getId(),
+        "Staff booking " + booking.getBookingCode() + " created with " + selectedTickets.size() + " tickets");
     return bookingMapper.toBookingResponse(booking);
   }
 
@@ -605,6 +620,19 @@ public class BookingService {
     throw new AppException(ErrorCode.UNAUTHORIZED);
   }
 
+  private void requireRefundManagementAccess(Booking booking) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (currentUser.getRole() == UserRole.MANAGER
+        && currentUser.getBranchId() != null
+        && isBookingInBranch(booking, currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
   private void requireStaffBookingAccess(Showtime showtime) {
     User currentUser = getUserCurrent();
     if (currentUser.getRole() == UserRole.ADMIN) {
@@ -779,13 +807,13 @@ public class BookingService {
   }
 
   /**
-   * Admin/Staff duyệt hoặc từ chối yêu cầu hoàn tiền.
+   * Admin/Manager duyệt hoặc từ chối yêu cầu hoàn tiền.
    */
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public BookingResponse processRefund(Long bookingId, boolean approved) {
     Booking booking = getBooking(bookingId);
-    requireBookingManagementAccess(booking);
+    requireRefundManagementAccess(booking);
 
     if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
       throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
@@ -796,6 +824,7 @@ public class BookingService {
       booking.setPaymentStatus(PaymentStatus.REFUNDED);
       booking.setRefundedAt(LocalDateTime.now());
       booking.setRefundAmount(booking.getTotalAmount());
+      foodInventoryService.restoreForBooking(booking);
 
       // Trả ghế về AVAILABLE
       booking
@@ -827,6 +856,11 @@ public class BookingService {
       }
 
       log.info("Refund APPROVED for booking {}", bookingId);
+      auditLogService.record(
+          AuditAction.REFUND_APPROVED,
+          "Booking",
+          bookingId,
+          "Refund approved for booking " + booking.getBookingCode());
     } else {
       // Từ chối → quay lại COMPLETED
       booking.setStatus(BookingStatus.COMPLETED);
@@ -834,6 +868,11 @@ public class BookingService {
       booking.setRefundAmount(BigDecimal.ZERO);
 
       log.info("Refund REJECTED for booking {}", bookingId);
+      auditLogService.record(
+          AuditAction.REFUND_REJECTED,
+          "Booking",
+          bookingId,
+          "Refund rejected for booking " + booking.getBookingCode());
     }
 
     bookingRepository.save(booking);

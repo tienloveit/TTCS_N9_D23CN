@@ -3,8 +3,8 @@ import { bookingApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 
 const BookingManagement = () => {
-  const { isAdmin, isStaff, isManager } = useAuth();
-  const canProcessRefund = isAdmin || isStaff || isManager;
+  const { isAdmin, isManager } = useAuth();
+  const canProcessRefund = isAdmin || isManager;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

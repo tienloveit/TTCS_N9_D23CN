@@ -48,6 +48,10 @@ public class Booking {
   private User user;
 
   @ManyToOne
+  @JoinColumn(name = "staff_user_id")
+  private User staffUser;
+
+  @ManyToOne
   @JoinColumn(name = "showtime_id", nullable = false)
   private Showtime showtime;
 
