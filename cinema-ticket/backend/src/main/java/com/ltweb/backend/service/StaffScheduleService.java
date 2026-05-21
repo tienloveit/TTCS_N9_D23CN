@@ -5,6 +5,7 @@ import com.ltweb.backend.dto.request.UpdateStaffScheduleRequest;
 import com.ltweb.backend.dto.response.StaffDetailResponse;
 import com.ltweb.backend.dto.response.StaffScheduleResponse;
 import com.ltweb.backend.entity.StaffSchedule;
+import com.ltweb.backend.entity.StaffShift;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.StaffScheduleStatus;
 import com.ltweb.backend.enums.UserRole;
@@ -32,6 +33,7 @@ public class StaffScheduleService {
   private final UserRepository userRepository;
   private final UserMapper userMapper;
   private final StaffOperationsService staffOperationsService;
+  private final NotificationService notificationService;
 
   @Transactional(readOnly = true)
   public StaffDetailResponse getStaffDetail(Long staffId) {
@@ -82,7 +84,14 @@ public class StaffScheduleService {
             .note(request.getNote())
             .status(StaffScheduleStatus.SCHEDULED)
             .build();
-    return toResponse(staffScheduleRepository.save(schedule));
+    StaffSchedule saved = staffScheduleRepository.save(schedule);
+    notificationService.notifyStaffSchedule(
+        staff.getId(),
+        saved.getBranchId(),
+        saved.getId(),
+        "Ban co lich truc moi",
+        "Lich truc bat dau luc " + saved.getStartTime() + ".");
+    return toResponse(saved);
   }
 
   @Transactional
@@ -106,14 +115,28 @@ public class StaffScheduleService {
     if (request.getStatus() != null) {
       schedule.setStatus(request.getStatus());
     }
-    return toResponse(staffScheduleRepository.save(schedule));
+    StaffSchedule saved = staffScheduleRepository.save(schedule);
+    notificationService.notifyStaffSchedule(
+        saved.getStaff().getId(),
+        saved.getBranchId(),
+        saved.getId(),
+        "Lich truc da duoc cap nhat",
+        "Lich truc cua ban da duoc quan ly cap nhat.");
+    return toResponse(saved);
   }
 
   @Transactional
   public StaffScheduleResponse cancelSchedule(Long scheduleId) {
     StaffSchedule schedule = getManagedSchedule(scheduleId);
     schedule.setStatus(StaffScheduleStatus.CANCELLED);
-    return toResponse(staffScheduleRepository.save(schedule));
+    StaffSchedule saved = staffScheduleRepository.save(schedule);
+    notificationService.notifyStaffSchedule(
+        saved.getStaff().getId(),
+        saved.getBranchId(),
+        saved.getId(),
+        "Lich truc da bi huy",
+        "Mot lich truc cua ban da bi quan ly huy.");
+    return toResponse(saved);
   }
 
   private StaffSchedule getManagedSchedule(Long scheduleId) {
@@ -165,6 +188,10 @@ public class StaffScheduleService {
   private StaffScheduleResponse toResponse(StaffSchedule schedule) {
     User staff = schedule.getStaff();
     User creator = schedule.getCreatedBy();
+    StaffShift shift =
+        staffShiftRepository.findByScheduleIdOrderByOpenedAtDesc(schedule.getId()).stream()
+            .findFirst()
+            .orElse(null);
     return StaffScheduleResponse.builder()
         .scheduleId(schedule.getId())
         .staffId(staff == null ? null : staff.getId())
@@ -177,6 +204,12 @@ public class StaffScheduleService {
         .position(schedule.getPosition())
         .note(schedule.getNote())
         .status(schedule.getStatus())
+        .shiftId(shift == null ? null : shift.getId())
+        .actualOpenedAt(shift == null ? null : shift.getOpenedAt())
+        .actualClosedAt(shift == null ? null : shift.getClosedAt())
+        .lateMinutes(shift == null ? null : lateMinutes(schedule, shift))
+        .earlyLeaveMinutes(shift == null ? null : earlyLeaveMinutes(schedule, shift))
+        .attendanceStatus(attendanceStatus(schedule, shift))
         .createdById(creator == null ? null : creator.getId())
         .createdByUsername(creator == null ? null : creator.getUsername())
         .createdAt(schedule.getCreatedAt())
@@ -189,6 +222,40 @@ public class StaffScheduleService {
       return null;
     }
     return Math.max(Duration.between(startTime, endTime).toMinutes(), 0);
+  }
+
+  private Long lateMinutes(StaffSchedule schedule, StaffShift shift) {
+    if (schedule.getStartTime() == null || shift.getOpenedAt() == null) {
+      return null;
+    }
+    return Math.max(Duration.between(schedule.getStartTime(), shift.getOpenedAt()).toMinutes(), 0);
+  }
+
+  private Long earlyLeaveMinutes(StaffSchedule schedule, StaffShift shift) {
+    if (schedule.getEndTime() == null || shift.getClosedAt() == null) {
+      return null;
+    }
+    return Math.max(Duration.between(shift.getClosedAt(), schedule.getEndTime()).toMinutes(), 0);
+  }
+
+  private String attendanceStatus(StaffSchedule schedule, StaffShift shift) {
+    if (schedule.getStatus() == StaffScheduleStatus.CANCELLED) {
+      return "CANCELLED";
+    }
+    if (shift == null) {
+      return schedule.getEndTime() != null && schedule.getEndTime().isBefore(LocalDateTime.now())
+          ? "MISSED"
+          : "SCHEDULED";
+    }
+    if (shift.getClosedAt() == null) {
+      return "WORKING";
+    }
+    long late = Objects.requireNonNullElse(lateMinutes(schedule, shift), 0L);
+    long early = Objects.requireNonNullElse(earlyLeaveMinutes(schedule, shift), 0L);
+    if (late > 0 || early > 0) {
+      return "IRREGULAR";
+    }
+    return "ON_TIME";
   }
 
   private String trimToDefault(String value, String fallback) {

@@ -537,6 +537,7 @@ const UserManagement = () => {
                         <th>Vị trí</th>
                         <th>Thời lượng</th>
                         <th>Trạng thái</th>
+                        <th>Chấm công</th>
                         <th>Người tạo</th>
                         <th>Ghi chú</th>
                         <th>Thao tác</th>
@@ -544,7 +545,7 @@ const UserManagement = () => {
                     </thead>
                     <tbody>
                       {(staffDetail.schedules || []).length === 0 ? (
-                        <tr><td colSpan="7" style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)' }}>Chưa có lịch trực.</td></tr>
+                        <tr><td colSpan="8" style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)' }}>Chưa có lịch trực.</td></tr>
                       ) : (
                         staffDetail.schedules.map((schedule) => (
                           <tr key={schedule.scheduleId}>
@@ -560,6 +561,16 @@ const UserManagement = () => {
                               <span className={`status-badge ${schedule.status === 'CANCELLED' ? 'status--inactive' : schedule.status === 'COMPLETED' ? 'status--active' : 'status--pending'}`}>
                                 {schedule.status === 'CANCELLED' ? 'Đã huỷ' : schedule.status === 'COMPLETED' ? 'Hoàn tất' : 'Đã lên lịch'}
                               </span>
+                            </td>
+                            <td>
+                              <span className={`status-badge ${schedule.attendanceStatus === 'MISSED' || schedule.attendanceStatus === 'IRREGULAR' ? 'status--pending' : schedule.attendanceStatus === 'ON_TIME' ? 'status--active' : 'status--inactive'}`}>
+                                {schedule.attendanceStatus || 'SCHEDULED'}
+                              </span>
+                              {(schedule.lateMinutes > 0 || schedule.earlyLeaveMinutes > 0) && (
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem', marginTop: 4 }}>
+                                  Muộn {schedule.lateMinutes || 0}p, sớm {schedule.earlyLeaveMinutes || 0}p
+                                </div>
+                              )}
                             </td>
                             <td>{schedule.createdByUsername || '—'}</td>
                             <td>{schedule.note || '—'}</td>

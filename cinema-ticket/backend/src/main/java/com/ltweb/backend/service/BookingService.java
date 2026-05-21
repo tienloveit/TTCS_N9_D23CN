@@ -75,6 +75,7 @@ public class BookingService {
   private final FoodInventoryService foodInventoryService;
   private final AuditLogService auditLogService;
   private final SystemSettingService systemSettingService;
+  private final NotificationService notificationService;
 
   @Transactional
   public BookingResponse createBooking(CreateBookingRequest request) {
@@ -329,6 +330,23 @@ public class BookingService {
   @Transactional(readOnly = true)
   public List<BookingResponse> getAllBookings() {
     return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
+        .map(bookingMapper::toBookingResponse)
+        .toList();
+  }
+
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  @Transactional(readOnly = true)
+  public List<BookingResponse> getRefundBookings() {
+    return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
+        .filter(
+            booking ->
+                booking.getStatus() == BookingStatus.REFUND_REQUESTED
+                    || booking.getStatus() == BookingStatus.REFUNDED)
+        .sorted(
+            java.util.Comparator.comparing(
+                    Booking::getUpdatedAt,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .reversed())
         .map(bookingMapper::toBookingResponse)
         .toList();
   }
@@ -605,10 +623,16 @@ public class BookingService {
   }
 
   private boolean isBookingInBranch(Booking booking, Long branchId) {
-    return booking.getShowtime() != null
-        && booking.getShowtime().getRoom() != null
-        && booking.getShowtime().getRoom().getBranch() != null
-        && Objects.equals(booking.getShowtime().getRoom().getBranch().getBranchId(), branchId);
+    return Objects.equals(getBookingBranchId(booking), branchId);
+  }
+
+  private Long getBookingBranchId(Booking booking) {
+    if (booking.getShowtime() == null
+        || booking.getShowtime().getRoom() == null
+        || booking.getShowtime().getRoom().getBranch() == null) {
+      return null;
+    }
+    return booking.getShowtime().getRoom().getBranch().getBranchId();
   }
 
   private void requireBookingManagementAccess(Booking booking) {
@@ -804,6 +828,8 @@ public class BookingService {
     booking.setRefundReason(reason);
     booking.setRefundAmount(booking.getTotalAmount());
     bookingRepository.save(booking);
+    notificationService.notifyRefundRequest(
+        getBookingBranchId(booking), booking.getId(), booking.getBookingCode());
 
     log.info("Refund requested for booking {}: reason={}", bookingId, reason);
     return bookingMapper.toBookingResponse(booking);
@@ -815,12 +841,23 @@ public class BookingService {
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public BookingResponse processRefund(Long bookingId, boolean approved) {
+    return processRefund(bookingId, approved, null);
+  }
+
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  @Transactional
+  public BookingResponse processRefund(Long bookingId, boolean approved, String note) {
     Booking booking = getBooking(bookingId);
     requireRefundManagementAccess(booking);
+    User processor = getUserCurrent();
 
     if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
       throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
     }
+
+    booking.setRefundProcessNote(trimToNull(note));
+    booking.setRefundProcessedBy(processor);
+    booking.setRefundProcessedAt(LocalDateTime.now());
 
     if (approved) {
       booking.setStatus(BookingStatus.REFUNDED);

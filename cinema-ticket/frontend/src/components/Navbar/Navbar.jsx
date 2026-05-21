@@ -210,9 +210,9 @@ export default function Navbar() {
                    Quản trị
                  </Link>
                )}
-               {(isStaff || isAdmin) && (
+               {isStaff && (
                  <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                   {isStaff ? 'Nhân viên' : 'Quầy vé'}
+                   Nhân viên
                  </Link>
                )}
                <button className="btn-ghost" onClick={handleLogout} style={{ padding: '6px 12px' }}>Đăng xuất</button>

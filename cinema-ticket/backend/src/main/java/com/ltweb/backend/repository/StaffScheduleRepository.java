@@ -16,4 +16,11 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, Lo
 
   @EntityGraph(attributePaths = {"staff", "createdBy"})
   List<StaffSchedule> findByBranchIdOrderByStartTimeDesc(Long branchId);
+
+  @EntityGraph(attributePaths = {"staff", "createdBy"})
+  List<StaffSchedule> findByStaffIdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualAndStatusOrderByStartTimeDesc(
+      Long staffId,
+      LocalDateTime latestStart,
+      LocalDateTime earliestEnd,
+      com.ltweb.backend.enums.StaffScheduleStatus status);
 }

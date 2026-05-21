@@ -8,9 +8,13 @@ import static org.mockito.Mockito.when;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Food;
+import com.ltweb.backend.entity.FoodStockTransaction;
+import com.ltweb.backend.enums.FoodStockTransactionType;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.repository.FoodRepository;
+import com.ltweb.backend.repository.FoodStockTransactionRepository;
+import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,6 +27,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class FoodInventoryServiceTest {
   @Mock private FoodRepository foodRepository;
+  @Mock private FoodStockTransactionRepository stockTransactionRepository;
+  @Mock private UserRepository userRepository;
+  @Mock private NotificationService notificationService;
 
   @InjectMocks private FoodInventoryService foodInventoryService;
 
@@ -37,6 +44,11 @@ class FoodInventoryServiceTest {
     assertThat(food.getStockQuantity()).isEqualTo(7);
     ArgumentCaptor<Iterable<Food>> captor = ArgumentCaptor.forClass(Iterable.class);
     verify(foodRepository).saveAll(captor.capture());
+    ArgumentCaptor<FoodStockTransaction> transactionCaptor =
+        ArgumentCaptor.forClass(FoodStockTransaction.class);
+    verify(stockTransactionRepository).save(transactionCaptor.capture());
+    assertThat(transactionCaptor.getValue().getType()).isEqualTo(FoodStockTransactionType.SALE);
+    assertThat(transactionCaptor.getValue().getQuantityChange()).isEqualTo(-3);
   }
 
   @Test
@@ -60,6 +72,11 @@ class FoodInventoryServiceTest {
     foodInventoryService.restoreForBooking(booking);
 
     assertThat(food.getStockQuantity()).isEqualTo(5);
+    ArgumentCaptor<FoodStockTransaction> transactionCaptor =
+        ArgumentCaptor.forClass(FoodStockTransaction.class);
+    verify(stockTransactionRepository).save(transactionCaptor.capture());
+    assertThat(transactionCaptor.getValue().getType()).isEqualTo(FoodStockTransactionType.REFUND);
+    assertThat(transactionCaptor.getValue().getQuantityChange()).isEqualTo(3);
   }
 
   private Food food(Long id, Integer stock) {

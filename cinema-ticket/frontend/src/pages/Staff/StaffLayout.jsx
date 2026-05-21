@@ -46,6 +46,12 @@ const Icons = {
       <path d="M3 10h18" />
     </svg>
   ),
+  Bell: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  ),
   Logout: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -77,6 +83,7 @@ const TITLE_MAP = {
   '/staff/booking': 'Đặt vé tại quầy',
   '/staff/check-in': 'Check-in vé',
   '/staff/bookings': 'Đơn đặt vé',
+  '/staff/notifications': 'Thông báo',
 };
 
 const NAV_SECTIONS = [
@@ -88,6 +95,7 @@ const NAV_SECTIONS = [
       { path: '/staff/booking', label: 'Đặt vé tại quầy', Icon: Icons.Ticket },
       { path: '/staff/check-in', label: 'Check-in', Icon: Icons.Scan },
       { path: '/staff/bookings', label: 'Đơn đặt vé', Icon: Icons.List },
+      { path: '/staff/notifications', label: 'Thông báo', Icon: Icons.Bell },
     ],
   },
 ];

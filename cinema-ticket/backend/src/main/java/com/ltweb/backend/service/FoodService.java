@@ -1,15 +1,19 @@
 package com.ltweb.backend.service;
 
 import com.ltweb.backend.dto.request.CreateFoodRequest;
+import com.ltweb.backend.dto.request.FoodStockAdjustmentRequest;
 import com.ltweb.backend.dto.request.UpdateFoodRequest;
+import com.ltweb.backend.dto.response.FoodStockTransactionResponse;
 import com.ltweb.backend.dto.response.FoodResponse;
 import com.ltweb.backend.entity.Food;
+import com.ltweb.backend.entity.FoodStockTransaction;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.repository.FoodRepository;
+import com.ltweb.backend.repository.FoodStockTransactionRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.util.Comparator;
 import java.util.List;
@@ -27,6 +31,8 @@ public class FoodService {
   private final FoodRepository foodRepository;
   private final UserRepository userRepository;
   private final AuditLogService auditLogService;
+  private final FoodInventoryService foodInventoryService;
+  private final FoodStockTransactionRepository stockTransactionRepository;
 
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public FoodResponse createFood(CreateFoodRequest request) {
@@ -125,6 +131,38 @@ public class FoodService {
     auditLogService.record(AuditAction.FOOD_DISABLED, "Food", saved.getId(), "Disabled food " + saved.getName());
   }
 
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public FoodResponse adjustStock(Long foodId, FoodStockAdjustmentRequest request) {
+    Food saved =
+        foodInventoryService.adjustStock(
+            foodId,
+            request.getQuantityChange(),
+            Boolean.TRUE.equals(request.getSetAbsoluteQuantity()),
+            request.getNote());
+    auditLogService.record(
+        AuditAction.FOOD_UPDATED,
+        "Food",
+        saved.getId(),
+        "Adjusted stock for " + saved.getName() + " to " + saved.getStockQuantity());
+    return toFoodResponse(saved);
+  }
+
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public List<FoodStockTransactionResponse> getStockTransactions(Long foodId) {
+    User user = getCurrentUser();
+    List<FoodStockTransaction> transactions =
+        foodId == null
+            ? (user.getRole() == UserRole.MANAGER
+                ? stockTransactionRepository.findTop200ByBranchIdOrderByCreatedAtDesc(requireManagedBranch(user))
+                : stockTransactionRepository.findTop200ByOrderByCreatedAtDesc())
+            : stockTransactionRepository.findTop100ByFoodIdOrderByCreatedAtDesc(foodId);
+    return transactions.stream()
+        .filter(transaction -> user.getRole() != UserRole.MANAGER
+            || Objects.equals(transaction.getBranchId(), requireManagedBranch(user)))
+        .map(this::toStockTransactionResponse)
+        .toList();
+  }
+
   private Food getFood(Long foodId) {
     return foodRepository
         .findById(foodId)
@@ -144,6 +182,27 @@ public class FoodService {
         .inStock(isInStock(food))
         .lowStock(isLowStock(food))
         .active(food.getActive())
+        .build();
+  }
+
+  private FoodStockTransactionResponse toStockTransactionResponse(FoodStockTransaction transaction) {
+    Food food = transaction.getFood();
+    User createdBy = transaction.getCreatedBy();
+    return FoodStockTransactionResponse.builder()
+        .transactionId(transaction.getId())
+        .foodId(food == null ? null : food.getId())
+        .foodName(food == null ? null : food.getName())
+        .branchId(transaction.getBranchId())
+        .type(transaction.getType())
+        .quantityBefore(transaction.getQuantityBefore())
+        .quantityChange(transaction.getQuantityChange())
+        .quantityAfter(transaction.getQuantityAfter())
+        .note(transaction.getNote())
+        .referenceId(transaction.getReferenceId())
+        .referenceType(transaction.getReferenceType())
+        .createdById(createdBy == null ? null : createdBy.getId())
+        .createdByUsername(createdBy == null ? null : createdBy.getUsername())
+        .createdAt(transaction.getCreatedAt())
         .build();
   }
 

@@ -60,7 +60,7 @@ public class BranchController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<String> deleteBranch(@PathVariable("id") Long id) {
     ApiResponse<String> apiResponse = new ApiResponse<>();
     branchService.deleteBranch(id);

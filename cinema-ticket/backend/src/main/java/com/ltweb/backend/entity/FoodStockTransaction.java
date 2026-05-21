@@ -1,6 +1,6 @@
 package com.ltweb.backend.entity;
 
-import com.ltweb.backend.enums.StaffShiftStatus;
+import com.ltweb.backend.enums.FoodStockTransactionType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,54 +11,54 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Table(name = "staff_shifts")
+@Table(name = "food_stock_transactions")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class StaffShift {
+public class FoodStockTransaction {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "shift_id")
+  @Column(name = "transaction_id")
   private Long id;
 
   @ManyToOne
-  @JoinColumn(name = "staff_id", nullable = false)
-  private User staff;
-
-  @ManyToOne
-  @JoinColumn(name = "schedule_id")
-  private StaffSchedule schedule;
+  @JoinColumn(name = "food_id", nullable = false)
+  private Food food;
 
   private Long branchId;
 
-  @Builder.Default
-  private BigDecimal openingCash = BigDecimal.ZERO;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 30)
+  private FoodStockTransactionType type;
 
-  private BigDecimal closingCash;
+  private Integer quantityBefore;
 
-  @Builder.Default
-  private BigDecimal expectedCash = BigDecimal.ZERO;
+  private Integer quantityChange;
 
-  private BigDecimal cashDifference;
-
-  private LocalDateTime openedAt;
-
-  private LocalDateTime closedAt;
+  private Integer quantityAfter;
 
   @Column(length = 500)
   private String note;
 
-  @Enumerated(EnumType.STRING)
-  private StaffShiftStatus status;
+  private Long referenceId;
+
+  private String referenceType;
+
+  @ManyToOne
+  @JoinColumn(name = "created_by")
+  private User createdBy;
+
+  @CreationTimestamp
+  private LocalDateTime createdAt;
 }

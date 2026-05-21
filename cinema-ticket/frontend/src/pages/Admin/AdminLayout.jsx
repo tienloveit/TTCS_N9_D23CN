@@ -98,10 +98,23 @@ const Icons = {
       <path d="M9 12l2 2 4-4" />
     </svg>
   ),
+  Bell: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  ),
   Settings: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.61.77 1 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" />
+    </svg>
+  ),
+  Box: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+      <path d="M3.3 7 12 12l8.7-5" />
+      <path d="M12 22V12" />
     </svg>
   ),
   Menu: () => (
@@ -133,6 +146,10 @@ const TITLE_MAP = {
   '/admin/foods': 'Quản lý Bắp & Nước',
   '/admin/promotions': 'Quản lý Khuyến mãi',
   '/admin/operations': 'Báo cáo vận hành',
+  '/admin/refunds': 'Xử lý hoàn tiền',
+  '/admin/inventory': 'Nhập xuất kho',
+  '/admin/revenue': 'Doanh thu chi tiết',
+  '/admin/notifications': 'Thông báo',
   '/admin/audit-logs': 'Nhật ký hệ thống',
   '/admin/settings': 'Cấu hình hệ thống',
   '/manager': 'Dashboard',
@@ -143,6 +160,10 @@ const TITLE_MAP = {
   '/manager/foods': 'Quản lý Bắp & Nước',
   '/manager/promotions': 'Quản lý Khuyến mãi',
   '/manager/operations': 'Báo cáo vận hành',
+  '/manager/refunds': 'Xử lý hoàn tiền',
+  '/manager/inventory': 'Nhập xuất kho',
+  '/manager/revenue': 'Doanh thu chi tiết',
+  '/manager/notifications': 'Thông báo',
   '/manager/audit-logs': 'Nhật ký hệ thống',
 };
 
@@ -162,14 +183,18 @@ const NAV_SECTIONS = [
       { path: '/admin/branches', label: 'Rạp & Phòng', Icon: Icons.Building },
       { path: '/admin/bookings', label: 'Đơn đặt vé', Icon: Icons.Ticket },
       { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
+      { path: '/admin/inventory', label: 'Nhập xuất kho', Icon: Icons.Box },
       { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
       { path: '/admin/operations', label: 'Báo cáo vận hành', Icon: Icons.Report },
+      { path: '/admin/revenue', label: 'Doanh thu chi tiết', Icon: Icons.Report },
+      { path: '/admin/refunds', label: 'Hoàn tiền', Icon: Icons.Ticket },
     ],
   },
   {
     label: 'Hệ thống',
     items: [
       { path: '/admin/users', label: 'Người dùng', Icon: Icons.Users },
+      { path: '/admin/notifications', label: 'Thông báo', Icon: Icons.Bell },
       { path: '/admin/audit-logs', label: 'Nhật ký hệ thống', Icon: Icons.Shield },
       { path: '/admin/settings', label: 'Cấu hình', Icon: Icons.Settings },
     ],
@@ -207,8 +232,12 @@ const AdminLayout = () => {
     '/admin/bookings',
     '/admin/users',
     '/admin/foods',
+    '/admin/inventory',
     '/admin/promotions',
     '/admin/operations',
+    '/admin/revenue',
+    '/admin/refunds',
+    '/admin/notifications',
     '/admin/audit-logs',
   ];
   const visibleSections = NAV_SECTIONS

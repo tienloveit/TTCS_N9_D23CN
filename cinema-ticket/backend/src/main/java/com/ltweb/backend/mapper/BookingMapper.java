@@ -23,6 +23,8 @@ public interface BookingMapper {
   @Mapping(target = "seatCodes", source = "tickets")
   @Mapping(target = "bookingId", source = "id")
   @Mapping(target = "foods", source = "bookingFoods")
+  @Mapping(target = "refundProcessedById", source = "refundProcessedBy.id")
+  @Mapping(target = "refundProcessedByUsername", source = "refundProcessedBy.username")
   BookingResponse toBookingResponse(Booking booking);
 
   default String ticketToSeatCode(Ticket ticket) {

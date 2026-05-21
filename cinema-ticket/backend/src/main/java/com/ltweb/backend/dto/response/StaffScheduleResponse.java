@@ -19,6 +19,12 @@ public class StaffScheduleResponse {
   private String position;
   private String note;
   private StaffScheduleStatus status;
+  private Long shiftId;
+  private LocalDateTime actualOpenedAt;
+  private LocalDateTime actualClosedAt;
+  private Long lateMinutes;
+  private Long earlyLeaveMinutes;
+  private String attendanceStatus;
   private Long createdById;
   private String createdByUsername;
   private LocalDateTime createdAt;

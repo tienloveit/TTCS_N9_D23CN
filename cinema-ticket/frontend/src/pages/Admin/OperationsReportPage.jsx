@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { branchApi, operationsApi } from '../../api';
+import { branchApi, operationsApi, reportsApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -63,6 +63,16 @@ const OperationsReportPage = () => {
     ['Cần xử lý', formatNumber(summary.refundRequests), `${formatNumber(summary.lowStockItems)} món sắp hết`],
   ], [summary]);
 
+  const exportExcel = async () => {
+    const res = await reportsApi.exportOperations({ date, branchId: branchId || undefined });
+    const url = URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'operations-report.xlsx';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
@@ -80,6 +90,7 @@ const OperationsReportPage = () => {
               ))}
             </select>
           )}
+          <button className="btn btn-primary" onClick={exportExcel}>Xuất Excel</button>
         </div>
       </div>
 

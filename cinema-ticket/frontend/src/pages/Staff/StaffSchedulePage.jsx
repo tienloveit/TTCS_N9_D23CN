@@ -20,6 +20,15 @@ const formatDuration = (minutes) => {
   return hours > 0 ? `${hours} giờ ${mins} phút` : `${mins} phút`;
 };
 
+const attendanceLabels = {
+  SCHEDULED: 'Chưa đến ca',
+  WORKING: 'Đang làm',
+  ON_TIME: 'Đúng giờ',
+  IRREGULAR: 'Lệch giờ',
+  MISSED: 'Không mở ca',
+  CANCELLED: 'Đã huỷ',
+};
+
 export default function StaffSchedulePage() {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +72,7 @@ export default function StaffSchedulePage() {
               <th>Vị trí</th>
               <th>Thời lượng</th>
               <th>Trạng thái</th>
+              <th>Chấm công</th>
               <th>Người tạo</th>
               <th>Ghi chú</th>
             </tr>
@@ -70,7 +80,7 @@ export default function StaffSchedulePage() {
           <tbody>
             {schedules.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: 36, color: 'var(--text-muted)' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: 36, color: 'var(--text-muted)' }}>
                   Chưa có lịch trực.
                 </td>
               </tr>
@@ -91,6 +101,16 @@ export default function StaffSchedulePage() {
                     <span className={`status-badge ${schedule.status === 'CANCELLED' ? 'status--inactive' : schedule.status === 'COMPLETED' ? 'status--active' : 'status--pending'}`}>
                       {schedule.status === 'CANCELLED' ? 'Đã huỷ' : schedule.status === 'COMPLETED' ? 'Hoàn tất' : 'Đã lên lịch'}
                     </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${schedule.attendanceStatus === 'MISSED' || schedule.attendanceStatus === 'IRREGULAR' ? 'status--pending' : schedule.attendanceStatus === 'ON_TIME' ? 'status--active' : 'status--inactive'}`}>
+                      {attendanceLabels[schedule.attendanceStatus] || '-'}
+                    </span>
+                    {(schedule.lateMinutes > 0 || schedule.earlyLeaveMinutes > 0) && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 4 }}>
+                        Muộn {schedule.lateMinutes || 0}p, sớm {schedule.earlyLeaveMinutes || 0}p
+                      </div>
+                    )}
                   </td>
                   <td>{schedule.createdByUsername || '-'}</td>
                   <td>{schedule.note || '-'}</td>

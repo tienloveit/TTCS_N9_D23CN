@@ -15,4 +15,7 @@ public interface StaffShiftRepository extends JpaRepository<StaffShift, Long> {
 
   @EntityGraph(attributePaths = {"staff"})
   List<StaffShift> findByStaffIdOrderByOpenedAtDesc(Long staffId);
+
+  @EntityGraph(attributePaths = {"staff", "schedule"})
+  List<StaffShift> findByScheduleIdOrderByOpenedAtDesc(Long scheduleId);
 }

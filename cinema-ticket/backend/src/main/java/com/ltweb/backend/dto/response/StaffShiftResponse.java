@@ -10,6 +10,7 @@ import lombok.Data;
 @Builder
 public class StaffShiftResponse {
   private Long shiftId;
+  private Long scheduleId;
   private Long staffId;
   private String staffUsername;
   private Long branchId;

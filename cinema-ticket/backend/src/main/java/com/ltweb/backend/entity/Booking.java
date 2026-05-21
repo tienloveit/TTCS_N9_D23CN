@@ -88,6 +88,15 @@ public class Booking {
 
   private String refundReason;
 
+  @Column(length = 1000)
+  private String refundProcessNote;
+
+  @ManyToOne
+  @JoinColumn(name = "refund_processed_by")
+  private User refundProcessedBy;
+
+  private LocalDateTime refundProcessedAt;
+
   private LocalDateTime refundedAt;
 
   @Builder.Default private BigDecimal refundAmount = BigDecimal.ZERO;

@@ -120,6 +120,8 @@ export const foodApi = {
   getById: (id) => axiosClient.get(`/food/${id}`),
   create: (data) => axiosClient.post('/food', data),
   update: (id, data) => axiosClient.put(`/food/${id}`, data),
+  adjustStock: (id, data) => axiosClient.post(`/food/${id}/stock-adjustments`, data),
+  getStockTransactions: (params) => axiosClient.get('/food/stock-transactions', { params }),
   delete: (id) => axiosClient.delete(`/food/${id}`),
 };
 
@@ -137,8 +139,9 @@ export const bookingApi = {
     axiosClient.patch(`/booking/${id}/apply-promotion`, { promotionCode }),
   requestRefund: (id, reason) =>
     axiosClient.post(`/booking/${id}/refund-request`, { reason }),
-  processRefund: (id, approved) =>
-    axiosClient.post(`/booking/${id}/refund-process`, { approved }),
+  processRefund: (id, approved, note) =>
+    axiosClient.post(`/booking/${id}/refund-process`, { approved, note }),
+  getRefunds: () => axiosClient.get('/booking/refunds'),
 };
 
 // ==================== ADMIN ANALYTICS ====================
@@ -148,6 +151,20 @@ export const analyticsApi = {
 
 export const operationsApi = {
   getDailyReport: (params) => axiosClient.get('/admin/operations/daily-report', { params }),
+};
+
+export const reportsApi = {
+  getRevenue: (params) => axiosClient.get('/admin/reports/revenue', { params }),
+  exportRevenue: (params) =>
+    axiosClient.get('/admin/reports/export/revenue.xlsx', { params, responseType: 'blob' }),
+  exportOperations: (params) =>
+    axiosClient.get('/admin/reports/export/operations.xlsx', { params, responseType: 'blob' }),
+};
+
+export const notificationApi = {
+  getAll: () => axiosClient.get('/notifications'),
+  getUnreadCount: () => axiosClient.get('/notifications/unread-count'),
+  markRead: (id) => axiosClient.post(`/notifications/${id}/read`),
 };
 
 export const auditLogApi = {

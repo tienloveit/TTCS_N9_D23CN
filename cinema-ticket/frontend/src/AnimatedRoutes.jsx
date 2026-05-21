@@ -30,6 +30,10 @@ import PromotionManagement from './pages/Admin/PromotionManagement';
 import OperationsReportPage from './pages/Admin/OperationsReportPage';
 import AuditLogPage from './pages/Admin/AuditLogPage';
 import SystemSettingsPage from './pages/Admin/SystemSettingsPage';
+import RefundManagementPage from './pages/Admin/RefundManagementPage';
+import InventoryManagementPage from './pages/Admin/InventoryManagementPage';
+import RevenueReportPage from './pages/Admin/RevenueReportPage';
+import NotificationPage from './pages/Admin/NotificationPage';
 import StaffLayout from './pages/Staff/StaffLayout';
 import StaffDashboardPage from './pages/Staff/StaffDashboardPage';
 import StaffBookingPage from './pages/Staff/StaffBookingPage';
@@ -124,6 +128,7 @@ const AnimatedRoutes = () => {
           <Route path="booking" element={<PageWrapper><StaffBookingPage /></PageWrapper>} />
           <Route path="check-in" element={<PageWrapper><CheckInPage /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
+          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
         </Route>
 
         {/* Admin routes */}
@@ -144,7 +149,11 @@ const AnimatedRoutes = () => {
           <Route path="foods" element={<AdminOnlyRoute><PageWrapper><FoodManagement /></PageWrapper></AdminOnlyRoute>} />
           <Route path="promotions" element={<AdminOnlyRoute><PageWrapper><PromotionManagement /></PageWrapper></AdminOnlyRoute>} />
           <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
+          <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
+          <Route path="inventory" element={<PageWrapper><InventoryManagementPage /></PageWrapper>} />
+          <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
           <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
+          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
           <Route path="settings" element={<AdminOnlyRoute><PageWrapper><SystemSettingsPage /></PageWrapper></AdminOnlyRoute>} />
         </Route>
 
@@ -166,7 +175,11 @@ const AnimatedRoutes = () => {
           <Route path="foods" element={<PageWrapper><FoodManagement /></PageWrapper>} />
           <Route path="promotions" element={<PageWrapper><PromotionManagement /></PageWrapper>} />
           <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
+          <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
+          <Route path="inventory" element={<PageWrapper><InventoryManagementPage /></PageWrapper>} />
+          <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
           <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
+          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
           <Route path="settings" element={<Navigate to="/manager" replace />} />
         </Route>
 

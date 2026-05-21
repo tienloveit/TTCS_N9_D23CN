@@ -64,6 +64,14 @@ public class BookingResponse {
 
   private String refundReason;
 
+  private String refundProcessNote;
+
+  private Long refundProcessedById;
+
+  private String refundProcessedByUsername;
+
+  private LocalDateTime refundProcessedAt;
+
   private LocalDateTime refundedAt;
 
   private BigDecimal refundAmount;

@@ -8,6 +8,7 @@ import com.ltweb.backend.dto.response.StaffShiftResponse;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Showtime;
+import com.ltweb.backend.entity.StaffSchedule;
 import com.ltweb.backend.entity.StaffShift;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
@@ -22,6 +23,7 @@ import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
+import com.ltweb.backend.repository.StaffScheduleRepository;
 import com.ltweb.backend.repository.StaffShiftRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
@@ -47,6 +49,7 @@ public class StaffOperationsService {
   private final BookingRepository bookingRepository;
   private final ShowtimeRepository showtimeRepository;
   private final TicketRepository ticketRepository;
+  private final StaffScheduleRepository staffScheduleRepository;
   private final StaffShiftRepository staffShiftRepository;
   private final UserRepository userRepository;
   private final BookingMapper bookingMapper;
@@ -166,6 +169,7 @@ public class StaffOperationsService {
     StaffShift shift =
         StaffShift.builder()
             .staff(staff)
+            .schedule(findMatchingSchedule(staff, LocalDateTime.now()))
             .branchId(branchId)
             .openingCash(safeAmount(request.getOpeningCash()))
             .expectedCash(safeAmount(request.getOpeningCash()))
@@ -194,6 +198,10 @@ public class StaffOperationsService {
     shift.setClosedAt(LocalDateTime.now());
     shift.setNote(request.getNote());
     shift.setStatus(StaffShiftStatus.CLOSED);
+    if (shift.getSchedule() != null) {
+      shift.getSchedule().setStatus(com.ltweb.backend.enums.StaffScheduleStatus.COMPLETED);
+      staffScheduleRepository.save(shift.getSchedule());
+    }
     StaffShift saved = staffShiftRepository.save(shift);
     return toShiftResponse(saved, calculateShiftMetrics(saved));
   }
@@ -230,6 +238,7 @@ public class StaffOperationsService {
     User staff = shift.getStaff();
     return StaffShiftResponse.builder()
         .shiftId(shift.getId())
+        .scheduleId(shift.getSchedule() == null ? null : shift.getSchedule().getId())
         .staffId(staff == null ? null : staff.getId())
         .staffUsername(staff == null ? null : staff.getUsername())
         .branchId(shift.getBranchId())
@@ -285,6 +294,15 @@ public class StaffOperationsService {
     }
     LocalDateTime end = shift.getClosedAt() == null ? LocalDateTime.now() : shift.getClosedAt();
     return Math.max(Duration.between(shift.getOpenedAt(), end).toMinutes(), 0);
+  }
+
+  private StaffSchedule findMatchingSchedule(User staff, LocalDateTime openedAt) {
+    return staffScheduleRepository
+        .findByStaffIdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualAndStatusOrderByStartTimeDesc(
+            staff.getId(), openedAt.plusMinutes(30), openedAt.minusMinutes(30), com.ltweb.backend.enums.StaffScheduleStatus.SCHEDULED)
+        .stream()
+        .findFirst()
+        .orElse(null);
   }
 
   private Long requireBranchOperatorBranch(User user) {
