@@ -113,8 +113,8 @@ public class DataSeedService {
         "user",
         "user@123",
         UserRole.USER,
-        "Nguyễn Hoàng Huy",
-        "huy.nguyen@example.com",
+        "Nguyễn Thanh Tu 2",
+        "tunguyen20905@gmail.com",
         "0902000001");
     upsertUser(
         "user2",

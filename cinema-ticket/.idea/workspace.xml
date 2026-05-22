@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="44bfda51-0bd8-4e56-8a78-05847a174f9b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,7 +20,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="278" />
+    <option name="cachedIndexableFilesCount" value="289" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
@@ -109,7 +110,9 @@
       <workItem from="1778763161555" duration="6637000" />
       <workItem from="1778843656215" duration="5619000" />
       <workItem from="1778863567606" duration="2561000" />
-      <workItem from="1779016674910" duration="4563000" />
+      <workItem from="1779016674910" duration="6926000" />
+      <workItem from="1779083818984" duration="6548000" />
+      <workItem from="1779193327307" duration="612000" />
     </task>
     <servers />
   </component>

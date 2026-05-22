@@ -6,7 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c3543277-ea9b-4b29-b905-475510ba1feb" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinema-ticket/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/cinema-ticket/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinema-ticket/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/cinema-ticket/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinema-ticket/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinema-ticket/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,7 +20,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="559" />
+    <option name="cachedIndexableFilesCount" value="593" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -88,11 +89,26 @@
       <workItem from="1778761403472" duration="160000" />
       <workItem from="1778761588987" duration="467000" />
       <workItem from="1778762083520" duration="1025000" />
+      <workItem from="1779328612756" duration="834000" />
+      <workItem from="1779329744694" duration="1042000" />
+      <workItem from="1779422060814" duration="231000" />
+      <workItem from="1779422360670" duration="400000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
