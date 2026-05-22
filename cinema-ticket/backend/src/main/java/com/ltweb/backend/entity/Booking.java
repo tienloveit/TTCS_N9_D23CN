@@ -48,6 +48,10 @@ public class Booking {
   private User user;
 
   @ManyToOne
+  @JoinColumn(name = "staff_user_id")
+  private User staffUser;
+
+  @ManyToOne
   @JoinColumn(name = "showtime_id", nullable = false)
   private Showtime showtime;
 
@@ -81,6 +85,21 @@ public class Booking {
   private LocalDateTime paidAt;
 
   private LocalDateTime paymentCreatedAt;
+
+  private String refundReason;
+
+  @Column(length = 1000)
+  private String refundProcessNote;
+
+  @ManyToOne
+  @JoinColumn(name = "refund_processed_by")
+  private User refundProcessedBy;
+
+  private LocalDateTime refundProcessedAt;
+
+  private LocalDateTime refundedAt;
+
+  @Builder.Default private BigDecimal refundAmount = BigDecimal.ZERO;
 
   @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default

@@ -67,6 +67,8 @@ public class User implements UserDetails {
   @Column(length = 20)
   private UserRole role;
 
+  private Long branchId;
+
   @Enumerated(EnumType.STRING)
   private UserStatus status;
 

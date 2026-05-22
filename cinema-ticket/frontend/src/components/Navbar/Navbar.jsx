@@ -14,7 +14,7 @@ import {
 } from '../Common/CinemaIcons';
 
 export default function Navbar() {
-  const { user, logout, isAuthenticated, isAdmin, isStaff } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isManager, isStaff } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showScheduleMenu, setShowScheduleMenu] = useState(false);
@@ -205,14 +205,14 @@ export default function Navbar() {
                    </div>
                  )}
                </div>
-               {isAdmin && (
-                 <Link to="/admin" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                {(isAdmin || isManager) && (
+                  <Link to={isManager ? '/manager' : '/admin'} className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
                    Quản trị
                  </Link>
                )}
-               {(isStaff || isAdmin) && (
+               {isStaff && (
                  <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                   {isStaff ? 'Nhân viên' : 'Quầy vé'}
+                   Nhân viên
                  </Link>
                )}
                <button className="btn-ghost" onClick={handleLogout} style={{ padding: '6px 12px' }}>Đăng xuất</button>

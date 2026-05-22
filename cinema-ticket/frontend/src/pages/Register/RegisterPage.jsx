@@ -42,7 +42,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await userApi.create({
+      await userApi.register({
         username: form.username,
         password: form.password,
         fullName: form.fullName,

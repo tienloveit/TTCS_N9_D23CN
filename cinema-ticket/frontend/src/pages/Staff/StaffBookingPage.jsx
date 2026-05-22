@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
@@ -27,6 +26,97 @@ const formatDateTime = (value) =>
     })
     : '';
 
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+const buildPrintDocument = (booking) => {
+  const seatCodes = booking.seatCodes || (booking.tickets || []).map((ticket) => ticket.seatCode);
+  const foods = booking.foods || [];
+  const foodRows = foods.length
+    ? foods
+        .map(
+          (food) => `
+            <tr>
+              <td>${escapeHtml(food.foodName)}</td>
+              <td>${escapeHtml(food.quantity)}</td>
+              <td>${formatCurrency(food.subtotal)}</td>
+            </tr>
+          `
+        )
+        .join('')
+    : '<tr><td colspan="3">Không có đồ ăn kèm</td></tr>';
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(booking.bookingCode || 'Hoa don')}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; margin: 0; color: #111827; }
+          .ticket { width: 80mm; padding: 14px; }
+          .brand { text-align: center; border-bottom: 1px dashed #9ca3af; padding-bottom: 10px; margin-bottom: 10px; }
+          .brand h1 { font-size: 18px; margin: 0 0 4px; }
+          .brand p, .muted { color: #6b7280; font-size: 12px; margin: 0; }
+          .row { display: flex; justify-content: space-between; gap: 12px; margin: 7px 0; font-size: 13px; }
+          .row strong { text-align: right; }
+          .section { border-top: 1px dashed #9ca3af; margin-top: 10px; padding-top: 10px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          td, th { padding: 5px 0; border-bottom: 1px solid #e5e7eb; text-align: left; }
+          td:last-child, th:last-child { text-align: right; }
+          .total { font-size: 18px; font-weight: 800; text-align: right; margin-top: 10px; }
+          .code { font-family: monospace; font-size: 13px; text-align: center; margin-top: 12px; }
+          @media print {
+            @page { size: 80mm auto; margin: 0; }
+            body { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ticket">
+          <div class="brand">
+            <h1>MoviePTIT</h1>
+            <p>Vé xem phim / Hóa đơn tại quầy</p>
+          </div>
+
+          <div class="row"><span>Mã đơn</span><strong>${escapeHtml(booking.bookingCode)}</strong></div>
+          <div class="row"><span>Phim</span><strong>${escapeHtml(booking.movieName)}</strong></div>
+          <div class="row"><span>Suất chiếu</span><strong>${formatDateTime(booking.showtimeStart)}</strong></div>
+          <div class="row"><span>Phòng</span><strong>${escapeHtml(booking.roomName || '')}</strong></div>
+          <div class="row"><span>Ghế</span><strong>${escapeHtml(seatCodes.join(', '))}</strong></div>
+          <div class="row"><span>Thanh toán</span><strong>${escapeHtml(booking.paymentMethod || 'CASH')}</strong></div>
+
+          <div class="section">
+            <table>
+              <thead>
+                <tr><th>Món</th><th>SL</th><th>Tiền</th></tr>
+              </thead>
+              <tbody>${foodRows}</tbody>
+            </table>
+          </div>
+
+          ${booking.discountAmount > 0 ? `<div class="row section"><span>Giảm giá</span><strong>${formatCurrency(booking.discountAmount)}</strong></div>` : ''}
+          <div class="total">${formatCurrency(booking.totalAmount)}</div>
+          <div class="code">${escapeHtml(booking.bookingCode)}</div>
+          <p class="muted" style="text-align:center;margin-top:10px">Vui lòng giữ vé để check-in.</p>
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            setTimeout(() => window.close(), 300);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+};
+
 export default function StaffBookingPage() {
   const navigate = useNavigate();
   const [showtimes, setShowtimes] = useState([]);
@@ -51,6 +141,9 @@ export default function StaffBookingPage() {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoError, setPromoError] = useState('');
   const [validatingPromo, setValidatingPromo] = useState(false);
+  const [availablePromos, setAvailablePromos] = useState([]);
+  const [showPromos, setShowPromos] = useState(false);
+  const [loadingPromos, setLoadingPromos] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -376,6 +469,21 @@ export default function StaffBookingPage() {
     }
   };
 
+  const handleShowPromos = async () => {
+    setShowPromos(!showPromos);
+    if (availablePromos.length === 0 && !showPromos) {
+      setLoadingPromos(true);
+      try {
+        const res = await promotionApi.getAvailable();
+        setAvailablePromos(res.data.result || []);
+      } catch (err) {
+        console.error('Failed to fetch promotions', err);
+      } finally {
+        setLoadingPromos(false);
+      }
+    }
+  };
+
   const toggleSeat = (ticket) => {
     const status = ticket.displayStatus || ticket.ticketStatus;
     if (status !== 'AVAILABLE') return;
@@ -452,6 +560,18 @@ export default function StaffBookingPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePrintLastBooking = () => {
+    if (!lastBooking) return;
+    const printWindow = window.open('', '_blank', 'width=420,height=720');
+    if (!printWindow) {
+      toast.error('Trình duyệt đang chặn cửa sổ in');
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(buildPrintDocument(lastBooking));
+    printWindow.document.close();
   };
 
   if (loading) return <div className="loading"><div className="spinner" /></div>;
@@ -719,6 +839,9 @@ export default function StaffBookingPage() {
               <div className="food-select-grid">
                 {foods.map((food) => {
                   const quantity = selectedFoods[food.id] || 0;
+                  const stockLimited = food.stockQuantity != null;
+                  const stockLeft = stockLimited ? Number(food.stockQuantity) - quantity : null;
+                  const cannotAdd = stockLimited && stockLeft <= 0;
 
                   return (
                     <div
@@ -737,6 +860,11 @@ export default function StaffBookingPage() {
                         <h3>{food.name}</h3>
                         {food.description && <p>{food.description}</p>}
                         <strong>{formatCurrency(food.price)}</strong>
+                        {stockLimited && (
+                          <p style={{ color: stockLeft <= 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: 700 }}>
+                            Còn {Math.max(stockLeft, 0)}
+                          </p>
+                        )}
                       </div>
 
                       <div className="food-stepper">
@@ -752,7 +880,7 @@ export default function StaffBookingPage() {
                         <button
                           type="button"
                           onClick={() => updateFoodQuantity(food.id, 1)}
-                          disabled={submitting}
+                          disabled={submitting || cannotAdd}
                           aria-label={`Tăng ${food.name}`}
                         >
                           +
@@ -804,7 +932,12 @@ export default function StaffBookingPage() {
 
                 {/* Mã khuyến mãi — hiện với cả CASH và CARD */}
                 <div style={{ marginTop: 16 }}>
-                    <span className="form-label">Mã khuyến mãi</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="form-label" style={{ margin: 0 }}>Mã khuyến mãi</span>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
+                        {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                       <input
                         type="text"
@@ -824,6 +957,34 @@ export default function StaffBookingPage() {
                         {validatingPromo ? '...' : 'Áp dụng'}
                       </button>
                     </div>
+                    {showPromos && (
+                      <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
+                        {loadingPromos ? (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
+                        ) : availablePromos.length === 0 ? (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {availablePromos.map(promo => (
+                              <div key={promo.id} 
+                                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                                 onClick={() => {
+                                   setPromoCode(promo.code);
+                                   setShowPromos(false);
+                                 }}>
+                                <div>
+                                  <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {promo.description || `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {promoError && (
                       <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>
                     )}
@@ -880,7 +1041,14 @@ export default function StaffBookingPage() {
             </div>
           )}
 
-          <div style={{ marginTop: 32, textAlign: 'center' }}>
+          <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handlePrintLastBooking}
+            >
+              In vé / hóa đơn
+            </button>
             <button
               type="button"
               className="btn"

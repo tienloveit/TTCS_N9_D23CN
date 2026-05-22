@@ -36,6 +36,16 @@ public class UserController {
     return apiResponse;
   }
 
+  @PostMapping({"/users", "/user"})
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ApiResponse<UserResponse> createUserByAdmin(
+      @RequestBody @Valid CreateUserRequest createUserRequest) {
+    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setMessage("User has been created successfully!");
+    apiResponse.setResult(userService.createUserByAdmin(createUserRequest));
+    return apiResponse;
+  }
+
   @GetMapping("/users")
   public ApiResponse<PageResponse<List<UserResponse>>> searchUsers(
       @RequestParam(defaultValue = "1") int page,
@@ -78,7 +88,7 @@ public class UserController {
   }
 
   @PutMapping("/users/{id}/status")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<UserResponse> updateUserStatus(
       @PathVariable Long id, @RequestParam com.ltweb.backend.enums.UserStatus status) {
     ApiResponse<UserResponse> apiResponse = new ApiResponse<>();

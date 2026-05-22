@@ -1,6 +1,7 @@
 package com.ltweb.backend.controller;
 
 import com.ltweb.backend.dto.request.CreateBookingRequest;
+import com.ltweb.backend.dto.request.ProcessRefundRequest;
 import com.ltweb.backend.dto.request.StaffBookingRequest;
 import com.ltweb.backend.dto.request.UpdateBookingRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,6 +39,7 @@ public class BookingController {
   }
 
   @PostMapping("/staff")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   public ApiResponse<BookingResponse> createStaffBooking(
       @RequestBody @Valid StaffBookingRequest request) {
     ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
@@ -46,9 +49,18 @@ public class BookingController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   public ApiResponse<List<BookingResponse>> getAllBookings() {
     ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
     apiResponse.setResult(bookingService.getAllBookings());
+    return apiResponse;
+  }
+
+  @GetMapping("/refunds")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ApiResponse<List<BookingResponse>> getRefundBookings() {
+    ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.getRefundBookings());
     return apiResponse;
   }
 
@@ -74,6 +86,7 @@ public class BookingController {
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   public ApiResponse<BookingResponse> updateBooking(
       @PathVariable("id") Long id, @RequestBody @Valid UpdateBookingRequest request) {
     ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
@@ -97,6 +110,38 @@ public class BookingController {
     ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
     apiResponse.setResult(bookingService.applyPromotion(id, code));
     apiResponse.setMessage(code != null && !code.isBlank() ? "Promotion applied!" : "Promotion removed!");
+    return apiResponse;
+  }
+
+  @PostMapping("/{id}/refund-request")
+  public ApiResponse<BookingResponse> requestRefund(
+      @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+    String reason = body.getOrDefault("reason", "");
+    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.requestRefund(id, reason));
+    apiResponse.setMessage("Refund request submitted successfully!");
+    return apiResponse;
+  }
+
+  @PostMapping("/{id}/refund-process")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ApiResponse<BookingResponse> processRefund(
+      @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
+    boolean approved = Boolean.TRUE.equals(body.get("approved"));
+    String note = body.get("note") == null ? null : String.valueOf(body.get("note"));
+    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.processRefund(id, approved, note));
+    apiResponse.setMessage(approved ? "Refund approved!" : "Refund rejected!");
+    return apiResponse;
+  }
+
+  @PostMapping("/{id}/refund-decision")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ApiResponse<BookingResponse> decideRefund(
+      @PathVariable("id") Long id, @RequestBody @Valid ProcessRefundRequest request) {
+    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.processRefund(id, request.getApproved(), request.getNote()));
+    apiResponse.setMessage(request.getApproved() ? "Refund approved!" : "Refund rejected!");
     return apiResponse;
   }
 }

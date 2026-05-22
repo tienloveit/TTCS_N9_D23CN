@@ -6,6 +6,8 @@ import com.ltweb.backend.dto.response.RoomResponse;
 import com.ltweb.backend.entity.Branch;
 import com.ltweb.backend.entity.Room;
 import com.ltweb.backend.entity.Seat;
+import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.enums.RoomStatus;
 import com.ltweb.backend.enums.SeatType;
 import com.ltweb.backend.exception.AppException;
@@ -15,9 +17,13 @@ import com.ltweb.backend.repository.BranchRepository;
 import com.ltweb.backend.repository.RoomRepository;
 import com.ltweb.backend.repository.SeatRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
+import com.ltweb.backend.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,10 +34,12 @@ public class RoomService {
   private final BranchRepository branchRepository;
   private final SeatRepository seatRepository;
   private final ShowtimeRepository showtimeRepository;
+  private final UserRepository userRepository;
   private final RoomMapper roomMapper;
 
   @Transactional
   public RoomResponse createRoom(CreateRoomRequest request) {
+    requireBranchAccess(request.getBranchId());
     Branch branch = getBranch(request.getBranchId());
 
     Room room = roomMapper.toRoomEntity(request);
@@ -44,23 +52,30 @@ public class RoomService {
   }
 
   public List<RoomResponse> getAllRooms(Long branchId, RoomStatus status) {
+    User user = getCurrentUser();
+    if (user.getRole() == UserRole.MANAGER) {
+      branchId = requireManagedBranch(user);
+    }
     List<Room> room = roomRepository.findByBranchIdAndStatus(branchId, status);
     return room.stream().map(roomMapper::toRoomResponse).toList();
   }
 
   public RoomResponse getRoomById(Long roomId) {
     Room room = getRoom(roomId);
+    requireBranchAccess(room.getBranch().getBranchId());
     return roomMapper.toRoomResponse(room);
   }
 
   @Transactional
   public RoomResponse updateRoom(Long roomId, UpdateRoomRequest request) {
     Room room = getRoom(roomId);
+    requireBranchAccess(room.getBranch().getBranchId());
 
     Integer oldCapacity = room.getSeatCapacity();
     roomMapper.updateRoom(room, request);
 
     if (request.getBranchId() != null) {
+      requireBranchAccess(request.getBranchId());
       Branch branch = getBranch(request.getBranchId());
       room.setBranch(branch);
     }
@@ -83,6 +98,7 @@ public class RoomService {
 
   public void deleteRoom(Long roomId) {
     Room room = getRoom(roomId);
+    requireBranchAccess(room.getBranch().getBranchId());
     roomRepository.delete(room);
   }
 
@@ -141,5 +157,30 @@ public class RoomService {
     return branchRepository
         .findById(branchId)
         .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+  }
+
+  private void requireBranchAccess(Long branchId) {
+    User user = getCurrentUser();
+    if (user.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (user.getRole() == UserRole.MANAGER
+        && Objects.equals(requireManagedBranch(user), branchId)) {
+      return;
+    }
+    throw new AccessDeniedException("Branch access denied");
+  }
+
+  private Long requireManagedBranch(User user) {
+    if (user.getBranchId() == null) {
+      throw new AccessDeniedException("Manager is not assigned to a branch");
+    }
+    return user.getBranchId();
+  }
+
+  private User getCurrentUser() {
+    return userRepository
+        .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
   }
 }

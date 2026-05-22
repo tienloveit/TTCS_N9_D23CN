@@ -39,6 +39,7 @@ public enum ErrorCode {
 
   // Room Management
   ROOM_NOT_FOUND(400, "Room does not exist", HttpStatus.BAD_REQUEST),
+  ROOM_NOT_AVAILABLE(400, "Room is not available for scheduling", HttpStatus.BAD_REQUEST),
   ROOM_HAS_SHOWTIMES(
       400,
       "Cannot change room structure because it has scheduled showtimes",
@@ -59,6 +60,7 @@ public enum ErrorCode {
 
   // Food Management
   FOOD_NOT_FOUND(400, "Food does not exist", HttpStatus.BAD_REQUEST),
+  FOOD_OUT_OF_STOCK(400, "One or more food items are out of stock", HttpStatus.BAD_REQUEST),
 
   // Showtime Management
   SHOWTIME_NOT_FOUND(400, "Showtime does not exist", HttpStatus.BAD_REQUEST),
@@ -97,6 +99,11 @@ public enum ErrorCode {
       400, "Your membership tier does not meet the requirement", HttpStatus.BAD_REQUEST),
   PROMOTION_MIN_ORDER(
       400, "Order amount does not meet minimum requirement for this promotion", HttpStatus.BAD_REQUEST),
+
+  // Refund Management
+  BOOKING_CANNOT_REFUND(400, "This booking cannot be refunded", HttpStatus.BAD_REQUEST),
+  BOOKING_ALREADY_REFUNDED(400, "This booking has already been refunded", HttpStatus.BAD_REQUEST),
+  REFUND_WINDOW_EXPIRED(400, "Refund request window has expired (24 hours after payment)", HttpStatus.BAD_REQUEST),
 
   // Database
   DATA_INTEGRITY_VIOLATION(400, "Database constraint violated", HttpStatus.BAD_REQUEST);

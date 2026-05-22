@@ -27,7 +27,7 @@ public class RoomController {
   private final RoomService roomService;
 
   @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<RoomResponse> createRoom(@RequestBody @Valid CreateRoomRequest request) {
     ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Create room successfully!");
@@ -36,7 +36,7 @@ public class RoomController {
   }
 
   @GetMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<List<RoomResponse>> getAllRooms(
       @RequestParam(value = "branchId", required = false) Long branchId,
       @RequestParam(value = "status", required = false) RoomStatus status) {
@@ -46,7 +46,7 @@ public class RoomController {
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<RoomResponse> getRoomById(@PathVariable("id") Long id) {
     ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
     apiResponse.setResult(roomService.getRoomById(id));
@@ -54,7 +54,7 @@ public class RoomController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<RoomResponse> updateRoom(
       @PathVariable("id") Long id, @RequestBody @Valid UpdateRoomRequest request) {
     ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
@@ -64,7 +64,7 @@ public class RoomController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> deleteRoom(@PathVariable("id") Long id) {
     ApiResponse<String> apiResponse = new ApiResponse<>();
     roomService.deleteRoom(id);

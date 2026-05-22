@@ -40,6 +40,12 @@ public class Food {
 
   private String imageUrl;
 
+  private Long branchId;
+
+  private Integer stockQuantity;
+
+  @Builder.Default private Integer lowStockThreshold = 5;
+
   @Builder.Default private Boolean active = true;
 
   @Column(name = "created_at", updatable = false)

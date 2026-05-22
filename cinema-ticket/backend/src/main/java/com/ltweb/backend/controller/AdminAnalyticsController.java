@@ -19,7 +19,7 @@ public class AdminAnalyticsController {
   private final AdminAnalyticsService adminAnalyticsService;
 
   @GetMapping("/dashboard")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<AdminAnalyticsResponse> getDashboard(
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate from,

@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { bookingApi } from '../../api';
+import { useAuth } from '../../context/useAuth';
 
 const BookingManagement = () => {
+  const { isAdmin, isManager } = useAuth();
+  const canProcessRefund = isAdmin || isManager;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [processingRefund, setProcessingRefund] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -24,6 +28,27 @@ const BookingManagement = () => {
     fetchBookings();
   }, []);
 
+  const handleProcessRefund = async (bookingId, approved) => {
+    if (!canProcessRefund) return;
+    const action = approved ? 'duyệt hoàn tiền' : 'từ chối hoàn tiền';
+    if (!window.confirm(`Bạn có chắc muốn ${action} cho đơn này?`)) return;
+    setProcessingRefund(bookingId);
+    try {
+      const res = await bookingApi.processRefund(bookingId, approved);
+      const updated = res.data.result;
+      setBookings(prev =>
+        prev.map(b => b.bookingId === bookingId
+          ? { ...b, status: updated.status, paymentStatus: updated.paymentStatus, refundedAt: updated.refundedAt, refundAmount: updated.refundAmount }
+          : b
+        )
+      );
+    } catch (err) {
+      alert('Lỗi: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setProcessingRefund(null);
+    }
+  };
+
   const filtered = bookings.filter((b) => {
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
     const matchSearch =
@@ -39,17 +64,20 @@ const BookingManagement = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
-  const STATUS_OPTIONS = ['ALL', 'PENDING', 'COMPLETED', 'CANCELLED'];
+  const STATUS_OPTIONS = ['ALL', 'PENDING', 'COMPLETED', 'REFUND_REQUESTED', 'REFUNDED', 'CANCELLED'];
   const STATUS_MAP = {
     PENDING: { label: 'Chờ TT', className: 'status--pending' },
     COMPLETED: { label: 'Thành công', className: 'status--active' },
     CANCELLED: { label: 'Đã huỷ', className: 'status--inactive' },
+    REFUND_REQUESTED: { label: 'Chờ hoàn tiền', className: 'status--pending' },
+    REFUNDED: { label: 'Đã hoàn tiền', className: 'status--inactive' },
   };
   const PAYMENT_MAP = {
     PENDING: { label: 'Chờ TT', className: 'status--pending' },
     PAID: { label: 'Đã TT', className: 'status--active' },
     CANCELLED: { label: 'Đã huỷ', className: 'status--inactive' },
     FAILED: { label: 'Thất bại', className: 'status--inactive' },
+    REFUNDED: { label: 'Đã hoàn', className: 'status--inactive' },
   };
 
   if (loading) return <div className="loading"><div className="spinner" /></div>;
@@ -58,6 +86,8 @@ const BookingManagement = () => {
     .filter(b => b.paymentStatus === 'PAID')
     .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
+  const refundRequestCount = bookings.filter(b => b.status === 'REFUND_REQUESTED').length;
+
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -65,6 +95,11 @@ const BookingManagement = () => {
           <h1 className="page-title">Quản lý Đơn đặt vé</h1>
           <p className="page-subtitle">
             <strong>{bookings.length}</strong> đơn · Doanh thu: <strong style={{ color: 'var(--green)' }}>{formatCurrency(totalRevenue)}</strong>
+            {refundRequestCount > 0 && (
+              <span style={{ marginLeft: 12, color: '#f97316', fontWeight: 700 }}>
+                · 🔔 {refundRequestCount} yêu cầu hoàn tiền
+              </span>
+            )}
           </p>
         </div>
       </div>
@@ -88,7 +123,7 @@ const BookingManagement = () => {
           </div>
 
           {/* Status filter tabs */}
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-input)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-input)', padding: '4px', borderRadius: 'var(--radius-md)', flexWrap: 'wrap' }}>
             {STATUS_OPTIONS.map((s) => (
               <button
                 key={s}
@@ -106,6 +141,11 @@ const BookingManagement = () => {
                 }}
               >
                 {s === 'ALL' ? 'Tất cả' : STATUS_MAP[s]?.label || s}
+                {s === 'REFUND_REQUESTED' && refundRequestCount > 0 && (
+                  <span style={{ marginLeft: 4, background: '#f97316', color: '#fff', borderRadius: '50%', padding: '1px 6px', fontSize: '0.72rem', fontWeight: 800 }}>
+                    {refundRequestCount}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -127,12 +167,13 @@ const BookingManagement = () => {
               <th>Tổng tiền</th>
               <th>Đơn hàng</th>
               <th>Thanh toán</th>
+              {canProcessRefund && <th>Thao tác</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <td colSpan={canProcessRefund ? 10 : 9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   {searchTerm || statusFilter !== 'ALL' ? 'Không tìm thấy đơn hàng nào' : 'Chưa có đơn hàng'}
                 </td>
               </tr>
@@ -178,8 +219,45 @@ const BookingManagement = () => {
                     </td>
                     <td style={{ fontSize: '0.85rem' }}>{formatDate(b.createdAt)}</td>
                     <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(b.totalAmount)}</td>
-                    <td><span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span></td>
+                    <td>
+                      <span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span>
+                      {b.status === 'REFUND_REQUESTED' && b.refundReason && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2, maxWidth: 120, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          title={b.refundReason}>
+                          Lý do: {b.refundReason}
+                        </div>
+                      )}
+                    </td>
                     <td><span className={`status-badge ${payInfo.className}`}>{payInfo.label}</span></td>
+                    {canProcessRefund && (
+                      <td>
+                        {b.status === 'REFUND_REQUESTED' && (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                              onClick={() => handleProcessRefund(b.bookingId, true)}
+                              disabled={processingRefund === b.bookingId}
+                            >
+                              ✓ Duyệt
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                              onClick={() => handleProcessRefund(b.bookingId, false)}
+                              disabled={processingRefund === b.bookingId}
+                            >
+                              ✕ Từ chối
+                            </button>
+                          </div>
+                        )}
+                        {b.status === 'REFUNDED' && (
+                          <span style={{ fontSize: '0.78rem', color: '#8b5cf6', fontWeight: 600 }}>
+                            Đã hoàn {formatCurrency(b.refundAmount)}
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })

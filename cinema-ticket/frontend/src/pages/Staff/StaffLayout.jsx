@@ -11,6 +11,14 @@ const Icons = {
       <path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" />
     </svg>
   ),
+  Dashboard: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
   Scan: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7V5a2 2 0 0 1 2-2h2" />
@@ -28,6 +36,20 @@ const Icons = {
       <line x1="3" y1="6" x2="3.01" y2="6" />
       <line x1="3" y1="12" x2="3.01" y2="12" />
       <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  ),
+  Calendar: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4" />
+      <path d="M8 2v4" />
+      <path d="M3 10h18" />
+    </svg>
+  ),
+  Bell: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
   ),
   Logout: () => (
@@ -55,19 +77,25 @@ const Icons = {
 };
 
 const TITLE_MAP = {
-  '/staff': 'Đặt vé tại quầy',
+  '/staff': 'Tổng quan ca làm',
+  '/staff/dashboard': 'Tổng quan ca làm',
+  '/staff/schedules': 'Lịch trực của tôi',
   '/staff/booking': 'Đặt vé tại quầy',
   '/staff/check-in': 'Check-in vé',
   '/staff/bookings': 'Đơn đặt vé',
+  '/staff/notifications': 'Thông báo',
 };
 
 const NAV_SECTIONS = [
   {
     label: 'Nghiệp vụ',
     items: [
+      { path: '/staff/dashboard', label: 'Tổng quan ca', Icon: Icons.Dashboard },
+      { path: '/staff/schedules', label: 'Lịch trực', Icon: Icons.Calendar },
       { path: '/staff/booking', label: 'Đặt vé tại quầy', Icon: Icons.Ticket },
       { path: '/staff/check-in', label: 'Check-in', Icon: Icons.Scan },
       { path: '/staff/bookings', label: 'Đơn đặt vé', Icon: Icons.List },
+      { path: '/staff/notifications', label: 'Thông báo', Icon: Icons.Bell },
     ],
   },
 ];
