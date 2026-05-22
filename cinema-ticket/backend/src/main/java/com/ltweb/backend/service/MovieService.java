@@ -11,6 +11,7 @@ import com.ltweb.backend.entity.Movie;
 import com.ltweb.backend.entity.MovieRating;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.MovieStatus;
+import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.MovieMapper;
@@ -19,10 +20,12 @@ import com.ltweb.backend.repository.GenreRepository;
 import com.ltweb.backend.repository.MovieRatingRepository;
 import com.ltweb.backend.repository.MovieRepository;
 import com.ltweb.backend.repository.UserRepository;
+import com.ltweb.backend.repository.ShowtimeRepository;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ public class MovieService {
   private final DirectorRepository directorRepository;
   private final MovieRatingRepository movieRatingRepository;
   private final UserRepository userRepository;
+  private final ShowtimeRepository showtimeRepository;
   private final MovieMapper movieMapper;
 
   @Transactional
@@ -60,6 +64,7 @@ public class MovieService {
     } else {
       movies = movieRepository.findAll();
     }
+    movies = scopeMoviesForManager(movies);
     return movies.stream().map(this::toMovieResponse).toList();
   }
 
@@ -171,6 +176,40 @@ public class MovieService {
     return userRepository
         .findByUsername(username)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+  }
+
+  private List<Movie> scopeMoviesForManager(List<Movie> movies) {
+    User currentUser = getCurrentUserOrNull();
+    if (currentUser == null || currentUser.getRole() != UserRole.MANAGER) {
+      return movies;
+    }
+    Long branchId = currentUser.getBranchId();
+    if (branchId == null) {
+      return List.of();
+    }
+    Set<Long> movieIdsInBranch =
+        showtimeRepository.findAll().stream()
+            .filter(
+                showtime ->
+                    showtime.getRoom() != null
+                        && showtime.getRoom().getBranch() != null
+                        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId)
+                        && showtime.getMovie() != null)
+            .map(showtime -> showtime.getMovie().getId())
+            .collect(Collectors.toSet());
+    return movies.stream().filter(movie -> movieIdsInBranch.contains(movie.getId())).toList();
+  }
+
+  private User getCurrentUserOrNull() {
+    var authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()) {
+      return null;
+    }
+    String username = authentication.getName();
+    if (username == null || "anonymousUser".equals(username)) {
+      return null;
+    }
+    return userRepository.findByUsername(username).orElse(null);
   }
 
   private MovieResponse toMovieResponse(Movie movie) {

@@ -5,6 +5,7 @@ import com.ltweb.backend.dto.response.PromotionResponse;
 import com.ltweb.backend.entity.Promotion;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.MembershipTier;
+import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.repository.BranchRepository;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class PromotionService {
       throw new AppException(ErrorCode.VALIDATION_ERROR);
     }
 
+    Long branchId = resolveWritableBranchId(request.getBranchId());
     Promotion promotion =
         Promotion.builder()
             .code(request.getCode().trim().toUpperCase())
@@ -45,7 +48,7 @@ public class PromotionService {
                     ? request.getMinOrderAmount()
                     : BigDecimal.ZERO)
             .minMembershipTier(request.getMinMembershipTier())
-            .branchId(request.getBranchId())
+            .branchId(branchId)
             .startDate(request.getStartDate())
             .endDate(request.getEndDate())
             .usageLimit(request.getUsageLimit())
@@ -58,7 +61,14 @@ public class PromotionService {
 
   @Transactional(readOnly = true)
   public List<PromotionResponse> getAllPromotions() {
-    return promotionRepository.findAll().stream().map(this::toResponse).toList();
+    User user = getUserCurrent();
+    Long managerBranchId = user.getRole() == UserRole.MANAGER ? requireManagedBranch(user) : null;
+    return promotionRepository.findAll().stream()
+        .filter(p -> user.getRole() != UserRole.MANAGER
+            || p.getBranchId() == null
+            || Objects.equals(p.getBranchId(), managerBranchId))
+        .map(this::toResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -88,6 +98,7 @@ public class PromotionService {
         promotionRepository
             .findById(id)
             .orElseThrow(() -> new AppException(ErrorCode.PROMOTION_NOT_FOUND));
+    requirePromotionAccess(promotion);
 
     promotion.setDescription(request.getDescription());
     promotion.setDiscountPercent(request.getDiscountPercent());
@@ -95,7 +106,7 @@ public class PromotionService {
     promotion.setMinOrderAmount(
         request.getMinOrderAmount() != null ? request.getMinOrderAmount() : BigDecimal.ZERO);
     promotion.setMinMembershipTier(request.getMinMembershipTier());
-    promotion.setBranchId(request.getBranchId());
+    promotion.setBranchId(resolveWritableBranchId(request.getBranchId()));
     promotion.setStartDate(request.getStartDate());
     promotion.setEndDate(request.getEndDate());
     promotion.setUsageLimit(request.getUsageLimit());
@@ -113,6 +124,7 @@ public class PromotionService {
         promotionRepository
             .findById(id)
             .orElseThrow(() -> new AppException(ErrorCode.PROMOTION_NOT_FOUND));
+    requirePromotionAccess(promotion);
     promotion.setActive(false);
     promotionRepository.save(promotion);
   }
@@ -233,5 +245,32 @@ public class PromotionService {
     return userRepository
         .findByUsername(username)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+  }
+
+  private Long resolveWritableBranchId(Long requestedBranchId) {
+    User user = getUserCurrent();
+    if (user.getRole() == UserRole.MANAGER) {
+      return requireManagedBranch(user);
+    }
+    return requestedBranchId;
+  }
+
+  private void requirePromotionAccess(Promotion promotion) {
+    User user = getUserCurrent();
+    if (user.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (user.getRole() == UserRole.MANAGER
+        && Objects.equals(promotion.getBranchId(), requireManagedBranch(user))) {
+      return;
+    }
+    throw new AccessDeniedException("Promotion access denied");
+  }
+
+  private Long requireManagedBranch(User user) {
+    if (user.getBranchId() == null) {
+      throw new AccessDeniedException("Manager is not assigned to a branch");
+    }
+    return user.getBranchId();
   }
 }

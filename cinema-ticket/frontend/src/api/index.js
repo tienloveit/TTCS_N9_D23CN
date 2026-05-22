@@ -18,7 +18,8 @@ export const authApi = {
 
 // ==================== USER ====================
 export const userApi = {
-  create: (data) => axiosClient.post('/sign-up', data, { skipAuth: true }),
+  register: (data) => axiosClient.post('/sign-up', data, { skipAuth: true }),
+  create: (data) => axiosClient.post('/users', data),
   getAll: (params) => axiosClient.get('/users', { params: { size: 1000, ...params } }),
   getById: (id) => axiosClient.get(`/users/${id}`),
   update: (id, data) => axiosClient.put(`/users/${id}`, data),
@@ -77,6 +78,12 @@ export const roomApi = {
   delete: (id) => axiosClient.delete(`/room/${id}`),
 };
 
+// ==================== SEAT ====================
+export const seatApi = {
+  getByRoom: (roomId) => axiosClient.get(`/seat/room/${roomId}`),
+  updateLayout: (roomId, data) => axiosClient.put(`/seat/room/${roomId}/layout`, data),
+};
+
 // ==================== SHOWTIME ====================
 export const showtimeApi = {
   getAll: () => axiosClient.get('/showtime'),
@@ -113,6 +120,8 @@ export const foodApi = {
   getById: (id) => axiosClient.get(`/food/${id}`),
   create: (data) => axiosClient.post('/food', data),
   update: (id, data) => axiosClient.put(`/food/${id}`, data),
+  adjustStock: (id, data) => axiosClient.post(`/food/${id}/stock-adjustments`, data),
+  getStockTransactions: (params) => axiosClient.get('/food/stock-transactions', { params }),
   delete: (id) => axiosClient.delete(`/food/${id}`),
 };
 
@@ -130,13 +139,55 @@ export const bookingApi = {
     axiosClient.patch(`/booking/${id}/apply-promotion`, { promotionCode }),
   requestRefund: (id, reason) =>
     axiosClient.post(`/booking/${id}/refund-request`, { reason }),
-  processRefund: (id, approved) =>
-    axiosClient.post(`/booking/${id}/refund-process`, { approved }),
+  processRefund: (id, approved, note) =>
+    axiosClient.post(`/booking/${id}/refund-process`, { approved, note }),
+  getRefunds: () => axiosClient.get('/booking/refunds'),
 };
 
 // ==================== ADMIN ANALYTICS ====================
 export const analyticsApi = {
   getDashboard: (params) => axiosClient.get('/admin/analytics/dashboard', { params }),
+};
+
+export const operationsApi = {
+  getDailyReport: (params) => axiosClient.get('/admin/operations/daily-report', { params }),
+};
+
+export const reportsApi = {
+  getRevenue: (params) => axiosClient.get('/admin/reports/revenue', { params }),
+  exportRevenue: (params) =>
+    axiosClient.get('/admin/reports/export/revenue.xlsx', { params, responseType: 'blob' }),
+  exportOperations: (params) =>
+    axiosClient.get('/admin/reports/export/operations.xlsx', { params, responseType: 'blob' }),
+};
+
+export const notificationApi = {
+  getAll: () => axiosClient.get('/notifications'),
+  getUnreadCount: () => axiosClient.get('/notifications/unread-count'),
+  markRead: (id) => axiosClient.post(`/notifications/${id}/read`),
+};
+
+export const auditLogApi = {
+  getRecent: () => axiosClient.get('/admin/audit-logs'),
+};
+
+export const systemSettingsApi = {
+  getAll: () => axiosClient.get('/admin/settings'),
+  update: (settingKey, data) => axiosClient.put(`/admin/settings/${settingKey}`, data),
+};
+
+// ==================== STAFF OPERATIONS ====================
+export const staffApi = {
+  getDashboard: () => axiosClient.get('/staff/dashboard'),
+  getActiveShift: () => axiosClient.get('/staff/shift/active'),
+  getShiftHistory: () => axiosClient.get('/staff/shift/history'),
+  getMySchedules: () => axiosClient.get('/staff/schedules/my'),
+  getStaffDetail: (staffId) => axiosClient.get(`/staff/manager/staff/${staffId}/detail`),
+  createSchedule: (data) => axiosClient.post('/staff/manager/schedules', data),
+  updateSchedule: (scheduleId, data) => axiosClient.put(`/staff/manager/schedules/${scheduleId}`, data),
+  cancelSchedule: (scheduleId) => axiosClient.delete(`/staff/manager/schedules/${scheduleId}`),
+  openShift: (data) => axiosClient.post('/staff/shift/open', data),
+  closeShift: (data) => axiosClient.post('/staff/shift/close', data),
 };
 
 // ==================== PROMOTION ====================

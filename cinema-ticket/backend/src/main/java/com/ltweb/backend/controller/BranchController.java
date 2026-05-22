@@ -42,7 +42,7 @@ public class BranchController {
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<BranchResponse> getBranchById(@PathVariable("id") Long id) {
     ApiResponse<BranchResponse> apiResponse = new ApiResponse<>();
     apiResponse.setResult(branchService.getBranchById(id));
@@ -50,7 +50,7 @@ public class BranchController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<BranchResponse> updateBranch(
       @PathVariable("id") Long id, @RequestBody @Valid UpdateBranchRequest updateBranchRequest) {
     ApiResponse<BranchResponse> apiResponse = new ApiResponse<>();
@@ -60,6 +60,7 @@ public class BranchController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<String> deleteBranch(@PathVariable("id") Long id) {
     ApiResponse<String> apiResponse = new ApiResponse<>();
     branchService.deleteBranch(id);

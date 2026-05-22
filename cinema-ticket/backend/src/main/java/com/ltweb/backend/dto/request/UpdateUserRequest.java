@@ -18,5 +18,6 @@ public class UpdateUserRequest {
   private String gender;
   private String email;
   private UserRole role;
+  private Long branchId;
   private String status;
 }

@@ -33,7 +33,7 @@ public class PromotionController {
   private final UserRepository userRepository;
 
   @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<PromotionResponse> create(
       @RequestBody @Valid CreatePromotionRequest request) {
     ApiResponse<PromotionResponse> apiResponse = new ApiResponse<>();
@@ -43,7 +43,7 @@ public class PromotionController {
   }
 
   @GetMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<List<PromotionResponse>> getAll() {
     ApiResponse<List<PromotionResponse>> apiResponse = new ApiResponse<>();
     apiResponse.setResult(promotionService.getAllPromotions());
@@ -59,7 +59,7 @@ public class PromotionController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<PromotionResponse> update(
       @PathVariable("id") Long id, @RequestBody @Valid CreatePromotionRequest request) {
     ApiResponse<PromotionResponse> apiResponse = new ApiResponse<>();
@@ -69,7 +69,7 @@ public class PromotionController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> delete(@PathVariable("id") Long id) {
     promotionService.deletePromotion(id);
     ApiResponse<String> apiResponse = new ApiResponse<>();

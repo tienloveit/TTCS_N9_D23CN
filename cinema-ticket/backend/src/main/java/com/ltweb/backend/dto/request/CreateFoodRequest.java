@@ -27,5 +27,11 @@ public class CreateFoodRequest {
 
   private String imageUrl;
 
+  private Long branchId;
+
+  private Integer stockQuantity;
+
+  private Integer lowStockThreshold;
+
   private Boolean active;
 }

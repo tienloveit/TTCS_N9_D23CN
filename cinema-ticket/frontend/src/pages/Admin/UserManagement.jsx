@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { userApi } from '../../api';
+import { branchApi, staffApi, userApi } from '../../api';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/useAuth';
 
 /* ─── Icons ─────────────────────────────────────────────── */
 const LockIcon = () => (
@@ -37,8 +38,16 @@ const PlusIcon = () => (
   </svg>
 );
 
+const DetailIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
 /* ─── Constants ──────────────────────────────────────────── */
 const ROLE_OPTIONS = [
+  { value: 'MANAGER', label: 'Manager' },
   { value: 'USER',  label: 'Khách hàng' },
   { value: 'STAFF', label: 'Nhân viên'  },
   { value: 'ADMIN', label: 'Admin'       },
@@ -59,11 +68,14 @@ const EMPTY_FORM = {
   gender:      'MALE',
   dob:         '',
   role:        'USER',
+  branchId:    '',
 };
 
 /* ─── Component ──────────────────────────────────────────── */
 const UserManagement = () => {
+  const { isManager, user } = useAuth();
   const [users,       setUsers]       = useState([]);
+  const [branches,    setBranches]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [searchTerm,  setSearchTerm]  = useState('');
 
@@ -72,6 +84,18 @@ const UserManagement = () => {
   const [editingUser,  setEditingUser]  = useState(null);   // null = add mode
   const [formData,     setFormData]     = useState(EMPTY_FORM);
   const [submitting,   setSubmitting]   = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [staffDetail, setStaffDetail] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    startTime: '',
+    endTime: '',
+    position: 'Quầy vé',
+    note: '',
+  });
+  const roleOptions = isManager
+    ? ROLE_OPTIONS.filter((option) => option.value === 'STAFF')
+    : ROLE_OPTIONS;
 
   /* ── Fetch ── */
   const fetchUsers = async () => {
@@ -87,12 +111,25 @@ const UserManagement = () => {
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchBranches = async () => {
+    try {
+      const res = await branchApi.getAll();
+      setBranches(res.data.result || []);
+    } catch {
+      setBranches([]);
+    }
+  };
+
+  useEffect(() => { fetchUsers(); fetchBranches(); }, []);
 
   /* ── Modal helpers ── */
   const openAddModal = () => {
     setEditingUser(null);
-    setFormData(EMPTY_FORM);
+    setFormData({
+      ...EMPTY_FORM,
+      role: isManager ? 'STAFF' : EMPTY_FORM.role,
+      branchId: isManager ? String(user?.branchId || '') : '',
+    });
     setIsModalOpen(true);
   };
 
@@ -107,6 +144,7 @@ const UserManagement = () => {
       gender:      user.gender      || 'MALE',
       dob:         user.dob         || '',
       role:        user.role        || 'CUSTOMER',
+      branchId:    user.branchId ? String(user.branchId) : '',
     });
     setIsModalOpen(true);
   };
@@ -119,6 +157,62 @@ const UserManagement = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const openDetailModal = async (staff) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setStaffDetail(null);
+    try {
+      const res = await staffApi.getStaffDetail(staff.id);
+      setStaffDetail(res.data.result);
+    } catch (err) {
+      toast.error('Không tải được chi tiết nhân viên: ' + (err.response?.data?.message || err.message));
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const reloadStaffDetail = async () => {
+    if (!staffDetail?.staff?.id) return;
+    const res = await staffApi.getStaffDetail(staffDetail.staff.id);
+    setStaffDetail(res.data.result);
+  };
+
+  const handleScheduleInputChange = (event) => {
+    const { name, value } = event.target;
+    setScheduleForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCreateSchedule = async (event) => {
+    event.preventDefault();
+    if (!staffDetail?.staff?.id) return;
+    try {
+      await staffApi.createSchedule({
+        staffId: staffDetail.staff.id,
+        startTime: scheduleForm.startTime,
+        endTime: scheduleForm.endTime,
+        position: scheduleForm.position,
+        note: scheduleForm.note,
+      });
+      toast.success('Đã lên lịch trực');
+      setScheduleForm({ startTime: '', endTime: '', position: 'Quầy vé', note: '' });
+      await reloadStaffDetail();
+    } catch (err) {
+      toast.error('Không tạo được lịch trực: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleCancelSchedule = async (scheduleId) => {
+    if (!window.confirm('Huỷ lịch trực này?')) return;
+    try {
+      await staffApi.cancelSchedule(scheduleId);
+      toast.success('Đã huỷ lịch trực');
+      await reloadStaffDetail();
+    } catch (err) {
+      toast.error('Không huỷ được lịch trực: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   /* ── Submit (Add / Edit) ── */
@@ -134,7 +228,8 @@ const UserManagement = () => {
           phoneNumber: formData.phoneNumber,
           gender:      formData.gender,
           dob:         formData.dob || null,
-          role:        formData.role,
+          role:        isManager ? 'STAFF' : formData.role,
+          branchId:    ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.update(editingUser.id, payload);
         toast.success(`Cập nhật người dùng "${formData.username}" thành công!`);
@@ -148,6 +243,8 @@ const UserManagement = () => {
           password:    formData.password,
           gender:      formData.gender,
           dob:         formData.dob || null,
+          role:        isManager ? 'STAFF' : formData.role,
+          branchId:    ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.create(payload);
         toast.success(`Tạo tài khoản "${formData.username}" thành công!`);
@@ -191,9 +288,25 @@ const UserManagement = () => {
 
   /* ── Helpers ── */
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
+  const formatDateTime = (d) => d ? new Date(d).toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }) : '—';
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(amount || 0));
+  const formatDuration = (minutes) => {
+    if (minutes == null) return '—';
+    const hours = Math.floor(Number(minutes) / 60);
+    const mins = Number(minutes) % 60;
+    return hours > 0 ? `${hours} giờ ${mins} phút` : `${mins} phút`;
+  };
 
   const getRoleInfo = (role) => {
     const map = {
+      MANAGER: { label: 'Manager', color: 'rgba(139,92,246,0.1)', text: 'var(--purple)' },
       ADMIN: { label: 'Admin',      color: 'rgba(229,9,20,0.1)',    text: 'var(--accent)' },
       STAFF: { label: 'Nhân viên',  color: 'rgba(59,130,246,0.1)', text: 'var(--blue)'   },
       USER:  { label: 'Khách hàng', color: 'rgba(16,185,129,0.1)', text: 'var(--green)'  },
@@ -304,6 +417,15 @@ const UserManagement = () => {
                     <td>{formatDate(user.createdAt)}</td>
                     <td>
                       <div className="action-btns">
+                        {user.role === 'STAFF' && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Xem lịch làm việc / lịch trực"
+                            onClick={() => openDetailModal(user)}
+                          >
+                            <DetailIcon />
+                          </button>
+                        )}
                         {/* Sửa */}
                         <button
                           className="btn btn-ghost btn-sm"
@@ -343,6 +465,179 @@ const UserManagement = () => {
       </div>
 
       {/* ─── Modal Thêm / Sửa ─── */}
+      {detailOpen && (
+        <div className="modal-overlay" onClick={() => setDetailOpen(false)}>
+          <div
+            className="modal-content admin-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '1100px', maxHeight: '92vh', overflowY: 'auto', padding: 28 }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 4 }}>Chi tiết nhân viên</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  Xem lịch trực được phân công và lịch sử ca làm tại chi nhánh.
+                </p>
+              </div>
+              <button onClick={() => setDetailOpen(false)} className="modal-close" style={{ position: 'static', fontSize: '1.5rem' }}>×</button>
+            </div>
+
+            {detailLoading ? (
+              <div className="loading"><div className="spinner" /></div>
+            ) : staffDetail ? (
+              <div style={{ display: 'grid', gap: 20 }}>
+                <div className="analytics-list-row">
+                  <div className="analytics-list-main">
+                    <strong>{staffDetail.staff?.fullName || staffDetail.staff?.username}</strong>
+                    <span>{staffDetail.staff?.email || '—'} · {staffDetail.staff?.phoneNumber || '—'}</span>
+                  </div>
+                  <div className="analytics-list-value">
+                    <strong>{staffDetail.staff?.username}</strong>
+                    <span>Chi nhánh #{staffDetail.staff?.branchId || '—'}</span>
+                  </div>
+                </div>
+
+                <section className="analytics-card" style={{ padding: 18 }}>
+                  <div className="analytics-card-header">
+                    <h3>Lên lịch trực</h3>
+                    <span>{staffDetail.staff?.username}</span>
+                  </div>
+                  <form onSubmit={handleCreateSchedule} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                    <label>
+                      <span className="form-label">Bắt đầu</span>
+                      <input type="datetime-local" className="input" name="startTime" value={scheduleForm.startTime} onChange={handleScheduleInputChange} required />
+                    </label>
+                    <label>
+                      <span className="form-label">Kết thúc</span>
+                      <input type="datetime-local" className="input" name="endTime" value={scheduleForm.endTime} onChange={handleScheduleInputChange} required />
+                    </label>
+                    <label>
+                      <span className="form-label">Vị trí</span>
+                      <input className="input" name="position" value={scheduleForm.position} onChange={handleScheduleInputChange} placeholder="Quầy vé" />
+                    </label>
+                    <label>
+                      <span className="form-label">Ghi chú</span>
+                      <input className="input" name="note" value={scheduleForm.note} onChange={handleScheduleInputChange} placeholder="Ví dụ: ca tối" />
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <button className="btn btn-primary" style={{ width: '100%' }}>Thêm lịch</button>
+                    </div>
+                  </form>
+                </section>
+
+                <div className="admin-table-card">
+                  <div className="table-header">
+                    <h3>Lịch trực</h3>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{staffDetail.schedules?.length || 0} lịch</span>
+                  </div>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Thời gian</th>
+                        <th>Vị trí</th>
+                        <th>Thời lượng</th>
+                        <th>Trạng thái</th>
+                        <th>Chấm công</th>
+                        <th>Người tạo</th>
+                        <th>Ghi chú</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(staffDetail.schedules || []).length === 0 ? (
+                        <tr><td colSpan="8" style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)' }}>Chưa có lịch trực.</td></tr>
+                      ) : (
+                        staffDetail.schedules.map((schedule) => (
+                          <tr key={schedule.scheduleId}>
+                            <td>
+                              <div style={{ display: 'grid', gap: 3 }}>
+                                <span>{formatDateTime(schedule.startTime)}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Đến {formatDateTime(schedule.endTime)}</span>
+                              </div>
+                            </td>
+                            <td>{schedule.position || '—'}</td>
+                            <td>{formatDuration(schedule.durationMinutes)}</td>
+                            <td>
+                              <span className={`status-badge ${schedule.status === 'CANCELLED' ? 'status--inactive' : schedule.status === 'COMPLETED' ? 'status--active' : 'status--pending'}`}>
+                                {schedule.status === 'CANCELLED' ? 'Đã huỷ' : schedule.status === 'COMPLETED' ? 'Hoàn tất' : 'Đã lên lịch'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-badge ${schedule.attendanceStatus === 'MISSED' || schedule.attendanceStatus === 'IRREGULAR' ? 'status--pending' : schedule.attendanceStatus === 'ON_TIME' ? 'status--active' : 'status--inactive'}`}>
+                                {schedule.attendanceStatus || 'SCHEDULED'}
+                              </span>
+                              {(schedule.lateMinutes > 0 || schedule.earlyLeaveMinutes > 0) && (
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem', marginTop: 4 }}>
+                                  Muộn {schedule.lateMinutes || 0}p, sớm {schedule.earlyLeaveMinutes || 0}p
+                                </div>
+                              )}
+                            </td>
+                            <td>{schedule.createdByUsername || '—'}</td>
+                            <td>{schedule.note || '—'}</td>
+                            <td>{schedule.status !== 'CANCELLED' && <button className="btn btn-ghost btn-sm" style={{ color: '#ef4444' }} onClick={() => handleCancelSchedule(schedule.scheduleId)}>Huỷ</button>}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="admin-table-card">
+                  <div className="table-header">
+                    <h3>Lịch sử ca làm</h3>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{staffDetail.shiftHistory?.length || 0} ca</span>
+                  </div>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Ca</th>
+                        <th>Thời gian</th>
+                        <th>Doanh thu</th>
+                        <th>Tiền mặt</th>
+                        <th>Chênh lệch</th>
+                        <th>Đơn/Vé</th>
+                        <th>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(staffDetail.shiftHistory || []).length === 0 ? (
+                        <tr><td colSpan="7" style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)' }}>Chưa có ca làm.</td></tr>
+                      ) : (
+                        staffDetail.shiftHistory.map((shift) => (
+                          <tr key={shift.shiftId}>
+                            <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>#{shift.shiftId}</td>
+                            <td>
+                              <div style={{ display: 'grid', gap: 3 }}>
+                                <span>{formatDateTime(shift.openedAt)}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{shift.closedAt ? `Đóng: ${formatDateTime(shift.closedAt)}` : 'Đang mở'}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{formatDuration(shift.durationMinutes)}</span>
+                              </div>
+                            </td>
+                            <td>{formatCurrency(shift.totalSales)}</td>
+                            <td>
+                              <div style={{ display: 'grid', gap: 3 }}>
+                                <span>Đầu: {formatCurrency(shift.openingCash)}</span>
+                                <span>Dự kiến: {formatCurrency(shift.expectedCash)}</span>
+                                {shift.closingCash != null && <span>Thực: {formatCurrency(shift.closingCash)}</span>}
+                              </div>
+                            </td>
+                            <td style={{ fontWeight: 700, color: Number(shift.cashDifference || 0) === 0 ? 'var(--text-primary)' : '#ef4444' }}>{shift.cashDifference == null ? '—' : formatCurrency(shift.cashDifference)}</td>
+                            <td>{shift.paidBookings} đơn · {shift.ticketsSold} vé</td>
+                            <td>
+                              <span className={`status-badge ${shift.status === 'OPEN' ? 'status--pending' : 'status--active'}`}>{shift.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       {isModalOpen && (
         <div className="modal-overlay" onClick={closeModal}>
           <div
@@ -445,7 +740,7 @@ const UserManagement = () => {
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Vai trò</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  {ROLE_OPTIONS.map(o => (
+                  {roleOptions.map(o => (
                     <label key={o.value} style={{
                       display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                       flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-md)',
@@ -469,6 +764,26 @@ const UserManagement = () => {
                   ))}
                 </div>
               </div>
+
+              {['MANAGER', 'STAFF'].includes(formData.role) && (
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="form-label">Chi nhánh quản lý</label>
+                  <select
+                    name="branchId"
+                    className="input"
+                    value={formData.branchId}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">-- Chọn chi nhánh --</option>
+                    {branches.map((branch) => (
+                      <option key={branch.branchId} value={branch.branchId}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Buttons */}
               <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '8px' }}>

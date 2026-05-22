@@ -15,6 +15,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
   @EntityGraph(
       attributePaths = {
         "user",
+        "staffUser",
         "showtime",
         "showtime.movie",
         "showtime.room",
@@ -27,6 +28,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
   @EntityGraph(
       attributePaths = {
         "user",
+        "staffUser",
         "showtime",
         "showtime.movie",
         "showtime.room",
@@ -41,6 +43,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
   @EntityGraph(
       attributePaths = {
         "user",
+        "staffUser",
         "showtime",
         "showtime.movie",
         "showtime.room",

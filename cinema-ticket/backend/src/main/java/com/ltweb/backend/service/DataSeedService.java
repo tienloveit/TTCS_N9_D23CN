@@ -72,7 +72,7 @@ public class DataSeedService {
 
   @Transactional
   public void seedInitialData() {
-    ensureUserRoleColumnSupportsStaff();
+    ensureUserRoleColumnSupportsAllRoles();
     seedUsers();
     seedSeatTypePrices();
     seedFoods();
@@ -86,11 +86,52 @@ public class DataSeedService {
     log.info("Demo seed data has been checked and refreshed.");
   }
 
-  private void ensureUserRoleColumnSupportsStaff() {
+  private void ensureUserRoleColumnSupportsAllRoles() {
     try {
       jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN role VARCHAR(20)");
     } catch (Exception ex) {
       log.debug("Could not adjust users.role column: {}", ex.getMessage());
+    }
+
+    try {
+      List<String> roleCheckConstraints =
+          jdbcTemplate.queryForList(
+              """
+              SELECT tc.CONSTRAINT_NAME
+              FROM information_schema.TABLE_CONSTRAINTS tc
+              JOIN information_schema.CHECK_CONSTRAINTS cc
+                ON tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA
+               AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+              WHERE tc.TABLE_SCHEMA = DATABASE()
+                AND tc.TABLE_NAME = 'users'
+                AND tc.CONSTRAINT_TYPE = 'CHECK'
+                AND LOWER(cc.CHECK_CLAUSE) LIKE '%role%'
+              """,
+              String.class);
+
+      for (String constraintName : roleCheckConstraints) {
+        try {
+          jdbcTemplate.execute("ALTER TABLE users DROP CHECK " + constraintName);
+        } catch (Exception ex) {
+          log.debug(
+              "Could not drop users.role check constraint {}: {}",
+              constraintName,
+              ex.getMessage());
+        }
+      }
+    } catch (Exception ex) {
+      log.debug("Could not inspect users.role check constraints: {}", ex.getMessage());
+    }
+
+    try {
+      jdbcTemplate.execute(
+          """
+          ALTER TABLE users
+          ADD CONSTRAINT users_role_chk
+          CHECK (role IS NULL OR role IN ('ADMIN', 'MANAGER', 'STAFF', 'USER'))
+          """);
+    } catch (Exception ex) {
+      log.debug("Could not add users.role check constraint: {}", ex.getMessage());
     }
   }
 
@@ -109,6 +150,13 @@ public class DataSeedService {
         "Minh Anh - Quầy vé",
         "staff@movieptit.vn",
         "0901000001");
+    upsertUser(
+        "manager",
+        "manager@123",
+        UserRole.MANAGER,
+        "MoviePTIT Manager",
+        "manager@movieptit.vn",
+        "0901000002");
     upsertUser(
         "user",
         "user@123",
@@ -500,8 +548,26 @@ public class DataSeedService {
 
     List<Room> rooms = new ArrayList<>();
     branches.values().forEach(branch -> rooms.addAll(seedRooms(branch)));
+    branches.values().stream().findFirst().ifPresent(this::assignDemoStaffToBranch);
     rooms.forEach(this::seedSeats);
     return rooms;
+  }
+
+  private void assignDemoStaffToBranch(Branch branch) {
+    userRepository
+        .findByUsername("manager")
+        .ifPresent(
+            manager -> {
+              manager.setBranchId(branch.getBranchId());
+              userRepository.save(manager);
+            });
+    userRepository
+        .findByUsername("staff")
+        .ifPresent(
+            staff -> {
+              staff.setBranchId(branch.getBranchId());
+              userRepository.save(staff);
+            });
   }
 
   private List<Room> seedRooms(Branch branch) {

@@ -39,6 +39,7 @@ public enum ErrorCode {
 
   // Room Management
   ROOM_NOT_FOUND(400, "Room does not exist", HttpStatus.BAD_REQUEST),
+  ROOM_NOT_AVAILABLE(400, "Room is not available for scheduling", HttpStatus.BAD_REQUEST),
   ROOM_HAS_SHOWTIMES(
       400,
       "Cannot change room structure because it has scheduled showtimes",
@@ -59,6 +60,7 @@ public enum ErrorCode {
 
   // Food Management
   FOOD_NOT_FOUND(400, "Food does not exist", HttpStatus.BAD_REQUEST),
+  FOOD_OUT_OF_STOCK(400, "One or more food items are out of stock", HttpStatus.BAD_REQUEST),
 
   // Showtime Management
   SHOWTIME_NOT_FOUND(400, "Showtime does not exist", HttpStatus.BAD_REQUEST),

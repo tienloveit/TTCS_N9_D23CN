@@ -24,4 +24,5 @@ public class CreateUserRequest {
   private String gender;
   private LocalDate dob;
   private UserRole role;  // optional – admin can assign role at creation
+  private Long branchId;
 }

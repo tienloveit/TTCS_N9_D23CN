@@ -27,8 +27,17 @@ import UserManagement from './pages/Admin/UserManagement';
 import BookingManagement from './pages/Admin/BookingManagement';
 import FoodManagement from './pages/Admin/FoodManagement';
 import PromotionManagement from './pages/Admin/PromotionManagement';
+import OperationsReportPage from './pages/Admin/OperationsReportPage';
+import AuditLogPage from './pages/Admin/AuditLogPage';
+import SystemSettingsPage from './pages/Admin/SystemSettingsPage';
+import RefundManagementPage from './pages/Admin/RefundManagementPage';
+import InventoryManagementPage from './pages/Admin/InventoryManagementPage';
+import RevenueReportPage from './pages/Admin/RevenueReportPage';
+import NotificationPage from './pages/Admin/NotificationPage';
 import StaffLayout from './pages/Staff/StaffLayout';
+import StaffDashboardPage from './pages/Staff/StaffDashboardPage';
 import StaffBookingPage from './pages/Staff/StaffBookingPage';
+import StaffSchedulePage from './pages/Staff/StaffSchedulePage';
 import CheckInPage from './pages/Staff/CheckInPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 
@@ -65,10 +74,18 @@ const PrivateRoute = ({ children }) => {
 };
 
 const AdminRoute = ({ children }) => {
-  const { user, loading, isAdmin, isStaff } = useAuth();
+  const { user, loading, isAdmin, isManager, isStaff } = useAuth();
   if (loading) return <div className="loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to={isStaff ? '/staff' : '/'} replace />;
+  if (!isAdmin && !isManager) return <Navigate to={isStaff ? '/staff' : '/'} replace />;
+  return children;
+};
+
+const AdminOnlyRoute = ({ children }) => {
+  const { user, loading, isAdmin, isManager } = useAuth();
+  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to={isManager ? '/manager' : '/'} replace />;
   return children;
 };
 
@@ -105,10 +122,13 @@ const AnimatedRoutes = () => {
             </StaffRoute>
           }
         >
-          <Route index element={<Navigate to="/staff/booking" replace />} />
+          <Route index element={<Navigate to="/staff/dashboard" replace />} />
+          <Route path="dashboard" element={<PageWrapper><StaffDashboardPage /></PageWrapper>} />
+          <Route path="schedules" element={<PageWrapper><StaffSchedulePage /></PageWrapper>} />
           <Route path="booking" element={<PageWrapper><StaffBookingPage /></PageWrapper>} />
           <Route path="check-in" element={<PageWrapper><CheckInPage /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
+          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
         </Route>
 
         {/* Admin routes */}
@@ -120,14 +140,47 @@ const AnimatedRoutes = () => {
             </AdminRoute>
           }
         >
+          <Route index element={<AdminOnlyRoute><PageWrapper><AdminDashboard /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="movies" element={<AdminOnlyRoute><PageWrapper><MovieManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="showtimes" element={<AdminOnlyRoute><PageWrapper><ShowtimeManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
+          <Route path="users" element={<AdminOnlyRoute><PageWrapper><UserManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="bookings" element={<AdminOnlyRoute><PageWrapper><BookingManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="foods" element={<AdminOnlyRoute><PageWrapper><FoodManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="promotions" element={<AdminOnlyRoute><PageWrapper><PromotionManagement /></PageWrapper></AdminOnlyRoute>} />
+          <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
+          <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
+          <Route path="inventory" element={<PageWrapper><InventoryManagementPage /></PageWrapper>} />
+          <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
+          <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
+          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
+          <Route path="settings" element={<AdminOnlyRoute><PageWrapper><SystemSettingsPage /></PageWrapper></AdminOnlyRoute>} />
+        </Route>
+
+        {/* Manager routes */}
+        <Route
+          path="/manager"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
           <Route index element={<PageWrapper><AdminDashboard /></PageWrapper>} />
-          <Route path="movies" element={<PageWrapper><MovieManagement /></PageWrapper>} />
+          <Route path="movies" element={<Navigate to="/manager" replace />} />
           <Route path="showtimes" element={<PageWrapper><ShowtimeManagement /></PageWrapper>} />
           <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
           <Route path="users" element={<PageWrapper><UserManagement /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
           <Route path="foods" element={<PageWrapper><FoodManagement /></PageWrapper>} />
           <Route path="promotions" element={<PageWrapper><PromotionManagement /></PageWrapper>} />
+          <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
+          <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
+          <Route path="inventory" element={<PageWrapper><InventoryManagementPage /></PageWrapper>} />
+          <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
+          <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
+          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
+          <Route path="settings" element={<Navigate to="/manager" replace />} />
         </Route>
 
         {/* Main pages */}

@@ -23,6 +23,8 @@ const FoodManagement = () => {
     description: '',
     price: '',
     imageUrl: '',
+    stockQuantity: '',
+    lowStockThreshold: 5,
     active: true,
   });
 
@@ -50,6 +52,8 @@ const FoodManagement = () => {
         description: food.description || '',
         price: food.price || '',
         imageUrl: food.imageUrl || '',
+        stockQuantity: food.stockQuantity ?? '',
+        lowStockThreshold: food.lowStockThreshold ?? 5,
         active: food.active !== false,
       });
     } else {
@@ -59,6 +63,8 @@ const FoodManagement = () => {
         description: '',
         price: '',
         imageUrl: '',
+        stockQuantity: '',
+        lowStockThreshold: 5,
         active: true,
       });
     }
@@ -84,6 +90,8 @@ const FoodManagement = () => {
       const payload = {
         ...formData,
         price: formData.price ? Number(formData.price) : 0,
+        stockQuantity: formData.stockQuantity === '' ? null : Number(formData.stockQuantity),
+        lowStockThreshold: Number(formData.lowStockThreshold || 0),
       };
 
       if (editingFood) {
@@ -198,6 +206,7 @@ const FoodManagement = () => {
               <th>Sản phẩm</th>
               <th>Mô tả</th>
               <th>Giá</th>
+              <th>Tồn kho</th>
               <th>Trạng thái</th>
               <th style={{ width: '120px' }}>Hành động</th>
             </tr>
@@ -206,7 +215,7 @@ const FoodManagement = () => {
             {filteredFoods.length === 0 ? (
               <tr>
                 <td
-                  colSpan="6"
+                  colSpan="7"
                   style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}
                 >
                   {searchTerm
@@ -252,6 +261,27 @@ const FoodManagement = () => {
                   </td>
                   <td style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     {formatCurrency(food.price)}
+                  </td>
+                  <td>
+                    {food.stockQuantity == null ? (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Không theo dõi</span>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 4 }}>
+                        <strong style={{ color: food.inStock ? 'var(--text-primary)' : '#ef4444' }}>
+                          {food.stockQuantity}
+                        </strong>
+                        {food.lowStock && food.inStock && (
+                          <span style={{ color: '#f59e0b', fontSize: '0.76rem', fontWeight: 700 }}>
+                            Sắp hết
+                          </span>
+                        )}
+                        {!food.inStock && (
+                          <span style={{ color: '#ef4444', fontSize: '0.76rem', fontWeight: 700 }}>
+                            Hết hàng
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <span
@@ -385,6 +415,34 @@ const FoodManagement = () => {
                   min="0"
                   placeholder="VD: 89000"
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Tồn kho</label>
+                  <input
+                    type="number"
+                    name="stockQuantity"
+                    className="input"
+                    value={formData.stockQuantity}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="Để trống nếu không theo dõi"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Ngưỡng cảnh báo</label>
+                  <input
+                    type="number"
+                    name="lowStockThreshold"
+                    className="input"
+                    value={formData.lowStockThreshold}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="5"
+                  />
+                </div>
               </div>
 
               <div className="form-group">

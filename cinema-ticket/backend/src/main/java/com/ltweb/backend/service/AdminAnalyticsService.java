@@ -6,11 +6,14 @@ import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
+import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
+import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
+import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -23,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +41,7 @@ public class AdminAnalyticsService {
 
   private final BookingRepository bookingRepository;
   private final ShowtimeRepository showtimeRepository;
+  private final UserRepository userRepository;
   private final BookingMapper bookingMapper;
 
   @Transactional(readOnly = true)
@@ -51,8 +57,15 @@ public class AdminAnalyticsService {
     LocalDateTime startInclusive = rangeFrom.atStartOfDay();
     LocalDateTime endExclusive = rangeTo.plusDays(1).atStartOfDay();
 
-    List<Booking> bookings = bookingRepository.findAll();
-    List<Showtime> showtimes = showtimeRepository.findAll();
+    User currentUser = getCurrentUser();
+    Long scopedBranchId =
+        currentUser.getRole() == UserRole.MANAGER ? requireManagedBranch(currentUser) : null;
+    List<Booking> bookings = bookingRepository.findAll().stream()
+        .filter(booking -> scopedBranchId == null || isBookingInBranch(booking, scopedBranchId))
+        .toList();
+    List<Showtime> showtimes = showtimeRepository.findAll().stream()
+        .filter(showtime -> scopedBranchId == null || isShowtimeInBranch(showtime, scopedBranchId))
+        .toList();
     List<Booking> paidBookings = bookings.stream().filter(this::isPaidBooking).toList();
     List<Booking> paidBookingsByPaymentDate =
         paidBookings.stream()
@@ -269,6 +282,30 @@ public class AdminAnalyticsService {
   private boolean isPaidBooking(Booking booking) {
     return booking.getStatus() == BookingStatus.COMPLETED
         || booking.getPaymentStatus() == PaymentStatus.PAID;
+  }
+
+  private boolean isBookingInBranch(Booking booking, Long branchId) {
+    return booking.getShowtime() != null && isShowtimeInBranch(booking.getShowtime(), branchId);
+  }
+
+  private boolean isShowtimeInBranch(Showtime showtime, Long branchId) {
+    return showtime.getRoom() != null
+        && showtime.getRoom().getBranch() != null
+        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
+  }
+
+  private Long requireManagedBranch(User user) {
+    if (user.getBranchId() == null) {
+      throw new AccessDeniedException("Manager is not assigned to a branch");
+    }
+    return user.getBranchId();
+  }
+
+  private User getCurrentUser() {
+    return userRepository
+        .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
+        .orElseThrow(() -> new com.ltweb.backend.exception.AppException(
+            com.ltweb.backend.exception.ErrorCode.USER_NOT_FOUND));
   }
 
   private LocalDateTime getPaymentDate(Booking booking) {

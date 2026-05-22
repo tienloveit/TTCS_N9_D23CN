@@ -8,6 +8,7 @@ const decodeUserFromToken = (token) => {
     return {
       username: payload.sub,
       role: payload.role,
+      branchId: payload.branchId,
     };
   } catch {
     return null;
@@ -62,8 +63,10 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'ADMIN';
+  const isManager = user?.role === 'MANAGER';
   const isStaff = user?.role === 'STAFF';
   const isStaffOrAdmin = isAdmin || isStaff;
+  const isAdminOrManager = isAdmin || isManager;
 
   return (
     <AuthContext.Provider
@@ -75,8 +78,10 @@ export function AuthProvider({ children }) {
         loading,
         isAuthenticated,
         isAdmin,
+        isManager,
         isStaff,
         isStaffOrAdmin,
+        isAdminOrManager,
       }}
     >
       {children}

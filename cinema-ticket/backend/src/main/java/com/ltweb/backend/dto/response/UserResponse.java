@@ -23,6 +23,7 @@ public class UserResponse {
   private String email;
   private String phoneNumber;
   private UserRole role;
+  private Long branchId;
   private LocalDate dob;
   private String gender;
   private UserStatus status;

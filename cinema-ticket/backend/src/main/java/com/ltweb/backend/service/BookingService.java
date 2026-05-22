@@ -12,6 +12,7 @@ import com.ltweb.backend.entity.Food;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
@@ -57,6 +58,8 @@ import org.springframework.util.StringUtils;
 public class BookingService {
 
   private static final int MAX_TICKETS_PER_MOVIE = 8;
+  private static final int DEFAULT_BOOKING_HOLD_MINUTES = 6;
+  private static final int DEFAULT_REFUND_WINDOW_HOURS = 24;
 
   private final BookingRepository bookingRepository;
   private final ShowtimeRepository showtimeRepository;
@@ -69,6 +72,10 @@ public class BookingService {
   private final PasswordEncoder passwordEncoder;
   private final ApplicationEventPublisher eventPublisher;
   private final PromotionService promotionService;
+  private final FoodInventoryService foodInventoryService;
+  private final AuditLogService auditLogService;
+  private final SystemSettingService systemSettingService;
+  private final NotificationService notificationService;
 
   @Transactional
   public BookingResponse createBooking(CreateBookingRequest request) {
@@ -77,7 +84,7 @@ public class BookingService {
 
     // Kiểm tra số lượng vé trong 1 lần giao dịch không vượt quá 8
     int requestedCount = request.getSeatIds().size();
-    if (requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (requestedCount > getMaxTicketsPerTransaction()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_TRANSACTION);
     }
 
@@ -89,7 +96,7 @@ public class BookingService {
     // Kiểm tra tổng số vé người dùng đã đặt cho bộ phim này không vượt quá 8
     Long movieId = showtime.getMovie().getId();
     int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(user.getId(), movieId);
-    if (alreadyBooked + requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (alreadyBooked + requestedCount > getMaxTicketsPerMovie()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
     }
 
@@ -109,7 +116,10 @@ public class BookingService {
 
     boolean hasUnavailableTicket =
         selectedTickets.stream()
-            .anyMatch(ticket -> ticket.getTicketStatus() != TicketStatus.AVAILABLE);
+            .anyMatch(
+                ticket ->
+                    ticket.getTicketStatus() != TicketStatus.AVAILABLE
+                        || Boolean.FALSE.equals(ticket.getSeat().getIsActive()));
 
     if (hasUnavailableTicket) {
       throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
@@ -117,14 +127,17 @@ public class BookingService {
 
     Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
     List<Food> selectedFoods = getSelectedFoods(foodQuantities);
+    requireFoodsAvailableForShowtime(selectedFoods, showtime);
+    foodInventoryService.requireAvailable(selectedFoods, foodQuantities);
     BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
 
     // khoá ghế bằng Redis
     String bookingUserId = String.valueOf(user.getId());
+    int holdMinutes = getBookingHoldMinutes();
     for (Ticket ticket : selectedTickets) {
       String seatKey = getSeatKey(showtime.getId(), ticket.getSeat().getId());
       Boolean locked =
-          redisTemplate.opsForValue().setIfAbsent(seatKey, bookingUserId, 6, TimeUnit.MINUTES);
+          redisTemplate.opsForValue().setIfAbsent(seatKey, bookingUserId, holdMinutes, TimeUnit.MINUTES);
 
       if (Boolean.FALSE.equals(locked)) {
         unlockSeats(showtime.getId(), selectedTickets);
@@ -168,7 +181,7 @@ public class BookingService {
             .status(BookingStatus.PENDING)
             .paymentCreatedAt(LocalDateTime.now())
             .paymentStatus(PaymentStatus.PENDING)
-            .expiresAt(LocalDateTime.now().plusMinutes(6))
+            .expiresAt(LocalDateTime.now().plusMinutes(holdMinutes))
             .build();
     booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
@@ -192,7 +205,7 @@ public class BookingService {
   public BookingResponse createStaffBooking(StaffBookingRequest request) {
     // Kiểm tra số lượng vé trong 1 lần giao dịch không vượt quá 8
     int requestedCount = request.getSeatIds().size();
-    if (requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (requestedCount > getMaxTicketsPerTransaction()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_TRANSACTION);
     }
 
@@ -200,6 +213,8 @@ public class BookingService {
         showtimeRepository
             .findById(request.getShowtimeId())
             .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
+    requireStaffBookingAccess(showtime);
+    User staffUser = getUserCurrent();
 
     Set<Long> uniqueSeatIds = new HashSet<>(request.getSeatIds());
     if (uniqueSeatIds.size() != request.getSeatIds().size()) {
@@ -220,6 +235,7 @@ public class BookingService {
             .anyMatch(
                 ticket ->
                     ticket.getTicketStatus() != TicketStatus.AVAILABLE
+                        || Boolean.FALSE.equals(ticket.getSeat().getIsActive())
                         || hasActiveSeatHold(showtime.getId(), ticket));
     if (hasUnavailableTicket) {
       throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
@@ -227,6 +243,8 @@ public class BookingService {
 
     Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
     List<Food> selectedFoods = getSelectedFoods(foodQuantities);
+    requireFoodsAvailableForShowtime(selectedFoods, showtime);
+    foodInventoryService.requireAvailable(selectedFoods, foodQuantities);
     BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
     BigDecimal ticketTotal =
         selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -236,7 +254,7 @@ public class BookingService {
     // Kiểm tra tổng số vé khách hàng đã đặt cho bộ phim này không vượt quá 8
     Long movieId = showtime.getMovie().getId();
     int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(customer.getId(), movieId);
-    if (alreadyBooked + requestedCount > MAX_TICKETS_PER_MOVIE) {
+    if (alreadyBooked + requestedCount > getMaxTicketsPerMovie()) {
       throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
     }
 
@@ -261,6 +279,7 @@ public class BookingService {
         Booking.builder()
             .bookingCode(generateBookingCode())
             .user(customer)
+            .staffUser(staffUser)
             .showtime(showtime)
             .totalAmount(totalAmount)
             .promotionCode(appliedPromoCode)
@@ -270,11 +289,14 @@ public class BookingService {
             .paymentStatus(request.getPaymentMethod() == PaymentMethod.CARD ? PaymentStatus.PENDING : PaymentStatus.PAID)
             .paymentMethod(request.getPaymentMethod() == null ? PaymentMethod.CASH : request.getPaymentMethod())
             .paidAt(request.getPaymentMethod() == PaymentMethod.CARD ? null : now)
-            .expiresAt(now.plusMinutes(6))
+            .expiresAt(now.plusMinutes(getBookingHoldMinutes()))
             .build();
     booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
     bookingRepository.save(booking);
+    if (request.getPaymentMethod() != PaymentMethod.CARD) {
+      foodInventoryService.deductForBooking(booking);
+    }
 
     selectedTickets.forEach(
         ticket -> {
@@ -296,13 +318,37 @@ public class BookingService {
     }
 
     log.info("Staff booking created with code: {}", booking.getBookingCode());
+    auditLogService.record(
+        AuditAction.STAFF_BOOKING_CREATED,
+        "Booking",
+        booking.getId(),
+        "Staff booking " + booking.getBookingCode() + " created with " + selectedTickets.size() + " tickets");
     return bookingMapper.toBookingResponse(booking);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional(readOnly = true)
   public List<BookingResponse> getAllBookings() {
-    return bookingRepository.findAll().stream().map(bookingMapper::toBookingResponse).toList();
+    return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
+        .map(bookingMapper::toBookingResponse)
+        .toList();
+  }
+
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  @Transactional(readOnly = true)
+  public List<BookingResponse> getRefundBookings() {
+    return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
+        .filter(
+            booking ->
+                booking.getStatus() == BookingStatus.REFUND_REQUESTED
+                    || booking.getStatus() == BookingStatus.REFUNDED)
+        .sorted(
+            java.util.Comparator.comparing(
+                    Booking::getUpdatedAt,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .reversed())
+        .map(bookingMapper::toBookingResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -310,8 +356,12 @@ public class BookingService {
     Booking booking = getBooking(bookingId);
     User user = getUserCurrent();
     boolean isOwner = booking.getUser().getId().equals(user.getId());
-    boolean isStaffOrAdmin = user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.STAFF;
-    if (!isOwner && !isStaffOrAdmin) {
+    boolean isAdmin = user.getRole() == UserRole.ADMIN;
+    boolean isBranchManager =
+        isBranchOperator(user)
+            && user.getBranchId() != null
+            && isBookingInBranch(booking, user.getBranchId());
+    if (!isOwner && !isAdmin && !isBranchManager) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
     return bookingMapper.toBookingResponse(booking);
@@ -343,6 +393,7 @@ public class BookingService {
   @Transactional
   public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
     Booking booking = getBooking(bookingId);
+    requireBookingManagementAccess(booking);
 
     if (request.getStatus() != null) {
       booking.setStatus(request.getStatus());
@@ -356,8 +407,12 @@ public class BookingService {
     Booking booking = getBooking(bookingId);
     User user = getUserCurrent();
     boolean isOwner = booking.getUser().getId().equals(user.getId());
-    boolean isStaffOrAdmin = user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.STAFF;
-    if (!isOwner && !isStaffOrAdmin) {
+    boolean canManageBooking =
+        user.getRole() == UserRole.ADMIN
+            || (user.getRole() == UserRole.STAFF
+                && user.getBranchId() != null
+                && isBookingInBranch(booking, user.getBranchId()));
+    if (!isOwner && !canManageBooking) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
@@ -552,6 +607,79 @@ public class BookingService {
         .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
   }
 
+  private List<Booking> scopeBookingsForBranchOperator(List<Booking> bookings) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return bookings;
+    }
+    if (!isBranchOperator(currentUser)) {
+      return List.of();
+    }
+    Long branchId = currentUser.getBranchId();
+    if (branchId == null) {
+      return List.of();
+    }
+    return bookings.stream().filter(booking -> isBookingInBranch(booking, branchId)).toList();
+  }
+
+  private boolean isBookingInBranch(Booking booking, Long branchId) {
+    return Objects.equals(getBookingBranchId(booking), branchId);
+  }
+
+  private Long getBookingBranchId(Booking booking) {
+    if (booking.getShowtime() == null
+        || booking.getShowtime().getRoom() == null
+        || booking.getShowtime().getRoom().getBranch() == null) {
+      return null;
+    }
+    return booking.getShowtime().getRoom().getBranch().getBranchId();
+  }
+
+  private void requireBookingManagementAccess(Booking booking) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (isBranchOperator(currentUser)
+        && currentUser.getBranchId() != null
+        && isBookingInBranch(booking, currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private void requireRefundManagementAccess(Booking booking) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (currentUser.getRole() == UserRole.MANAGER
+        && currentUser.getBranchId() != null
+        && isBookingInBranch(booking, currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private void requireStaffBookingAccess(Showtime showtime) {
+    User currentUser = getUserCurrent();
+    if (currentUser.getRole() == UserRole.ADMIN) {
+      return;
+    }
+    if (currentUser.getRole() == UserRole.STAFF
+        && currentUser.getBranchId() != null
+        && showtime.getRoom() != null
+        && showtime.getRoom().getBranch() != null
+        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), currentUser.getBranchId())) {
+      return;
+    }
+    throw new AppException(ErrorCode.UNAUTHORIZED);
+  }
+
+  private boolean isBranchOperator(User user) {
+    return user.getRole() == UserRole.STAFF || user.getRole() == UserRole.MANAGER;
+  }
+
   private Map<Long, Integer> getFoodQuantities(List<CreateBookingFoodRequest> foods) {
     if (foods == null || foods.isEmpty()) {
       return Map.of();
@@ -588,6 +716,23 @@ public class BookingService {
     }
 
     return selectedFoods;
+  }
+
+  private void requireFoodsAvailableForShowtime(List<Food> foods, Showtime showtime) {
+    if (foods.isEmpty()) {
+      return;
+    }
+    Long branchId =
+        showtime.getRoom() == null || showtime.getRoom().getBranch() == null
+            ? null
+            : showtime.getRoom().getBranch().getBranchId();
+    boolean hasFoodFromOtherBranch =
+        foods.stream()
+            .anyMatch(
+                food -> food.getBranchId() != null && !Objects.equals(food.getBranchId(), branchId));
+    if (hasFoodFromOtherBranch) {
+      throw new AppException(ErrorCode.FOOD_NOT_FOUND);
+    }
   }
 
   private BigDecimal calculateFoodTotal(
@@ -644,7 +789,6 @@ public class BookingService {
   }
 
   // ===== REFUND =====
-  private static final int REFUND_WINDOW_HOURS = 24;
 
   /**
    * User yêu cầu hoàn tiền.
@@ -676,7 +820,7 @@ public class BookingService {
     if (paidAt == null) {
       throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
     }
-    if (LocalDateTime.now().isAfter(paidAt.plusHours(REFUND_WINDOW_HOURS))) {
+    if (LocalDateTime.now().isAfter(paidAt.plusHours(getRefundWindowHours()))) {
       throw new AppException(ErrorCode.REFUND_WINDOW_EXPIRED);
     }
 
@@ -684,28 +828,43 @@ public class BookingService {
     booking.setRefundReason(reason);
     booking.setRefundAmount(booking.getTotalAmount());
     bookingRepository.save(booking);
+    notificationService.notifyRefundRequest(
+        getBookingBranchId(booking), booking.getId(), booking.getBookingCode());
 
     log.info("Refund requested for booking {}: reason={}", bookingId, reason);
     return bookingMapper.toBookingResponse(booking);
   }
 
   /**
-   * Admin/Staff duyệt hoặc từ chối yêu cầu hoàn tiền.
+   * Admin/Manager duyệt hoặc từ chối yêu cầu hoàn tiền.
    */
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public BookingResponse processRefund(Long bookingId, boolean approved) {
+    return processRefund(bookingId, approved, null);
+  }
+
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  @Transactional
+  public BookingResponse processRefund(Long bookingId, boolean approved, String note) {
     Booking booking = getBooking(bookingId);
+    requireRefundManagementAccess(booking);
+    User processor = getUserCurrent();
 
     if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
       throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
     }
+
+    booking.setRefundProcessNote(trimToNull(note));
+    booking.setRefundProcessedBy(processor);
+    booking.setRefundProcessedAt(LocalDateTime.now());
 
     if (approved) {
       booking.setStatus(BookingStatus.REFUNDED);
       booking.setPaymentStatus(PaymentStatus.REFUNDED);
       booking.setRefundedAt(LocalDateTime.now());
       booking.setRefundAmount(booking.getTotalAmount());
+      foodInventoryService.restoreForBooking(booking);
 
       // Trả ghế về AVAILABLE
       booking
@@ -737,6 +896,11 @@ public class BookingService {
       }
 
       log.info("Refund APPROVED for booking {}", bookingId);
+      auditLogService.record(
+          AuditAction.REFUND_APPROVED,
+          "Booking",
+          bookingId,
+          "Refund approved for booking " + booking.getBookingCode());
     } else {
       // Từ chối → quay lại COMPLETED
       booking.setStatus(BookingStatus.COMPLETED);
@@ -744,10 +908,43 @@ public class BookingService {
       booking.setRefundAmount(BigDecimal.ZERO);
 
       log.info("Refund REJECTED for booking {}", bookingId);
+      auditLogService.record(
+          AuditAction.REFUND_REJECTED,
+          "Booking",
+          bookingId,
+          "Refund rejected for booking " + booking.getBookingCode());
     }
 
     bookingRepository.save(booking);
     return bookingMapper.toBookingResponse(booking);
+  }
+
+  private int getBookingHoldMinutes() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.BOOKING_HOLD_MINUTES, DEFAULT_BOOKING_HOLD_MINUTES));
+  }
+
+  private int getMaxTicketsPerTransaction() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.BOOKING_MAX_TICKETS_PER_TRANSACTION, MAX_TICKETS_PER_MOVIE));
+  }
+
+  private int getMaxTicketsPerMovie() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.BOOKING_MAX_TICKETS_PER_MOVIE, MAX_TICKETS_PER_MOVIE));
+  }
+
+  private int getRefundWindowHours() {
+    return Math.max(
+        1,
+        systemSettingService.getInt(
+            SystemSettingService.REFUND_WINDOW_HOURS, DEFAULT_REFUND_WINDOW_HOURS));
   }
 }
 
