@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { ticketApi } from '../../api';
 
@@ -19,6 +19,29 @@ export default function CheckInPage() {
   const [result, setResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [recentCheckIns, setRecentCheckIns] = useState([]);
+  const codeInputRef = useRef(null);
+  const uploadInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  const addRecentCheckIn = (ticketCode, status) => {
+    const normalizedCode = ticketCode || 'QR_IMAGE';
+    setRecentCheckIns((items) => [
+      {
+        id: `${Date.now()}-${normalizedCode}`,
+        time: new Date().toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        code: normalizedCode,
+        status,
+      },
+      ...items,
+    ].slice(0, 6));
+  };
+
+  const shortenCode = (value) =>
+    value.length > 28 ? `${value.slice(0, 25)}...` : value;
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -31,6 +54,7 @@ export default function CheckInPage() {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
+    event.target.value = '';
   };
 
   const handleSubmit = async (event) => {
@@ -46,9 +70,11 @@ export default function CheckInPage() {
       const res = await ticketApi.checkIn({ code: value });
       setResult(res.data.result);
       setCode('');
+      addRecentCheckIn(value, 'Thành công');
       toast.success('Check-in thành công');
     } catch (err) {
       setResult(null);
+      addRecentCheckIn(value, 'Thất bại');
       toast.error(err.response?.data?.message || 'Check-in thất bại');
     } finally {
       setChecking(false);
@@ -66,11 +92,13 @@ export default function CheckInPage() {
     try {
       const res = await ticketApi.checkInByQRImage(selectedFile);
       setResult(res.data.result);
+      addRecentCheckIn(selectedFile.name, 'Thành công');
       setSelectedFile(null);
       setPreviewUrl(null);
       toast.success('Check-in thành công');
     } catch (err) {
       setResult(null);
+      addRecentCheckIn(selectedFile.name, 'Thất bại');
       toast.error(err.response?.data?.message || 'Check-in thất bại');
     } finally {
       setChecking(false);
@@ -83,93 +111,118 @@ export default function CheckInPage() {
   };
 
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">Check-in vé</h1>
-        <p className="page-subtitle">Quét QR hoặc nhập mã vé để xác nhận khách vào rạp.</p>
-      </div>
+    <div className="checkin-page">
+      <section className="checkin-card">
+        <div className="checkin-actions">
+          <button
+            type="button"
+            className="checkin-action"
+            onClick={() => cameraInputRef.current?.click()}
+          >
+            <span className="checkin-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img">
+                <path d="M4 7.5h3l1.4-2h7.2l1.4 2h3a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z" />
+                <circle cx="12" cy="13.4" r="3.2" />
+              </svg>
+            </span>
+            <strong>Sử dụng Camera để quét</strong>
+          </button>
 
-      <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' }}>
-        {/* Form nhập mã */}
-        <form className="admin-table-card" style={{ padding: 24, display: 'grid', gap: 16 }} onSubmit={handleSubmit}>
-          <h3 style={{ margin: 0 }}>Nhập mã QR</h3>
-          <label>
-            <span className="form-label">Mã QR / mã vé</span>
-            <textarea
-              className="input"
-              rows="4"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="CINEMAHUB|BOOKING=...|TICKET=...|SEAT=..."
-              style={{ resize: 'vertical', minHeight: 110 }}
-              autoFocus
-            />
-          </label>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" disabled={checking}>
-              {checking ? 'Đang check-in...' : 'Check-in'}
-            </button>
-          </div>
-        </form>
+          <button
+            type="button"
+            className="checkin-action"
+            onClick={() => uploadInputRef.current?.click()}
+          >
+            <span className="checkin-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img">
+                <path d="M12 3v12" />
+                <path d="m7 8 5-5 5 5" />
+                <path d="M5 15v3.5A2.5 2.5 0 0 0 7.5 21h9A2.5 2.5 0 0 0 19 18.5V15" />
+              </svg>
+            </span>
+            <strong>Tải ảnh mã QR</strong>
+          </button>
+        </div>
 
-        {/* Form upload ảnh */}
-        <form className="admin-table-card" style={{ padding: 24, display: 'grid', gap: 16 }} onSubmit={handleImageSubmit}>
-          <h3 style={{ margin: 0 }}>Tải ảnh QR code</h3>
-          <label>
-            <span className="form-label">Chọn ảnh QR code</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="input"
-              style={{ padding: '8px' }}
-            />
-          </label>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          className="checkin-hidden-input"
+        />
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="checkin-hidden-input"
+        />
 
-          {previewUrl && (
-            <div style={{ position: 'relative' }}>
-              <img
-                src={previewUrl}
-                alt="QR Preview"
-                style={{
-                  width: '100%',
-                  maxWidth: '300px',
-                  height: 'auto',
-                  border: '2px solid var(--border-color)',
-                  borderRadius: '8px',
-                  display: 'block',
-                  margin: '0 auto'
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleClearImage}
-                className="btn"
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  background: 'rgba(0,0,0,0.6)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  fontSize: '12px'
-                }}
-              >
-                Xóa
-              </button>
+        {previewUrl && (
+          <form className="checkin-preview" onSubmit={handleImageSubmit}>
+            <img src={previewUrl} alt="QR Preview" />
+            <div>
+              <strong>{selectedFile?.name}</strong>
+              <span>Ảnh QR đã sẵn sàng để check-in.</span>
             </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" disabled={checking || !selectedFile}>
               {checking ? 'Đang check-in...' : 'Check-in bằng ảnh'}
             </button>
-          </div>
+            <button type="button" className="btn" onClick={handleClearImage}>
+              Xóa
+            </button>
+          </form>
+        )}
+
+        <form className="checkin-code-form" onSubmit={handleSubmit}>
+          <label>
+            <span className="form-label">Mã QR / mã vé</span>
+            <textarea
+              ref={codeInputRef}
+              className="input"
+              rows="2"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Nhập hoặc dán mã vé tại đây..."
+              autoFocus
+            />
+          </label>
+          <button className="btn btn-primary" disabled={checking}>
+            {checking ? 'Đang check-in...' : 'Check-in'}
+          </button>
         </form>
-      </div>
+      </section>
+
+      <section className="checkin-history-card">
+        <h2>Lịch sử check-in gần đây</h2>
+        <div className="checkin-history-table">
+          <div className="checkin-history-head">
+            <span>Thời gian</span>
+            <span>Mã vé</span>
+            <span>Trạng thái</span>
+          </div>
+          {recentCheckIns.length === 0 ? (
+            <div className="checkin-history-empty">
+              Chưa có lượt check-in trong phiên này.
+            </div>
+          ) : (
+            recentCheckIns.map((item) => (
+              <div className="checkin-history-row" key={item.id}>
+                <span>{item.time}</span>
+                <span>{shortenCode(item.code)}</span>
+                <span className={item.status === 'Thành công' ? 'checkin-status-success' : 'checkin-status-error'}>
+                  {item.status}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
 
       {result && (
-        <div className="admin-table-card" style={{ padding: 24, marginTop: 20 }}>
+        <div className="admin-table-card checkin-result-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
               <h2 style={{ margin: '0 0 8px' }}>{result.movieName || 'Vé xem phim'}</h2>

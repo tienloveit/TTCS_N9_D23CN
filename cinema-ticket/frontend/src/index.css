@@ -1358,6 +1358,364 @@ select:disabled {
   font-weight: 800;
 }
 
+/* ==================== STAFF COUNTER BOOKING ==================== */
+
+.counter-booking {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+  gap: 18px;
+  align-items: start;
+  padding-bottom: 108px;
+}
+
+.counter-booking--selection {
+  grid-template-columns: minmax(0, 1180px);
+  justify-content: center;
+}
+
+.counter-booking--seats {
+  grid-template-columns: minmax(360px, 560px);
+  justify-content: center;
+}
+
+.counter-booking--addons,
+.counter-booking--checkout {
+  grid-template-columns: 1fr;
+}
+
+.counter-booking--selection .counter-showtime-card,
+.counter-booking--seats .counter-selected-card,
+.counter-booking--seats .counter-seat-card,
+.counter-booking--addons .counter-selected-card,
+.counter-booking--checkout .counter-selected-card {
+  grid-column: 1;
+  grid-row: auto;
+}
+
+.counter-booking > .error-message {
+  grid-column: 1 / -1;
+}
+
+.counter-stepper {
+  grid-column: 1 / -1;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 900px;
+  width: 100%;
+  margin: 4px auto 14px;
+  padding: 8px 8px 4px;
+}
+
+.counter-stepper::before {
+  content: '';
+  position: absolute;
+  top: 24px;
+  left: 12.5%;
+  right: 12.5%;
+  height: 2px;
+  background: #b8c5d4;
+}
+
+.counter-step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: #485668;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.counter-step span {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #aab8c9;
+  border-radius: 50%;
+  background: #f6f9fd;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.counter-step strong {
+  font-weight: 500;
+}
+
+.counter-step--active,
+.counter-step--done {
+  color: #102033;
+}
+
+.counter-step--active span,
+.counter-step--done span {
+  background: #075f9f;
+  border-color: #075f9f;
+  box-shadow: 0 8px 20px rgba(7, 95, 159, 0.22);
+  font-size: 0;
+}
+
+.counter-step--active span::after,
+.counter-step--done span::after {
+  content: '✓';
+  color: #ffffff;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.counter-panel {
+  border-radius: 8px;
+  border-color: #d9e3ef;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.counter-showtime-card {
+  grid-column: 1;
+  grid-row: span 2;
+  padding: 22px;
+  overflow: visible;
+}
+
+.counter-showtime-card .table-header > div:last-child {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.counter-showtime-card .input {
+  min-height: 44px;
+  border-radius: 8px;
+  border-color: #dce5ef;
+  background: #ffffff;
+  font-size: 0.92rem;
+}
+
+.counter-showtime-list {
+  display: grid;
+  gap: 18px;
+}
+
+.counter-showtime-group h2 {
+  color: #1c2635;
+  font-size: 0.98rem !important;
+  font-weight: 800;
+}
+
+.counter-showtime-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.counter-showtime-option {
+  min-height: 114px;
+  padding: 14px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.counter-showtime-option:hover:not(:disabled) {
+  border-color: #7aa7d4;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.counter-showtime-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.counter-showtime-option--active {
+  border-color: #075f9f;
+  background: #eef7ff;
+  box-shadow: inset 0 0 0 1px rgba(7, 95, 159, 0.18);
+}
+
+.counter-step-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #dbe4ef;
+}
+
+.counter-step-actions > div {
+  display: grid;
+  gap: 4px;
+}
+
+.counter-step-actions strong {
+  color: #0f172a;
+  font-size: 0.98rem;
+}
+
+.counter-step-actions span:last-child {
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.counter-step-actions .btn {
+  min-width: 128px;
+  background: #075f9f;
+}
+
+.counter-selected-card,
+.counter-seat-card {
+  grid-column: 2;
+}
+
+.counter-selected-card {
+  padding: 18px;
+}
+
+.counter-selected-card h2 {
+  line-height: 1.25;
+}
+
+.counter-selected-seats {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #eef7ff;
+  color: #075f9f;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.counter-seat-card {
+  padding: 20px;
+}
+
+.counter-seat-card .loading {
+  min-height: 260px;
+}
+
+.counter-seat-card .seat-map {
+  gap: 7px;
+  padding: 18px 4px 20px;
+}
+
+.counter-seat-card .seat-row {
+  gap: 7px;
+}
+
+.counter-seat-card .seat {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border-width: 1px;
+  font-size: 0.68rem;
+}
+
+.counter-seat-card .seat:hover:not(.seat--booked):not(.seat--holding) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.counter-seat-card .seat-screen {
+  width: 72%;
+  height: 7px;
+  margin-bottom: 10px;
+  background: linear-gradient(180deg, #cbd5e1, rgba(203, 213, 225, 0.2));
+}
+
+.counter-seat-card .seat-screen::after {
+  content: '';
+}
+
+.counter-seat-card .seat-legend {
+  justify-content: center;
+  gap: 18px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.counter-seat-card .seat-legend-item {
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.counter-seat-card .seat-legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border-width: 1px;
+}
+
+.counter-seat-summary {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #dbe4ef;
+}
+
+.counter-seat-summary span {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.counter-seat-summary > strong {
+  justify-self: end;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.counter-seat-summary .btn {
+  min-width: 112px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #075f9f;
+}
+
+.counter-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.counter-food-card,
+.counter-checkout-card,
+.counter-success-card {
+  grid-column: 1 / -1;
+  padding: 22px;
+}
+
+.counter-checkout-card {
+  margin-bottom: 0;
+}
+
+.counter-booking .booking-bar {
+  left: 264px;
+  justify-content: flex-end;
+  gap: 22px;
+  padding-right: 32px;
+}
+
+.counter-booking .booking-bar .btn-primary {
+  min-width: 168px;
+  background: #075f9f;
+}
+
 @media (max-width: 640px) {
   .food-select-header {
     flex-direction: column;
@@ -1380,6 +1738,309 @@ select:disabled {
   .booking-bar {
     flex-wrap: wrap;
     gap: 12px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .counter-booking {
+    grid-template-columns: 1fr;
+  }
+
+  .counter-showtime-card,
+  .counter-selected-card,
+  .counter-seat-card,
+  .counter-food-card,
+  .counter-checkout-card,
+  .counter-success-card {
+    grid-column: 1;
+  }
+
+  .counter-booking .booking-bar {
+    left: 0;
+  }
+
+  .counter-showtime-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .counter-stepper {
+    max-width: 100%;
+  }
+
+  .counter-step {
+    font-size: 0.8rem;
+  }
+
+  .counter-step span {
+    width: 36px;
+    height: 36px;
+  }
+
+  .counter-stepper::before {
+    top: 20px;
+  }
+
+  .counter-showtime-card .table-header > div:last-child,
+  .counter-showtime-options {
+    grid-template-columns: 1fr !important;
+  }
+
+  .counter-seat-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .counter-seat-summary > strong,
+  .counter-seat-summary .btn {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .counter-step-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .counter-step-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ==================== STAFF CHECK-IN ==================== */
+
+.checkin-page {
+  display: grid;
+  gap: 16px;
+  justify-content: center;
+  padding: 32px 16px 64px;
+}
+
+.checkin-card,
+.checkin-history-card,
+.checkin-result-card {
+  width: min(100%, 800px);
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.04);
+}
+
+.checkin-card {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+}
+
+.checkin-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 238px));
+  gap: 16px;
+  justify-content: center;
+}
+
+.checkin-action {
+  min-height: 134px;
+  padding: 20px;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #111827;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.checkin-action:hover {
+  border-color: #0b63b6;
+  box-shadow: 0 14px 28px rgba(7, 95, 159, 0.12);
+  transform: translateY(-1px);
+}
+
+.checkin-action-icon {
+  width: 52px;
+  height: 52px;
+  color: #075f9f;
+}
+
+.checkin-action-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.checkin-action strong {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.checkin-hidden-input {
+  display: none;
+}
+
+.checkin-preview {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.checkin-preview img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #dbe4ef;
+}
+
+.checkin-preview div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.checkin-preview strong {
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkin-preview span {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.checkin-code-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 16px;
+  align-items: end;
+}
+
+.checkin-code-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.checkin-code-form textarea.input {
+  min-height: 58px;
+  resize: vertical;
+  border-radius: 8px;
+  border-color: #c9d9ea;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.checkin-code-form .btn {
+  height: 58px;
+  border-radius: 8px;
+  background: #075f9f;
+}
+
+.checkin-history-card {
+  padding: 24px;
+}
+
+.checkin-history-card h2 {
+  margin: 0 0 18px;
+  color: #111827;
+  font-size: 1.2rem;
+}
+
+.checkin-history-table {
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.checkin-history-head,
+.checkin-history-row {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 180px;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid #e3ebf5;
+}
+
+.checkin-history-head {
+  min-height: 40px;
+  background: #f5f8fc;
+  color: #5d6778;
+  font-size: 0.95rem;
+}
+
+.checkin-history-row {
+  color: #111827;
+  font-size: 1rem;
+}
+
+.checkin-history-empty {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  border-bottom: 1px solid #e3ebf5;
+}
+
+.checkin-status-success {
+  color: #111827;
+}
+
+.checkin-status-error {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.checkin-result-card {
+  padding: 24px;
+}
+
+@media (max-width: 760px) {
+  .checkin-page {
+    padding: 20px 0 48px;
+  }
+
+  .checkin-card,
+  .checkin-history-card,
+  .checkin-result-card {
+    border-radius: 10px;
+  }
+
+  .checkin-actions,
+  .checkin-code-form,
+  .checkin-preview,
+  .checkin-history-head,
+  .checkin-history-row {
+    grid-template-columns: 1fr;
+  }
+
+  .checkin-preview .btn,
+  .checkin-code-form .btn {
+    width: 100%;
+  }
+
+  .checkin-history-head {
+    display: none;
+  }
+
+  .checkin-history-row {
+    gap: 4px;
+    padding: 14px 12px;
   }
 }
 

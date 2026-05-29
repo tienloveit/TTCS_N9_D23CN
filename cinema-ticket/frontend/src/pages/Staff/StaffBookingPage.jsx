@@ -123,11 +123,12 @@ export default function StaffBookingPage() {
   const [foods, setFoods] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [showtimeId, setShowtimeId] = useState('');
+  const [currentStep, setCurrentStep] = useState('SELECTION');
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [timeFilter, setTimeFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('AVAILABLE');
   const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedFoods, setSelectedFoods] = useState({});
@@ -186,6 +187,7 @@ export default function StaffBookingPage() {
     setSelectedFoods({});
     setLastBooking(null);
     setError('');
+    setCurrentStep('SELECTION');
 
     if (stompClient.current) {
       stompClient.current.deactivate();
@@ -396,6 +398,11 @@ export default function StaffBookingPage() {
       ]);
   }, [tickets]);
 
+  const selectedSeatTickets = useMemo(
+    () => tickets.filter((ticket) => selectedSeats.includes(ticket.seatId)),
+    [tickets, selectedSeats]
+  );
+
   const selectedFoodItems = useMemo(
     () =>
       foods
@@ -424,6 +431,21 @@ export default function StaffBookingPage() {
   const foodQuantity = selectedFoodItems.reduce((sum, food) => sum + food.quantity, 0);
   const total = seatTotal + foodTotal;
   const finalPrice = Math.max(0, total - promoDiscount);
+  const hasActiveFilters =
+    searchQuery ||
+    dateFilter ||
+    branchFilter !== 'ALL' ||
+    timeFilter !== 'ALL' ||
+    statusFilter !== 'AVAILABLE' ||
+    roomTypeFilter !== 'ALL';
+  const canContinueSelection = Boolean(showtimeId);
+  const canContinueSeats = selectedSeats.length > 0;
+  const stepItems = [
+    { key: 'SELECTION', label: '1. Selection' },
+    { key: 'SEATS', label: '2. Seats' },
+    { key: 'ADDONS', label: '3. Add-ons' },
+    { key: 'CHECKOUT', label: '4. Checkout' },
+  ];
 
   // Reset giảm giá khi giỏ hàng thay đổi
   useEffect(() => {
@@ -513,6 +535,40 @@ export default function StaffBookingPage() {
     });
   };
 
+  const clearFilters = () => {
+    setSearchQuery('');
+    setDateFilter('');
+    setBranchFilter('ALL');
+    setTimeFilter('ALL');
+    setStatusFilter('AVAILABLE');
+    setRoomTypeFilter('ALL');
+  };
+
+  const continueFromSelection = () => {
+    if (!showtimeId) {
+      toast.error('Chọn suất chiếu');
+      return;
+    }
+    setCurrentStep('SEATS');
+  };
+
+  const continueFromSeats = () => {
+    if (!showtimeId) {
+      toast.error('Chọn suất chiếu');
+      setCurrentStep('SELECTION');
+      return;
+    }
+    if (selectedSeats.length === 0) {
+      toast.error('Chọn ít nhất 1 ghế');
+      return;
+    }
+    setCurrentStep(foods.length > 0 || foodError ? 'ADDONS' : 'CHECKOUT');
+  };
+
+  const continueToCheckout = () => {
+    setCurrentStep('CHECKOUT');
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -577,12 +633,23 @@ export default function StaffBookingPage() {
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="page-header">
-        <h1 className="page-title">Đặt vé tại quầy</h1>
-        <p className="page-subtitle">
-          Chọn suất chiếu hôm nay, ghế, đồ ăn và hoàn tất thanh toán trực tiếp cho khách.
-        </p>
+    <form onSubmit={handleSubmit} className={`counter-booking counter-booking--${currentStep.toLowerCase()}`}>
+      <div className="counter-stepper" aria-label="Quy trình đặt vé tại quầy">
+        {stepItems.map((step, index) => {
+          const activeIndex = stepItems.findIndex((item) => item.key === currentStep);
+          const isActive = step.key === currentStep;
+          const isDone = index < activeIndex;
+
+          return (
+            <div
+              key={step.key}
+              className={`counter-step ${isActive ? 'counter-step--active' : ''} ${isDone ? 'counter-step--done' : ''}`}
+            >
+              <span>{isDone || isActive ? '✓' : ''}</span>
+              <strong>{step.label}</strong>
+            </div>
+          );
+        })}
       </div>
 
       {error && (
@@ -591,7 +658,8 @@ export default function StaffBookingPage() {
         </div>
       )}
 
-      <div className="admin-table-card" style={{ padding: 24, marginBottom: 20 }}>
+      {currentStep === 'SELECTION' && (
+      <div className="admin-table-card counter-panel counter-showtime-card">
         <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
@@ -672,19 +740,12 @@ export default function StaffBookingPage() {
             </label>
 
             {/* Clear filters button */}
-            {(searchQuery || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL') && (
+            {hasActiveFilters && (
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <button
                   type="button"
                   className="btn"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setDateFilter('');
-                    setBranchFilter('ALL');
-                    setTimeFilter('ALL');
-                    setStatusFilter('ALL');
-                    setRoomTypeFilter('ALL');
-                  }}
+                  onClick={clearFilters}
                   style={{ width: '100%' }}
                 >
                   Xóa bộ lọc
@@ -696,16 +757,16 @@ export default function StaffBookingPage() {
 
         {filteredShowtimes.length === 0 ? (
           <div className="empty-state">
-            {searchQuery.trim() || dateFilter || branchFilter !== 'ALL' || timeFilter !== 'ALL' || statusFilter !== 'ALL' || roomTypeFilter !== 'ALL'
+            {hasActiveFilters
               ? 'Không tìm thấy suất chiếu nào phù hợp với bộ lọc'
               : 'Không có suất chiếu phù hợp với MoviePTIT đã chọn.'}
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 18 }}>
+          <div className="counter-showtime-list">
             {showtimeGroups.map((group) => (
-              <section key={group.branchName}>
+              <section key={group.branchName} className="counter-showtime-group">
                 <h2 style={{ fontSize: 16, margin: '0 0 10px' }}>{group.branchName}</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <div className="counter-showtime-options">
                   {group.items.map((showtime) => {
                     const available = isShowtimeAvailable(showtime);
                     const selected = String(showtime.showtimeId) === String(showtimeId);
@@ -716,15 +777,7 @@ export default function StaffBookingPage() {
                         type="button"
                         onClick={() => available && setShowtimeId(String(showtime.showtimeId))}
                         disabled={!available}
-                        className={`admin-table-card ${selected ? 'showtime-time-btn--active' : ''}`}
-                        style={{
-                          padding: 16,
-                          textAlign: 'left',
-                          cursor: available ? 'pointer' : 'not-allowed',
-                          opacity: available ? 1 : 0.55,
-                          borderColor: selected ? 'var(--accent)' : 'var(--border)',
-                          background: selected ? 'var(--accent-glow)' : 'var(--bg-card)',
-                        }}
+                        className={`counter-showtime-option ${selected ? 'counter-showtime-option--active' : ''}`}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                           <strong style={{ color: 'var(--text-primary)' }}>{formatTime(showtime.startTime)}</strong>
@@ -746,17 +799,47 @@ export default function StaffBookingPage() {
             ))}
           </div>
         )}
-      </div>
 
-      {selectedShowtime && (
+        <div className="counter-step-actions">
+          {selectedShowtime ? (
+            <div>
+              <span className="form-label">Suất đã chọn</span>
+              <strong>{selectedShowtime.movieName}</strong>
+              <span>{formatDateTime(selectedShowtime.startTime)}</span>
+            </div>
+          ) : (
+            <div>
+              <span className="form-label">Suất đã chọn</span>
+              <strong>Chưa chọn suất chiếu</strong>
+              <span>Chọn một suất còn bán để qua bước chọn ghế.</span>
+            </div>
+          )}
+          <button
+            className="btn btn-primary"
+            type="button"
+            disabled={!canContinueSelection}
+            onClick={continueFromSelection}
+          >
+            Chọn ghế
+          </button>
+        </div>
+      </div>
+      )}
+
+      {selectedShowtime && currentStep !== 'SELECTION' && (
         <>
-          <div className="admin-table-card" style={{ padding: 20, marginBottom: 20 }}>
+          <div className="admin-table-card counter-panel counter-selected-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
                 <span className="form-label">Suất đang bán</span>
                 <h2 style={{ margin: '4px 0 0', fontSize: 20 }}>{selectedShowtime.movieName}</h2>
                 <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
                   {selectedShowtime.branchName} - {selectedShowtime.roomName}
+                </div>
+                <div className="counter-selected-seats">
+                  {selectedSeatTickets.length > 0
+                    ? selectedSeatTickets.map((ticket) => ticket.seatCode).join(', ')
+                    : 'Chưa chọn ghế'}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -768,7 +851,8 @@ export default function StaffBookingPage() {
             </div>
           </div>
 
-          <div className="admin-table-card" style={{ padding: 32, marginBottom: 20 }}>
+          {currentStep === 'SEATS' && (
+          <div className="admin-table-card counter-panel counter-seat-card">
             {loadingTickets ? (
               <div className="loading"><div className="spinner" /></div>
             ) : (
@@ -816,18 +900,39 @@ export default function StaffBookingPage() {
                     Đã đặt
                   </div>
                 </div>
+
+                <div className="counter-seat-summary">
+                  <span>
+                    <strong>{selectedSeats.length}</strong> ghế
+                  </span>
+                  <strong>{formatCurrency(finalPrice)}</strong>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    disabled={!canContinueSeats}
+                    onClick={continueFromSeats}
+                  >
+                    Tiếp tục
+                  </button>
+                </div>
               </>
             )}
           </div>
+          )}
 
-          {(foods.length > 0 || foodError) && (
-            <div className="admin-table-card food-select-card" style={{ marginBottom: 20 }}>
+          {currentStep === 'ADDONS' && (foods.length > 0 || foodError) && (
+            <div className="admin-table-card food-select-card counter-panel counter-food-card">
               <div className="food-select-header">
                 <div>
                   <h2>Chọn đồ ăn</h2>
                   <p>Thêm bắp nước và combo vào đơn tại quầy.</p>
                 </div>
-                {foodTotal > 0 && <strong>{formatCurrency(foodTotal)}</strong>}
+                <div className="counter-card-actions">
+                  {foodTotal > 0 && <strong>{formatCurrency(foodTotal)}</strong>}
+                  <button type="button" className="btn btn-primary" onClick={continueToCheckout}>
+                    Tiếp tục
+                  </button>
+                </div>
               </div>
 
               {foodError && (
@@ -893,7 +998,8 @@ export default function StaffBookingPage() {
             </div>
           )}
 
-          <div className="admin-table-card" style={{ padding: 20, marginBottom: selectedSeats.length > 0 ? 96 : 20 }}>
+          {currentStep === 'CHECKOUT' && (
+            <div className="admin-table-card counter-panel counter-checkout-card">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
               <div>
                 <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thông tin khách</h2>
@@ -1009,11 +1115,12 @@ export default function StaffBookingPage() {
               </div>
             </div>
           </div>
+          )}
         </>
       )}
 
       {lastBooking && (
-        <div className="admin-table-card" style={{ padding: 24, marginBottom: 20 }}>
+        <div className="admin-table-card counter-panel counter-success-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green)' }}>
             <span style={{ fontSize: '1.8rem' }}>✓</span>
             <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
@@ -1071,8 +1178,17 @@ export default function StaffBookingPage() {
             </span>
           )}
           <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
-          <button className="btn btn-primary" type="submit" disabled={submitting}>
-            {submitting ? 'Đang xử lý...' : 'Hoàn tất tại quầy'}
+          <button
+            className="btn btn-primary"
+            type={currentStep === 'CHECKOUT' ? 'submit' : 'button'}
+            disabled={submitting || (currentStep === 'SEATS' && !canContinueSeats)}
+            onClick={currentStep === 'SEATS' ? continueFromSeats : currentStep === 'ADDONS' ? continueToCheckout : undefined}
+          >
+            {currentStep === 'SEATS'
+              ? 'Tiếp tục'
+              : currentStep === 'ADDONS'
+                ? 'Tiếp tục thanh toán'
+                : submitting ? 'Đang xử lý...' : 'Hoàn tất tại quầy'}
           </button>
         </div>
       )}

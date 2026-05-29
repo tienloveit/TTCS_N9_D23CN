@@ -116,7 +116,7 @@ export default function StaffLayout() {
   const roleLabel = isAdmin ? 'Quản trị viên' : 'Nhân viên';
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout staff-layout">
       <aside className={`admin-sidebar ${sidebarOpen ? 'admin-sidebar--open' : ''}`}>
         <div className="admin-sidebar-header">
           <NavLink to="/staff" className="admin-logo">

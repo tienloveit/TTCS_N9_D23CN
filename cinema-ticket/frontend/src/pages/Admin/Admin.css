@@ -26,6 +26,63 @@
   background: var(--bg-primary);
 }
 
+.staff-layout {
+  --accent: #0756a6;
+  --accent-hover: #034a91;
+  --accent-glow: rgba(7, 86, 166, 0.16);
+  background: #f6f9fd;
+}
+
+.staff-layout .admin-sidebar {
+  background: linear-gradient(180deg, #0c1826 0%, #0b1622 100%);
+  border-right-color: rgba(148, 163, 184, 0.16);
+  color: #e5edf6;
+}
+
+.staff-layout .admin-sidebar-header,
+.staff-layout .admin-sidebar-footer {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.staff-layout .admin-logo,
+.staff-layout .admin-logo-text strong {
+  color: #ffffff;
+}
+
+.staff-layout .admin-logo-text small,
+.staff-layout .admin-nav-label,
+.staff-layout .admin-sidebar-user-info span {
+  color: #93a4b8;
+}
+
+.staff-layout .admin-nav-item {
+  color: #d4deea;
+}
+
+.staff-layout .admin-nav-item:hover {
+  background: rgba(37, 99, 235, 0.18);
+  color: #ffffff;
+}
+
+.staff-layout .admin-nav-item--active {
+  background: linear-gradient(135deg, #0b63b6, #0d75d3);
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(3, 74, 145, 0.28);
+}
+
+.staff-layout .admin-nav-item--active::before {
+  background: #7dd3fc;
+}
+
+.staff-layout .admin-sidebar-user {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.staff-layout .admin-sidebar-user-info strong {
+  color: #ffffff;
+}
+
 /* ---------- Sidebar ---------- */
 .admin-sidebar {
   width: 264px;
