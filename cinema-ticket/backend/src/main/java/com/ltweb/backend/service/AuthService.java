@@ -228,6 +228,10 @@ public class AuthService {
   }
 
   private LoginResponse getLoginResponse(User user) {
+    if (!user.isAccountNonLocked() || !user.isEnabled()) {
+      throw new AppException(ErrorCode.ACCESS_DENIED);
+    }
+
     TokenPayload accessPayload = jwtService.generateAccessToken(user);
     TokenPayload refreshPayload = jwtService.generateRefreshToken(user);
 

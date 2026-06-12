@@ -4,6 +4,7 @@ import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.service.DataSeedService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,6 +18,7 @@ public class CleanupController {
   private final DataSeedService dataSeedService;
 
   @DeleteMapping("/database")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<String> cleanupDatabase() {
     jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
 

@@ -1,7 +1,9 @@
 package com.ltweb.backend.config;
 
+import com.ltweb.backend.entity.User;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
+import com.ltweb.backend.repository.UserRepository;
 import com.ltweb.backend.service.JwtService;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -26,6 +28,7 @@ public class JwtDecoderConfig implements JwtDecoder {
   private String secretKey;
 
   private final JwtService jwtService;
+  private final UserRepository userRepository;
   private NimbusJwtDecoder nimbusJwtDecoder = null;
 
   @Override
@@ -40,12 +43,49 @@ public class JwtDecoderConfig implements JwtDecoder {
         nimbusJwtDecoder =
             NimbusJwtDecoder.withSecretKey(secretKeySpec).macAlgorithm(MacAlgorithm.HS512).build();
       }
+      Jwt jwt = nimbusJwtDecoder.decode(token);
+      validateCurrentUser(jwt);
+      return jwt;
     } catch (AppException e) {
       if (ErrorCode.ACCESS_DENIED.equals(e.getErrorCode())) {
         throw new AccessDeniedException(e.getMessage(), e);
       }
       throw new BadJwtException(e.getMessage(), e);
     }
-    return nimbusJwtDecoder.decode(token);
+  }
+
+  private void validateCurrentUser(Jwt jwt) {
+    String username = jwt.getSubject();
+    User user =
+        userRepository.findByUsername(username).orElseThrow(() -> new AppException(ErrorCode.TOKEN_INVALID));
+
+    if (!user.isAccountNonLocked() || !user.isEnabled()) {
+      throw new AppException(ErrorCode.ACCESS_DENIED);
+    }
+
+    String tokenRole = jwt.getClaimAsString("role");
+    if (user.getRole() == null || !user.getRole().name().equals(tokenRole)) {
+      throw new AppException(ErrorCode.TOKEN_INVALID);
+    }
+
+    Long tokenBranchId = getLongClaim(jwt, "branchId");
+    if (!Objects.equals(user.getBranchId(), tokenBranchId)) {
+      throw new AppException(ErrorCode.TOKEN_INVALID);
+    }
+  }
+
+  private Long getLongClaim(Jwt jwt, String claimName) {
+    Object claim = jwt.getClaim(claimName);
+    if (claim == null) {
+      return null;
+    }
+    if (claim instanceof Number number) {
+      return number.longValue();
+    }
+    try {
+      return Long.valueOf(claim.toString());
+    } catch (NumberFormatException e) {
+      throw new AppException(ErrorCode.TOKEN_INVALID);
+    }
   }
 }

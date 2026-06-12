@@ -8,6 +8,7 @@ import com.ltweb.backend.service.VnpayService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,6 +34,7 @@ public class VnpayController {
   }
 
   @PostMapping("/querydr")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> querydr(
       @Valid @RequestBody QueryRequest request, HttpServletRequest servletRequest) {
     String data = vnpayService.queryDr(request, servletRequest);
@@ -40,6 +42,7 @@ public class VnpayController {
   }
 
   @PostMapping("/refund")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> refund(
       @Valid @RequestBody RefundRequest request, HttpServletRequest servletRequest) {
     String data = vnpayService.refund(request, servletRequest);

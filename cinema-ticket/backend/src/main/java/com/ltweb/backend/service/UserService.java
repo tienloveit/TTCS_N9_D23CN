@@ -181,7 +181,7 @@ public class UserService {
             .findByUsername(name)
             .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-    userMapper.updateUser(user, updateUserRequest);
+    userMapper.updateMyInfo(user, updateUserRequest);
     return userMapper.toUserResponse(userRepository.save(user));
   }
 

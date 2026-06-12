@@ -6,6 +6,8 @@ import com.ltweb.backend.dto.response.ChatResponse;
 import com.ltweb.backend.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +19,7 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<ChatResponse> chat(@RequestBody ChatRequest request) {
         if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
             return ApiResponse.<ChatResponse>builder()
@@ -25,9 +28,10 @@ public class ChatController {
                     .build();
         }
         
-        String chatId = request.getChatId();
-        if (chatId == null || chatId.trim().isEmpty()) {
-            chatId = "default-user";
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String chatId = username;
+        if (request.getChatId() != null && !request.getChatId().trim().isEmpty()) {
+            chatId = username + ":" + request.getChatId().trim();
         }
         
         try {

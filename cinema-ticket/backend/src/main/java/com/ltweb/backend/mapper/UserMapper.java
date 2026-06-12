@@ -28,5 +28,17 @@ public interface UserMapper {
   @Mapping(target = "password", ignore = true)
   void updateUser(@MappingTarget User user, UpdateUserRequest request);
 
+  @Mapping(target = "id", ignore = true)
+  @Mapping(target = "username", ignore = true)
+  @Mapping(target = "role", ignore = true)
+  @Mapping(target = "branchId", ignore = true)
+  @Mapping(target = "status", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
+  @Mapping(target = "bookings", ignore = true)
+  @Mapping(target = "authorities", ignore = true)
+  @Mapping(target = "password", ignore = true)
+  void updateMyInfo(@MappingTarget User user, UpdateUserRequest request);
+
   UserResponse toUserResponse(User user);
 }

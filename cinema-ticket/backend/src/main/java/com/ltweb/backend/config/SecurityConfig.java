@@ -39,9 +39,7 @@ public class SecurityConfig {
       "/auth/forgot-password",
       "/auth/reset-password",
       "/oauth2/**",
-      "/login/oauth2/**",
-      "/api/v1/cleanup/**",
-      "/chat"
+      "/login/oauth2/**"
   };
 
   private final CustomUserDetailService userDetailsService;
@@ -57,8 +55,6 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             (authorize) -> authorize
                 .requestMatchers(PUBLIC_ENDPOINT)
-                .permitAll()
-                .requestMatchers("/v1/cleanup/**")
                 .permitAll()
                 .requestMatchers("/ws/**")
                 .permitAll()
@@ -77,8 +73,6 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/branch/**")
                 .permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/room/**")
-                .permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/user")
                 .permitAll()
                 .anyRequest()
                 .authenticated())

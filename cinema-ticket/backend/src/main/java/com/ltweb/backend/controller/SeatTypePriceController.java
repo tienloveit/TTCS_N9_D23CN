@@ -8,6 +8,7 @@ import com.ltweb.backend.enums.SeatType;
 import com.ltweb.backend.service.SeatTypePriceService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public class SeatTypePriceController {
   }
 
   @PostMapping
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<SeatTypePriceResponse> create(@RequestBody CreateSeatTypePrice request) {
     ApiResponse<SeatTypePriceResponse> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Create seat type price successfully!");
@@ -39,6 +41,7 @@ public class SeatTypePriceController {
   }
 
   @PutMapping("/{seatType}")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<SeatTypePriceResponse> update(
       @PathVariable SeatType seatType, @RequestBody UpdateSeatTypePrice request) {
     ApiResponse<SeatTypePriceResponse> apiResponse = new ApiResponse<>();
