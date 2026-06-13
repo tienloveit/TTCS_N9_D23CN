@@ -93,6 +93,14 @@ public class BookingService {
             .findById(request.getShowtimeId())
             .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
+    // Không cho đặt nếu showtime đã đóng hoặc bị hủy
+    if (showtime.getStatus() != com.ltweb.backend.enums.ShowtimeStatus.OPEN) {
+      throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
+    }
+    // Không cho đặt nếu showtime đã bắt đầu
+    if (showtime.getStartTime() != null && showtime.getStartTime().isBefore(LocalDateTime.now())) {
+      throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
+    }
     // Kiểm tra tổng số vé người dùng đã đặt cho bộ phim này không vượt quá 8
     Long movieId = showtime.getMovie().getId();
     int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(user.getId(), movieId);

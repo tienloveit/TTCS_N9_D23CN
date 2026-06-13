@@ -135,8 +135,15 @@ export default function MovieDetailPage() {
 
   const showtimesWithMeta = useMemo(() => {
     const subtitleLabel = getSubtitleLabel(movie?.subtitle);
+    const now = new Date();
 
     return [...showtimes]
+      .filter((showtime) => {
+        // Chỉ hiện suất OPEN và chưa bắt đầu
+        if (showtime.status && showtime.status !== 'OPEN') return false;
+        if (showtime.startTime && new Date(showtime.startTime) <= now) return false;
+        return true;
+      })
       .map((showtime) => {
         const room = roomById.get(String(showtime.roomId));
         const branchId = showtime.branchId ?? room?.branchId ?? null;
@@ -158,6 +165,7 @@ export default function MovieDetailPage() {
       })
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
   }, [branchById, movie?.subtitle, roomById, showtimes]);
+
 
   const cityOptions = useMemo(() => {
     const cities = new Set();

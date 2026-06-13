@@ -252,10 +252,19 @@ export default function SeatSelectPage() {
       const bookingData = res.data.result;
       navigate(`/booking/${bookingData.bookingId}/payment`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Đặt vé thất bại. Vui lòng thử lại.');
+      const code = err.response?.data?.code;
+      const msg  = err.response?.data?.message || '';
+      // Showtime đã bị xóa hoặc đã đóng → quay lại chọn suất
+      if (code === 1012 || msg.toLowerCase().includes('showtime')) {
+        alert('Suất chiếu này không còn khả dụng. Vui lòng chọn suất chiếu khác.');
+        navigate(-1);
+      } else {
+        setError(msg || 'Đặt vé thất bại. Vui lòng thử lại.');
+      }
     } finally {
       setBooking(false);
     }
+
   };
 
   if (loading) {

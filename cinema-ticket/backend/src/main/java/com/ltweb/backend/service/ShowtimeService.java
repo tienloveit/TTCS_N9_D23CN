@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -205,7 +206,11 @@ public class ShowtimeService {
     LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
     List<Showtime> showtimes =
-        showtimeRepository.findByBranchAndDate(branchId, startOfDay, endOfDay);
+        showtimeRepository.findByBranchAndDate(branchId, startOfDay, endOfDay)
+            .stream()
+            // Chỉ trả về showtime OPEN (chưa hết giờ) cho khách hàng
+            .filter(s -> s.getStatus() == ShowtimeStatus.OPEN)
+            .toList();
 
     // Nhóm theo movie
     Map<Long, List<Showtime>> grouped =
@@ -252,6 +257,22 @@ public class ShowtimeService {
     }
 
     return result;
+  }
+
+  // ===== SCHEDULED: tự động CLOSED showtime đã qua giờ =====
+  @Scheduled(fixedRate = 5 * 60 * 1000) // Chạy mỗi 5 phút
+  @Transactional
+  public void autoCloseExpiredShowtimes() {
+    List<Showtime> expired = showtimeRepository.findAll().stream()
+        .filter(s -> s.getStatus() == ShowtimeStatus.OPEN
+            && s.getEndTime() != null
+            && s.getEndTime().isBefore(LocalDateTime.now()))
+        .toList();
+    if (!expired.isEmpty()) {
+      expired.forEach(s -> s.setStatus(ShowtimeStatus.CLOSED));
+      showtimeRepository.saveAll(expired);
+      log.info("Auto-closed {} expired showtimes.", expired.size());
+    }
   }
 
   // ===== PRIVATE HELPER =====
