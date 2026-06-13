@@ -104,7 +104,10 @@ public class TicketService {
             .toList();
 
     // Bước 3: Batch query Redis — 1 lần lấy tất cả
-    List<String> redisHoldStatus = redisTemplate.opsForValue().multiGet(seatKeys);
+    List<String> redisHoldStatus = null;
+    if (!seatKeys.isEmpty()) {
+      redisHoldStatus = redisTemplate.opsForValue().multiGet(seatKeys);
+    }
 
     // Bước 4: Merge trạng thái DB với Redis để tạo displayStatus
     for (int i = 0; i < tickets.size(); i++) {
@@ -176,7 +179,7 @@ public class TicketService {
     return ticketMapper.toTicketResponse(ticketRepository.save(ticket));
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional
   public TicketCheckInResponse checkIn(CheckInTicketRequest request) {
     String code = request.getCode().trim();
@@ -217,7 +220,7 @@ public class TicketService {
     return buildCheckInResponse(booking, booking.getTickets(), alreadyCheckedIn);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional
   public TicketCheckInResponse checkInByQRImage(MultipartFile qrImage) {
     // Decode QR code from image
@@ -292,13 +295,17 @@ public class TicketService {
       throw new AppException(ErrorCode.INVALID_TICKET_CHECKIN);
     }
     User currentUser = getUserCurrent();
+    // ADMIN: tất cả
     if (currentUser.getRole() == UserRole.ADMIN) {
       return;
     }
-    if (currentUser.getRole() == UserRole.STAFF
-        && currentUser.getBranchId() != null
-        && isBookingInBranch(booking, currentUser.getBranchId())) {
-      return;
+    // STAFF & MANAGER: check-in trong chi nhánh của mình
+    if (currentUser.getRole() == UserRole.STAFF || currentUser.getRole() == UserRole.MANAGER) {
+      if (currentUser.getBranchId() != null && isBookingInBranch(booking, currentUser.getBranchId())) {
+        return;
+      } else {
+        throw new AppException(ErrorCode.TICKET_WRONG_BRANCH);
+      }
     }
     throw new AppException(ErrorCode.UNAUTHORIZED);
   }

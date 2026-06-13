@@ -139,7 +139,7 @@ const DigitalTicket = ({ booking }) => {
       </div>
 
       <div className="ticket-actions-row">
-        <button className="btn-download-ticket" onClick={handleDownload}>
+        <button type="button" className="btn-download-ticket" onClick={handleDownload}>
           <DownloadIcon className="btn-icon" />
           Tải vé về máy
         </button>

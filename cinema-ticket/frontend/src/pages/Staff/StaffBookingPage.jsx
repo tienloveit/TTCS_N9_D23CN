@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { useAuth } from '../../context/useAuth';
 import { bookingApi, foodApi, showtimeApi, ticketApi, promotionApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
 import DigitalTicket from '../../components/Ticket/DigitalTicket';
@@ -118,6 +119,7 @@ const buildPrintDocument = (booking) => {
 };
 
 export default function StaffBookingPage() {
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [showtimes, setShowtimes] = useState([]);
   const [foods, setFoods] = useState([]);
@@ -249,7 +251,11 @@ export default function StaffBookingPage() {
   const branchOptions = useMemo(() => {
     const branchMap = new Map();
 
-    showtimes.forEach((showtime) => {
+    const allowedShowtimes = (!isAdmin && user?.branchId)
+      ? showtimes.filter(s => String(s.branchId) === String(user.branchId))
+      : showtimes;
+
+    allowedShowtimes.forEach((showtime) => {
       const key = showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
       if (!branchMap.has(key)) {
         branchMap.set(key, {
@@ -260,7 +266,7 @@ export default function StaffBookingPage() {
     });
 
     return [...branchMap.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [showtimes]);
+  }, [showtimes, isAdmin, user]);
 
   const roomTypeOptions = useMemo(() => {
     const types = new Set();
@@ -274,6 +280,11 @@ export default function StaffBookingPage() {
 
   const filteredShowtimes = useMemo(() => {
     let result = showtimes;
+
+    // Chỉ cho phép STAFF/MANAGER xem suất chiếu của chi nhánh mình
+    if (!isAdmin && user?.branchId) {
+      result = result.filter(showtime => String(showtime.branchId) === String(user.branchId));
+    }
 
     // Filter by branch
     if (branchFilter !== 'ALL') {
@@ -351,7 +362,7 @@ export default function StaffBookingPage() {
     }
 
     return result;
-  }, [branchFilter, showtimes, searchQuery, dateFilter, timeFilter, statusFilter, roomTypeFilter]);
+  }, [branchFilter, showtimes, searchQuery, dateFilter, timeFilter, statusFilter, roomTypeFilter, isAdmin, user]);
 
   const showtimeGroups = useMemo(() => {
     const grouped = filteredShowtimes.reduce((acc, showtime) => {
@@ -1182,7 +1193,15 @@ export default function StaffBookingPage() {
             className="btn btn-primary"
             type={currentStep === 'CHECKOUT' ? 'submit' : 'button'}
             disabled={submitting || (currentStep === 'SEATS' && !canContinueSeats)}
-            onClick={currentStep === 'SEATS' ? continueFromSeats : currentStep === 'ADDONS' ? continueToCheckout : undefined}
+            onClick={(e) => {
+              if (currentStep === 'SEATS') {
+                e.preventDefault();
+                continueFromSeats();
+              } else if (currentStep === 'ADDONS') {
+                e.preventDefault();
+                continueToCheckout();
+              }
+            }}
           >
             {currentStep === 'SEATS'
               ? 'Tiếp tục'

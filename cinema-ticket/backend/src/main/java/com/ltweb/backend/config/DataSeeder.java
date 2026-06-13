@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -17,10 +18,10 @@ import org.springframework.stereotype.Component;
 
 /**
  * DataSeeder — Chạy khi khởi động ứng dụng.
- *  1. Xóa showtime + booking cũ hơn 30 ngày (SQL thuần, đúng thứ tự FK)
- *  2. Sinh showtime mới (hôm nay → +14 ngày)
- *  3. Sinh booking / ticket mẫu thực tế
- *  4. Sinh booking hoàn vé mẫu
+ * 1. Xóa showtime + booking cũ hơn 30 ngày (SQL thuần, đúng thứ tự FK)
+ * 2. Sinh showtime mới (hôm nay → +14 ngày)
+ * 3. Sinh booking / ticket mẫu thực tế
+ * 4. Sinh booking hoàn vé mẫu
  */
 @Component
 @Order(2)
@@ -28,35 +29,57 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
-  private final ShowtimeRepository  showtimeRepository;
-  private final BookingRepository   bookingRepository;
-  private final TicketRepository    ticketRepository;
-  private final MovieRepository     movieRepository;
-  private final RoomRepository      roomRepository;
-  private final SeatRepository      seatRepository;
-  private final UserRepository      userRepository;
-  private final FoodRepository      foodRepository;
-  private final JdbcTemplate        jdbcTemplate;
+  private final ShowtimeRepository showtimeRepository;
+  private final BookingRepository bookingRepository;
+  private final TicketRepository ticketRepository;
+  private final MovieRepository movieRepository;
+  private final RoomRepository roomRepository;
+  private final SeatRepository seatRepository;
+  private final UserRepository userRepository;
+  private final FoodRepository foodRepository;
+  private final SeatTypePriceRepository seatTypePriceRepository;
+  private final JdbcTemplate jdbcTemplate;
 
   private static final Random RANDOM = new Random(42);
 
   private static final int[][] TIME_SLOTS = {
-    {8, 30}, {10, 45}, {13, 0}, {15, 30}, {18, 0}, {20, 30}, {22, 45}
+      { 8, 30 }, { 10, 45 }, { 13, 0 }, { 15, 30 }, { 18, 0 }, { 20, 30 }, { 22, 45 }
   };
 
   // ══════════════════════════════════════════════════════
   @Override
   public void run(String... args) {
     log.info("=== DataSeeder START ===");
-    try { cleanOldData();       } catch (Exception e) { log.warn("cleanOldData error: {}", e.getMessage()); }
-    try { seedShowtimes();      } catch (Exception e) { log.warn("seedShowtimes error: {}", e.getMessage()); }
-    try { seedSampleBookings(); } catch (Exception e) { log.warn("seedSampleBookings error: {}", e.getMessage()); }
-    try { seedRefundBookings(); } catch (Exception e) { log.warn("seedRefundBookings error: {}", e.getMessage()); }
+    try {
+      cleanOldData();
+    } catch (Exception e) {
+      log.warn("cleanOldData error: {}", e.getMessage());
+    }
+    try {
+      seedShowtimes();
+    } catch (Exception e) {
+      log.warn("seedShowtimes error: {}", e.getMessage());
+    }
+    try {
+      seedSampleBookings();
+    } catch (Exception e) {
+      log.warn("seedSampleBookings error: {}", e.getMessage());
+    }
+    try {
+      seedRefundBookings();
+    } catch (Exception e) {
+      log.warn("seedRefundBookings error: {}", e.getMessage());
+    }
+    try {
+      seedMissingTickets();
+    } catch (Exception e) {
+      log.warn("seedMissingTickets error: {}", e.getMessage());
+    }
     log.info("=== DataSeeder DONE ===");
   }
 
   // ══════════════════════════════════════════════════════
-  //  1. DỌN DỮ LIỆU CŨ — SQL thuần, đúng thứ tự FK
+  // 1. DỌN DỮ LIỆU CŨ — SQL thuần, đúng thứ tự FK
   // ══════════════════════════════════════════════════════
   private void cleanOldData() {
     String cutoff = LocalDateTime.now().minusDays(30)
@@ -66,25 +89,29 @@ public class DataSeeder implements CommandLineRunner {
     // Thứ tự: tickets → booking_foods → bookings → showtimes
     int t1 = jdbcTemplate.update(
         "DELETE t FROM tickets t "
-        + "JOIN bookings b ON t.booking_id = b.booking_id "
-        + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
-        + "WHERE s.end_time < ?", cutoff);
+            + "JOIN bookings b ON t.booking_id = b.booking_id "
+            + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
+            + "WHERE s.end_time < ?",
+        cutoff);
 
     int t2 = jdbcTemplate.update(
         "DELETE t FROM tickets t "
-        + "JOIN showtimes s ON t.showtime_id = s.showtime_id "
-        + "WHERE s.end_time < ? AND t.booking_id IS NULL", cutoff);
+            + "JOIN showtimes s ON t.showtime_id = s.showtime_id "
+            + "WHERE s.end_time < ? AND t.booking_id IS NULL",
+        cutoff);
 
     jdbcTemplate.update(
         "DELETE bf FROM booking_foods bf "
-        + "JOIN bookings b ON bf.booking_id = b.booking_id "
-        + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
-        + "WHERE s.end_time < ?", cutoff);
+            + "JOIN bookings b ON bf.booking_id = b.booking_id "
+            + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
+            + "WHERE s.end_time < ?",
+        cutoff);
 
     int b1 = jdbcTemplate.update(
         "DELETE b FROM bookings b "
-        + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
-        + "WHERE s.end_time < ?", cutoff);
+            + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
+            + "WHERE s.end_time < ?",
+        cutoff);
 
     int s1 = jdbcTemplate.update(
         "DELETE FROM showtimes WHERE end_time < ?", cutoff);
@@ -93,7 +120,7 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   // ══════════════════════════════════════════════════════
-  //  2. SINH SHOWTIME MỚI (hôm nay → +14 ngày)
+  // 2. SINH SHOWTIME MỚI (hôm nay → +14 ngày)
   // ══════════════════════════════════════════════════════
   private void seedShowtimes() {
     List<Movie> movies = movieRepository.findAll().stream()
@@ -126,9 +153,10 @@ public class DataSeeder implements CommandLineRunner {
           Movie movie = movies.get(RANDOM.nextInt(movies.size()));
           int duration = movie.getDurationMinutes() != null ? movie.getDurationMinutes() : 120;
           LocalDateTime start = date.atTime(slot[0], slot[1]);
-          LocalDateTime end   = start.plusMinutes(duration + 15);
+          LocalDateTime end = start.plusMinutes(duration + 15);
 
-          if (showtimeRepository.existsOverlappingShowtime(room.getId(), start, end)) continue;
+          if (showtimeRepository.existsOverlappingShowtime(room.getId(), start, end))
+            continue;
 
           showtimeRepository.save(Showtime.builder()
               .room(room).movie(movie)
@@ -143,7 +171,7 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   // ══════════════════════════════════════════════════════
-  //  3. SINH BOOKING MẪU
+  // 3. SINH BOOKING MẪU
   // ══════════════════════════════════════════════════════
   private void seedSampleBookings() {
     long recent = bookingRepository.findAll().stream()
@@ -157,16 +185,22 @@ public class DataSeeder implements CommandLineRunner {
 
     List<User> customers = userRepository.findAll().stream()
         .filter(u -> u.getRole() == UserRole.USER).limit(10).toList();
-    if (customers.isEmpty()) { log.warn("No customers."); return; }
+    if (customers.isEmpty()) {
+      log.warn("No customers.");
+      return;
+    }
 
     LocalDateTime from = LocalDateTime.now().minusDays(7);
-    LocalDateTime to   = LocalDateTime.now().minusHours(1);
+    LocalDateTime to = LocalDateTime.now().minusHours(1);
 
     List<Showtime> past = showtimeRepository.findAll().stream()
         .filter(s -> s.getEndTime() != null
             && s.getEndTime().isAfter(from) && s.getEndTime().isBefore(to))
         .toList();
-    if (past.isEmpty()) { log.warn("No past showtimes — skip booking seed."); return; }
+    if (past.isEmpty()) {
+      log.warn("No past showtimes — skip booking seed.");
+      return;
+    }
 
     List<Food> foods = foodRepository.findAll();
 
@@ -182,19 +216,20 @@ public class DataSeeder implements CommandLineRunner {
     List<Showtime> shuffled = new ArrayList<>(past);
     Collections.shuffle(shuffled, RANDOM);
     int target = Math.min(30, shuffled.size());
-    int count  = 0;
+    int count = 0;
 
     for (int i = 0; i < target; i++) {
-      Showtime st   = shuffled.get(i % shuffled.size());
-      User     user = customers.get(RANDOM.nextInt(customers.size()));
+      Showtime st = shuffled.get(i % shuffled.size());
+      User user = customers.get(RANDOM.nextInt(customers.size()));
 
       Set<Long> usedIds = used.getOrDefault(st.getId(), Collections.emptySet());
       List<Seat> avail = seatRepository.findByRoomId(st.getRoom().getId()).stream()
           .filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !usedIds.contains(s.getId()))
           .toList();
-      if (avail.isEmpty()) continue;
+      if (avail.isEmpty())
+        continue;
 
-      List<Seat> picked  = pickSeats(avail, 1 + RANDOM.nextInt(Math.min(3, avail.size())));
+      List<Seat> picked = pickSeats(avail, 1 + RANDOM.nextInt(Math.min(3, avail.size())));
       // Đánh dấu ngay vào map trước khi save
       Set<Long> stUsed = used.computeIfAbsent(st.getId(), k -> new HashSet<>());
       picked.forEach(s -> stUsed.add(s.getId()));
@@ -203,7 +238,7 @@ public class DataSeeder implements CommandLineRunner {
           .reduce(BigDecimal.ZERO, BigDecimal::add);
 
       PaymentMethod method = pickPaymentMethod();
-      LocalDateTime paid   = st.getStartTime().minusHours(RANDOM.nextInt(24) + 1);
+      LocalDateTime paid = st.getStartTime().minusHours(RANDOM.nextInt(24) + 1);
       String code = bookingCode(st, user, i);
 
       Booking booking = Booking.builder()
@@ -217,7 +252,7 @@ public class DataSeeder implements CommandLineRunner {
 
       if (!foods.isEmpty() && RANDOM.nextBoolean()) {
         Food f = foods.get(RANDOM.nextInt(foods.size()));
-        int  q = 1 + RANDOM.nextInt(3);
+        int q = 1 + RANDOM.nextInt(3);
         BigDecimal sub = f.getPrice().multiply(BigDecimal.valueOf(q));
         booking.getBookingFoods().add(BookingFood.builder()
             .booking(booking).food(f).quantity(q)
@@ -241,7 +276,7 @@ public class DataSeeder implements CommandLineRunner {
       }
 
       BigDecimal cur = user.getTotalSpending() != null ? user.getTotalSpending() : BigDecimal.ZERO;
-      BigDecimal add = booking.getTotalAmount()  != null ? booking.getTotalAmount()  : BigDecimal.ZERO;
+      BigDecimal add = booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO;
       user.setTotalSpending(cur.add(add));
       user.setMembershipTier(MembershipTier.fromSpending(user.getTotalSpending()));
       userRepository.save(user);
@@ -251,31 +286,40 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   // ══════════════════════════════════════════════════════
-  //  4. SINH BOOKING HOÀN VÉ MẪU
+  // 4. SINH BOOKING HOÀN VÉ MẪU
   // ══════════════════════════════════════════════════════
   private void seedRefundBookings() {
     long existing = bookingRepository.findAll().stream()
         .filter(b -> b.getStatus() == BookingStatus.REFUND_REQUESTED
             || b.getStatus() == BookingStatus.REFUNDED)
         .count();
-    if (existing >= 3) { log.info("Already {} refund bookings — skip.", existing); return; }
+    if (existing >= 3) {
+      log.info("Already {} refund bookings — skip.", existing);
+      return;
+    }
 
     List<User> customers = userRepository.findAll().stream()
         .filter(u -> u.getRole() == UserRole.USER).limit(10).toList();
-    if (customers.isEmpty()) { log.warn("No customers."); return; }
+    if (customers.isEmpty()) {
+      log.warn("No customers.");
+      return;
+    }
 
     Optional<User> admin = userRepository.findAll().stream()
         .filter(u -> u.getRole() == UserRole.ADMIN || u.getRole() == UserRole.MANAGER)
         .findFirst();
 
     LocalDateTime from = LocalDateTime.now().minusDays(14);
-    LocalDateTime to   = LocalDateTime.now().minusDays(1);
+    LocalDateTime to = LocalDateTime.now().minusDays(1);
 
     List<Showtime> past = showtimeRepository.findAll().stream()
         .filter(s -> s.getEndTime() != null
             && s.getEndTime().isAfter(from) && s.getEndTime().isBefore(to))
         .toList();
-    if (past.isEmpty()) { log.warn("No past showtimes for refund seed."); return; }
+    if (past.isEmpty()) {
+      log.warn("No past showtimes for refund seed.");
+      return;
+    }
 
     // Dùng id-based set cho refund cũng để tránh trùng
     Map<Long, Set<Long>> used = new HashMap<>();
@@ -304,23 +348,24 @@ public class DataSeeder implements CommandLineRunner {
   private int saveRefundBooking(List<Showtime> past, List<User> customers,
       Map<Long, Set<Long>> used, BookingStatus status, PaymentStatus payStatus,
       User admin, int idx) {
-    Showtime st   = past.get(RANDOM.nextInt(past.size()));
-    User     user = customers.get(RANDOM.nextInt(customers.size()));
+    Showtime st = past.get(RANDOM.nextInt(past.size()));
+    User user = customers.get(RANDOM.nextInt(customers.size()));
 
     Set<Long> usedIds = used.getOrDefault(st.getId(), Collections.emptySet());
     List<Seat> avail = seatRepository.findByRoomId(st.getRoom().getId()).stream()
         .filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !usedIds.contains(s.getId()))
         .toList();
-    if (avail.isEmpty()) return 0;
+    if (avail.isEmpty())
+      return 0;
 
     List<Seat> picked = pickSeats(avail, Math.min(2, avail.size()));
     Set<Long> stUsed = used.computeIfAbsent(st.getId(), k -> new HashSet<>());
     picked.forEach(s -> stUsed.add(s.getId()));
 
-    BigDecimal amt    = picked.stream().map(s -> price(s.getSeatType())).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal amt = picked.stream().map(s -> price(s.getSeatType())).reduce(BigDecimal.ZERO, BigDecimal::add);
     BigDecimal refAmt = status == BookingStatus.REFUNDED ? amt.multiply(new BigDecimal("0.8")) : amt;
 
-    LocalDateTime paid      = st.getStartTime().minusHours(RANDOM.nextInt(12) + 2);
+    LocalDateTime paid = st.getStartTime().minusHours(RANDOM.nextInt(12) + 2);
     LocalDateTime refundedAt = status == BookingStatus.REFUNDED ? st.getStartTime().minusHours(5) : null;
     String code = bookingCode(st, user, idx);
 
@@ -333,7 +378,8 @@ public class DataSeeder implements CommandLineRunner {
         .refundReason(pickRefundReason()).refundAmount(refAmt)
         .refundedAt(refundedAt).refundProcessedAt(refundedAt)
         .refundProcessNote(status == BookingStatus.REFUNDED
-            ? "Đã hoàn " + refAmt.toPlainString() + " VNĐ (80%)." : null)
+            ? "Đã hoàn " + refAmt.toPlainString() + " VNĐ (80%)."
+            : null)
         .refundProcessedBy(admin)
         .build();
 
@@ -355,15 +401,15 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   // ══════════════════════════════════════════════════════
-  //  HELPERS
+  // HELPERS
   // ══════════════════════════════════════════════════════
 
   private static final String[] REFUND_REASONS = {
-    "Bận công việc đột xuất không thể đến xem",
-    "Mua nhầm suất chiếu",
-    "Sự cố cá nhân phát sinh",
-    "Mua nhầm rạp chiếu",
-    "Có việc gia đình khẩn cấp"
+      "Bận công việc đột xuất không thể đến xem",
+      "Mua nhầm suất chiếu",
+      "Sự cố cá nhân phát sinh",
+      "Mua nhầm rạp chiếu",
+      "Có việc gia đình khẩn cấp"
   };
 
   private String pickRefundReason() {
@@ -383,18 +429,21 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   private BigDecimal price(SeatType type) {
-    if (type == null) return new BigDecimal("80000");
+    if (type == null)
+      return new BigDecimal("80000");
     return switch (type) {
-      case VIP    -> new BigDecimal("120000");
+      case VIP -> new BigDecimal("120000");
       case COUPLE -> new BigDecimal("180000");
-      default     -> new BigDecimal("80000");
+      default -> new BigDecimal("80000");
     };
   }
 
   private PaymentMethod pickPaymentMethod() {
     int r = RANDOM.nextInt(10);
-    if (r < 6) return PaymentMethod.VNPAY;
-    if (r < 8) return PaymentMethod.CASH;
+    if (r < 6)
+      return PaymentMethod.VNPAY;
+    if (r < 8)
+      return PaymentMethod.CASH;
     return PaymentMethod.CARD;
   }
 
@@ -402,5 +451,40 @@ public class DataSeeder implements CommandLineRunner {
     String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     return String.format("BK%s%d%d%s", date, st.getId(), user.getId(),
         Integer.toHexString(RANDOM.nextInt(0xFFFF) + idx).toUpperCase());
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  5. SINH CÁC VÉ CÒN THIẾU CHO SHOWTIME
+  // ══════════════════════════════════════════════════════
+  private void seedMissingTickets() {
+    List<Showtime> showtimes = showtimeRepository.findAll();
+    Map<SeatType, BigDecimal> pricesMap = seatTypePriceRepository.findAll().stream()
+        .collect(Collectors.toMap(SeatTypePrice::getSeatType, SeatTypePrice::getPrice));
+
+    int generated = 0;
+    for (Showtime st : showtimes) {
+      List<Seat> seats = seatRepository.findByRoomId(st.getRoom().getId());
+      List<Ticket> existingTickets = ticketRepository.findByShowtimeId(st.getId());
+      Set<Long> existingSeatIds = existingTickets.stream()
+          .map(t -> t.getSeat().getId())
+          .collect(Collectors.toSet());
+
+      List<Ticket> newTickets = new ArrayList<>();
+      for (Seat seat : seats) {
+        if (!existingSeatIds.contains(seat.getId())) {
+          newTickets.add(Ticket.builder()
+              .showtime(st)
+              .seat(seat)
+              .price(pricesMap.get(seat.getSeatType()))
+              .ticketStatus(TicketStatus.AVAILABLE)
+              .build());
+        }
+      }
+      if (!newTickets.isEmpty()) {
+        ticketRepository.saveAll(newTickets);
+        generated += newTickets.size();
+      }
+    }
+    log.info("Seeded {} missing tickets for all showtimes.", generated);
   }
 }

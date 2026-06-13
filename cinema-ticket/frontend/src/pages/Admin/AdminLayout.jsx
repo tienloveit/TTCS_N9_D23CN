@@ -217,8 +217,8 @@ const AdminLayout = () => {
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

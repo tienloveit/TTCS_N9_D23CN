@@ -51,7 +51,7 @@ public class TicketController {
   }
 
   @PostMapping("/check-in")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   public ApiResponse<TicketCheckInResponse> checkIn(
       @RequestBody @Valid CheckInTicketRequest request) {
     ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
@@ -61,7 +61,7 @@ public class TicketController {
   }
 
   @PostMapping("/check-in/qr-image")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   public ApiResponse<TicketCheckInResponse> checkInByQRImage(
       @RequestParam("qrImage") MultipartFile qrImage) {
     ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();

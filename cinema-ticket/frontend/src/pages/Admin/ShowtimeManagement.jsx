@@ -220,7 +220,11 @@ const ShowtimeManagement = () => {
     }
   };
 
-  const filtered = showtimes.filter((showtime) =>
+  const listShowtimes = useMemo(() => {
+    return showtimes.filter((showtime) => !selectedBranchId || String(showtime.branchId) === String(selectedBranchId));
+  }, [showtimes, selectedBranchId]);
+
+  const filtered = listShowtimes.filter((showtime) =>
     [showtime.movieName, showtime.roomName, showtime.branchName].some((field) =>
       field?.toLowerCase().includes(searchTerm.toLowerCase()),
     ),
@@ -264,7 +268,11 @@ const ShowtimeManagement = () => {
         <div>
           <h1 className="page-title">Quản lý Suất chiếu</h1>
           <p className="page-subtitle">
-            <strong>{dayStats.total}</strong> suất trong ngày đang chọn · <strong>{dayStats.usedRooms}</strong> phòng có lịch
+            {viewMode === 'calendar' ? (
+              <><strong>{dayStats.total}</strong> suất trong ngày đang chọn · <strong>{dayStats.usedRooms}</strong> phòng có lịch</>
+            ) : (
+              <><strong>{listShowtimes.length}</strong> suất chiếu trên hệ thống</>
+            )}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!canEditShowtime} style={!canEditShowtime ? { display: 'none' } : undefined}>
@@ -297,7 +305,9 @@ const ShowtimeManagement = () => {
             </button>
           </div>
 
-          <input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          {viewMode === 'calendar' && (
+            <input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          )}
 
           <select className="input" value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}>
             <option value="">Tất cả chi nhánh</option>
@@ -306,17 +316,19 @@ const ShowtimeManagement = () => {
             ))}
           </select>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() - 1))))}>
-              Trước
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue())}>
-              Hôm nay
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1))))}>
-              Sau
-            </button>
-          </div>
+          {viewMode === 'calendar' && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() - 1))))}>
+                Trước
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue())}>
+                Hôm nay
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1))))}>
+                Sau
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
