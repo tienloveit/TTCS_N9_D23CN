@@ -21,19 +21,13 @@ export default function SeatSelectPage() {
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
   const [foodError, setFoodError] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-  const [promoDiscount, setPromoDiscount] = useState(0);
-  const [promoError, setPromoError] = useState('');
-  const [validatingPromo, setValidatingPromo] = useState(false);
-  const [availablePromos, setAvailablePromos] = useState([]);
-  const [showPromos, setShowPromos] = useState(false);
-  const [loadingPromos, setLoadingPromos] = useState(false);
   const stompClient = useRef(null);
 
   // New state for showtime info, movie info, sibling showtimes
   const [showtimeInfo, setShowtimeInfo] = useState(null);
   const [movieInfo, setMovieInfo] = useState(null);
   const [siblingShowtimes, setSiblingShowtimes] = useState([]);
+  const [bookingStep, setBookingStep] = useState(1); // 1 = SEAT, 2 = FOOD
 
   // Fetch showtime info → then movie info + sibling showtimes
   useEffect(() => {
@@ -180,7 +174,7 @@ export default function SeatSelectPage() {
 
   const foodQuantity = selectedFoodItems.reduce((sum, food) => sum + food.quantity, 0);
   const totalPrice = seatTotal + foodTotal;
-  const finalPrice = Math.max(0, totalPrice - promoDiscount);
+  const finalPrice = totalPrice;
 
   const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
 
@@ -196,57 +190,6 @@ export default function SeatSelectPage() {
     const d = new Date(isoStr);
     const weekdays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     return `${weekdays[d.getDay()]}, ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
-  };
-
-  // Reset promo discount if total price changes and becomes less than promo criteria
-  useEffect(() => {
-    if (promoDiscount > 0) {
-      setPromoDiscount(0);
-      setPromoError('Giỏ hàng thay đổi, vui lòng áp dụng lại mã (nếu có)');
-    }
-  }, [totalPrice]);
-
-  const handleValidatePromo = async () => {
-    if (!promoCode.trim()) {
-      setPromoDiscount(0);
-      setPromoError('');
-      return;
-    }
-    if (totalPrice === 0) {
-      setPromoError('Vui lòng chọn ghế trước khi áp dụng mã');
-      return;
-    }
-
-    setValidatingPromo(true);
-    setPromoError('');
-    try {
-      const res = await promotionApi.validate({
-        code: promoCode,
-        orderAmount: totalPrice,
-      });
-      setPromoDiscount(Number(res.data.result.discountAmount));
-      setPromoError('');
-    } catch (err) {
-      setPromoDiscount(0);
-      setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
-    } finally {
-      setValidatingPromo(false);
-    }
-  };
-
-  const handleShowPromos = async () => {
-    setShowPromos(!showPromos);
-    if (availablePromos.length === 0 && !showPromos) {
-      setLoadingPromos(true);
-      try {
-        const res = await promotionApi.getAvailable();
-        setAvailablePromos(res.data.result || []);
-      } catch (err) {
-        console.error('Failed to fetch promotions', err);
-      } finally {
-        setLoadingPromos(false);
-      }
-    }
   };
 
   const toggleSeat = (ticket) => {
@@ -290,9 +233,6 @@ export default function SeatSelectPage() {
     // Reset selections when switching
     setSelectedSeats([]);
     setSelectedFoods({});
-    setPromoCode('');
-    setPromoDiscount(0);
-    setPromoError('');
     navigate(`/showtime/${newShowtimeId}/seats`, { replace: true });
   };
 
@@ -315,7 +255,6 @@ export default function SeatSelectPage() {
           foodId: food.id,
           quantity: food.quantity,
         })),
-        promotionCode: promoDiscount > 0 ? promoCode : undefined,
       });
       const bookingData = res.data.result;
       navigate(`/booking/${bookingData.bookingId}/payment`);
@@ -335,6 +274,23 @@ export default function SeatSelectPage() {
 
   };
 
+  // Selected seat objects for sidebar display
+  const selectedTicketObjects = useMemo(
+    () => tickets.filter((t) => selectedSeats.includes(t.seatId)),
+    [tickets, selectedSeats]
+  );
+
+  // Group selected seats by seat type for display
+  const seatGroups = useMemo(() => {
+    const groups = {};
+    selectedTicketObjects.forEach((t) => {
+      const type = t.seatType || 'Ghế thường';
+      if (!groups[type]) groups[type] = { seats: [], price: Number(t.price || 0) };
+      groups[type].seats.push(t.seatCode || `${t.rowLabel || '?'}${t.seatNumber || ''}`);
+    });
+    return Object.entries(groups);
+  }, [selectedTicketObjects]);
+
   if (loading) {
     return (
       <div className="loading">
@@ -348,9 +304,29 @@ export default function SeatSelectPage() {
   if (movieInfo?.language) subtitleParts.push(movieInfo.language === 'Tiếng Việt' ? '2D' : '2D Phụ Đề');
   if (movieInfo?.ageRating) subtitleParts.push(movieInfo.ageRating);
 
+  // Steps definition
+  const steps = [
+    { label: 'Chọn phim / Rạp / Suất', done: true },
+    { label: 'Chọn ghế', active: bookingStep === 1, done: bookingStep > 1 },
+    { label: 'Chọn thức ăn', active: bookingStep === 2, done: bookingStep > 2 },
+    { label: 'Thanh toán' },
+    { label: 'Xác nhận' },
+  ];
+
   return (
     <div className="page">
       <div className="container">
+        {/* Booking Steps */}
+        <div className="booking-steps">
+          {steps.map((step, i) => (
+            <div key={i} className={`booking-step ${step.active ? 'booking-step--active' : ''} ${step.done ? 'booking-step--done' : ''}`}>
+              <div className="booking-step-dot">{step.done ? '✓' : i + 1}</div>
+              <span className="booking-step-label">{step.label}</span>
+              {i < steps.length - 1 && <div className="booking-step-line" />}
+            </div>
+          ))}
+        </div>
+
         <div className="seat-page-layout">
           {/* ===== LEFT: Main Content ===== */}
           <div className="seat-page-main">
@@ -360,7 +336,9 @@ export default function SeatSelectPage() {
               </div>
             )}
 
-            {/* Showtime Switcher */}
+            {bookingStep === 1 && (
+              <>
+                {/* Showtime Switcher */}
             {siblingShowtimes.length > 1 && (
               <div className="showtime-switcher">
                 <div className="showtime-switcher-label">
@@ -456,8 +434,12 @@ export default function SeatSelectPage() {
                 </div>
               </div>
             </div>
+          </>
+        )}
 
-            {/* Food Selection */}
+            {bookingStep === 2 && (
+              <>
+                {/* Food Selection */}
             {(foods.length > 0 || foodError) && (
               <div className="card food-select-card">
                 <div className="food-select-header">
@@ -522,147 +504,89 @@ export default function SeatSelectPage() {
                 </div>
               </div>
             )}
-
-            {/* Promo Code + Summary (shown when seats selected) */}
-            {selectedSeats.length > 0 && (
-              <div className="card" style={{ padding: '24px 32px', marginTop: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 300px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Mã khuyến mãi</h3>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
-                        {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      <input
-                        type="text"
-                        className="input"
-                        placeholder="Nhập mã giảm giá..."
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase', maxWidth: 300 }}
-                      />
-                      <button
-                        className="btn btn-secondary"
-                        onClick={handleValidatePromo}
-                        disabled={validatingPromo || !promoCode.trim()}
-                      >
-                        {validatingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
-                      </button>
-                    </div>
-                    {promoError && (
-                      <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: 8 }}>{promoError}</div>
-                    )}
-                    {showPromos && (
-                      <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
-                        {loadingPromos ? (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
-                        ) : availablePromos.length === 0 ? (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {availablePromos.map(promo => (
-                              <div key={promo.id}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                                onClick={() => {
-                                  setPromoCode(promo.code);
-                                  setShowPromos(false);
-                                }}>
-                                <div>
-                                  <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
-                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    {promo.description || `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {promoDiscount > 0 && (
-                      <div style={{ color: 'var(--seat-available)', fontSize: '0.9rem', marginTop: 8, fontWeight: 600 }}>
-                        Đã giảm: {formatCurrency(promoDiscount)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          </>
+        )}
+      </div>
 
           {/* ===== RIGHT: Sidebar ===== */}
           <aside className="seat-sidebar">
             <div className="seat-sidebar-card">
-              {/* Poster */}
-              {movieInfo?.thumbnailUrl && (
-                <SafeImage
-                  src={movieInfo.thumbnailUrl}
-                  alt={movieInfo.movieName}
-                  className="seat-sidebar-poster"
-                />
-              )}
-
-              {/* Movie Info */}
-              <div className="seat-sidebar-info">
-                <h3 className="seat-sidebar-title">{showtimeInfo?.movieName || 'Đang tải...'}</h3>
-                {subtitleParts.length > 0 && (
-                  <div className="seat-sidebar-subtitle">
-                    {subtitleParts.map((part, i) => (
-                      <span key={i}>
-                        {i > 0 && ' - '}
-                        {part === movieInfo?.ageRating ? (
-                          <span className="seat-sidebar-age-badge">{part}</span>
-                        ) : (
-                          part
-                        )}
-                      </span>
-                    ))}
-                  </div>
+              {/* Poster + Movie Info */}
+              <div className="seat-sidebar-header">
+                {movieInfo?.thumbnailUrl && (
+                  <SafeImage
+                    src={movieInfo.thumbnailUrl}
+                    alt={movieInfo.movieName}
+                    className="seat-sidebar-poster"
+                  />
                 )}
+                <div className="seat-sidebar-info">
+                  <h3 className="seat-sidebar-title">{showtimeInfo?.movieName || 'Đang tải...'}</h3>
+                  {subtitleParts.length > 0 && (
+                    <div className="seat-sidebar-subtitle">
+                      {subtitleParts.map((part, i) => (
+                        <span key={i}>
+                          {i > 0 && ' - '}
+                          {part === movieInfo?.ageRating ? (
+                            <span className="seat-sidebar-age-badge">{part}</span>
+                          ) : (
+                            part
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Cinema + Showtime Info */}
-              <div className="seat-sidebar-details">
+              {/* Cinema + Showtime line */}
+              <div className="seat-sidebar-cinema">
                 {showtimeInfo?.branchName && (
-                  <div className="seat-sidebar-detail-row">
-                    <span className="seat-sidebar-detail-label">Rạp</span>
-                    <span>{showtimeInfo.branchName}{showtimeInfo.roomName ? ` - ${showtimeInfo.roomName}` : ''}</span>
+                  <div className="seat-sidebar-cinema-name">
+                    {showtimeInfo.branchName}{showtimeInfo.roomName ? ` - ${showtimeInfo.roomName}` : ''}
                   </div>
                 )}
                 {showtimeInfo?.startTime && (
-                  <div className="seat-sidebar-detail-row">
-                    <span className="seat-sidebar-detail-label">Suất</span>
-                    <span>
-                      <strong>{formatTime(showtimeInfo.startTime)}</strong>
-                      {' - '}
-                      {formatDate(showtimeInfo.startTime)}
-                    </span>
-                  </div>
-                )}
-                {selectedSeats.length > 0 && (
-                  <div className="seat-sidebar-detail-row">
-                    <span className="seat-sidebar-detail-label">Ghế</span>
-                    <span>
-                      {tickets
-                        .filter((t) => selectedSeats.includes(t.seatId))
-                        .map((t) => t.seatCode || `${t.rowLabel || '?'}${t.seatNumber || ''}`)
-                        .join(', ')}
-                    </span>
-                  </div>
-                )}
-                {foodQuantity > 0 && (
-                  <div className="seat-sidebar-detail-row">
-                    <span className="seat-sidebar-detail-label">Đồ ăn</span>
-                    <span>{foodQuantity} món ({formatCurrency(foodTotal)})</span>
+                  <div className="seat-sidebar-cinema-time">
+                    Suất <strong>{formatTime(showtimeInfo.startTime)}</strong> - {formatDate(showtimeInfo.startTime)}
                   </div>
                 )}
               </div>
 
-              {/* Divider */}
-              <div className="seat-sidebar-divider" />
+              {/* Ticket Items (separated by divider) */}
+              {seatGroups.length > 0 && (
+                <div className="seat-sidebar-items">
+                  {seatGroups.map(([type, data]) => (
+                    <div key={type} className="seat-sidebar-item">
+                      <div className="seat-sidebar-item-info">
+                        <span className="seat-sidebar-item-qty">{data.seats.length}x</span>
+                        <div>
+                          <div className="seat-sidebar-item-name">{type}</div>
+                          <div className="seat-sidebar-item-detail">Ghế: {data.seats.join(', ')}</div>
+                        </div>
+                      </div>
+                      <span className="seat-sidebar-item-price">{formatCurrency(data.price * data.seats.length)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Food Items (separated by divider) */}
+              {selectedFoodItems.length > 0 && (
+                <div className="seat-sidebar-items">
+                  {selectedFoodItems.map((food) => (
+                    <div key={food.id} className="seat-sidebar-item">
+                      <div className="seat-sidebar-item-info">
+                        <span className="seat-sidebar-item-qty">{food.quantity}x</span>
+                        <div>
+                          <div className="seat-sidebar-item-name">{food.name}</div>
+                        </div>
+                      </div>
+                      <span className="seat-sidebar-item-price">{formatCurrency(food.price * food.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Total */}
               <div className="seat-sidebar-total">
@@ -670,30 +594,34 @@ export default function SeatSelectPage() {
                 <strong>{formatCurrency(finalPrice)}</strong>
               </div>
 
-              {/* Promo info in sidebar */}
-              {promoDiscount > 0 && (
-                <div className="seat-sidebar-promo">
-                  Khuyến mãi: -{formatCurrency(promoDiscount)}
-                </div>
-              )}
-
               {/* Actions */}
               <div className="seat-sidebar-actions">
                 <button
                   type="button"
                   className="btn btn-secondary seat-sidebar-btn"
-                  onClick={() => navigate(-1)}
+                  onClick={() => bookingStep === 2 ? setBookingStep(1) : navigate(-1)}
                 >
                   Quay lại
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-primary seat-sidebar-btn"
-                  onClick={handleBooking}
-                  disabled={booking || selectedSeats.length === 0}
-                >
-                  {booking ? 'Đang xử lý...' : 'Tiếp tục'}
-                </button>
+                {bookingStep === 1 ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary seat-sidebar-btn"
+                    onClick={() => setBookingStep(2)}
+                    disabled={selectedSeats.length === 0}
+                  >
+                    Tiếp tục
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary seat-sidebar-btn"
+                    onClick={handleBooking}
+                    disabled={booking || selectedSeats.length === 0}
+                  >
+                    {booking ? 'Đang xử lý...' : 'Thanh toán'}
+                  </button>
+                )}
               </div>
             </div>
           </aside>
@@ -712,9 +640,13 @@ export default function SeatSelectPage() {
             </span>
           )}
           <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
-          <button className="btn btn-primary" onClick={handleBooking} disabled={booking}>
-            {booking ? 'Đang xử lý...' : 'Đặt vé'}
-          </button>
+          {bookingStep === 1 ? (
+            <button className="btn btn-primary" onClick={() => setBookingStep(2)}>Tiếp tục</button>
+          ) : (
+            <button className="btn btn-primary" onClick={handleBooking} disabled={booking}>
+              {booking ? 'Đang xử lý...' : 'Thanh toán'}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -187,8 +187,27 @@ export default function PaymentPage() {
     booking.seatCodes?.join(', ') ||
     '-';
 
+  const steps = [
+    { label: 'Chọn phim / Rạp / Suất', done: true },
+    { label: 'Chọn ghế', done: true },
+    { label: 'Chọn thức ăn', done: true },
+    { label: 'Thanh toán', active: true },
+    { label: 'Xác nhận' },
+  ];
+
   return (
     <div className="page">
+      <div className="container">
+        <div className="booking-steps">
+          {steps.map((step, i) => (
+            <div key={i} className={`booking-step ${step.active ? 'booking-step--active' : ''} ${step.done ? 'booking-step--done' : ''}`}>
+              <div className="booking-step-dot">{step.done ? '✓' : i + 1}</div>
+              <span className="booking-step-label">{step.label}</span>
+              {i < steps.length - 1 && <div className="booking-step-line" />}
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="container" style={{ maxWidth: 600 }}>
         <div className="page-header" style={{ textAlign: 'center' }}>
           <h1 className="page-title">Thanh toán</h1>
