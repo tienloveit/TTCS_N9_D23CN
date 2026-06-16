@@ -452,10 +452,10 @@ export default function StaffBookingPage() {
   const canContinueSelection = Boolean(showtimeId);
   const canContinueSeats = selectedSeats.length > 0;
   const stepItems = [
-    { key: 'SELECTION', label: '1. Selection' },
-    { key: 'SEATS', label: '2. Seats' },
-    { key: 'ADDONS', label: '3. Add-ons' },
-    { key: 'CHECKOUT', label: '4. Checkout' },
+    { key: 'SELECTION', label: 'Chọn phim / Rạp / Suất' },
+    { key: 'SEATS', label: 'Chọn ghế' },
+    { key: 'ADDONS', label: 'Chọn thức ăn' },
+    { key: 'CHECKOUT', label: 'Thanh toán' },
   ];
 
   // Reset giảm giá khi giỏ hàng thay đổi
@@ -643,574 +643,424 @@ export default function StaffBookingPage() {
 
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
+  const activeIndex = stepItems.findIndex((item) => item.key === currentStep);
+
   return (
-    <form onSubmit={handleSubmit} className={`counter-booking counter-booking--${currentStep.toLowerCase()}`}>
-      <div className="counter-stepper" aria-label="Quy trình đặt vé tại quầy">
-        {stepItems.map((step, index) => {
-          const activeIndex = stepItems.findIndex((item) => item.key === currentStep);
-          const isActive = step.key === currentStep;
-          const isDone = index < activeIndex;
-
-          return (
-            <div
-              key={step.key}
-              className={`counter-step ${isActive ? 'counter-step--active' : ''} ${isDone ? 'counter-step--done' : ''}`}
-            >
-              <span>{isDone || isActive ? '✓' : ''}</span>
-              <strong>{step.label}</strong>
-            </div>
-          );
-        })}
-      </div>
-
-      {error && (
-        <div className="error-message" style={{ marginBottom: 20 }}>
-          {error}
-        </div>
-      )}
-
-      {currentStep === 'SELECTION' && (
-        <div className="admin-table-card counter-panel counter-showtime-card">
-          <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <h3>Suất chiếu</h3>
-                <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
-                  {filteredShowtimes.length}/{showtimes.length} suất chiếu được lấy từ hệ thống
-                </p>
-              </div>
-            </div>
-
-            {/* Filter row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-              <label>
-                <span className="form-label">Tìm kiếm</span>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Tên phim, rạp, phòng..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </label>
-
-              <label>
-                <span className="form-label">Ngày chiếu</span>
-                <input
-                  type="date"
-                  className="input"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                />
-              </label>
-
-              <label>
-                <span className="form-label">Rạp</span>
-                <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
-                  <option value="ALL">Tất cả rạp</option>
-                  {branchOptions.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <span className="form-label">Khung giờ</span>
-                <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
-                  <option value="ALL">Tất cả</option>
-                  <option value="MORNING">Sáng (6h-12h)</option>
-                  <option value="AFTERNOON">Chiều (12h-18h)</option>
-                  <option value="EVENING">Tối (18h-22h)</option>
-                  <option value="NIGHT">Khuya (22h-6h)</option>
-                  <option value="UPCOMING">Chưa chiếu</option>
-                  <option value="ONGOING">Đang chiếu</option>
-                </select>
-              </label>
-
-              <label>
-                <span className="form-label">Trạng thái</span>
-                <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="ALL">Tất cả</option>
-                  <option value="AVAILABLE">Có thể bán</option>
-                  <option value="UNAVAILABLE">Không bán</option>
-                </select>
-              </label>
-
-              <label>
-                <span className="form-label">Loại phòng</span>
-                <select className="input" value={roomTypeFilter} onChange={(e) => setRoomTypeFilter(e.target.value)}>
-                  <option value="ALL">Tất cả</option>
-                  {roomTypeOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {/* Clear filters button */}
-              {hasActiveFilters && (
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={clearFilters}
-                    style={{ width: '100%' }}
-                  >
-                    Xóa bộ lọc
-                  </button>
+    <form onSubmit={handleSubmit} className="staff-booking-wrapper" style={{ width: '100%', maxWidth: 1200, margin: '0 auto', background: 'var(--bg-secondary)', padding: '24px 32px', borderRadius: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* Booking Steps (User Stepper UI) */}
+        {!lastBooking && (
+          <div className="booking-steps">
+            {stepItems.map((step, index) => {
+              const isActive = step.key === currentStep;
+              const isDone = index < activeIndex;
+              return (
+                <div
+                  key={step.key}
+                  className={`booking-step ${isActive ? 'booking-step--active' : ''} ${isDone ? 'booking-step--done' : ''}`}
+                >
+                  <div className="booking-step-dot">{isDone ? '✓' : index + 1}</div>
+                  <span className="booking-step-label">{step.label.replace(/^\d+\.\s*/, '')}</span>
+                  {index < stepItems.length - 1 && <div className="booking-step-line" />}
                 </div>
-              )}
-            </div>
+              );
+            })}
           </div>
+        )}
 
-          {filteredShowtimes.length === 0 ? (
-            <div className="empty-state">
-              {hasActiveFilters
-                ? 'Không tìm thấy suất chiếu nào phù hợp với bộ lọc'
-                : 'Không có suất chiếu phù hợp với MoviePTIT đã chọn.'}
+        {error && (
+          <div className="error-message" style={{ marginBottom: 20 }}>
+            {error}
+          </div>
+        )}
+
+        {lastBooking ? (
+          /* SUCCESS PAGE */
+          <div className="card checkin-result-card" style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: 40 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green)' }}>
+              <span style={{ fontSize: '2.5rem' }}>✓</span>
+              <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
             </div>
-          ) : (
-            <div className="counter-showtime-list">
-              {showtimeGroups.map((group) => (
-                <section key={group.branchName} className="counter-showtime-group">
-                  <h2 style={{ fontSize: 16, margin: '0 0 10px' }}>{group.branchName}</h2>
-                  <div className="counter-showtime-options">
-                    {group.items.map((showtime) => {
-                      const available = isShowtimeAvailable(showtime);
-                      const selected = String(showtime.showtimeId) === String(showtimeId);
-
-                      return (
-                        <button
-                          key={showtime.showtimeId}
-                          type="button"
-                          onClick={() => available && setShowtimeId(String(showtime.showtimeId))}
-                          disabled={!available}
-                          className={`counter-showtime-option ${selected ? 'counter-showtime-option--active' : ''}`}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                            <strong style={{ color: 'var(--text-primary)' }}>{formatTime(showtime.startTime)}</strong>
-                            <span className={`status-badge ${available ? 'status--active' : 'status--inactive'}`}>
-                              {available ? 'Có thể bán' : 'Không bán'}
-                            </span>
-                          </div>
-                          <div style={{ marginTop: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            {showtime.movieName}
-                          </div>
-                          <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                            {showtime.roomName} - {showtime.roomType}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+              <DigitalTicket booking={{
+                ...lastBooking,
+                startTime: lastBooking.showtimeStart,
+                seatCodes: lastBooking.seatCodes || (lastBooking.tickets || []).map(t => t.seatCode),
+                status: 'COMPLETED'
+              }} />
             </div>
-          )}
-
-          <div className="counter-step-actions">
-            {selectedShowtime ? (
-              <div>
-                <span className="form-label">Suất đã chọn</span>
-                <strong>{selectedShowtime.movieName}</strong>
-                <span>{formatDateTime(selectedShowtime.startTime)}</span>
-              </div>
-            ) : (
-              <div>
-                <span className="form-label">Suất đã chọn</span>
-                <strong>Chưa chọn suất chiếu</strong>
-                <span>Chọn một suất còn bán để qua bước chọn ghế.</span>
+            {lastBooking.foods && lastBooking.foods.length > 0 && (
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '2px dashed var(--border)', textAlign: 'left' }}>
+                <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>🍿 Đồ ăn cần giao cho khách:</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  {lastBooking.foods.map((bf) => (
+                    <div key={bf.id} style={{ background: 'var(--bg-card)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--border)', fontSize: '0.95rem' }}>
+                      <strong style={{ color: 'var(--accent)' }}>{bf.quantity}x</strong> {bf.foodName}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-            <button
-              className="btn btn-primary"
-              type="button"
-              disabled={!canContinueSelection}
-              onClick={continueFromSelection}
-            >
-              Chọn ghế
-            </button>
-          </div>
-        </div>
-      )}
-
-      {selectedShowtime && currentStep !== 'SELECTION' && (
-        <>
-          <div className="admin-table-card counter-panel counter-selected-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-              <div>
-                <span className="form-label">Suất đang bán</span>
-                <h2 style={{ margin: '4px 0 0', fontSize: 20 }}>{selectedShowtime.movieName}</h2>
-                <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>
-                  {selectedShowtime.branchName} - {selectedShowtime.roomName}
-                </div>
-                <div className="counter-selected-seats">
-                  {selectedSeatTickets.length > 0
-                    ? selectedSeatTickets.map((ticket) => ticket.seatCode).join(', ')
-                    : 'Chưa chọn ghế'}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <span className="form-label">Thời gian</span>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--green)' }}>
-                  {formatDateTime(selectedShowtime.startTime)}
-                </div>
-              </div>
+            <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-secondary" onClick={handlePrintLastBooking}>
+                In vé / hóa đơn
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+                Tạo đơn hàng mới
+              </button>
             </div>
           </div>
+        ) : (
+          <div className="seat-page-layout">
+            {/* ===== LEFT: Main Content ===== */}
+            <div className="seat-page-main">
 
-          {currentStep === 'SEATS' && (
-            <div className="admin-table-card counter-panel counter-seat-card">
-              {loadingTickets ? (
-                <div className="loading"><div className="spinner" /></div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-                    <div className="seat-screen" />
+              {currentStep === 'SELECTION' && (
+                <div className="card" style={{ padding: 24 }}>
+                  <div className="showtime-switcher" style={{ marginBottom: 20 }}>
+                    <div className="showtime-switcher-label">Lọc suất chiếu</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, padding: 12 }}>
+                      <input type="text" className="input" placeholder="Tìm tên phim, rạp..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                      <input type="date" className="input" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
+                      <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
+                        <option value="ALL">Tất cả rạp</option>
+                        {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                      <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
+                        <option value="ALL">Khung giờ: Tất cả</option>
+                        <option value="MORNING">Sáng (6h-12h)</option>
+                        <option value="AFTERNOON">Chiều (12h-18h)</option>
+                        <option value="EVENING">Tối (18h-22h)</option>
+                        <option value="NIGHT">Khuya (22h-6h)</option>
+                      </select>
+                      <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                        <option value="AVAILABLE">Chỉ suất có thể bán</option>
+                        <option value="ALL">Tất cả trạng thái</option>
+                      </select>
+                      {hasActiveFilters && (
+                        <button type="button" className="btn" onClick={clearFilters}>Xóa lọc</button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="seat-map-wrapper">
-                    <div className="seat-map">
-                      {sortedRows.map(([row, seats]) => (
-                        <div key={row} className="seat-row">
-                          <span className="seat-row-label">{row}</span>
-                          {seats.map((ticket) => (
-                            <div
-                              key={ticket.id}
-                              className={getSeatClass(ticket)}
-                              onClick={() => toggleSeat(ticket)}
-                              title={`${ticket.seatCode} - ${ticket.displayStatus || ticket.ticketStatus}`}
-                            >
-                              {ticket.seatNumber || ''}
-                            </div>
-                          ))}
-                          <span className="seat-row-label">{row}</span>
+                  {filteredShowtimes.length === 0 ? (
+                    <div className="empty-state">Không có suất chiếu phù hợp.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      {showtimeGroups.map((group) => (
+                        <div key={group.branchName} className="admin-table-card">
+                          <h3 style={{ margin: '0 0 16px', fontSize: 18 }}>{group.branchName}</h3>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                            {group.items.map((showtime) => {
+                              const available = isShowtimeAvailable(showtime);
+                              const selected = String(showtime.showtimeId) === String(showtimeId);
+                              return (
+                                <button
+                                  key={showtime.showtimeId}
+                                  type="button"
+                                  onClick={() => available && setShowtimeId(String(showtime.showtimeId))}
+                                  disabled={!available}
+                                  style={{
+                                    textAlign: 'left',
+                                    padding: 12,
+                                    borderRadius: 'var(--radius-md)',
+                                    border: `2px solid ${selected ? 'var(--seat-selected)' : 'var(--border)'}`,
+                                    background: selected ? 'rgba(59,130,246,0.1)' : 'var(--bg-primary)',
+                                    cursor: available ? 'pointer' : 'not-allowed',
+                                    opacity: available ? 1 : 0.6
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)', marginBottom: 4 }}>
+                                    {formatTime(showtime.startTime)}
+                                  </div>
+                                  <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{showtime.movieName}</div>
+                                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{showtime.roomName} - {showtime.roomType}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-
-                  <div className="seat-legend">
-                    <div className="seat-legend-item">
-                      <div className="seat-legend-dot" style={{ background: 'rgba(16,185,129,0.15)', borderColor: 'var(--seat-available)' }} />
-                      Trống
-                    </div>
-                    <div className="seat-legend-item">
-                      <div className="seat-legend-dot" style={{ background: 'rgba(59,130,246,0.3)', borderColor: 'var(--seat-selected)' }} />
-                      Đang chọn
-                    </div>
-                    <div className="seat-legend-item">
-                      <div className="seat-legend-dot" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'var(--seat-holding)' }} />
-                      Đang giữ
-                    </div>
-                    <div className="seat-legend-item">
-                      <div className="seat-legend-dot" style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'var(--seat-booked)' }} />
-                      Đã đặt
-                    </div>
-                  </div>
-
-                  <div className="counter-seat-summary">
-                    <span>
-                      <strong>{selectedSeats.length}</strong> ghế
-                    </span>
-                    <strong>{formatCurrency(finalPrice)}</strong>
-                    <button
-                      className="btn btn-primary"
-                      type="button"
-                      disabled={!canContinueSeats}
-                      onClick={continueFromSeats}
-                    >
-                      Tiếp tục
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {currentStep === 'ADDONS' && (foods.length > 0 || foodError) && (
-            <div className="admin-table-card food-select-card counter-panel counter-food-card">
-              <div className="food-select-header">
-                <div>
-                  <h2>Chọn đồ ăn</h2>
-                  <p>Thêm bắp nước và combo vào đơn tại quầy.</p>
-                </div>
-                <div className="counter-card-actions">
-                  {foodTotal > 0 && <strong>{formatCurrency(foodTotal)}</strong>}
-                  <button type="button" className="btn btn-primary" onClick={continueToCheckout}>
-                    Tiếp tục
-                  </button>
-                </div>
-              </div>
-
-              {foodError && (
-                <div className="error-message" style={{ marginBottom: 16 }}>
-                  {foodError}
+                  )}
                 </div>
               )}
 
-              <div className="food-select-grid">
-                {foods.map((food) => {
-                  const quantity = selectedFoods[food.id] || 0;
-                  const stockLimited = food.stockQuantity != null;
-                  const stockLeft = stockLimited ? Number(food.stockQuantity) - quantity : null;
-                  const cannotAdd = stockLimited && stockLeft <= 0;
-
-                  return (
-                    <div
-                      key={food.id}
-                      className={`food-option ${quantity > 0 ? 'food-option--selected' : ''}`}
-                    >
-                      <div className="food-option-media">
-                        {food.imageUrl ? (
-                          <img src={food.imageUrl} alt={food.name} />
-                        ) : (
-                          <span>{food.name?.charAt(0) || 'F'}</span>
-                        )}
+              {currentStep === 'SEATS' && (
+                <div className="card" style={{ padding: 32 }}>
+                  {loadingTickets ? (
+                    <div className="loading"><div className="spinner" /></div>
+                  ) : (
+                    <>
+                      <div className="seat-screen-wrapper" style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
+                        <div className="seat-screen" />
                       </div>
-
-                      <div className="food-option-body">
-                        <h3>{food.name}</h3>
-                        {food.description && <p>{food.description}</p>}
-                        <strong>{formatCurrency(food.price)}</strong>
-                        {stockLimited && (
-                          <p style={{ color: stockLeft <= 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: 700 }}>
-                            Còn {Math.max(stockLeft, 0)}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="food-stepper">
-                        <button
-                          type="button"
-                          onClick={() => updateFoodQuantity(food.id, -1)}
-                          disabled={quantity === 0 || submitting}
-                          aria-label={`Giảm ${food.name}`}
-                        >
-                          -
-                        </button>
-                        <span>{quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateFoodQuantity(food.id, 1)}
-                          disabled={submitting || cannotAdd}
-                          aria-label={`Tăng ${food.name}`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {currentStep === 'CHECKOUT' && (
-            <div className="admin-table-card counter-panel counter-checkout-card">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
-                <div>
-                  <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thông tin khách</h2>
-                  <div style={{ display: 'grid', gap: 12 }}>
-                    <input
-                      className="input"
-                      placeholder="Họ tên"
-                      value={customer.customerName}
-                      onChange={(e) => setCustomer({ ...customer, customerName: e.target.value })}
-                    />
-                    <input
-                      className="input"
-                      placeholder="Email để gửi vé"
-                      value={customer.customerEmail}
-                      onChange={(e) => setCustomer({ ...customer, customerEmail: e.target.value })}
-                    />
-                    <input
-                      className="input"
-                      placeholder="Số điện thoại"
-                      value={customer.customerPhone}
-                      onChange={(e) => setCustomer({ ...customer, customerPhone: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thanh toán tại quầy</h2>
-                  <select
-                    className="input"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  >
-                    <option value="CASH">Tiền mặt</option>
-                    <option value="CARD">Thẻ</option>
-                  </select>
-
-                  {/* Mã khuyến mãi — hiện với cả CASH và CARD */}
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="form-label" style={{ margin: 0 }}>Mã khuyến mãi</span>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
-                        {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                      <input
-                        type="text"
-                        className="input"
-                        placeholder="Nhập mã giảm giá..."
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase', flex: 1 }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={handleValidatePromo}
-                        disabled={validatingPromo || !promoCode.trim()}
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
-                        {validatingPromo ? '...' : 'Áp dụng'}
-                      </button>
-                    </div>
-                    {showPromos && (
-                      <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
-                        {loadingPromos ? (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
-                        ) : availablePromos.length === 0 ? (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {availablePromos.map(promo => (
-                              <div key={promo.id}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                                onClick={() => {
-                                  setPromoCode(promo.code);
-                                  setShowPromos(false);
-                                }}>
-                                <div>
-                                  <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
-                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    {promo.description || `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
-                                  </div>
+                      <div className="seat-map-wrapper">
+                        <div className="seat-map">
+                          {sortedRows.map(([row, seats]) => (
+                            <div key={row} className="seat-row">
+                              <span className="seat-row-label">{row}</span>
+                              {seats.map((ticket) => (
+                                <div
+                                  key={ticket.id}
+                                  className={getSeatClass(ticket)}
+                                  onClick={() => toggleSeat(ticket)}
+                                  title={`${ticket.seatCode} - ${ticket.displayStatus || ticket.ticketStatus}`}
+                                >
+                                  {ticket.seatNumber || ''}
                                 </div>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
+                              ))}
+                              <span className="seat-row-label">{row}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="seat-legend" style={{ marginTop: 40, justifyContent: 'center' }}>
+                        <div className="seat-legend-item">
+                          <div className="seat-legend-dot" style={{ background: 'rgba(16,185,129,0.15)', borderColor: 'var(--seat-available)' }} />
+                          Trống
+                        </div>
+                        <div className="seat-legend-item">
+                          <div className="seat-legend-dot" style={{ background: 'rgba(59,130,246,0.3)', borderColor: 'var(--seat-selected)' }} />
+                          Đang chọn
+                        </div>
+                        <div className="seat-legend-item">
+                          <div className="seat-legend-dot" style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'var(--seat-booked)' }} />
+                          Đã đặt
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {currentStep === 'ADDONS' && (foods.length > 0 || foodError) && (
+                <div className="card food-select-card" style={{ padding: 24 }}>
+                  <h2 style={{ fontSize: 24, marginBottom: 8 }}>Món ngon thả ga, Xem phim cực đã!</h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Lựa chọn các gói combo bắp nước để tiết kiệm hơn.</p>
+                  {foodError && <div className="error-message" style={{ marginBottom: 16 }}>{foodError}</div>}
+                  <div className="food-select-grid">
+                    {foods.map((food) => {
+                      const quantity = selectedFoods[food.id] || 0;
+                      const stockLimited = food.stockQuantity != null;
+                      const stockLeft = stockLimited ? Number(food.stockQuantity) - quantity : null;
+                      const cannotAdd = stockLimited && stockLeft <= 0;
+
+                      return (
+                        <div key={food.id} className={`food-option ${quantity > 0 ? 'food-option--selected' : ''}`}>
+                          <div className="food-option-media">
+                            {food.imageUrl ? <img src={food.imageUrl} alt={food.name} /> : <span>{food.name?.charAt(0) || 'F'}</span>}
+                          </div>
+                          <div className="food-option-body">
+                            <h3>{food.name}</h3>
+                            {food.description && <p>{food.description}</p>}
+                            <strong>{formatCurrency(food.price)}</strong>
+                            {stockLimited && (
+                              <p style={{ color: stockLeft <= 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: 700 }}>Còn {Math.max(stockLeft, 0)}</p>
+                            )}
+                          </div>
+                          <div className="food-stepper">
+                            <button type="button" onClick={() => updateFoodQuantity(food.id, -1)} disabled={quantity === 0 || submitting}>-</button>
+                            <span>{quantity}</span>
+                            <button type="button" onClick={() => updateFoodQuantity(food.id, 1)} disabled={submitting || cannotAdd}>+</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 'CHECKOUT' && (
+                <div className="card" style={{ padding: 32 }}>
+                  <h2 style={{ fontSize: 24, marginBottom: 20 }}>Thông tin thanh toán</h2>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}>
+                    <div>
+                      <h3 style={{ fontSize: 16, marginBottom: 16 }}>Thông tin khách hàng (Không bắt buộc)</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <input className="input" placeholder="Họ và tên" value={customer.customerName} onChange={(e) => setCustomer({ ...customer, customerName: e.target.value })} />
+                        <input className="input" placeholder="Email nhận vé" value={customer.customerEmail} onChange={(e) => setCustomer({ ...customer, customerEmail: e.target.value })} />
+                        <input className="input" placeholder="Số điện thoại" value={customer.customerPhone} onChange={(e) => setCustomer({ ...customer, customerPhone: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: 16, marginBottom: 16 }}>Thanh toán & Khuyến mãi</h3>
+                      <select className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginBottom: 16 }}>
+                        <option value="CASH">Thanh toán Tiền mặt</option>
+                        <option value="CARD">Thanh toán Online (VNPay)</option>
+                      </select>
+
+                      <div style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontWeight: 600 }}>Mã khuyến mãi</span>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos}>
+                            {showPromos ? 'Đóng' : 'Mã khả dụng'}
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input
+                            type="text"
+                            className="input"
+                            placeholder="Nhập mã..."
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase', flex: 1 }}
+                          />
+                          <button type="button" className="btn btn-secondary" onClick={handleValidatePromo} disabled={validatingPromo || !promoCode.trim()}>
+                            {validatingPromo ? '...' : 'Áp dụng'}
+                          </button>
+                        </div>
+
+                        {showPromos && (
+                          <div style={{ marginTop: 12, background: 'var(--bg-primary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)' }}>
+                            {loadingPromos ? (
+                              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Đang tải...</div>
+                            ) : availablePromos.length === 0 ? (
+                              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Không có mã nào</div>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {availablePromos.map(promo => (
+                                  <div key={promo.id}
+                                    style={{ padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                                    onClick={() => { setPromoCode(promo.code); setShowPromos(false); }}>
+                                    <strong style={{ color: 'var(--seat-available)', display: 'block' }}>{promo.code}</strong>
+                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{promo.description || `Giảm ${promo.discountPercent}%`}</span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
                           </div>
                         )}
+                        {promoError && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 8 }}>{promoError}</div>}
                       </div>
-                    )}
-                    {promoError && (
-                      <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>
-                    )}
-                    {promoDiscount > 0 && (
-                      <div style={{ color: 'var(--seat-available)', fontSize: '0.85rem', marginTop: 6, fontWeight: 600 }}>
-                        ✓ Giảm: {formatCurrency(promoDiscount)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginTop: 16 }}>
-                    <span className="form-label">Tổng tiền</span>
-                    {promoDiscount > 0 && (
-                      <div style={{ fontSize: 14, color: 'var(--text-muted)', textDecoration: 'line-through', marginTop: 4 }}>
-                        {formatCurrency(total)}
-                      </div>
-                    )}
-                    <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: promoDiscount > 0 ? 2 : 6 }}>
-                      {formatCurrency(finalPrice)}
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </>
-      )}
 
-      {lastBooking && (
-        <div className="admin-table-card counter-panel counter-success-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green)' }}>
-            <span style={{ fontSize: '1.8rem' }}>✓</span>
-            <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-            <DigitalTicket booking={{
-              ...lastBooking,
-              startTime: lastBooking.showtimeStart,
-              seatCodes: lastBooking.seatCodes || (lastBooking.tickets || []).map(t => t.seatCode),
-              status: 'COMPLETED'
-            }} />
-          </div>
-
-          {lastBooking.foods && lastBooking.foods.length > 0 && (
-            <div style={{ marginTop: 24, paddingTop: 20, borderTop: '2px dashed var(--border)' }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>🍿 Đồ ăn cần giao cho khách:</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {lastBooking.foods.map((bf) => (
-                  <div key={bf.id} style={{ background: 'var(--bg-card)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--border)', fontSize: '0.95rem' }}>
-                    <strong style={{ color: 'var(--accent)' }}>{bf.quantity}x</strong> {bf.foodName}
+            {/* ===== RIGHT: Sidebar ===== */}
+            <aside className="seat-sidebar">
+              <div className="seat-sidebar-card">
+                {selectedShowtime ? (
+                  <div className="seat-sidebar-header">
+                    {selectedShowtime.thumbnailUrl && (
+                      <img
+                        src={selectedShowtime.thumbnailUrl}
+                        alt={selectedShowtime.movieName}
+                        className="seat-sidebar-poster"
+                        onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                      />
+                    )}
+                    <div className="seat-sidebar-info">
+                      <h3 className="seat-sidebar-title">{selectedShowtime.movieName}</h3>
+                      <div className="seat-sidebar-subtitle">
+                        <span>2D Phụ Đề</span>
+                        <span> - </span>
+                        <span className="seat-sidebar-age-badge">{selectedShowtime.ageRating || 'P'}</span>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <div className="seat-sidebar-header">
+                    <div className="seat-sidebar-info">
+                      <h3 className="seat-sidebar-title" style={{ color: 'var(--text-muted)' }}>Chưa chọn suất</h3>
+                    </div>
+                  </div>
+                )}
+
+                <div className="seat-sidebar-details">
+                  <div className="seat-sidebar-row">
+                    <span>Rạp</span>
+                    <strong>{selectedShowtime ? selectedShowtime.branchName : '-'}</strong>
+                  </div>
+                  <div className="seat-sidebar-row">
+                    <span>Phòng</span>
+                    <strong>{selectedShowtime ? `${selectedShowtime.roomName} (${selectedShowtime.roomType})` : '-'}</strong>
+                  </div>
+                  <div className="seat-sidebar-row">
+                    <span>Suất chiếu</span>
+                    <strong>{selectedShowtime ? formatDateTime(selectedShowtime.startTime) : '-'}</strong>
+                  </div>
+                </div>
+
+                <div className="seat-sidebar-details">
+                  <div className="seat-sidebar-row">
+                    <span>Ghế ({selectedSeats.length})</span>
+                    <strong style={{ color: 'var(--seat-available)', wordBreak: 'break-word', textAlign: 'right' }}>
+                      {selectedSeats.length > 0 ? selectedSeatTickets.map((t) => t.seatCode).join(', ') : '-'}
+                    </strong>
+                  </div>
+                  {seatTotal > 0 && (
+                    <div className="seat-sidebar-row">
+                      <span style={{ fontSize: '0.85rem' }}>Tiền ghế</span>
+                      <strong style={{ fontSize: '0.9rem' }}>{formatCurrency(seatTotal)}</strong>
+                    </div>
+                  )}
+                </div>
+
+                {selectedFoodItems.length > 0 && (
+                  <div className="seat-sidebar-details">
+                    <div style={{ marginBottom: 8, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Bắp nước</div>
+                    {selectedFoodItems.map((food) => (
+                      <div className="seat-sidebar-row" key={food.id} style={{ marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{food.quantity}x {food.name}</span>
+                        <strong style={{ fontSize: '0.85rem' }}>{formatCurrency(food.price * food.quantity)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {promoDiscount > 0 && (
+                  <div className="seat-sidebar-details" style={{ color: 'var(--seat-available)' }}>
+                    <div className="seat-sidebar-row">
+                      <span>Mã giảm giá</span>
+                      <strong>- {formatCurrency(promoDiscount)}</strong>
+                    </div>
+                  </div>
+                )}
+
+                <div className="seat-sidebar-total">
+                  <span>TỔNG TIỀN</span>
+                  <strong>{formatCurrency(finalPrice)}</strong>
+                </div>
+
+                <div className="seat-sidebar-actions">
+                  {currentStep === 'SELECTION' && (
+                    <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '16px 0', fontSize: '1.1rem', background: '#ea580c', borderColor: '#ea580c', color: '#fff' }} disabled={!canContinueSelection} onClick={continueFromSelection}>
+                      Tiếp tục chọn ghế
+                    </button>
+                  )}
+                  {currentStep === 'SEATS' && (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setCurrentStep('SELECTION')}>Quay lại</button>
+                      <button type="button" className="btn btn-primary" style={{ flex: 2, padding: '16px 0', fontSize: '1.1rem', background: '#ea580c', borderColor: '#ea580c', color: '#fff' }} disabled={!canContinueSeats} onClick={continueFromSeats}>
+                        Tiếp tục
+                      </button>
+                    </div>
+                  )}
+                  {currentStep === 'ADDONS' && (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setCurrentStep('SEATS')}>Quay lại</button>
+                      <button type="button" className="btn btn-primary" style={{ flex: 2, padding: '16px 0', fontSize: '1.1rem', background: '#ea580c', borderColor: '#ea580c', color: '#fff' }} onClick={continueToCheckout}>
+                        Thanh toán
+                      </button>
+                    </div>
+                  )}
+                  {currentStep === 'CHECKOUT' && (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setCurrentStep(foods.length > 0 ? 'ADDONS' : 'SEATS')}>Quay lại</button>
+                      <button type="submit" className="btn btn-primary" style={{ flex: 2, padding: '16px 0', fontSize: '1.1rem', background: '#ea580c', borderColor: '#ea580c', color: '#fff' }} disabled={submitting}>
+                        {submitting ? 'Đang xử lý...' : 'Xác nhận đơn'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-
-          <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handlePrintLastBooking}
-            >
-              In vé / hóa đơn
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => window.location.reload()}
-            >
-              Tạo đơn hàng mới
-            </button>
+            </aside>
           </div>
-        </div>
-      )}
-
-      {selectedSeats.length > 0 && (
-        <div className="booking-bar">
-          <span>
-            <strong>{selectedSeats.length}</strong> ghế
-          </span>
-          {foodQuantity > 0 && (
-            <span>
-              <strong>{foodQuantity}</strong> món
-            </span>
-          )}
-          <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
-          <button
-            className="btn btn-primary"
-            type={currentStep === 'CHECKOUT' ? 'submit' : 'button'}
-            disabled={submitting || (currentStep === 'SEATS' && !canContinueSeats)}
-            onClick={(e) => {
-              if (currentStep === 'SEATS') {
-                e.preventDefault();
-                continueFromSeats();
-              } else if (currentStep === 'ADDONS') {
-                e.preventDefault();
-                continueToCheckout();
-              }
-            }}
-          >
-            {currentStep === 'SEATS'
-              ? 'Tiếp tục'
-              : currentStep === 'ADDONS'
-                ? 'Tiếp tục thanh toán'
-                : submitting ? 'Đang xử lý...' : 'Hoàn tất tại quầy'}
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </form>
   );
 }
