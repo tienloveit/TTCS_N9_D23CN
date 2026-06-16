@@ -21,7 +21,6 @@ export default function CheckInPage() {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [recentCheckIns, setRecentCheckIns] = useState([]);
   const codeInputRef = useRef(null);
-  const uploadInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
   const addRecentCheckIn = (ticketCode, status) => {
@@ -127,21 +126,6 @@ export default function CheckInPage() {
             </span>
             <strong>Sử dụng Camera để quét</strong>
           </button>
-
-          <button
-            type="button"
-            className="checkin-action"
-            onClick={() => uploadInputRef.current?.click()}
-          >
-            <span className="checkin-action-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" role="img">
-                <path d="M12 3v12" />
-                <path d="m7 8 5-5 5 5" />
-                <path d="M5 15v3.5A2.5 2.5 0 0 0 7.5 21h9A2.5 2.5 0 0 0 19 18.5V15" />
-              </svg>
-            </span>
-            <strong>Tải ảnh mã QR</strong>
-          </button>
         </div>
 
         <input
@@ -149,13 +133,6 @@ export default function CheckInPage() {
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={handleFileChange}
-          className="checkin-hidden-input"
-        />
-        <input
-          ref={uploadInputRef}
-          type="file"
-          accept="image/*"
           onChange={handleFileChange}
           className="checkin-hidden-input"
         />
