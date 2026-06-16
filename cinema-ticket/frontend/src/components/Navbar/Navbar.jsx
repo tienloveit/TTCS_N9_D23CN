@@ -7,6 +7,7 @@ import {
   CalendarIcon,
   FilmIcon,
   KeyIcon,
+  LogoutIcon,
   MoviePTITLogoIcon,
   SearchIcon,
   SparkIcon,
@@ -202,6 +203,11 @@ export default function Navbar() {
                       <KeyIcon className="navbar-dropdown-icon" />
                       Đổi mật khẩu
                     </button>
+                    <div className="navbar-user-dropdown-divider"></div>
+                    <button type="button" className="navbar-user-dropdown-item navbar-user-dropdown-logout" onClick={handleLogout}>
+                      <LogoutIcon className="navbar-dropdown-icon" />
+                      Đăng xuất
+                    </button>
                   </div>
                 )}
               </div>
@@ -215,7 +221,6 @@ export default function Navbar() {
                   Nhân viên
                 </Link>
               )}
-              <button className="btn-ghost" onClick={handleLogout} style={{ padding: '6px 12px' }}>Đăng xuất</button>
             </div>
           ) : (
             <>

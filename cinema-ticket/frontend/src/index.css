@@ -369,6 +369,16 @@ select:disabled {
   color: var(--text-primary);
 }
 
+.navbar-user-dropdown-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+.navbar-user-dropdown-logout:hover {
+  color: #dc2626;
+}
+
 /* ==================== NAVBAR SEARCH ==================== */
 .navbar-search-wrapper {
   position: relative;
