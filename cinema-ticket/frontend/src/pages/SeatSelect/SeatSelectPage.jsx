@@ -253,7 +253,7 @@ export default function SeatSelectPage() {
       navigate(`/booking/${bookingData.bookingId}/payment`);
     } catch (err) {
       const code = err.response?.data?.code;
-      const msg  = err.response?.data?.message || '';
+      const msg = err.response?.data?.message || '';
       // Showtime đã bị xóa hoặc đã đóng → quay lại chọn suất
       if (code === 1012 || msg.toLowerCase().includes('showtime')) {
         alert('Suất chiếu này không còn khả dụng. Vui lòng chọn suất chiếu khác.');
@@ -448,8 +448,8 @@ export default function SeatSelectPage() {
                       onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                       style={{ textTransform: 'uppercase', maxWidth: 300 }}
                     />
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       onClick={handleValidatePromo}
                       disabled={validatingPromo || !promoCode.trim()}
                     >
@@ -468,12 +468,12 @@ export default function SeatSelectPage() {
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {availablePromos.map(promo => (
-                            <div key={promo.id} 
-                               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                               onClick={() => {
-                                 setPromoCode(promo.code);
-                                 setShowPromos(false);
-                               }}>
+                            <div key={promo.id}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                              onClick={() => {
+                                setPromoCode(promo.code);
+                                setShowPromos(false);
+                              }}>
                               <div>
                                 <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -493,7 +493,7 @@ export default function SeatSelectPage() {
                     </div>
                   )}
                 </div>
-                
+
                 <div style={{ flex: '1 1 300px', background: 'var(--bg-secondary)', padding: 20, borderRadius: 'var(--radius-md)', minWidth: 280 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Tạm tính:</span>

@@ -16,51 +16,48 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SeatTypePriceService {
 
-  private final SeatTypePriceRepository seatTypePriceRepository;
+    private final SeatTypePriceRepository seatTypePriceRepository;
 
-  public List<SeatTypePriceResponse> getAllPrice() {
-    return seatTypePriceRepository.findAll().stream()
-        .map(
-            seat ->
-                SeatTypePriceResponse.builder()
-                    .seatType(seat.getSeatType())
-                    .id(seat.getId())
-                    .price(seat.getPrice())
-                    .build())
-        .toList();
-  }
-
-  public SeatTypePriceResponse createPrice(CreateSeatTypePrice cre) {
-    if (seatTypePriceRepository.existsBySeatType(cre.getSeatType())) {
-      throw new AppException(ErrorCode.SEATTYPE_EXIST);
+    public List<SeatTypePriceResponse> getAllPrice() {
+        return seatTypePriceRepository.findAll().stream()
+                .map(
+                        seat -> SeatTypePriceResponse.builder()
+                                .seatType(seat.getSeatType())
+                                .id(seat.getId())
+                                .price(seat.getPrice())
+                                .build())
+                .toList();
     }
 
-    SeatTypePrice s =
-        SeatTypePrice.builder().seatType(cre.getSeatType()).price(cre.getPrice()).build();
+    public SeatTypePriceResponse createPrice(CreateSeatTypePrice cre) {
+        if (seatTypePriceRepository.existsBySeatType(cre.getSeatType())) {
+            throw new AppException(ErrorCode.SEATTYPE_EXIST);
+        }
 
-    seatTypePriceRepository.save(s);
+        SeatTypePrice s = SeatTypePrice.builder().seatType(cre.getSeatType()).price(cre.getPrice()).build();
 
-    return SeatTypePriceResponse.builder()
-        .id(s.getId())
-        .seatType(s.getSeatType())
-        .price(s.getPrice())
-        .build();
-  }
+        seatTypePriceRepository.save(s);
 
-  public SeatTypePriceResponse update(SeatType seatType, UpdateSeatTypePrice up) {
-    SeatTypePrice s =
-        seatTypePriceRepository
-            .findBySeatType(seatType)
-            .orElseThrow(() -> new AppException(ErrorCode.SEATTYPE_NOT_EXIST));
+        return SeatTypePriceResponse.builder()
+                .id(s.getId())
+                .seatType(s.getSeatType())
+                .price(s.getPrice())
+                .build();
+    }
 
-    s.setPrice(up.getPrice());
+    public SeatTypePriceResponse update(SeatType seatType, UpdateSeatTypePrice up) {
+        SeatTypePrice s = seatTypePriceRepository
+                .findBySeatType(seatType)
+                .orElseThrow(() -> new AppException(ErrorCode.SEATTYPE_NOT_EXIST));
 
-    seatTypePriceRepository.save(s);
+        s.setPrice(up.getPrice());
 
-    return SeatTypePriceResponse.builder()
-        .id(s.getId())
-        .seatType(s.getSeatType())
-        .price(s.getPrice())
-        .build();
-  }
+        seatTypePriceRepository.save(s);
+
+        return SeatTypePriceResponse.builder()
+                .id(s.getId())
+                .seatType(s.getSeatType())
+                .price(s.getPrice())
+                .build();
+    }
 }

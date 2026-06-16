@@ -6,9 +6,12 @@ import lombok.Data;
 
 @Data
 public class CreateStaffScheduleRequest {
-  @NotNull private Long staffId;
-  @NotNull private LocalDateTime startTime;
-  @NotNull private LocalDateTime endTime;
-  private String position;
-  private String note;
+    @NotNull
+    private Long staffId;
+    @NotNull
+    private LocalDateTime startTime;
+    @NotNull
+    private LocalDateTime endTime;
+    private String position;
+    private String note;
 }

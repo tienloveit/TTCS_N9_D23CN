@@ -21,7 +21,7 @@ export default function PaymentResultPage() {
       return Math.random() * (max - min) + min;
     }
 
-    const interval = setInterval(function() {
+    const interval = setInterval(function () {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
@@ -37,7 +37,7 @@ export default function PaymentResultPage() {
 
   useEffect(() => {
     const params = Object.fromEntries(searchParams.entries());
-    
+
     vnpayApi.handleReturn(params)
       .then((res) => {
         if (res.data.code === 200) {
@@ -63,7 +63,7 @@ export default function PaymentResultPage() {
             <CheckCircleIcon className="payment-result-icon payment-result-icon--success" />
             <h1 className="page-title" style={{ color: 'var(--green)', fontSize: '2.2rem', marginBottom: 16 }}>ĐẶT VÉ THÀNH CÔNG!</h1>
             <p className="page-subtitle" style={{ marginBottom: 40, lineHeight: 1.6, fontSize: '1.1rem' }}>
-              Cảm ơn bạn! Hệ thống đã ghi nhận thanh toán của bạn. <br/>
+              Cảm ơn bạn! Hệ thống đã ghi nhận thanh toán của bạn. <br />
               Bạn có thể xem vé và mã QR trong phần lịch sử đặt vé.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

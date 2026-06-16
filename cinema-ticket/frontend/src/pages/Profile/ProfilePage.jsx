@@ -5,10 +5,10 @@ import { toast } from 'react-toastify';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 
 const TIER_CONFIG = {
-  BRONZE:   { name: 'Đồng',     color: '#cd7f32', gradient: 'linear-gradient(135deg, #cd7f32, #a0522d)', next: 'SILVER',   nextAmount: 500000 },
-  SILVER:   { name: 'Bạc',      color: '#c0c0c0', gradient: 'linear-gradient(135deg, #c0c0c0, #808080)', next: 'GOLD',     nextAmount: 2000000 },
-  GOLD:     { name: 'Vàng',     color: '#ffd700', gradient: 'linear-gradient(135deg, #ffd700, #daa520)', next: 'PLATINUM', nextAmount: 5000000 },
-  PLATINUM: { name: 'Bạch Kim', color: '#e5e4e2', gradient: 'linear-gradient(135deg, #e5e4e2, #b0b0b0)', next: null,       nextAmount: null },
+  BRONZE: { name: 'Đồng', color: '#cd7f32', gradient: 'linear-gradient(135deg, #cd7f32, #a0522d)', next: 'SILVER', nextAmount: 500000 },
+  SILVER: { name: 'Bạc', color: '#c0c0c0', gradient: 'linear-gradient(135deg, #c0c0c0, #808080)', next: 'GOLD', nextAmount: 2000000 },
+  GOLD: { name: 'Vàng', color: '#ffd700', gradient: 'linear-gradient(135deg, #ffd700, #daa520)', next: 'PLATINUM', nextAmount: 5000000 },
+  PLATINUM: { name: 'Bạch Kim', color: '#e5e4e2', gradient: 'linear-gradient(135deg, #e5e4e2, #b0b0b0)', next: null, nextAmount: null },
 };
 
 const formatCurrency = (amount) =>
@@ -187,99 +187,99 @@ const ProfilePage = () => {
 
         {/* Info Section */}
         {activeSection === 'info' && (
-        <div id="info" className="card profile-section-card" style={{ padding: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Thông tin cá nhân</h2>
-            <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(!isEditing)}>
-              {isEditing ? 'Huỷ' : 'Chỉnh sửa'}
-            </button>
+          <div id="info" className="card profile-section-card" style={{ padding: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Thông tin cá nhân</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(!isEditing)}>
+                {isEditing ? 'Huỷ' : 'Chỉnh sửa'}
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProfile}>
+              <div className="form-group">
+                <label className="form-label">Tên đăng nhập</label>
+                <input className="input" value={profile.username} disabled style={{ opacity: 0.7 }} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Họ và tên</label>
+                <input
+                  className="input"
+                  value={profile.fullName}
+                  onChange={e => setProfile({ ...profile, fullName: e.target.value })}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={profile.email}
+                  onChange={e => setProfile({ ...profile, email: e.target.value })}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Số điện thoại</label>
+                <input
+                  className="input"
+                  value={profile.phoneNumber}
+                  onChange={e => setProfile({ ...profile, phoneNumber: e.target.value })}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              {isEditing && (
+                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Lưu thay đổi</button>
+              )}
+            </form>
           </div>
-
-          <form onSubmit={handleUpdateProfile}>
-            <div className="form-group">
-              <label className="form-label">Tên đăng nhập</label>
-              <input className="input" value={profile.username} disabled style={{ opacity: 0.7 }} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Họ và tên</label>
-              <input
-                className="input"
-                value={profile.fullName}
-                onChange={e => setProfile({...profile, fullName: e.target.value})}
-                disabled={!isEditing}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input
-                className="input"
-                type="email"
-                value={profile.email}
-                onChange={e => setProfile({...profile, email: e.target.value})}
-                disabled={!isEditing}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Số điện thoại</label>
-              <input
-                className="input"
-                value={profile.phoneNumber}
-                onChange={e => setProfile({...profile, phoneNumber: e.target.value})}
-                disabled={!isEditing}
-              />
-            </div>
-
-            {isEditing && (
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Lưu thay đổi</button>
-            )}
-          </form>
-        </div>
         )}
 
         {/* Password Section */}
         {activeSection === 'password' && (
-        <div id="password" className="card profile-section-card" style={{ padding: '32px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '24px' }}>Đổi mật khẩu</h2>
-          <form onSubmit={handleChangePassword}>
-            <div className="form-group">
-              <label className="form-label">Mật khẩu hiện tại</label>
-              <input
-                className="input"
-                type="password"
-                value={passwords.currentPassword}
-                onChange={e => setPasswords({...passwords, currentPassword: e.target.value})}
-                required
-              />
-            </div>
+          <div id="password" className="card profile-section-card" style={{ padding: '32px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '24px' }}>Đổi mật khẩu</h2>
+            <form onSubmit={handleChangePassword}>
+              <div className="form-group">
+                <label className="form-label">Mật khẩu hiện tại</label>
+                <input
+                  className="input"
+                  type="password"
+                  value={passwords.currentPassword}
+                  onChange={e => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Mật khẩu mới</label>
-              <input
-                className="input"
-                type="password"
-                value={passwords.newPassword}
-                onChange={e => setPasswords({...passwords, newPassword: e.target.value})}
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label className="form-label">Mật khẩu mới</label>
+                <input
+                  className="input"
+                  type="password"
+                  value={passwords.newPassword}
+                  onChange={e => setPasswords({ ...passwords, newPassword: e.target.value })}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Xác nhận mật khẩu mới</label>
-              <input
-                className="input"
-                type="password"
-                value={passwords.confirmPassword}
-                onChange={e => setPasswords({...passwords, confirmPassword: e.target.value})}
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label className="form-label">Xác nhận mật khẩu mới</label>
+                <input
+                  className="input"
+                  type="password"
+                  value={passwords.confirmPassword}
+                  onChange={e => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                  required
+                />
+              </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Cập nhật mật khẩu</button>
-          </form>
-        </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Cập nhật mật khẩu</button>
+            </form>
+          </div>
         )}
       </div>
     </div>

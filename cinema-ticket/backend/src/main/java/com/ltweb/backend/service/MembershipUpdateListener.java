@@ -14,19 +14,19 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class MembershipUpdateListener {
 
-  private final BookingService bookingService;
+    private final BookingService bookingService;
 
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public void updateMembership(BookingPaidEvent event) {
-    try {
-      bookingService.updateMembershipAfterPayment(event.bookingId());
-    } catch (Exception ex) {
-      log.error(
-          "Could not update membership for booking {}: {}",
-          event.bookingId(),
-          ex.getMessage(),
-          ex);
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateMembership(BookingPaidEvent event) {
+        try {
+            bookingService.updateMembershipAfterPayment(event.bookingId());
+        } catch (Exception ex) {
+            log.error(
+                    "Could not update membership for booking {}: {}",
+                    event.bookingId(),
+                    ex.getMessage(),
+                    ex);
+        }
     }
-  }
 }

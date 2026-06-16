@@ -17,31 +17,31 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @PreAuthorize("isAuthenticated()")
 public class NotificationController {
-  private final NotificationService notificationService;
+    private final NotificationService notificationService;
 
-  @GetMapping
-  public ApiResponse<List<NotificationResponse>> getMyNotifications() {
-    notificationService.generateMissedShiftNotifications();
-    notificationService.generateStaffShiftTimeNotificationsForCurrentUser();
-    ApiResponse<List<NotificationResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(notificationService.getMyNotifications());
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<NotificationResponse>> getMyNotifications() {
+        notificationService.generateMissedShiftNotifications();
+        notificationService.generateStaffShiftTimeNotificationsForCurrentUser();
+        ApiResponse<List<NotificationResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(notificationService.getMyNotifications());
+        return apiResponse;
+    }
 
-  @GetMapping("/unread-count")
-  public ApiResponse<Long> getUnreadCount() {
-    notificationService.generateMissedShiftNotifications();
-    notificationService.generateStaffShiftTimeNotificationsForCurrentUser();
-    ApiResponse<Long> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(notificationService.countUnread());
-    return apiResponse;
-  }
+    @GetMapping("/unread-count")
+    public ApiResponse<Long> getUnreadCount() {
+        notificationService.generateMissedShiftNotifications();
+        notificationService.generateStaffShiftTimeNotificationsForCurrentUser();
+        ApiResponse<Long> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(notificationService.countUnread());
+        return apiResponse;
+    }
 
-  @PostMapping("/{id}/read")
-  public ApiResponse<NotificationResponse> markRead(@PathVariable Long id) {
-    ApiResponse<NotificationResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(notificationService.markRead(id));
-    apiResponse.setMessage("Notification marked as read");
-    return apiResponse;
-  }
+    @PostMapping("/{id}/read")
+    public ApiResponse<NotificationResponse> markRead(@PathVariable Long id) {
+        ApiResponse<NotificationResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(notificationService.markRead(id));
+        apiResponse.setMessage("Notification marked as read");
+        return apiResponse;
+    }
 }

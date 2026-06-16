@@ -6,10 +6,10 @@ import lombok.Data;
 
 @Data
 public class UpdateSystemSettingRequest {
-  @NotBlank
-  @Size(max = 1000)
-  private String settingValue;
+    @NotBlank
+    @Size(max = 1000)
+    private String settingValue;
 
-  @Size(max = 500)
-  private String description;
+    @Size(max = 500)
+    private String description;
 }

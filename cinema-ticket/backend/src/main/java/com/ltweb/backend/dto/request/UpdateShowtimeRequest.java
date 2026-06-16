@@ -14,7 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateShowtimeRequest {
-  private LocalDateTime startTime;
-  private LocalDateTime endTime;
-  private ShowtimeStatus status;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private ShowtimeStatus status;
 }

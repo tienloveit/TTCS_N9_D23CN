@@ -24,25 +24,25 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class BookingFood {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "booking_food_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_food_id")
+    private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "booking_id", nullable = false)
-  private Booking booking;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "food_id", nullable = false)
-  private Food food;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_id", nullable = false)
+    private Food food;
 
-  @Column(nullable = false)
-  private Integer quantity;
+    @Column(nullable = false)
+    private Integer quantity;
 
-  @Column(nullable = false, precision = 12, scale = 2)
-  private BigDecimal unitPrice;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal unitPrice;
 
-  @Column(nullable = false, precision = 12, scale = 2)
-  private BigDecimal subtotal;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal subtotal;
 }

@@ -14,7 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class SeatTypePriceResponse {
-  private Long id;
-  private SeatType seatType;
-  private BigDecimal price;
+    private Long id;
+    private SeatType seatType;
+    private BigDecimal price;
 }

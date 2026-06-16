@@ -16,22 +16,22 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class CreateFoodRequest {
-  @NotBlank(message = "Food name is required")
-  private String name;
+    @NotBlank(message = "Food name is required")
+    private String name;
 
-  private String description;
+    private String description;
 
-  @NotNull(message = "Food price is required")
-  @DecimalMin(value = "0.0", inclusive = false, message = "Food price must be greater than 0")
-  private BigDecimal price;
+    @NotNull(message = "Food price is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Food price must be greater than 0")
+    private BigDecimal price;
 
-  private String imageUrl;
+    private String imageUrl;
 
-  private Long branchId;
+    private Long branchId;
 
-  private Integer stockQuantity;
+    private Integer stockQuantity;
 
-  private Integer lowStockThreshold;
+    private Integer lowStockThreshold;
 
-  private Boolean active;
+    private Boolean active;
 }

@@ -505,11 +505,30 @@
   flex-shrink: 0;
 }
 
-.stat-icon--red    { background: rgba(229, 9, 20, 0.1);  color: var(--accent); }
-.stat-icon--blue   { background: rgba(59, 130, 246, 0.1); color: var(--blue);   }
-.stat-icon--green  { background: rgba(16, 185, 129, 0.1); color: var(--green);  }
-.stat-icon--gold   { background: rgba(245, 158, 11, 0.1); color: var(--gold);   }
-.stat-icon--purple { background: rgba(139, 92, 246, 0.1); color: var(--purple); }
+.stat-icon--red {
+  background: rgba(229, 9, 20, 0.1);
+  color: var(--accent);
+}
+
+.stat-icon--blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--blue);
+}
+
+.stat-icon--green {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--green);
+}
+
+.stat-icon--gold {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--gold);
+}
+
+.stat-icon--purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--purple);
+}
 
 .stat-info h3 {
   font-size: 1.55rem;
@@ -770,9 +789,20 @@
   background: currentColor;
 }
 
-.status--active   { background: rgba(16, 185, 129, 0.1);  color: var(--green); }
-.status--inactive { background: rgba(239, 68, 68, 0.1);   color: #ef4444;     }
-.status--pending  { background: rgba(245, 158, 11, 0.1);  color: var(--gold);  }
+.status--active {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--green);
+}
+
+.status--inactive {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.status--pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--gold);
+}
 
 /* ---------- Sidebar Overlay (mobile) ---------- */
 .admin-sidebar-overlay {
@@ -830,7 +860,7 @@
     transform: translateX(0);
   }
 
-  .admin-sidebar--open ~ .admin-sidebar-overlay {
+  .admin-sidebar--open~.admin-sidebar-overlay {
     display: block;
   }
 

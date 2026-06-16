@@ -13,44 +13,44 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CleanupController {
 
-  private final JdbcTemplate jdbcTemplate;
-  private final DataSeedService dataSeedService;
+    private final JdbcTemplate jdbcTemplate;
+    private final DataSeedService dataSeedService;
 
-  @DeleteMapping("/database")
-  public ApiResponse<String> cleanupDatabase() {
-    jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+    @DeleteMapping("/database")
+    public ApiResponse<String> cleanupDatabase() {
+        jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
 
-    String[] tables = {
-      "booking_foods",
-      "tickets",
-      "bookings",
-      "showtimes",
-      "seats",
-      "rooms",
-      "branches",
-      "movie_ratings",
-      "movie_genres",
-      "movies",
-      "genres",
-      "foods",
-      "seat_type_prices",
-      "users"
-    };
+        String[] tables = {
+                "booking_foods",
+                "tickets",
+                "bookings",
+                "showtimes",
+                "seats",
+                "rooms",
+                "branches",
+                "movie_ratings",
+                "movie_genres",
+                "movies",
+                "genres",
+                "foods",
+                "seat_type_prices",
+                "users"
+        };
 
-    for (String table : tables) {
-      try {
-        jdbcTemplate.execute("TRUNCATE TABLE " + table);
-      } catch (Exception e) {
-        // Table might not exist yet
-      }
+        for (String table : tables) {
+            try {
+                jdbcTemplate.execute("TRUNCATE TABLE " + table);
+            } catch (Exception e) {
+                // Table might not exist yet
+            }
+        }
+
+        jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
+
+        dataSeedService.seedInitialData();
+
+        return ApiResponse.<String>builder()
+                .result("Database cleaned and default seed data re-initialized.")
+                .build();
     }
-
-    jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
-
-    dataSeedService.seedInitialData();
-
-    return ApiResponse.<String>builder()
-        .result("Database cleaned and default seed data re-initialized.")
-        .build();
-  }
 }

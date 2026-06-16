@@ -35,77 +35,80 @@ import org.hibernate.annotations.UpdateTimestamp;
 @AllArgsConstructor
 @Builder
 public class Booking {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "booking_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_id")
+    private Long id;
 
-  @Column(unique = true)
-  private String bookingCode;
+    @Column(unique = true)
+    private String bookingCode;
 
-  @ManyToOne
-  @JoinColumn(name = "user_id")
-  private User user;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
-  @ManyToOne
-  @JoinColumn(name = "staff_user_id")
-  private User staffUser;
+    @ManyToOne
+    @JoinColumn(name = "staff_user_id")
+    private User staffUser;
 
-  @ManyToOne
-  @JoinColumn(name = "showtime_id", nullable = false)
-  private Showtime showtime;
+    @ManyToOne
+    @JoinColumn(name = "showtime_id", nullable = false)
+    private Showtime showtime;
 
-  @Builder.Default private BigDecimal totalAmount = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal totalAmount = BigDecimal.ZERO;
 
-  private String promotionCode;
+    private String promotionCode;
 
-  @Builder.Default private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 
-  @Enumerated(EnumType.STRING)
-  private BookingStatus status;
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status;
 
-  private LocalDateTime expiresAt;
+    private LocalDateTime expiresAt;
 
-  @Column(name = "created_at", updatable = false)
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+    @Column(name = "created_at", updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
-  @Column(name = "updated_at")
-  @UpdateTimestamp
-  private LocalDateTime updatedAt;
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
-  @Enumerated(EnumType.STRING)
-  private PaymentMethod paymentMethod;
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
 
-  @Enumerated(EnumType.STRING)
-  private PaymentStatus paymentStatus;
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
-  private String providerTxnId;
+    private String providerTxnId;
 
-  private LocalDateTime paidAt;
+    private LocalDateTime paidAt;
 
-  private LocalDateTime paymentCreatedAt;
+    private LocalDateTime paymentCreatedAt;
 
-  private String refundReason;
+    private String refundReason;
 
-  @Column(length = 1000)
-  private String refundProcessNote;
+    @Column(length = 1000)
+    private String refundProcessNote;
 
-  @ManyToOne
-  @JoinColumn(name = "refund_processed_by")
-  private User refundProcessedBy;
+    @ManyToOne
+    @JoinColumn(name = "refund_processed_by")
+    private User refundProcessedBy;
 
-  private LocalDateTime refundProcessedAt;
+    private LocalDateTime refundProcessedAt;
 
-  private LocalDateTime refundedAt;
+    private LocalDateTime refundedAt;
 
-  @Builder.Default private BigDecimal refundAmount = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal refundAmount = BigDecimal.ZERO;
 
-  @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default
-  private List<Ticket> tickets = new ArrayList<>();
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Ticket> tickets = new ArrayList<>();
 
-  @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default
-  private List<BookingFood> bookingFoods = new ArrayList<>();
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<BookingFood> bookingFoods = new ArrayList<>();
 }

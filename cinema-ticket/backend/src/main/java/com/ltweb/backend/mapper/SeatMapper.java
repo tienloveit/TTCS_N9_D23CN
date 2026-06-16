@@ -13,16 +13,16 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring")
 public interface SeatMapper {
 
-  @Mapping(target = "room", ignore = true)
-  @Mapping(target = "id", ignore = true)
-  Seat toSeat(CreateSeatRequest request);
+    @Mapping(target = "room", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    Seat toSeat(CreateSeatRequest request);
 
-  @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-  @Mapping(target = "id", ignore = true)
-  @Mapping(target = "room", ignore = true)
-  void updateSeat(@MappingTarget Seat seat, UpdateSeatRequest request);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "room", ignore = true)
+    void updateSeat(@MappingTarget Seat seat, UpdateSeatRequest request);
 
-  @Mapping(source = "id", target = "seatId")
-  @Mapping(source = "room.id", target = "roomId")
-  SeatResponse toSeatResponse(Seat seat);
+    @Mapping(source = "id", target = "seatId")
+    @Mapping(source = "room.id", target = "roomId")
+    SeatResponse toSeatResponse(Seat seat);
 }

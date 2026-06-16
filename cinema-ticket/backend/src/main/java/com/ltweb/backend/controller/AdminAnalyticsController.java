@@ -16,17 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admin/analytics")
 @RequiredArgsConstructor
 public class AdminAnalyticsController {
-  private final AdminAnalyticsService adminAnalyticsService;
+    private final AdminAnalyticsService adminAnalyticsService;
 
-  @GetMapping("/dashboard")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<AdminAnalyticsResponse> getDashboard(
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          LocalDate from,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          LocalDate to) {
-    ApiResponse<AdminAnalyticsResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(adminAnalyticsService.getDashboard(from, to));
-    return apiResponse;
-  }
+    @GetMapping("/dashboard")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<AdminAnalyticsResponse> getDashboard(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        ApiResponse<AdminAnalyticsResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(adminAnalyticsService.getDashboard(from, to));
+        return apiResponse;
+    }
 }

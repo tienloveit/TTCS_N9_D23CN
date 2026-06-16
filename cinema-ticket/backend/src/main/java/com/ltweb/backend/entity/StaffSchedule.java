@@ -28,36 +28,36 @@ import org.hibernate.annotations.UpdateTimestamp;
 @AllArgsConstructor
 @Builder
 public class StaffSchedule {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "schedule_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "schedule_id")
+    private Long id;
 
-  @ManyToOne
-  @JoinColumn(name = "staff_id", nullable = false)
-  private User staff;
+    @ManyToOne
+    @JoinColumn(name = "staff_id", nullable = false)
+    private User staff;
 
-  @ManyToOne
-  @JoinColumn(name = "created_by")
-  private User createdBy;
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
-  private Long branchId;
+    private Long branchId;
 
-  private LocalDateTime startTime;
+    private LocalDateTime startTime;
 
-  private LocalDateTime endTime;
+    private LocalDateTime endTime;
 
-  private String position;
+    private String position;
 
-  @Column(length = 500)
-  private String note;
+    @Column(length = 500)
+    private String note;
 
-  @Enumerated(EnumType.STRING)
-  private StaffScheduleStatus status;
+    @Enumerated(EnumType.STRING)
+    private StaffScheduleStatus status;
 
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
-  @UpdateTimestamp
-  private LocalDateTime updatedAt;
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

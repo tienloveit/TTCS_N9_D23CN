@@ -18,31 +18,31 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreatePromotionRequest {
-  @NotBlank(message = "Promotion code is required")
-  private String code;
+    @NotBlank(message = "Promotion code is required")
+    private String code;
 
-  private String description;
+    private String description;
 
-  @NotNull(message = "Discount percent is required")
-  @Min(value = 1, message = "Discount must be at least 1%")
-  @Max(value = 100, message = "Discount cannot exceed 100%")
-  private Integer discountPercent;
+    @NotNull(message = "Discount percent is required")
+    @Min(value = 1, message = "Discount must be at least 1%")
+    @Max(value = 100, message = "Discount cannot exceed 100%")
+    private Integer discountPercent;
 
-  private BigDecimal maxDiscount;
+    private BigDecimal maxDiscount;
 
-  private BigDecimal minOrderAmount;
+    private BigDecimal minOrderAmount;
 
-  private MembershipTier minMembershipTier;
+    private MembershipTier minMembershipTier;
 
-  private Long branchId;
+    private Long branchId;
 
-  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
-  private LocalDateTime startDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+    private LocalDateTime startDate;
 
-  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
-  private LocalDateTime endDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+    private LocalDateTime endDate;
 
-  private Integer usageLimit;
+    private Integer usageLimit;
 
-  private Boolean active;
+    private Boolean active;
 }

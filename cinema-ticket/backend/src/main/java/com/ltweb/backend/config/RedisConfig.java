@@ -9,19 +9,19 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-  @Bean
-  public RedisTemplate<String, String> redisTemplate(
-      RedisConnectionFactory redisConnectionFactory) {
-    RedisTemplate<String, String> template = new RedisTemplate<>();
-    template.setConnectionFactory(redisConnectionFactory);
+    @Bean
+    public RedisTemplate<String, String> redisTemplate(
+            RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
 
-    // Dùng StringSerializer để key/value lưu dạng String dễ đọc
-    template.setKeySerializer(new StringRedisSerializer());
-    template.setValueSerializer(new StringRedisSerializer());
+        // Dùng StringSerializer để key/value lưu dạng String dễ đọc
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
 
-    template.setHashKeySerializer(new StringRedisSerializer());
-    template.setHashValueSerializer(new StringRedisSerializer());
-    template.afterPropertiesSet();
-    return template;
-  }
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
+        template.afterPropertiesSet();
+        return template;
+    }
 }

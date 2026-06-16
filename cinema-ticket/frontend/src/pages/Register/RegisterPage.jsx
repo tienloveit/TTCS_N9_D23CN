@@ -92,14 +92,14 @@ export default function RegisterPage() {
           <div className="form-group">
             <label className="form-label">Mật khẩu</label>
             <div style={{ position: 'relative' }}>
-              <input 
-                className="input" 
-                name="password" 
-                type={showPassword ? 'text' : 'password'} 
-                placeholder="Nhập mật khẩu" 
-                value={form.password} 
-                onChange={handleChange} 
-                required 
+              <input
+                className="input"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Nhập mật khẩu"
+                value={form.password}
+                onChange={handleChange}
+                required
                 style={{ paddingRight: '40px' }}
               />
               <button
@@ -127,14 +127,14 @@ export default function RegisterPage() {
           <div className="form-group">
             <label className="form-label">Xác nhận mật khẩu</label>
             <div style={{ position: 'relative' }}>
-              <input 
-                className="input" 
-                name="confirmPassword" 
-                type={showConfirmPassword ? 'text' : 'password'} 
-                placeholder="Nhập lại mật khẩu" 
-                value={form.confirmPassword} 
-                onChange={handleChange} 
-                required 
+              <input
+                className="input"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Nhập lại mật khẩu"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                required
                 style={{ paddingRight: '40px' }}
               />
               <button

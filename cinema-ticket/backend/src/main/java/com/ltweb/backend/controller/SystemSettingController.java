@@ -20,21 +20,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class SystemSettingController {
-  private final SystemSettingService systemSettingService;
+    private final SystemSettingService systemSettingService;
 
-  @GetMapping
-  public ApiResponse<List<SystemSettingResponse>> getSettings() {
-    ApiResponse<List<SystemSettingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(systemSettingService.getAllSettings());
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<SystemSettingResponse>> getSettings() {
+        ApiResponse<List<SystemSettingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(systemSettingService.getAllSettings());
+        return apiResponse;
+    }
 
-  @PutMapping("/{settingKey}")
-  public ApiResponse<SystemSettingResponse> updateSetting(
-      @PathVariable String settingKey, @RequestBody @Valid UpdateSystemSettingRequest request) {
-    ApiResponse<SystemSettingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("System setting updated successfully!");
-    apiResponse.setResult(systemSettingService.updateSetting(settingKey, request));
-    return apiResponse;
-  }
+    @PutMapping("/{settingKey}")
+    public ApiResponse<SystemSettingResponse> updateSetting(
+            @PathVariable String settingKey, @RequestBody @Valid UpdateSystemSettingRequest request) {
+        ApiResponse<SystemSettingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("System setting updated successfully!");
+        apiResponse.setResult(systemSettingService.updateSetting(settingKey, request));
+        return apiResponse;
+    }
 }

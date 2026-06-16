@@ -6,11 +6,11 @@ import lombok.Data;
 
 @Data
 public class FoodStockAdjustmentRequest {
-  @NotNull
-  private Integer quantityChange;
+    @NotNull
+    private Integer quantityChange;
 
-  private Boolean setAbsoluteQuantity;
+    private Boolean setAbsoluteQuantity;
 
-  @Size(max = 500)
-  private String note;
+    @Size(max = 500)
+    private String note;
 }

@@ -10,34 +10,36 @@ import lombok.Data;
 @Builder
 public class TicketResponse {
 
-  private Long id;
+    private Long id;
 
-  private BigDecimal price;
+    private BigDecimal price;
 
-  /** Trạng thái raw trong DB */
-  private TicketStatus ticketStatus;
+    /** Trạng thái raw trong DB */
+    private TicketStatus ticketStatus;
 
-  private Long showtimeId;
+    private Long showtimeId;
 
-  private Long seatId;
+    private Long seatId;
 
-  private Long bookingId;
+    private Long bookingId;
 
-  // đặc điểm của ghế
-  private String seatCode;
+    // đặc điểm của ghế
+    private String seatCode;
 
-  private String rowLabel;
+    private String rowLabel;
 
-  private Integer seatNumber;
+    private Integer seatNumber;
 
-  /**
-   * Trạng thái hiển thị cho frontend, kết hợp DB + Redis seat lock. - AVAILABLE : ghế trống, có thể
-   * chọn - HOLDING : đang bị khóa tạm thời bởi user khác (Redis) - BOOKED : đã thanh toán thành
-   * công
-   */
-  private TicketStatus displayStatus;
+    /**
+     * Trạng thái hiển thị cho frontend, kết hợp DB + Redis seat lock. - AVAILABLE :
+     * ghế trống, có thể
+     * chọn - HOLDING : đang bị khóa tạm thời bởi user khác (Redis) - BOOKED : đã
+     * thanh toán thành
+     * công
+     */
+    private TicketStatus displayStatus;
 
-  private String qrCode;
+    private String qrCode;
 
-  private LocalDateTime checkedInAt;
+    private LocalDateTime checkedInAt;
 }

@@ -13,15 +13,15 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class FoodResponse {
-  private Long id;
-  private String name;
-  private String description;
-  private BigDecimal price;
-  private String imageUrl;
-  private Long branchId;
-  private Integer stockQuantity;
-  private Integer lowStockThreshold;
-  private Boolean inStock;
-  private Boolean lowStock;
-  private Boolean active;
+    private Long id;
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private String imageUrl;
+    private Long branchId;
+    private Integer stockQuantity;
+    private Integer lowStockThreshold;
+    private Boolean inStock;
+    private Boolean lowStock;
+    private Boolean active;
 }

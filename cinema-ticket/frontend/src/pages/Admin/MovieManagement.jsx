@@ -11,7 +11,7 @@ const MovieManagement = () => {
   const [directors, setDirectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState(null);
@@ -335,11 +335,11 @@ const MovieManagement = () => {
       {/* Movie Modal */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-content admin-modal" onClick={e => e.stopPropagation()} style={{ 
-            maxWidth: '800px', 
-            maxHeight: '90vh', 
-            overflowY: 'auto', 
-            padding: '32px' 
+          <div className="modal-content admin-modal" onClick={e => e.stopPropagation()} style={{
+            maxWidth: '800px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '32px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{editingMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}</h2>
@@ -349,24 +349,24 @@ const MovieManagement = () => {
             <form onSubmit={handleSubmit} className="auth-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Tên phim</label>
-                <input 
-                  type="text" 
-                  name="movieName" 
-                  className="input" 
-                  value={formData.movieName} 
-                  onChange={handleInputChange} 
-                  required 
+                <input
+                  type="text"
+                  name="movieName"
+                  className="input"
+                  value={formData.movieName}
+                  onChange={handleInputChange}
+                  required
                   placeholder="Nhập tên phim..."
                 />
               </div>
 
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Mô tả</label>
-                <textarea 
-                  name="description" 
-                  className="input" 
-                  value={formData.description} 
-                  onChange={handleInputChange} 
+                <textarea
+                  name="description"
+                  className="input"
+                  value={formData.description}
+                  onChange={handleInputChange}
                   style={{ minHeight: '100px', resize: 'vertical' }}
                   placeholder="Nhập mô tả phim..."
                 />
@@ -404,12 +404,12 @@ const MovieManagement = () => {
 
               <div className="form-group">
                 <label className="form-label">Thời lượng (phút)</label>
-                <input 
-                  type="number" 
-                  name="durationMinutes" 
-                  className="input" 
-                  value={formData.durationMinutes} 
-                  onChange={handleInputChange} 
+                <input
+                  type="number"
+                  name="durationMinutes"
+                  className="input"
+                  value={formData.durationMinutes}
+                  onChange={handleInputChange}
                   placeholder="Ví dụ: 120"
                 />
               </div>
@@ -470,9 +470,9 @@ const MovieManagement = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                   {genres.map(genre => (
                     <label key={genre.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={formData.genreIds.includes(genre.id)} 
+                      <input
+                        type="checkbox"
+                        checked={formData.genreIds.includes(genre.id)}
                         onChange={() => handleGenreToggle(genre.id)}
                         style={{ cursor: 'pointer' }}
                       />

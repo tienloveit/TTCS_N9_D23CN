@@ -101,12 +101,12 @@ const ShowtimeManagement = () => {
       ]);
       const movieList = isManager
         ? await Promise.all([movieApi.getNowShowing(), movieApi.getUpcoming()]).then(([nowRes, upcomingRes]) => {
-            const moviesById = new Map();
-            [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach((movie) => {
-              moviesById.set(movie.movieId, movie);
-            });
-            return [...moviesById.values()];
-          })
+          const moviesById = new Map();
+          [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach((movie) => {
+            moviesById.set(movie.movieId, movie);
+          });
+          return [...moviesById.values()];
+        })
         : (await movieApi.getAll()).data.result || [];
       const branchList = branchRes.data.result || [];
       setShowtimes(stRes.data.result || []);

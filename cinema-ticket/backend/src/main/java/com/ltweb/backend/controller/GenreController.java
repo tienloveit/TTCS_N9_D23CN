@@ -20,46 +20,46 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/genre")
 @RequiredArgsConstructor
-public class  GenreController {
-  private final GenreService genreService;
+public class GenreController {
+    private final GenreService genreService;
 
-  @PostMapping
-  public ApiResponse<GenreResponse> createGenre(
-      @RequestBody @Valid CreateGenreRequest createGenreRequest) {
-    ApiResponse<GenreResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create genre successfully!");
-    apiResponse.setResult(genreService.createGenre(createGenreRequest));
-    return apiResponse;
-  }
+    @PostMapping
+    public ApiResponse<GenreResponse> createGenre(
+            @RequestBody @Valid CreateGenreRequest createGenreRequest) {
+        ApiResponse<GenreResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create genre successfully!");
+        apiResponse.setResult(genreService.createGenre(createGenreRequest));
+        return apiResponse;
+    }
 
-  @GetMapping
-  public ApiResponse<List<GenreResponse>> getAllGenres() {
-    ApiResponse<List<GenreResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(genreService.getAllGenres());
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<GenreResponse>> getAllGenres() {
+        ApiResponse<List<GenreResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(genreService.getAllGenres());
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<GenreResponse> getGenreById(@PathVariable("id") Long id) {
-    ApiResponse<GenreResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(genreService.getGenreById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<GenreResponse> getGenreById(@PathVariable("id") Long id) {
+        ApiResponse<GenreResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(genreService.getGenreById(id));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  public ApiResponse<GenreResponse> updateGenre(
-      @PathVariable("id") Long id, @RequestBody @Valid UpdateGenreRequest updateGenreRequest) {
-    ApiResponse<GenreResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Genre has been updated successfully!");
-    apiResponse.setResult(genreService.updateGenre(id, updateGenreRequest));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    public ApiResponse<GenreResponse> updateGenre(
+            @PathVariable("id") Long id, @RequestBody @Valid UpdateGenreRequest updateGenreRequest) {
+        ApiResponse<GenreResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Genre has been updated successfully!");
+        apiResponse.setResult(genreService.updateGenre(id, updateGenreRequest));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  public ApiResponse<String> deleteGenre(@PathVariable("id") Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    genreService.deleteGenre(id);
-    apiResponse.setMessage("Genre has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> deleteGenre(@PathVariable("id") Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        genreService.deleteGenre(id);
+        apiResponse.setMessage("Genre has been deleted successfully!");
+        return apiResponse;
+    }
 }

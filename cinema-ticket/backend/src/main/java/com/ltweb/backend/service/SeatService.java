@@ -31,148 +31,147 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SeatService {
 
-  private final SeatRepository seatRepository;
-  private final RoomRepository roomRepository;
-  private final UserRepository userRepository;
-  private final SeatMapper seatMapper;
+    private final SeatRepository seatRepository;
+    private final RoomRepository roomRepository;
+    private final UserRepository userRepository;
+    private final SeatMapper seatMapper;
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public SeatResponse createSeat(CreateSeatRequest request) {
-    requireRoomAccess(request.getRoomId());
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public SeatResponse createSeat(CreateSeatRequest request) {
+        requireRoomAccess(request.getRoomId());
 
-    if (seatRepository.existsByRoomIdAndSeatCode(request.getRoomId(), request.getSeatCode())) {
-      throw new AppException(ErrorCode.SEAT_DUPLICATE);
+        if (seatRepository.existsByRoomIdAndSeatCode(request.getRoomId(), request.getSeatCode())) {
+            throw new AppException(ErrorCode.SEAT_DUPLICATE);
+        }
+
+        Seat seat = seatMapper.toSeat(request);
+
+        Room room = getRoom(request.getRoomId());
+        seat.setRoom(room);
+
+        return seatMapper.toSeatResponse(seatRepository.save(seat));
     }
 
-    Seat seat = seatMapper.toSeat(request);
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public SeatResponse updateSeat(Long seatId, UpdateSeatRequest request) {
 
-    Room room = getRoom(request.getRoomId());
-    seat.setRoom(room);
+        Seat seat = getSeat(seatId);
+        requireRoomAccess(seat.getRoom().getId());
 
-    return seatMapper.toSeatResponse(seatRepository.save(seat));
-  }
+        seatMapper.updateSeat(seat, request);
 
-  @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public SeatResponse updateSeat(Long seatId, UpdateSeatRequest request) {
+        if (request.getRoomId() != null) {
+            requireRoomAccess(request.getRoomId());
+            Room room = getRoom(request.getRoomId());
+            seat.setRoom(room);
+        }
 
-    Seat seat = getSeat(seatId);
-    requireRoomAccess(seat.getRoom().getId());
-
-    seatMapper.updateSeat(seat, request);
-
-    if (request.getRoomId() != null) {
-      requireRoomAccess(request.getRoomId());
-      Room room = getRoom(request.getRoomId());
-      seat.setRoom(room);
+        return seatMapper.toSeatResponse(seatRepository.save(seat));
     }
 
-    return seatMapper.toSeatResponse(seatRepository.save(seat));
-  }
-
-  @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public void deleteSeat(Long seatId) {
-    Seat seat = getSeat(seatId);
-    requireRoomAccess(seat.getRoom().getId());
-    seatRepository.delete(seat);
-  }
-
-  @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public List<SeatResponse> updateSeatLayout(Long roomId, UpdateSeatLayoutRequest request) {
-    requireRoomAccess(roomId);
-    if (request.getSeats() == null || request.getSeats().isEmpty()) {
-      throw new AppException(ErrorCode.VALIDATION_ERROR);
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public void deleteSeat(Long seatId) {
+        Seat seat = getSeat(seatId);
+        requireRoomAccess(seat.getRoom().getId());
+        seatRepository.delete(seat);
     }
 
-    List<Seat> roomSeats = seatRepository.findByRoomId(roomId);
-    Map<Long, Seat> seatsById =
-        roomSeats.stream().collect(Collectors.toMap(Seat::getId, Function.identity()));
-    Set<String> positions = new HashSet<>();
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public List<SeatResponse> updateSeatLayout(Long roomId, UpdateSeatLayoutRequest request) {
+        requireRoomAccess(roomId);
+        if (request.getSeats() == null || request.getSeats().isEmpty()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
 
-    for (UpdateSeatLayoutRequest.Item item : request.getSeats()) {
-      Seat seat = seatsById.get(item.getSeatId());
-      if (seat == null
-          || item.getRowLabel() == null
-          || item.getRowLabel().isBlank()
-          || item.getSeatNumber() == null
-          || item.getSeatNumber() <= 0) {
-        throw new AppException(ErrorCode.VALIDATION_ERROR);
-      }
-      String rowLabel = item.getRowLabel().trim().toUpperCase();
-      String positionKey = rowLabel + ":" + item.getSeatNumber();
-      if (!positions.add(positionKey)) {
-        throw new AppException(ErrorCode.SEAT_DUPLICATE);
-      }
+        List<Seat> roomSeats = seatRepository.findByRoomId(roomId);
+        Map<Long, Seat> seatsById = roomSeats.stream().collect(Collectors.toMap(Seat::getId, Function.identity()));
+        Set<String> positions = new HashSet<>();
+
+        for (UpdateSeatLayoutRequest.Item item : request.getSeats()) {
+            Seat seat = seatsById.get(item.getSeatId());
+            if (seat == null
+                    || item.getRowLabel() == null
+                    || item.getRowLabel().isBlank()
+                    || item.getSeatNumber() == null
+                    || item.getSeatNumber() <= 0) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR);
+            }
+            String rowLabel = item.getRowLabel().trim().toUpperCase();
+            String positionKey = rowLabel + ":" + item.getSeatNumber();
+            if (!positions.add(positionKey)) {
+                throw new AppException(ErrorCode.SEAT_DUPLICATE);
+            }
+        }
+
+        for (Seat seat : roomSeats) {
+            seat.setSeatCode("__TMP_" + seat.getId());
+        }
+        seatRepository.saveAll(roomSeats);
+        seatRepository.flush();
+
+        for (UpdateSeatLayoutRequest.Item item : request.getSeats()) {
+            Seat seat = seatsById.get(item.getSeatId());
+            String rowLabel = item.getRowLabel().trim().toUpperCase();
+            seat.setRowLabel(rowLabel);
+            seat.setSeatNumber(item.getSeatNumber());
+            seat.setSeatCode(rowLabel + item.getSeatNumber());
+            if (item.getSeatType() != null) {
+                seat.setSeatType(item.getSeatType());
+            }
+            if (item.getIsActive() != null) {
+                seat.setIsActive(item.getIsActive());
+            }
+        }
+
+        return seatRepository.saveAll(roomSeats).stream()
+                .map(seatMapper::toSeatResponse)
+                .toList();
     }
 
-    for (Seat seat : roomSeats) {
-      seat.setSeatCode("__TMP_" + seat.getId());
-    }
-    seatRepository.saveAll(roomSeats);
-    seatRepository.flush();
-
-    for (UpdateSeatLayoutRequest.Item item : request.getSeats()) {
-      Seat seat = seatsById.get(item.getSeatId());
-      String rowLabel = item.getRowLabel().trim().toUpperCase();
-      seat.setRowLabel(rowLabel);
-      seat.setSeatNumber(item.getSeatNumber());
-      seat.setSeatCode(rowLabel + item.getSeatNumber());
-      if (item.getSeatType() != null) {
-        seat.setSeatType(item.getSeatType());
-      }
-      if (item.getIsActive() != null) {
-        seat.setIsActive(item.getIsActive());
-      }
+    @Transactional(readOnly = true)
+    public List<SeatResponse> getSeatsByRoom(Long roomId) {
+        return seatRepository.findByRoomId(roomId).stream().map(seatMapper::toSeatResponse).toList();
     }
 
-    return seatRepository.saveAll(roomSeats).stream()
-        .map(seatMapper::toSeatResponse)
-        .toList();
-  }
-
-  @Transactional(readOnly = true)
-  public List<SeatResponse> getSeatsByRoom(Long roomId) {
-    return seatRepository.findByRoomId(roomId).stream().map(seatMapper::toSeatResponse).toList();
-  }
-
-  public SeatResponse getSeatById(Long seatId) {
-    Seat seat = getSeat(seatId);
-    return seatMapper.toSeatResponse(seat);
-  }
-
-  // ===== PRIVATE HELPER =====
-  private Seat getSeat(Long seatId) {
-    return seatRepository
-        .findById(seatId)
-        .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
-  }
-
-  private Room getRoom(Long roomId) {
-    return roomRepository
-        .findById(roomId)
-        .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
-  }
-
-  private void requireRoomAccess(Long roomId) {
-    User currentUser = getCurrentUser();
-    if (currentUser.getRole() == UserRole.ADMIN) {
-      return;
+    public SeatResponse getSeatById(Long seatId) {
+        Seat seat = getSeat(seatId);
+        return seatMapper.toSeatResponse(seat);
     }
-    Room room = getRoom(roomId);
-    if (currentUser.getRole() == UserRole.MANAGER
-        && currentUser.getBranchId() != null
-        && room.getBranch() != null
-        && Objects.equals(room.getBranch().getBranchId(), currentUser.getBranchId())) {
-      return;
-    }
-    throw new AppException(ErrorCode.UNAUTHORIZED);
-  }
 
-  private User getCurrentUser() {
-    return userRepository
-        .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
-        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-  }
+    // ===== PRIVATE HELPER =====
+    private Seat getSeat(Long seatId) {
+        return seatRepository
+                .findById(seatId)
+                .orElseThrow(() -> new AppException(ErrorCode.SEAT_NOT_FOUND));
+    }
+
+    private Room getRoom(Long roomId) {
+        return roomRepository
+                .findById(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
+    }
+
+    private void requireRoomAccess(Long roomId) {
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() == UserRole.ADMIN) {
+            return;
+        }
+        Room room = getRoom(roomId);
+        if (currentUser.getRole() == UserRole.MANAGER
+                && currentUser.getBranchId() != null
+                && room.getBranch() != null
+                && Objects.equals(room.getBranch().getBranchId(), currentUser.getBranchId())) {
+            return;
+        }
+        throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private User getCurrentUser() {
+        return userRepository
+                .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
 }

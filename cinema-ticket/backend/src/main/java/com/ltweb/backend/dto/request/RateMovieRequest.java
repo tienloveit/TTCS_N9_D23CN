@@ -14,11 +14,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RateMovieRequest {
-  @NotNull(message = "Rating score is required")
-  @Min(value = 1, message = "Rating score must be at least 1")
-  @Max(value = 5, message = "Rating score must be at most 5")
-  private Integer score;
+    @NotNull(message = "Rating score is required")
+    @Min(value = 1, message = "Rating score must be at least 1")
+    @Max(value = 5, message = "Rating score must be at most 5")
+    private Integer score;
 
-  @Size(max = 500, message = "Comment must not exceed 500 characters")
-  private String comment;
+    @Size(max = 500, message = "Comment must not exceed 500 characters")
+    private String comment;
 }

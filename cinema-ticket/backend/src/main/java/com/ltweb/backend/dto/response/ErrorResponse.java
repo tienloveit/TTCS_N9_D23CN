@@ -14,9 +14,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ErrorResponse implements Serializable {
-  private int code; // Error code (400, 404, 500...)
-  private String error; // HTTP status reason (Bad Request, Not Found...)
-  private String message; // Chi tiết lỗi
-  private Date timestamp; // Thời điểm xảy ra lỗi
-  private String path; // API endpoint bị lỗi
+    private int code; // Error code (400, 404, 500...)
+    private String error; // HTTP status reason (Bad Request, Not Found...)
+    private String message; // Chi tiết lỗi
+    private Date timestamp; // Thời điểm xảy ra lỗi
+    private String path; // API endpoint bị lỗi
 }

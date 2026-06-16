@@ -16,17 +16,17 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateRoomRequest {
-  @Size(max = 50, message = "Room code must be at most 50 characters")
-  private String code;
+    @Size(max = 50, message = "Room code must be at most 50 characters")
+    private String code;
 
-  @Size(max = 255, message = "Room name must be at most 255 characters")
-  private String name;
+    @Size(max = 255, message = "Room name must be at most 255 characters")
+    private String name;
 
-  private RoomType roomType;
+    private RoomType roomType;
 
-  @Min(value = 1, message = "Seat capacity must be at least 1")
-  private Integer seatCapacity;
+    @Min(value = 1, message = "Seat capacity must be at least 1")
+    private Integer seatCapacity;
 
-  private RoomStatus status;
-  private Long branchId;
+    private RoomStatus status;
+    private Long branchId;
 }

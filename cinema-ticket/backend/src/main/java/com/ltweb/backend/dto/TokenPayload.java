@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class TokenPayload {
-  private String token;
-  private String jwtId;
-  private Date expiredTime;
+    private String token;
+    private String jwtId;
+    private Date expiredTime;
 }

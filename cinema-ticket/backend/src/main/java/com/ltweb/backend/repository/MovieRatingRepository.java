@@ -10,14 +10,14 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MovieRatingRepository extends JpaRepository<MovieRating, Long> {
-  Optional<MovieRating> findByMovieIdAndUserId(Long movieId, Long userId);
+    Optional<MovieRating> findByMovieIdAndUserId(Long movieId, Long userId);
 
-  List<MovieRating> findByMovieIdOrderByCreatedAtDesc(Long movieId);
+    List<MovieRating> findByMovieIdOrderByCreatedAtDesc(Long movieId);
 
-  void deleteByMovieId(Long movieId);
+    void deleteByMovieId(Long movieId);
 
-  Long countByMovieId(Long movieId);
+    Long countByMovieId(Long movieId);
 
-  @Query("select avg(r.score) from MovieRating r where r.movie.id = :movieId")
-  Double getAverageScoreByMovieId(@Param("movieId") Long movieId);
+    @Query("select avg(r.score) from MovieRating r where r.movie.id = :movieId")
+    Double getAverageScoreByMovieId(@Param("movieId") Long movieId);
 }

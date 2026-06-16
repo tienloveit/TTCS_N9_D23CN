@@ -24,57 +24,57 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SeatController {
 
-  private final SeatService seatService;
+    private final SeatService seatService;
 
-  @PostMapping
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<SeatResponse> createSeat(@RequestBody @Valid CreateSeatRequest request) {
-    ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create seat successfully!");
-    apiResponse.setResult(seatService.createSeat(request));
-    return apiResponse;
-  }
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<SeatResponse> createSeat(@RequestBody @Valid CreateSeatRequest request) {
+        ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create seat successfully!");
+        apiResponse.setResult(seatService.createSeat(request));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<SeatResponse> update(
-      @PathVariable Long id, @RequestBody UpdateSeatRequest request) {
-    ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Seat has been updated successfully!");
-    apiResponse.setResult(seatService.updateSeat(id, request));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<SeatResponse> update(
+            @PathVariable Long id, @RequestBody UpdateSeatRequest request) {
+        ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Seat has been updated successfully!");
+        apiResponse.setResult(seatService.updateSeat(id, request));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<String> delete(@PathVariable Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    seatService.deleteSeat(id);
-    apiResponse.setMessage("Seat has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<String> delete(@PathVariable Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        seatService.deleteSeat(id);
+        apiResponse.setMessage("Seat has been deleted successfully!");
+        return apiResponse;
+    }
 
-  @PutMapping("/room/{roomId}/layout")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<SeatResponse>> updateLayout(
-      @PathVariable Long roomId, @RequestBody UpdateSeatLayoutRequest request) {
-    ApiResponse<List<SeatResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Seat layout has been updated successfully!");
-    apiResponse.setResult(seatService.updateSeatLayout(roomId, request));
-    return apiResponse;
-  }
+    @PutMapping("/room/{roomId}/layout")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<SeatResponse>> updateLayout(
+            @PathVariable Long roomId, @RequestBody UpdateSeatLayoutRequest request) {
+        ApiResponse<List<SeatResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Seat layout has been updated successfully!");
+        apiResponse.setResult(seatService.updateSeatLayout(roomId, request));
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<SeatResponse> getById(@PathVariable Long id) {
-    ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(seatService.getSeatById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<SeatResponse> getById(@PathVariable Long id) {
+        ApiResponse<SeatResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(seatService.getSeatById(id));
+        return apiResponse;
+    }
 
-  @GetMapping("/room/{roomId}")
-  public ApiResponse<List<SeatResponse>> getByRoom(@PathVariable Long roomId) {
-    ApiResponse<List<SeatResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(seatService.getSeatsByRoom(roomId));
-    return apiResponse;
-  }
+    @GetMapping("/room/{roomId}")
+    public ApiResponse<List<SeatResponse>> getByRoom(@PathVariable Long roomId) {
+        ApiResponse<List<SeatResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(seatService.getSeatsByRoom(roomId));
+        return apiResponse;
+    }
 }

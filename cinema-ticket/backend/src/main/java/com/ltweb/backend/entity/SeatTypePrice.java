@@ -24,14 +24,14 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class SeatTypePrice {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "seat_type", nullable = false, unique = true)
-  private SeatType seatType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "seat_type", nullable = false, unique = true)
+    private SeatType seatType;
 
-  @Column(nullable = false)
-  private BigDecimal price;
+    @Column(nullable = false)
+    private BigDecimal price;
 }

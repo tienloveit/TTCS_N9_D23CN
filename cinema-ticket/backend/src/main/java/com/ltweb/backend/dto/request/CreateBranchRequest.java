@@ -15,22 +15,22 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class CreateBranchRequest {
-  @NotBlank(message = "Branch code is required")
-  @Size(max = 50, message = "Branch code must be at most 50 characters")
-  private String branchCode;
+    @NotBlank(message = "Branch code is required")
+    @Size(max = 50, message = "Branch code must be at most 50 characters")
+    private String branchCode;
 
-  @NotBlank(message = "Branch name is required")
-  @Size(max = 255, message = "Branch name must be at most 255 characters")
-  private String name;
+    @NotBlank(message = "Branch name is required")
+    @Size(max = 255, message = "Branch name must be at most 255 characters")
+    private String name;
 
-  @Size(max = 255, message = "Address must be at most 255 characters")
-  private String address;
+    @Size(max = 255, message = "Address must be at most 255 characters")
+    private String address;
 
-  @Size(max = 100, message = "City must be at most 100 characters")
-  private String city;
+    @Size(max = 100, message = "City must be at most 100 characters")
+    private String city;
 
-  @Size(max = 20, message = "Phone must be at most 20 characters")
-  private String phone;
+    @Size(max = 20, message = "Phone must be at most 20 characters")
+    private String phone;
 
-  private BranchStatus status;
+    private BranchStatus status;
 }

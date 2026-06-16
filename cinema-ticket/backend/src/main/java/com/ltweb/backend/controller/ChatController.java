@@ -24,15 +24,15 @@ public class ChatController {
                     .message("Tin nhắn không được để trống")
                     .build();
         }
-        
+
         String chatId = request.getChatId();
         if (chatId == null || chatId.trim().isEmpty()) {
             chatId = "default-user";
         }
-        
+
         try {
             String response = chatService.chat(chatId, request.getMessage());
-            
+
             return ApiResponse.<ChatResponse>builder()
                     .code(200)
                     .result(new ChatResponse(response))

@@ -40,88 +40,88 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Getter
 @Setter
 public class User implements UserDetails {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @Column(unique = true)
-  private String username;
+    @Column(unique = true)
+    private String username;
 
-  private String password;
+    private String password;
 
-  private String fullName;
+    private String fullName;
 
-  @Column(unique = true)
-  private String email;
+    @Column(unique = true)
+    private String email;
 
-  @Column(unique = true)
-  private String phoneNumber;
+    @Column(unique = true)
+    private String phoneNumber;
 
-  private LocalDate dob;
+    private LocalDate dob;
 
-  @Enumerated(EnumType.STRING)
-  private Gender gender;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
 
-  @Enumerated(EnumType.STRING)
-  @JdbcTypeCode(SqlTypes.VARCHAR)
-  @Column(length = 20)
-  private UserRole role;
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 20)
+    private UserRole role;
 
-  private Long branchId;
+    private Long branchId;
 
-  @Enumerated(EnumType.STRING)
-  private UserStatus status;
+    @Enumerated(EnumType.STRING)
+    private UserStatus status;
 
-  @Enumerated(EnumType.STRING)
-  @Column(length = 20)
-  @Builder.Default
-  private MembershipTier membershipTier = MembershipTier.BRONZE;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    @Builder.Default
+    private MembershipTier membershipTier = MembershipTier.BRONZE;
 
-  @Column(precision = 15, scale = 2)
-  @Builder.Default
-  private BigDecimal totalSpending = BigDecimal.ZERO;
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal totalSpending = BigDecimal.ZERO;
 
-  private LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
-  private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
-  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-  @Builder.Default
-  private List<Booking> bookings = new ArrayList<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<Booking> bookings = new ArrayList<>();
 
-  @PrePersist
-  public void prePersist() {
-    this.createdAt = LocalDateTime.now();
-    this.updatedAt = LocalDateTime.now();
-  }
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
 
-  @PreUpdate
-  public void preUpdate() {
-    this.updatedAt = LocalDateTime.now();
-  }
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
-  @Override
-  public Collection<? extends GrantedAuthority> getAuthorities() {
-    return List.of();
-  }
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of();
+    }
 
-  @Override
-  public boolean isAccountNonExpired() {
-    return true;
-  }
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
-  @Override
-  public boolean isAccountNonLocked() {
-    return this.status != UserStatus.BLOCKED;
-  }
+    @Override
+    public boolean isAccountNonLocked() {
+        return this.status != UserStatus.BLOCKED;
+    }
 
-  @Override
-  public boolean isCredentialsNonExpired() {
-    return true;
-  }
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
 
-  @Override
-  public boolean isEnabled() {
-    return this.status == null || this.status == UserStatus.ACTIVE;
-  }
+    @Override
+    public boolean isEnabled() {
+        return this.status == null || this.status == UserStatus.ACTIVE;
+    }
 }

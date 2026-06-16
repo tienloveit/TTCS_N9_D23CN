@@ -12,12 +12,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateUserRequest {
-  private String fullName;
-  private LocalDate dob;
-  private String phoneNumber;
-  private String gender;
-  private String email;
-  private UserRole role;
-  private Long branchId;
-  private String status;
+    private String fullName;
+    private LocalDate dob;
+    private String phoneNumber;
+    private String gender;
+    private String email;
+    private UserRole role;
+    private Long branchId;
+    private String status;
 }

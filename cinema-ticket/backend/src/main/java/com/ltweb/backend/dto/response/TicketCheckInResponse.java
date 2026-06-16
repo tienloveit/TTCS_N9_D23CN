@@ -8,13 +8,13 @@ import lombok.Data;
 @Data
 @Builder
 public class TicketCheckInResponse {
-  private Long bookingId;
-  private String bookingCode;
-  private String customerName;
-  private String movieName;
-  private String branchName;
-  private String roomName;
-  private LocalDateTime showtimeStart;
-  private List<TicketCheckInItemResponse> tickets;
-  private String message;
+    private Long bookingId;
+    private String bookingCode;
+    private String customerName;
+    private String movieName;
+    private String branchName;
+    private String roomName;
+    private LocalDateTime showtimeStart;
+    private List<TicketCheckInItemResponse> tickets;
+    private String message;
 }

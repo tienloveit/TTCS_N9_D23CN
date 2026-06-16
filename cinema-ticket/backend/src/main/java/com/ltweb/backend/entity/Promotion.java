@@ -26,44 +26,44 @@ import org.hibernate.annotations.CreationTimestamp;
 @AllArgsConstructor
 @Builder
 public class Promotion {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @Column(unique = true, nullable = false, length = 50)
-  private String code;
+    @Column(unique = true, nullable = false, length = 50)
+    private String code;
 
-  private String description;
+    private String description;
 
-  @Column(nullable = false)
-  private Integer discountPercent;
+    @Column(nullable = false)
+    private Integer discountPercent;
 
-  @Column(precision = 15, scale = 2)
-  private BigDecimal maxDiscount;
+    @Column(precision = 15, scale = 2)
+    private BigDecimal maxDiscount;
 
-  @Column(precision = 15, scale = 2)
-  @Builder.Default
-  private BigDecimal minOrderAmount = BigDecimal.ZERO;
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal minOrderAmount = BigDecimal.ZERO;
 
-  @Enumerated(EnumType.STRING)
-  @Column(length = 20)
-  private MembershipTier minMembershipTier;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MembershipTier minMembershipTier;
 
-  private Long branchId;
+    private Long branchId;
 
-  private LocalDateTime startDate;
+    private LocalDateTime startDate;
 
-  private LocalDateTime endDate;
+    private LocalDateTime endDate;
 
-  private Integer usageLimit;
+    private Integer usageLimit;
 
-  @Builder.Default
-  private Integer usedCount = 0;
+    @Builder.Default
+    private Integer usedCount = 0;
 
-  @Builder.Default
-  private Boolean active = true;
+    @Builder.Default
+    private Boolean active = true;
 
-  @Column(name = "created_at", updatable = false)
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+    @Column(name = "created_at", updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }

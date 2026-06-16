@@ -21,39 +21,37 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(
-    name = "tickets",
-    uniqueConstraints = {@UniqueConstraint(columnNames = {"showtime_id", "seat_id"})})
+@Table(name = "tickets", uniqueConstraints = { @UniqueConstraint(columnNames = { "showtime_id", "seat_id" }) })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Ticket {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "ticket_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ticket_id")
+    private Long id;
 
-  @ManyToOne
-  @JoinColumn(name = "booking_id")
-  private Booking booking;
+    @ManyToOne
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
 
-  @ManyToOne
-  @JoinColumn(name = "showtime_id", nullable = false)
-  private Showtime showtime;
+    @ManyToOne
+    @JoinColumn(name = "showtime_id", nullable = false)
+    private Showtime showtime;
 
-  @ManyToOne
-  @JoinColumn(name = "seat_id", nullable = false)
-  private Seat seat;
+    @ManyToOne
+    @JoinColumn(name = "seat_id", nullable = false)
+    private Seat seat;
 
-  @Column(nullable = false)
-  private BigDecimal price;
+    @Column(nullable = false)
+    private BigDecimal price;
 
-  @Enumerated(EnumType.STRING)
-  private TicketStatus ticketStatus;
+    @Enumerated(EnumType.STRING)
+    private TicketStatus ticketStatus;
 
-  private String qrCode;
+    private String qrCode;
 
-  private LocalDateTime checkedInAt;
+    private LocalDateTime checkedInAt;
 }

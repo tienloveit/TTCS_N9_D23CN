@@ -13,9 +13,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class BookingFoodResponse {
-  private Long foodId;
-  private String foodName;
-  private Integer quantity;
-  private BigDecimal unitPrice;
-  private BigDecimal subtotal;
+    private Long foodId;
+    private String foodName;
+    private Integer quantity;
+    private BigDecimal unitPrice;
+    private BigDecimal subtotal;
 }

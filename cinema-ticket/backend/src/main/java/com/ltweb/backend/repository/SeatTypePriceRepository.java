@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SeatTypePriceRepository extends JpaRepository<SeatTypePrice, Long> {
-  boolean existsBySeatType(SeatType seatType);
+    boolean existsBySeatType(SeatType seatType);
 
-  Optional<SeatTypePrice> findBySeatType(SeatType seatType);
+    Optional<SeatTypePrice> findBySeatType(SeatType seatType);
 }

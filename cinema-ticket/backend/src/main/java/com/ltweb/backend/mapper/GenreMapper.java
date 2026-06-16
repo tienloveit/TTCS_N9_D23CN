@@ -7,5 +7,5 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface GenreMapper {
 
-  GenreResponse toGenreResponse(Genre genre);
+    GenreResponse toGenreResponse(Genre genre);
 }

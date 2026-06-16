@@ -16,21 +16,21 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class MovieResponse {
-  private Long movieId;
-  private String movieName;
-  private String description;
-  private Integer durationMinutes;
-  private AgeRating ageRating;
-  private String language;
-  private String subtitle;
-  private String thumbnailUrl;
-  private String trailerUrl;
-  private LocalDate releaseDate;
-  private LocalDate endDate;
-  private MovieStatus status;
-  private Long directorId;
-  private String directorName;
-  private Set<GenreResponse> genres;
-  private Double averageRating;
-  private Long ratingCount;
+    private Long movieId;
+    private String movieName;
+    private String description;
+    private Integer durationMinutes;
+    private AgeRating ageRating;
+    private String language;
+    private String subtitle;
+    private String thumbnailUrl;
+    private String trailerUrl;
+    private LocalDate releaseDate;
+    private LocalDate endDate;
+    private MovieStatus status;
+    private Long directorId;
+    private String directorName;
+    private Set<GenreResponse> genres;
+    private Double averageRating;
+    private Long ratingCount;
 }

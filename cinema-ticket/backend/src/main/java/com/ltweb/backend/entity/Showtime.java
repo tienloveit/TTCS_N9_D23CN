@@ -26,23 +26,23 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class Showtime {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "showtime_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "showtime_id")
+    private Long id;
 
-  @ManyToOne
-  @JoinColumn(name = "room_id", nullable = false)
-  private Room room;
+    @ManyToOne
+    @JoinColumn(name = "room_id", nullable = false)
+    private Room room;
 
-  @ManyToOne
-  @JoinColumn(name = "movie_id", nullable = false)
-  private Movie movie;
+    @ManyToOne
+    @JoinColumn(name = "movie_id", nullable = false)
+    private Movie movie;
 
-  private LocalDateTime startTime;
+    private LocalDateTime startTime;
 
-  private LocalDateTime endTime;
+    private LocalDateTime endTime;
 
-  @Enumerated(EnumType.STRING)
-  private ShowtimeStatus status;
+    @Enumerated(EnumType.STRING)
+    private ShowtimeStatus status;
 }

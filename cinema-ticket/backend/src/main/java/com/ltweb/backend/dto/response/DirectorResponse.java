@@ -12,7 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class DirectorResponse {
-  private Long id;
-  private String name;
-  private String bio;
+    private Long id;
+    private String name;
+    private String bio;
 }

@@ -13,12 +13,12 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class MovieRatingResponse {
-  private Long movieId;
-  private Long userId;
-  private String username;
-  private Integer score;
-  private String comment;
-  private LocalDateTime createdAt;
-  private Double averageRating;
-  private Long ratingCount;
+    private Long movieId;
+    private Long userId;
+    private String username;
+    private Integer score;
+    private String comment;
+    private LocalDateTime createdAt;
+    private Double averageRating;
+    private Long ratingCount;
 }

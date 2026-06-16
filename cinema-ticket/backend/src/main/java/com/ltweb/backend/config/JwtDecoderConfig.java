@@ -22,30 +22,29 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class JwtDecoderConfig implements JwtDecoder {
 
-  @Value("${jwt.secret-key}")
-  private String secretKey;
+    @Value("${jwt.secret-key}")
+    private String secretKey;
 
-  private final JwtService jwtService;
-  private NimbusJwtDecoder nimbusJwtDecoder = null;
+    private final JwtService jwtService;
+    private NimbusJwtDecoder nimbusJwtDecoder = null;
 
-  @Override
-  public Jwt decode(String token) throws JwtException {
-    try {
-      if (!jwtService.verifyToken(token)) {
-        throw new AppException(ErrorCode.TOKEN_INVALID);
-      }
-      if (Objects.isNull(nimbusJwtDecoder)) {
-        SecretKey secretKeySpec =
-            new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HS512");
-        nimbusJwtDecoder =
-            NimbusJwtDecoder.withSecretKey(secretKeySpec).macAlgorithm(MacAlgorithm.HS512).build();
-      }
-    } catch (AppException e) {
-      if (ErrorCode.ACCESS_DENIED.equals(e.getErrorCode())) {
-        throw new AccessDeniedException(e.getMessage(), e);
-      }
-      throw new BadJwtException(e.getMessage(), e);
+    @Override
+    public Jwt decode(String token) throws JwtException {
+        try {
+            if (!jwtService.verifyToken(token)) {
+                throw new AppException(ErrorCode.TOKEN_INVALID);
+            }
+            if (Objects.isNull(nimbusJwtDecoder)) {
+                SecretKey secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HS512");
+                nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec).macAlgorithm(MacAlgorithm.HS512)
+                        .build();
+            }
+        } catch (AppException e) {
+            if (ErrorCode.ACCESS_DENIED.equals(e.getErrorCode())) {
+                throw new AccessDeniedException(e.getMessage(), e);
+            }
+            throw new BadJwtException(e.getMessage(), e);
+        }
+        return nimbusJwtDecoder.decode(token);
     }
-    return nimbusJwtDecoder.decode(token);
-  }
 }

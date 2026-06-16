@@ -17,35 +17,35 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateMovieRequest {
-  @Size(max = 255, message = "Movie name must be at most 255 characters")
-  private String movieName;
+    @Size(max = 255, message = "Movie name must be at most 255 characters")
+    private String movieName;
 
-  @Size(max = 5000, message = "Description must be at most 5000 characters")
-  private String description;
+    @Size(max = 5000, message = "Description must be at most 5000 characters")
+    private String description;
 
-  private Integer durationMinutes;
+    private Integer durationMinutes;
 
-  private AgeRating ageRating;
+    private AgeRating ageRating;
 
-  @Size(max = 100, message = "Language must be at most 100 characters")
-  private String language;
+    @Size(max = 100, message = "Language must be at most 100 characters")
+    private String language;
 
-  @Size(max = 100, message = "Subtitle must be at most 100 characters")
-  private String subtitle;
+    @Size(max = 100, message = "Subtitle must be at most 100 characters")
+    private String subtitle;
 
-  @Size(max = 500, message = "Thumbnail URL must be at most 500 characters")
-  private String thumbnailUrl;
+    @Size(max = 500, message = "Thumbnail URL must be at most 500 characters")
+    private String thumbnailUrl;
 
-  @Size(max = 500, message = "Trailer URL must be at most 500 characters")
-  private String trailerUrl;
+    @Size(max = 500, message = "Trailer URL must be at most 500 characters")
+    private String trailerUrl;
 
-  private LocalDate releaseDate;
+    private LocalDate releaseDate;
 
-  private LocalDate endDate;
+    private LocalDate endDate;
 
-  private MovieStatus status;
+    private MovieStatus status;
 
-  private Long directorId;
+    private Long directorId;
 
-  private Set<Long> genreIds;
+    private Set<Long> genreIds;
 }

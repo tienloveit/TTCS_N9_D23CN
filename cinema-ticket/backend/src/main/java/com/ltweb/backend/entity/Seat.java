@@ -19,33 +19,31 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(
-    name = "seats",
-    uniqueConstraints = {@UniqueConstraint(columnNames = {"room_id", "seat_code"})})
+@Table(name = "seats", uniqueConstraints = { @UniqueConstraint(columnNames = { "room_id", "seat_code" }) })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Seat {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "seat_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "seat_id")
+    private Long id;
 
-  @ManyToOne
-  @JoinColumn(name = "room_id", nullable = false)
-  private Room room;
+    @ManyToOne
+    @JoinColumn(name = "room_id", nullable = false)
+    private Room room;
 
-  @Column(name = "seat_code")
-  private String seatCode;
+    @Column(name = "seat_code")
+    private String seatCode;
 
-  private String rowLabel;
+    private String rowLabel;
 
-  private Integer seatNumber;
+    private Integer seatNumber;
 
-  @Enumerated(EnumType.STRING)
-  private SeatType seatType;
+    @Enumerated(EnumType.STRING)
+    private SeatType seatType;
 
-  private Boolean isActive;
+    private Boolean isActive;
 }

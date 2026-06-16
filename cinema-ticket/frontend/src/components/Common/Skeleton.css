@@ -1,10 +1,8 @@
 .skeleton-base {
-  background: linear-gradient(
-    90deg,
-    rgba(15, 95, 191, 0.06) 25%,
-    rgba(15, 95, 191, 0.13) 37%,
-    rgba(15, 95, 191, 0.06) 63%
-  );
+  background: linear-gradient(90deg,
+      rgba(15, 95, 191, 0.06) 25%,
+      rgba(15, 95, 191, 0.13) 37%,
+      rgba(15, 95, 191, 0.06) 63%);
   background-size: 400% 100%;
   animation: skeleton-loading 1.4s ease infinite;
 }
@@ -13,6 +11,7 @@
   0% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }

@@ -21,29 +21,29 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SeatTypePriceController {
 
-  private final SeatTypePriceService seatTypePriceService;
+    private final SeatTypePriceService seatTypePriceService;
 
-  @GetMapping
-  public ApiResponse<List<SeatTypePriceResponse>> getAllSeatTypePrices() {
-    ApiResponse<List<SeatTypePriceResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(seatTypePriceService.getAllPrice());
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<SeatTypePriceResponse>> getAllSeatTypePrices() {
+        ApiResponse<List<SeatTypePriceResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(seatTypePriceService.getAllPrice());
+        return apiResponse;
+    }
 
-  @PostMapping
-  public ApiResponse<SeatTypePriceResponse> create(@RequestBody CreateSeatTypePrice request) {
-    ApiResponse<SeatTypePriceResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create seat type price successfully!");
-    apiResponse.setResult(seatTypePriceService.createPrice(request));
-    return apiResponse;
-  }
+    @PostMapping
+    public ApiResponse<SeatTypePriceResponse> create(@RequestBody CreateSeatTypePrice request) {
+        ApiResponse<SeatTypePriceResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create seat type price successfully!");
+        apiResponse.setResult(seatTypePriceService.createPrice(request));
+        return apiResponse;
+    }
 
-  @PutMapping("/{seatType}")
-  public ApiResponse<SeatTypePriceResponse> update(
-      @PathVariable SeatType seatType, @RequestBody UpdateSeatTypePrice request) {
-    ApiResponse<SeatTypePriceResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Seat type price has been updated successfully!");
-    apiResponse.setResult(seatTypePriceService.update(seatType, request));
-    return apiResponse;
-  }
+    @PutMapping("/{seatType}")
+    public ApiResponse<SeatTypePriceResponse> update(
+            @PathVariable SeatType seatType, @RequestBody UpdateSeatTypePrice request) {
+        ApiResponse<SeatTypePriceResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Seat type price has been updated successfully!");
+        apiResponse.setResult(seatTypePriceService.update(seatType, request));
+        return apiResponse;
+    }
 }

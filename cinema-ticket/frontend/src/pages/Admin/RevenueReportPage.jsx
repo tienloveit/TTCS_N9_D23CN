@@ -42,7 +42,7 @@ const RevenueReportPage = () => {
       setMovies(Array.isArray(movieResult) ? movieResult : movieResult?.data || []);
       const users = userRes.data.result?.data || userRes.data.result || [];
       setStaff(users.filter((item) => item.role === 'STAFF'));
-    }).catch(() => {});
+    }).catch(() => { });
   }, [user?.role]);
 
   useEffect(() => {

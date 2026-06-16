@@ -1,8 +1,8 @@
 package com.ltweb.backend.enums;
 
 public enum PaymentStatus {
-  PENDING,
-  PAID,
-  CANCELLED,
-  REFUNDED
+    PENDING,
+    PAID,
+    CANCELLED,
+    REFUNDED
 }

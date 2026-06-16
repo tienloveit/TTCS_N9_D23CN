@@ -6,9 +6,9 @@ import lombok.Data;
 
 @Data
 public class ProcessRefundRequest {
-  @NotNull
-  private Boolean approved;
+    @NotNull
+    private Boolean approved;
 
-  @Size(max = 1000)
-  private String note;
+    @Size(max = 1000)
+    private String note;
 }

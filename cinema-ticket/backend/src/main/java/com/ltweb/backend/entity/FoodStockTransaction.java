@@ -27,38 +27,38 @@ import org.hibernate.annotations.CreationTimestamp;
 @AllArgsConstructor
 @Builder
 public class FoodStockTransaction {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "transaction_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "transaction_id")
+    private Long id;
 
-  @ManyToOne
-  @JoinColumn(name = "food_id", nullable = false)
-  private Food food;
+    @ManyToOne
+    @JoinColumn(name = "food_id", nullable = false)
+    private Food food;
 
-  private Long branchId;
+    private Long branchId;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 30)
-  private FoodStockTransactionType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private FoodStockTransactionType type;
 
-  private Integer quantityBefore;
+    private Integer quantityBefore;
 
-  private Integer quantityChange;
+    private Integer quantityChange;
 
-  private Integer quantityAfter;
+    private Integer quantityAfter;
 
-  @Column(length = 500)
-  private String note;
+    @Column(length = 500)
+    private String note;
 
-  private Long referenceId;
+    private Long referenceId;
 
-  private String referenceType;
+    private String referenceType;
 
-  @ManyToOne
-  @JoinColumn(name = "created_by")
-  private User createdBy;
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }

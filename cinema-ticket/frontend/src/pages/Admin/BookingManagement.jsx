@@ -190,8 +190,8 @@ const BookingManagement = () => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ 
-                          width: '24px', height: '24px', borderRadius: '50%', 
+                        <div style={{
+                          width: '24px', height: '24px', borderRadius: '50%',
                           background: 'linear-gradient(135deg, var(--purple), var(--blue))',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '0.7rem', fontWeight: 800, color: '#fff'

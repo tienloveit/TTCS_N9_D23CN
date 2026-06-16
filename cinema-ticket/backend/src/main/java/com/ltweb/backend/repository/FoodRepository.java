@@ -11,14 +11,14 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FoodRepository extends JpaRepository<Food, Long> {
-  List<Food> findByActiveTrueOrderByNameAsc();
+    List<Food> findByActiveTrueOrderByNameAsc();
 
-  List<Food> findByBranchIdAndActiveTrueOrderByNameAsc(Long branchId);
+    List<Food> findByBranchIdAndActiveTrueOrderByNameAsc(Long branchId);
 
-  List<Food> findByBranchId(Long branchId);
+    List<Food> findByBranchId(Long branchId);
 
-  Optional<Food> findFirstByNameIgnoreCase(String name);
+    Optional<Food> findFirstByNameIgnoreCase(String name);
 
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
-  List<Food> findByIdIn(Collection<Long> ids);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<Food> findByIdIn(Collection<Long> ids);
 }

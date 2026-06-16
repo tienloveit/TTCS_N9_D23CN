@@ -9,23 +9,23 @@ import lombok.Data;
 @Data
 @Builder
 public class StaffShiftResponse {
-  private Long shiftId;
-  private Long scheduleId;
-  private Long staffId;
-  private String staffUsername;
-  private Long branchId;
-  private BigDecimal openingCash;
-  private BigDecimal closingCash;
-  private BigDecimal cashSales;
-  private BigDecimal cardSales;
-  private BigDecimal totalSales;
-  private BigDecimal expectedCash;
-  private BigDecimal cashDifference;
-  private long paidBookings;
-  private long ticketsSold;
-  private LocalDateTime openedAt;
-  private LocalDateTime closedAt;
-  private Long durationMinutes;
-  private String note;
-  private StaffShiftStatus status;
+    private Long shiftId;
+    private Long scheduleId;
+    private Long staffId;
+    private String staffUsername;
+    private Long branchId;
+    private BigDecimal openingCash;
+    private BigDecimal closingCash;
+    private BigDecimal cashSales;
+    private BigDecimal cardSales;
+    private BigDecimal totalSales;
+    private BigDecimal expectedCash;
+    private BigDecimal cashDifference;
+    private long paidBookings;
+    private long ticketsSold;
+    private LocalDateTime openedAt;
+    private LocalDateTime closedAt;
+    private Long durationMinutes;
+    private String note;
+    private StaffShiftStatus status;
 }

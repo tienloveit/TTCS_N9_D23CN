@@ -12,6 +12,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CheckInTicketRequest {
 
-  @NotBlank(message = "Ticket code is required")
-  private String code;
+    @NotBlank(message = "Ticket code is required")
+    private String code;
 }

@@ -25,67 +25,67 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/ticket")
 @RequiredArgsConstructor
 public class TicketController {
-  private final TicketService ticketService;
+    private final TicketService ticketService;
 
-  @GetMapping
-  @PreAuthorize("hasRole('ADMIN')")
-  public ApiResponse<List<TicketResponse>> getAllTickets() {
-    ApiResponse<List<TicketResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(ticketService.getAllTickets());
-    return apiResponse;
-  }
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<TicketResponse>> getAllTickets() {
+        ApiResponse<List<TicketResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(ticketService.getAllTickets());
+        return apiResponse;
+    }
 
-  @GetMapping("/showtime/{showtimeId}")
-  public ApiResponse<List<TicketResponse>> getTicketsByShowtime(
-      @PathVariable("showtimeId") Long showtimeId) {
-    ApiResponse<List<TicketResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(ticketService.getTicketsByShowtimeId(showtimeId));
-    return apiResponse;
-  }
+    @GetMapping("/showtime/{showtimeId}")
+    public ApiResponse<List<TicketResponse>> getTicketsByShowtime(
+            @PathVariable("showtimeId") Long showtimeId) {
+        ApiResponse<List<TicketResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(ticketService.getTicketsByShowtimeId(showtimeId));
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<TicketResponse> getTicketById(@PathVariable("id") Long id) {
-    ApiResponse<TicketResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(ticketService.getTicketById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<TicketResponse> getTicketById(@PathVariable("id") Long id) {
+        ApiResponse<TicketResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(ticketService.getTicketById(id));
+        return apiResponse;
+    }
 
-  @PostMapping("/check-in")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
-  public ApiResponse<TicketCheckInResponse> checkIn(
-      @RequestBody @Valid CheckInTicketRequest request) {
-    ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Ticket checked in successfully!");
-    apiResponse.setResult(ticketService.checkIn(request));
-    return apiResponse;
-  }
+    @PostMapping("/check-in")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
+    public ApiResponse<TicketCheckInResponse> checkIn(
+            @RequestBody @Valid CheckInTicketRequest request) {
+        ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Ticket checked in successfully!");
+        apiResponse.setResult(ticketService.checkIn(request));
+        return apiResponse;
+    }
 
-  @PostMapping("/check-in/qr-image")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
-  public ApiResponse<TicketCheckInResponse> checkInByQRImage(
-      @RequestParam("qrImage") MultipartFile qrImage) {
-    ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Ticket checked in successfully via QR image!");
-    apiResponse.setResult(ticketService.checkInByQRImage(qrImage));
-    return apiResponse;
-  }
+    @PostMapping("/check-in/qr-image")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
+    public ApiResponse<TicketCheckInResponse> checkInByQRImage(
+            @RequestParam("qrImage") MultipartFile qrImage) {
+        ApiResponse<TicketCheckInResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Ticket checked in successfully via QR image!");
+        apiResponse.setResult(ticketService.checkInByQRImage(qrImage));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
-  public ApiResponse<TicketResponse> updateTicket(
-      @PathVariable("id") Long id, @RequestBody UpdateTicketRequest request) {
-    ApiResponse<TicketResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Ticket has been updated successfully!");
-    apiResponse.setResult(ticketService.updateTicket(id, request));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<TicketResponse> updateTicket(
+            @PathVariable("id") Long id, @RequestBody UpdateTicketRequest request) {
+        ApiResponse<TicketResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Ticket has been updated successfully!");
+        apiResponse.setResult(ticketService.updateTicket(id, request));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
-  public ApiResponse<String> deleteTicket(@PathVariable("id") Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    ticketService.deleteTicket(id);
-    apiResponse.setMessage("Ticket has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<String> deleteTicket(@PathVariable("id") Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        ticketService.deleteTicket(id);
+        apiResponse.setMessage("Ticket has been deleted successfully!");
+        return apiResponse;
+    }
 }

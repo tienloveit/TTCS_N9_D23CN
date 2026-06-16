@@ -11,7 +11,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AnimatedRoutes />
-          <ToastContainer 
+          <ToastContainer
             position="top-right"
             autoClose={3000}
             hideProgressBar={false}

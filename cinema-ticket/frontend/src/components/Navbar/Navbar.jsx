@@ -115,18 +115,18 @@ export default function Navbar() {
               onFocus={() => searchQuery.trim().length >= 2 && setShowSearch(true)}
             />
           </div>
-          
+
           {showSearch && searchResults.length > 0 && (
             <div className="navbar-search-dropdown">
               {searchResults.map(movie => (
-                <div 
-                  key={movie.movieId} 
+                <div
+                  key={movie.movieId}
                   className="search-result-item"
                   onClick={() => navigate(`/movie/${movie.movieId}`)}
                 >
-                  <SafeImage 
-                    src={movie.thumbnailUrl} 
-                    alt={movie.movieName} 
+                  <SafeImage
+                    src={movie.thumbnailUrl}
+                    alt={movie.movieName}
                     className="search-result-image"
                   />
                   <div className="search-result-info">
@@ -183,40 +183,40 @@ export default function Navbar() {
 
           {isAuthenticated ? (
             <div className="navbar-user">
-               <div className="navbar-user-menu" ref={userMenuRef}>
-                 <button
-                   type="button"
-                   className={`navbar-user-name navbar-user-trigger ${isActive('/profile') ? 'navbar-link--active' : ''}`}
-                   onClick={() => setShowUserMenu((open) => !open)}
-                 >
-                   <UserIcon className="navbar-user-icon" />
-                   <span>{user?.username}</span>
-                 </button>
-                 {showUserMenu && (
-                   <div className="navbar-user-dropdown">
-                     <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#info')}>
-                       <UserIcon className="navbar-dropdown-icon" />
-                       Thông tin cá nhân
-                     </button>
-                     <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#password')}>
-                       <KeyIcon className="navbar-dropdown-icon" />
-                       Đổi mật khẩu
-                     </button>
-                   </div>
-                 )}
-               </div>
-                {(isAdmin || isManager) && (
-                  <Link to={isManager ? '/manager' : '/admin'} className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                   Quản trị
-                 </Link>
-               )}
-               {isStaff && (
-                 <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                   Nhân viên
-                 </Link>
-               )}
-               <button className="btn-ghost" onClick={handleLogout} style={{ padding: '6px 12px' }}>Đăng xuất</button>
-             </div>
+              <div className="navbar-user-menu" ref={userMenuRef}>
+                <button
+                  type="button"
+                  className={`navbar-user-name navbar-user-trigger ${isActive('/profile') ? 'navbar-link--active' : ''}`}
+                  onClick={() => setShowUserMenu((open) => !open)}
+                >
+                  <UserIcon className="navbar-user-icon" />
+                  <span>{user?.username}</span>
+                </button>
+                {showUserMenu && (
+                  <div className="navbar-user-dropdown">
+                    <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#info')}>
+                      <UserIcon className="navbar-dropdown-icon" />
+                      Thông tin cá nhân
+                    </button>
+                    <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#password')}>
+                      <KeyIcon className="navbar-dropdown-icon" />
+                      Đổi mật khẩu
+                    </button>
+                  </div>
+                )}
+              </div>
+              {(isAdmin || isManager) && (
+                <Link to={isManager ? '/manager' : '/admin'} className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                  Quản trị
+                </Link>
+              )}
+              {isStaff && (
+                <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                  Nhân viên
+                </Link>
+              )}
+              <button className="btn-ghost" onClick={handleLogout} style={{ padding: '6px 12px' }}>Đăng xuất</button>
+            </div>
           ) : (
             <>
               <Link to="/login" style={{ color: 'var(--text-secondary)' }}>Đăng nhập</Link>

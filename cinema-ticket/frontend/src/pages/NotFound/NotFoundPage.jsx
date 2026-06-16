@@ -5,11 +5,11 @@ const MotionDiv = motion.div;
 
 const NotFoundPage = () => {
   return (
-    <div className="page" style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
+    <div className="page" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       textAlign: 'center',
       minHeight: '80vh'
     }}>

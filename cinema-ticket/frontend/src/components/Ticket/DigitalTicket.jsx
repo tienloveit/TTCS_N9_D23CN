@@ -36,12 +36,12 @@ const DigitalTicket = ({ booking }) => {
 
   const handleDownload = () => {
     if (ticketRef.current === null) return;
-    
+
     // Force dimensions and horizontal layout for the captured image
     // to ensure it never cuts off or misaligns regardless of screen size.
-    toPng(ticketRef.current, { 
-      cacheBust: true, 
-      pixelRatio: 3, 
+    toPng(ticketRef.current, {
+      cacheBust: true,
+      pixelRatio: 3,
       width: 850,
       height: 300,
       style: {
@@ -78,14 +78,14 @@ const DigitalTicket = ({ booking }) => {
               MoviePTIT
             </span>
             <span className={`ticket-status-tag status-${booking.status?.toLowerCase()}`}>
-              {booking.status === 'COMPLETED' ? 'VÉ HỢP LỆ' : 
-               booking.status === 'PENDING' ? 'CHỜ THANH TOÁN' : 
-               booking.status === 'CANCELLED' ? 'ĐÃ HUỶ' : 'KHÔNG XÁC ĐỊNH'}
+              {booking.status === 'COMPLETED' ? 'VÉ HỢP LỆ' :
+                booking.status === 'PENDING' ? 'CHỜ THANH TOÁN' :
+                  booking.status === 'CANCELLED' ? 'ĐÃ HUỶ' : 'KHÔNG XÁC ĐỊNH'}
             </span>
           </div>
-          
+
           <h2 className="ticket-movie-title">{booking.movieName}</h2>
-          
+
           <div className="ticket-info-grid">
             <div className="info-item">
               <label>Ngày chiếu</label>
@@ -127,8 +127,8 @@ const DigitalTicket = ({ booking }) => {
         {/* Right Part: QR Code */}
         <div className="ticket-stub">
           <div className="qr-container">
-            <QRCodeSVG 
-              value={booking.bookingCode || booking.bookingId || 'MoviePTIT'} 
+            <QRCodeSVG
+              value={booking.bookingCode || booking.bookingId || 'MoviePTIT'}
               size={120}
               level="H"
               includeMargin={true}

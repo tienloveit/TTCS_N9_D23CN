@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class JwtInfo {
-  private String jwtId;
-  private Date issuedTime;
-  private Date expiresTime;
+    private String jwtId;
+    private Date issuedTime;
+    private Date expiresTime;
 }

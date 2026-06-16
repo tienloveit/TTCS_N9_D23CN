@@ -13,12 +13,12 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring")
 public interface BranchMapper {
 
-  @Mapping(target = "branchId", ignore = true)
-  Branch toBranchEntity(CreateBranchRequest createBranchRequest);
+    @Mapping(target = "branchId", ignore = true)
+    Branch toBranchEntity(CreateBranchRequest createBranchRequest);
 
-  BranchResponse toBranchResponse(Branch branch);
+    BranchResponse toBranchResponse(Branch branch);
 
-  @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-  @Mapping(target = "branchId", ignore = true)
-  void updateBranch(UpdateBranchRequest request, @MappingTarget Branch branch);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "branchId", ignore = true)
+    void updateBranch(UpdateBranchRequest request, @MappingTarget Branch branch);
 }

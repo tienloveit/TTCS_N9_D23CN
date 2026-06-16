@@ -12,10 +12,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateBookingFoodRequest {
-  @NotNull(message = "Food ID is required")
-  private Long foodId;
+    @NotNull(message = "Food ID is required")
+    private Long foodId;
 
-  @NotNull(message = "Food quantity is required")
-  @Min(value = 1, message = "Food quantity must be at least 1")
-  private Integer quantity;
+    @NotNull(message = "Food quantity is required")
+    @Min(value = 1, message = "Food quantity must be at least 1")
+    private Integer quantity;
 }

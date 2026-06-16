@@ -27,82 +27,81 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ShowtimeController {
 
-  private final ShowtimeService showtimeService;
+    private final ShowtimeService showtimeService;
 
-  @GetMapping
-  public ApiResponse<List<ShowtimeResponse>> getAll() {
-    ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(showtimeService.getAll());
-    return apiResponse;
-  }
-
-  @GetMapping("/today")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
-  public ApiResponse<List<ShowtimeResponse>> getToday() {
-    ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(showtimeService.getToday());
-    return apiResponse;
-  }
-
-  @PostMapping
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<ShowtimeResponse> create(@Valid @RequestBody CreateShowtimeRequest request) {
-    ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create showtime successfully!");
-    apiResponse.setResult(showtimeService.createShowtime(request));
-    return apiResponse;
-  }
-
-  @PutMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<ShowtimeResponse> update(
-      @PathVariable Long id, @RequestBody UpdateShowtimeRequest request) {
-    ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Showtime has been updated successfully!");
-    apiResponse.setResult(showtimeService.update(id, request));
-    return apiResponse;
-  }
-
-  @DeleteMapping("/{id}")
-  public ApiResponse<String> delete(@PathVariable Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    showtimeService.delete(id);
-    apiResponse.setMessage("Showtime has been deleted successfully!");
-    return apiResponse;
-  }
-
-  @GetMapping("/{id}")
-  public ApiResponse<ShowtimeResponse> getById(@PathVariable Long id) {
-    ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(showtimeService.getById(id));
-    return apiResponse;
-  }
-
-  @GetMapping("/room/{roomId}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<ShowtimeResponse>> getByRoom(@PathVariable Long roomId) {
-    ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(showtimeService.getByRoom(roomId));
-    return apiResponse;
-  }
-
-  @GetMapping("/movie/{movieId}")
-  public ApiResponse<List<ShowtimeResponse>> getByMovie(@PathVariable Long movieId) {
-    ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(showtimeService.getByMovie(movieId));
-    return apiResponse;
-  }
-
-  @GetMapping("/branch/{branchId}")
-  public ApiResponse<List<Map<String, Object>>> getByBranch(
-      @PathVariable Long branchId,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          LocalDate date) {
-    if (date == null) {
-      date = LocalDate.now();
+    @GetMapping
+    public ApiResponse<List<ShowtimeResponse>> getAll() {
+        ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(showtimeService.getAll());
+        return apiResponse;
     }
-    ApiResponse<List<Map<String, Object>>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(showtimeService.getByBranch(branchId, date));
-    return apiResponse;
-  }
+
+    @GetMapping("/today")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ApiResponse<List<ShowtimeResponse>> getToday() {
+        ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(showtimeService.getToday());
+        return apiResponse;
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<ShowtimeResponse> create(@Valid @RequestBody CreateShowtimeRequest request) {
+        ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create showtime successfully!");
+        apiResponse.setResult(showtimeService.createShowtime(request));
+        return apiResponse;
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<ShowtimeResponse> update(
+            @PathVariable Long id, @RequestBody UpdateShowtimeRequest request) {
+        ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Showtime has been updated successfully!");
+        apiResponse.setResult(showtimeService.update(id, request));
+        return apiResponse;
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> delete(@PathVariable Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        showtimeService.delete(id);
+        apiResponse.setMessage("Showtime has been deleted successfully!");
+        return apiResponse;
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<ShowtimeResponse> getById(@PathVariable Long id) {
+        ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(showtimeService.getById(id));
+        return apiResponse;
+    }
+
+    @GetMapping("/room/{roomId}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<ShowtimeResponse>> getByRoom(@PathVariable Long roomId) {
+        ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(showtimeService.getByRoom(roomId));
+        return apiResponse;
+    }
+
+    @GetMapping("/movie/{movieId}")
+    public ApiResponse<List<ShowtimeResponse>> getByMovie(@PathVariable Long movieId) {
+        ApiResponse<List<ShowtimeResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(showtimeService.getByMovie(movieId));
+        return apiResponse;
+    }
+
+    @GetMapping("/branch/{branchId}")
+    public ApiResponse<List<Map<String, Object>>> getByBranch(
+            @PathVariable Long branchId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        if (date == null) {
+            date = LocalDate.now();
+        }
+        ApiResponse<List<Map<String, Object>>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(showtimeService.getByBranch(branchId, date));
+        return apiResponse;
+    }
 }

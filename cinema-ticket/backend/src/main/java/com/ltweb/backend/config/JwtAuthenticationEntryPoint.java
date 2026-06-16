@@ -19,49 +19,48 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-  @Override
-  public void commence(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      AuthenticationException authException)
-      throws IOException, ServletException {
-    ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
+    @Override
+    public void commence(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException authException)
+            throws IOException, ServletException {
+        ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
 
-    response.setStatus(errorCode.getStatus().value());
-    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(errorCode.getStatus().value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-    ErrorResponse errorResponse =
-        ErrorResponse.builder()
-            .code(errorCode.getCode())
-            .error(errorCode.getStatus().getReasonPhrase())
-            .message(errorCode.getMessage())
-            .timestamp(new Date())
-            .path(resolveOriginalPath(request))
-            .build();
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .code(errorCode.getCode())
+                .error(errorCode.getStatus().getReasonPhrase())
+                .message(errorCode.getMessage())
+                .timestamp(new Date())
+                .path(resolveOriginalPath(request))
+                .build();
 
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    objectMapper.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
-    response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
-    response.flushBuffer();
-  }
-
-  private String resolveOriginalPath(HttpServletRequest request) {
-    Object errorUri = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
-    if (errorUri != null) {
-      return errorUri.toString();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+        response.flushBuffer();
     }
 
-    Object forwardUri = request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
-    if (forwardUri != null) {
-      return forwardUri.toString();
-    }
+    private String resolveOriginalPath(HttpServletRequest request) {
+        Object errorUri = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
+        if (errorUri != null) {
+            return errorUri.toString();
+        }
 
-    Object includeUri = request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI);
-    if (includeUri != null) {
-      return includeUri.toString();
-    }
+        Object forwardUri = request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        if (forwardUri != null) {
+            return forwardUri.toString();
+        }
 
-    return request.getRequestURI();
-  }
+        Object includeUri = request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI);
+        if (includeUri != null) {
+            return includeUri.toString();
+        }
+
+        return request.getRequestURI();
+    }
 }

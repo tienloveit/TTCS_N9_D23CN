@@ -27,38 +27,38 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class StaffShift {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "shift_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "shift_id")
+    private Long id;
 
-  @ManyToOne
-  @JoinColumn(name = "staff_id", nullable = false)
-  private User staff;
+    @ManyToOne
+    @JoinColumn(name = "staff_id", nullable = false)
+    private User staff;
 
-  @ManyToOne
-  @JoinColumn(name = "schedule_id")
-  private StaffSchedule schedule;
+    @ManyToOne
+    @JoinColumn(name = "schedule_id")
+    private StaffSchedule schedule;
 
-  private Long branchId;
+    private Long branchId;
 
-  @Builder.Default
-  private BigDecimal openingCash = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal openingCash = BigDecimal.ZERO;
 
-  private BigDecimal closingCash;
+    private BigDecimal closingCash;
 
-  @Builder.Default
-  private BigDecimal expectedCash = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal expectedCash = BigDecimal.ZERO;
 
-  private BigDecimal cashDifference;
+    private BigDecimal cashDifference;
 
-  private LocalDateTime openedAt;
+    private LocalDateTime openedAt;
 
-  private LocalDateTime closedAt;
+    private LocalDateTime closedAt;
 
-  @Column(length = 500)
-  private String note;
+    @Column(length = 500)
+    private String note;
 
-  @Enumerated(EnumType.STRING)
-  private StaffShiftStatus status;
+    @Enumerated(EnumType.STRING)
+    private StaffShiftStatus status;
 }

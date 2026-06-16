@@ -8,17 +8,17 @@ import lombok.Data;
 @Builder
 public class SeatResponse {
 
-  private Long seatId;
+    private Long seatId;
 
-  private Long roomId;
+    private Long roomId;
 
-  private String seatCode;
+    private String seatCode;
 
-  private String rowLabel;
+    private String rowLabel;
 
-  private Integer seatNumber;
+    private Integer seatNumber;
 
-  private SeatType seatType;
+    private SeatType seatType;
 
-  private Boolean isActive;
+    private Boolean isActive;
 }

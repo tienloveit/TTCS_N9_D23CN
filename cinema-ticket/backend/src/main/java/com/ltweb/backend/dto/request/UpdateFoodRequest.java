@@ -14,20 +14,20 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateFoodRequest {
-  private String name;
+    private String name;
 
-  private String description;
+    private String description;
 
-  @DecimalMin(value = "0.0", inclusive = false, message = "Food price must be greater than 0")
-  private BigDecimal price;
+    @DecimalMin(value = "0.0", inclusive = false, message = "Food price must be greater than 0")
+    private BigDecimal price;
 
-  private String imageUrl;
+    private String imageUrl;
 
-  private Long branchId;
+    private Long branchId;
 
-  private Integer stockQuantity;
+    private Integer stockQuantity;
 
-  private Integer lowStockThreshold;
+    private Integer lowStockThreshold;
 
-  private Boolean active;
+    private Boolean active;
 }

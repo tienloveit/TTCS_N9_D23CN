@@ -17,8 +17,9 @@ import org.springframework.data.redis.core.TimeToLive;
 @RedisHash("redis_tokens")
 @Builder
 public class RedisToken {
-  @Id private String jwtId;
+    @Id
+    private String jwtId;
 
-  @TimeToLive(unit = TimeUnit.SECONDS)
-  private Long expiredTime;
+    @TimeToLive(unit = TimeUnit.SECONDS)
+    private Long expiredTime;
 }

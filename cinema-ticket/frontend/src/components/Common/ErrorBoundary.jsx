@@ -17,11 +17,11 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="page" style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
+        <div className="page" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
           textAlign: 'center',
           minHeight: '80vh'
         }}>
@@ -31,8 +31,8 @@ class ErrorBoundary extends React.Component {
           <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>
             Hệ thống gặp sự cố bất ngờ. Vui lòng thử tải lại trang hoặc quay lại sau.
           </p>
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             onClick={() => window.location.reload()}
           >
             Tải lại trang

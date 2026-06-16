@@ -13,16 +13,16 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateUserRequest {
-  private String username;
-  private String fullName;
-  private String email;
-  private String phoneNumber;
+    private String username;
+    private String fullName;
+    private String email;
+    private String phoneNumber;
 
-  @Size(min = 6, message = "Password must be at least 6 characters")
-  private String password;
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password;
 
-  private String gender;
-  private LocalDate dob;
-  private UserRole role;  // optional – admin can assign role at creation
-  private Long branchId;
+    private String gender;
+    private LocalDate dob;
+    private UserRole role; // optional – admin can assign role at creation
+    private Long branchId;
 }

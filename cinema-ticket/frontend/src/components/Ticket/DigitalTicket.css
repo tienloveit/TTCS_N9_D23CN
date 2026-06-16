@@ -1,14 +1,16 @@
 /* ==================== DIGITAL TICKET STYLE ==================== */
 .digital-ticket {
   display: flex;
-  background-color: #ffffff; /* Explicit white background */
+  background-color: #ffffff;
+  /* Explicit white background */
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
   margin-bottom: 30px;
   position: relative;
   min-height: 280px;
-  color: #1a202c; /* Explicit dark text */
+  color: #1a202c;
+  /* Explicit dark text */
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
@@ -75,7 +77,8 @@
   font-weight: 900;
   margin-bottom: 24px;
   line-height: 1.1;
-  color: #111827; /* Very dark for contrast */
+  color: #111827;
+  /* Very dark for contrast */
 }
 
 .ticket-info-grid {
@@ -127,23 +130,31 @@
   border-left: 2px dashed #d1d5db;
 }
 
-.perforation-top, .perforation-bottom {
+.perforation-top,
+.perforation-bottom {
   position: absolute;
   width: 40px;
   height: 40px;
-  background-color: var(--bg-primary); /* Match app background for "cutout" effect */
+  background-color: var(--bg-primary);
+  /* Match app background for "cutout" effect */
   border-radius: 50%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
 }
 
-.perforation-top { top: -20px; }
-.perforation-bottom { bottom: -20px; }
+.perforation-top {
+  top: -20px;
+}
+
+.perforation-bottom {
+  bottom: -20px;
+}
 
 .ticket-stub {
   width: 240px;
-  background-color: #f9fafb; /* Light gray stub */
+  background-color: #f9fafb;
+  /* Light gray stub */
   padding: 30px;
   display: flex;
   flex-direction: column;
@@ -156,7 +167,7 @@
   background-color: #ffffff;
   padding: 15px;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   margin-bottom: 20px;
 }
 
@@ -173,12 +184,14 @@
     flex-direction: column;
     max-width: 100%;
   }
+
   .ticket-stub {
     width: 100%;
     border-left: none;
     border-top: 1px solid #f3f4f6;
     padding: 40px;
   }
+
   .ticket-divider {
     display: none;
   }

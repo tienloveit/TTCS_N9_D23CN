@@ -14,11 +14,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class RoomResponse {
-  private Long id;
-  private String code;
-  private String name;
-  private RoomType roomType;
-  private Integer seatCapacity;
-  private RoomStatus status;
-  private Long branchId;
+    private Long id;
+    private String code;
+    private String name;
+    private RoomType roomType;
+    private Integer seatCapacity;
+    private RoomStatus status;
+    private Long branchId;
 }

@@ -16,16 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admin/operations")
 @RequiredArgsConstructor
 public class OperationsReportController {
-  private final OperationsReportService operationsReportService;
+    private final OperationsReportService operationsReportService;
 
-  @GetMapping("/daily-report")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<OperationsReportResponse> getDailyReport(
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          LocalDate date,
-      @RequestParam(required = false) Long branchId) {
-    ApiResponse<OperationsReportResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(operationsReportService.getDailyReport(date, branchId));
-    return apiResponse;
-  }
+    @GetMapping("/daily-report")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<OperationsReportResponse> getDailyReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Long branchId) {
+        ApiResponse<OperationsReportResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(operationsReportService.getDailyReport(date, branchId));
+        return apiResponse;
+    }
 }

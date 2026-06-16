@@ -18,22 +18,22 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class CreateRoomRequest {
-  @NotBlank(message = "Room code is required")
-  @Size(max = 50, message = "Room code must be at most 50 characters")
-  private String code;
+    @NotBlank(message = "Room code is required")
+    @Size(max = 50, message = "Room code must be at most 50 characters")
+    private String code;
 
-  @NotBlank(message = "Room name is required")
-  @Size(max = 255, message = "Room name must be at most 255 characters")
-  private String name;
+    @NotBlank(message = "Room name is required")
+    @Size(max = 255, message = "Room name must be at most 255 characters")
+    private String name;
 
-  private RoomType roomType;
+    private RoomType roomType;
 
-  @NotNull(message = "Seat capacity is required")
-  @Min(value = 1, message = "Seat capacity must be at least 1")
-  private Integer seatCapacity;
+    @NotNull(message = "Seat capacity is required")
+    @Min(value = 1, message = "Seat capacity must be at least 1")
+    private Integer seatCapacity;
 
-  private RoomStatus status;
+    private RoomStatus status;
 
-  @NotNull(message = "Branch id is required")
-  private Long branchId;
+    @NotNull(message = "Branch id is required")
+    private Long branchId;
 }

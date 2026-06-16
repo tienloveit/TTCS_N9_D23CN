@@ -13,6 +13,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateGenreRequest {
-  @Size(max = 100, message = "Genre name must be at most 100 characters")
-  private String name;
+    @Size(max = 100, message = "Genre name must be at most 100 characters")
+    private String name;
 }

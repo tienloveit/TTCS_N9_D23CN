@@ -24,7 +24,7 @@ export default function MovieListPage() {
   useEffect(() => {
     const urlStatus = searchParams.get('status') || 'ALL';
     const urlSearch = searchParams.get('movieName') || '';
-    
+
     setStatusFilter(urlStatus);
     setSearchTerm(urlSearch);
     setCurrentPage(1);
@@ -173,7 +173,7 @@ export default function MovieListPage() {
 
         {/* ================= GRID ================= */}
         {filteredMovies.length === 0 ? (
-          <EmptyState 
+          <EmptyState
             title="Không tìm thấy phim"
             message="Rất tiếc, không có bộ phim nào khớp với tìm kiếm của bạn. Hãy thử đổi từ khoá hoặc xem các thể loại khác."
             buttonText="Xem tất cả phim"

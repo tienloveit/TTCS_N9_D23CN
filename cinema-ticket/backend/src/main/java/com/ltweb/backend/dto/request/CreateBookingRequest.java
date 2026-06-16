@@ -16,13 +16,14 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateBookingRequest {
 
-  @NotNull(message = "Showtime ID is required")
-  private Long showtimeId;
+    @NotNull(message = "Showtime ID is required")
+    private Long showtimeId;
 
-  @NotEmpty(message = "At least one seat ID is required")
-  private List<Long> seatIds;
+    @NotEmpty(message = "At least one seat ID is required")
+    private List<Long> seatIds;
 
-  @Valid private List<CreateBookingFoodRequest> foods = new ArrayList<>();
+    @Valid
+    private List<CreateBookingFoodRequest> foods = new ArrayList<>();
 
-  private String promotionCode;
+    private String promotionCode;
 }

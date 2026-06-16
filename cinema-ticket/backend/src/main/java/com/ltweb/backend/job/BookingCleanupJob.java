@@ -22,73 +22,73 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingCleanupJob {
 
-  private final BookingRepository bookingRepository;
-  private final TicketRepository ticketRepository;
-  private final SimpMessagingTemplate simpMessagingTemplate;
-  private final RedisTemplate<String, String> redisTemplate;
+    private final BookingRepository bookingRepository;
+    private final TicketRepository ticketRepository;
+    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
-  /**
-   * Chạy mỗi 2 phút để quét và giải phóng các booking PENDING đã hết hạn. Xử lý trường hợp người
-   * dùng bỏ qua thanh toán mà không có IPN callback từ VNPay.
-   */
-  @Scheduled(fixedRate = 120_000)
-  @Transactional
-  public void releaseExpiredBookings() {
-    List<Booking> expiredBookings =
-        bookingRepository.findByStatusAndExpiresAtBefore(
-            BookingStatus.PENDING, LocalDateTime.now());
+    /**
+     * Chạy mỗi 2 phút để quét và giải phóng các booking PENDING đã hết hạn. Xử lý
+     * trường hợp người
+     * dùng bỏ qua thanh toán mà không có IPN callback từ VNPay.
+     */
+    @Scheduled(fixedRate = 120_000)
+    @Transactional
+    public void releaseExpiredBookings() {
+        List<Booking> expiredBookings = bookingRepository.findByStatusAndExpiresAtBefore(
+                BookingStatus.PENDING, LocalDateTime.now());
 
-    if (expiredBookings.isEmpty()) {
-      return;
-    }
-
-    log.info(
-        "[BookingCleanupJob] Tìm thấy {} booking hết hạn, đang giải phóng...",
-        expiredBookings.size());
-
-    for (Booking booking : expiredBookings) {
-      try {
-        // Cập nhật trạng thái booking
-        booking.setStatus(BookingStatus.CANCELLED);
-        booking.setPaymentStatus(PaymentStatus.CANCELLED);
-
-        // Giải phóng từng vé và broadcast real-time qua WebSocket
-        booking
-            .getTickets()
-            .forEach(
-                ticket -> {
-                  ticket.setBooking(null);
-                  ticket.setTicketStatus(TicketStatus.AVAILABLE);
-                  ticketRepository.save(ticket);
-
-                  simpMessagingTemplate.convertAndSend(
-                      "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
-                      SeatStatusEvent.builder()
-                          .seatId(ticket.getSeat().getId())
-                          .status("AVAILABLE")
-                          .build());
-                });
-
-        bookingRepository.save(booking);
-
-        // Xóa Redis seat locks
-        try {
-          List<String> keys = booking.getTickets().stream()
-              .map(t -> "seat_hold:" + booking.getShowtime().getId() + ":" + t.getSeat().getId())
-              .toList();
-          redisTemplate.delete(keys);
-        } catch (Exception ex) {
-          log.warn("[BookingCleanupJob] Không thể xóa Redis seat lock: {}", ex.getMessage());
+        if (expiredBookings.isEmpty()) {
+            return;
         }
 
-        log.info("[BookingCleanupJob] Đã giải phóng booking: {}", booking.getBookingCode());
+        log.info(
+                "[BookingCleanupJob] Tìm thấy {} booking hết hạn, đang giải phóng...",
+                expiredBookings.size());
 
-      } catch (Exception e) {
-        log.error(
-            "[BookingCleanupJob] Lỗi khi giải phóng booking {}: {}",
-            booking.getBookingCode(),
-            e.getMessage());
-      }
+        for (Booking booking : expiredBookings) {
+            try {
+                // Cập nhật trạng thái booking
+                booking.setStatus(BookingStatus.CANCELLED);
+                booking.setPaymentStatus(PaymentStatus.CANCELLED);
+
+                // Giải phóng từng vé và broadcast real-time qua WebSocket
+                booking
+                        .getTickets()
+                        .forEach(
+                                ticket -> {
+                                    ticket.setBooking(null);
+                                    ticket.setTicketStatus(TicketStatus.AVAILABLE);
+                                    ticketRepository.save(ticket);
+
+                                    simpMessagingTemplate.convertAndSend(
+                                            "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
+                                            SeatStatusEvent.builder()
+                                                    .seatId(ticket.getSeat().getId())
+                                                    .status("AVAILABLE")
+                                                    .build());
+                                });
+
+                bookingRepository.save(booking);
+
+                // Xóa Redis seat locks
+                try {
+                    List<String> keys = booking.getTickets().stream()
+                            .map(t -> "seat_hold:" + booking.getShowtime().getId() + ":" + t.getSeat().getId())
+                            .toList();
+                    redisTemplate.delete(keys);
+                } catch (Exception ex) {
+                    log.warn("[BookingCleanupJob] Không thể xóa Redis seat lock: {}", ex.getMessage());
+                }
+
+                log.info("[BookingCleanupJob] Đã giải phóng booking: {}", booking.getBookingCode());
+
+            } catch (Exception e) {
+                log.error(
+                        "[BookingCleanupJob] Lỗi khi giải phóng booking {}: {}",
+                        booking.getBookingCode(),
+                        e.getMessage());
+            }
+        }
     }
-  }
 }

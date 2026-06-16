@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
-  List<Notification> findTop100ByOrderByCreatedAtDesc();
+    List<Notification> findTop100ByOrderByCreatedAtDesc();
 
-  boolean existsByTypeAndTargetTypeAndTargetId(
-      NotificationType type, String targetType, String targetId);
+    boolean existsByTypeAndTargetTypeAndTargetId(
+            NotificationType type, String targetType, String targetId);
 }

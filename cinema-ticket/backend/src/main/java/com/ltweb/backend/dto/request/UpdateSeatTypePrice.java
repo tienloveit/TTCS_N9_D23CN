@@ -9,5 +9,5 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class UpdateSeatTypePrice {
-  private BigDecimal price;
+    private BigDecimal price;
 }

@@ -48,42 +48,42 @@ const DetailIcon = () => (
 /* ─── Constants ──────────────────────────────────────────── */
 const ROLE_OPTIONS = [
   { value: 'MANAGER', label: 'Manager' },
-  { value: 'USER',  label: 'Khách hàng' },
-  { value: 'STAFF', label: 'Nhân viên'  },
-  { value: 'ADMIN', label: 'Admin'       },
+  { value: 'USER', label: 'Khách hàng' },
+  { value: 'STAFF', label: 'Nhân viên' },
+  { value: 'ADMIN', label: 'Admin' },
 ];
 
 const GENDER_OPTIONS = [
-  { value: 'MALE',   label: 'Nam'   },
-  { value: 'FEMALE', label: 'Nữ'    },
-  { value: 'OTHER',  label: 'Khác'  },
+  { value: 'MALE', label: 'Nam' },
+  { value: 'FEMALE', label: 'Nữ' },
+  { value: 'OTHER', label: 'Khác' },
 ];
 
 const EMPTY_FORM = {
-  username:    '',
-  fullName:    '',
-  email:       '',
+  username: '',
+  fullName: '',
+  email: '',
   phoneNumber: '',
-  password:    '',
-  gender:      'MALE',
-  dob:         '',
-  role:        'USER',
-  branchId:    '',
+  password: '',
+  gender: 'MALE',
+  dob: '',
+  role: 'USER',
+  branchId: '',
 };
 
 /* ─── Component ──────────────────────────────────────────── */
 const UserManagement = () => {
   const { isManager, user } = useAuth();
-  const [users,       setUsers]       = useState([]);
-  const [branches,    setBranches]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [searchTerm,  setSearchTerm]  = useState('');
+  const [users, setUsers] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Modal
-  const [isModalOpen,  setIsModalOpen]  = useState(false);
-  const [editingUser,  setEditingUser]  = useState(null);   // null = add mode
-  const [formData,     setFormData]     = useState(EMPTY_FORM);
-  const [submitting,   setSubmitting]   = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);   // null = add mode
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [submitting, setSubmitting] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [staffDetail, setStaffDetail] = useState(null);
@@ -136,15 +136,15 @@ const UserManagement = () => {
   const openEditModal = (user) => {
     setEditingUser(user);
     setFormData({
-      username:    user.username    || '',
-      fullName:    user.fullName    || '',
-      email:       user.email       || '',
+      username: user.username || '',
+      fullName: user.fullName || '',
+      email: user.email || '',
       phoneNumber: user.phoneNumber || '',
-      password:    '',                          // không gửi password khi edit
-      gender:      user.gender      || 'MALE',
-      dob:         user.dob         || '',
-      role:        user.role        || 'CUSTOMER',
-      branchId:    user.branchId ? String(user.branchId) : '',
+      password: '',                          // không gửi password khi edit
+      gender: user.gender || 'MALE',
+      dob: user.dob || '',
+      role: user.role || 'CUSTOMER',
+      branchId: user.branchId ? String(user.branchId) : '',
     });
     setIsModalOpen(true);
   };
@@ -223,28 +223,28 @@ const UserManagement = () => {
       if (editingUser) {
         // Sửa: dùng UpdateUserRequest (fullName, dob, phoneNumber, gender, email, role)
         const payload = {
-          fullName:    formData.fullName,
-          email:       formData.email,
+          fullName: formData.fullName,
+          email: formData.email,
           phoneNumber: formData.phoneNumber,
-          gender:      formData.gender,
-          dob:         formData.dob || null,
-          role:        isManager ? 'STAFF' : formData.role,
-          branchId:    ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
+          gender: formData.gender,
+          dob: formData.dob || null,
+          role: isManager ? 'STAFF' : formData.role,
+          branchId: ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.update(editingUser.id, payload);
         toast.success(`Cập nhật người dùng "${formData.username}" thành công!`);
       } else {
         // Thêm mới: dùng CreateUserRequest
         const payload = {
-          username:    formData.username,
-          fullName:    formData.fullName,
-          email:       formData.email,
+          username: formData.username,
+          fullName: formData.fullName,
+          email: formData.email,
           phoneNumber: formData.phoneNumber,
-          password:    formData.password,
-          gender:      formData.gender,
-          dob:         formData.dob || null,
-          role:        isManager ? 'STAFF' : formData.role,
-          branchId:    ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
+          password: formData.password,
+          gender: formData.gender,
+          dob: formData.dob || null,
+          role: isManager ? 'STAFF' : formData.role,
+          branchId: ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.create(payload);
         toast.success(`Tạo tài khoản "${formData.username}" thành công!`);
@@ -307,9 +307,9 @@ const UserManagement = () => {
   const getRoleInfo = (role) => {
     const map = {
       MANAGER: { label: 'Manager', color: 'rgba(139,92,246,0.1)', text: 'var(--purple)' },
-      ADMIN: { label: 'Admin',      color: 'rgba(229,9,20,0.1)',    text: 'var(--accent)' },
-      STAFF: { label: 'Nhân viên',  color: 'rgba(59,130,246,0.1)', text: 'var(--blue)'   },
-      USER:  { label: 'Khách hàng', color: 'rgba(16,185,129,0.1)', text: 'var(--green)'  },
+      ADMIN: { label: 'Admin', color: 'rgba(229,9,20,0.1)', text: 'var(--accent)' },
+      STAFF: { label: 'Nhân viên', color: 'rgba(59,130,246,0.1)', text: 'var(--blue)' },
+      USER: { label: 'Khách hàng', color: 'rgba(16,185,129,0.1)', text: 'var(--green)' },
     };
     return map[role] || { label: role, color: 'transparent', text: 'var(--text-muted)' };
   };

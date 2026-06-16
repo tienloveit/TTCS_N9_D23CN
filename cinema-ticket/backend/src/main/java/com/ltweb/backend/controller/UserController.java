@@ -25,91 +25,91 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController()
 @RequiredArgsConstructor
 public class UserController {
-  private final UserService userService;
+    private final UserService userService;
 
-  @PostMapping("/sign-up")
-  public ApiResponse<UserResponse> createUser(
-      @RequestBody @Valid CreateUserRequest createUserRequest) {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Register successfully!");
-    apiResponse.setResult(userService.createUser(createUserRequest));
-    return apiResponse;
-  }
+    @PostMapping("/sign-up")
+    public ApiResponse<UserResponse> createUser(
+            @RequestBody @Valid CreateUserRequest createUserRequest) {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Register successfully!");
+        apiResponse.setResult(userService.createUser(createUserRequest));
+        return apiResponse;
+    }
 
-  @PostMapping({"/users", "/user"})
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<UserResponse> createUserByAdmin(
-      @RequestBody @Valid CreateUserRequest createUserRequest) {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("User has been created successfully!");
-    apiResponse.setResult(userService.createUserByAdmin(createUserRequest));
-    return apiResponse;
-  }
+    @PostMapping({ "/users", "/user" })
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<UserResponse> createUserByAdmin(
+            @RequestBody @Valid CreateUserRequest createUserRequest) {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("User has been created successfully!");
+        apiResponse.setResult(userService.createUserByAdmin(createUserRequest));
+        return apiResponse;
+    }
 
-  @GetMapping("/users")
-  public ApiResponse<PageResponse<List<UserResponse>>> searchUsers(
-      @RequestParam(defaultValue = "1") int page,
-      @RequestParam(defaultValue = "10") int size,
-      @RequestParam(required = false) String username,
-      @RequestParam(required = false) String email,
-      @RequestParam(required = false) String phone) {
-    Sort sort = Sort.by("createdAt").descending();
-    int pageIndex = Math.max(page - 1, 0);
-    Pageable pageable = PageRequest.of(pageIndex, size, sort);
+    @GetMapping("/users")
+    public ApiResponse<PageResponse<List<UserResponse>>> searchUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phone) {
+        Sort sort = Sort.by("createdAt").descending();
+        int pageIndex = Math.max(page - 1, 0);
+        Pageable pageable = PageRequest.of(pageIndex, size, sort);
 
-    ApiResponse<PageResponse<List<UserResponse>>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(userService.searchUsers(username, email, phone, pageable));
-    return apiResponse;
-  }
+        ApiResponse<PageResponse<List<UserResponse>>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.searchUsers(username, email, phone, pageable));
+        return apiResponse;
+    }
 
-  @GetMapping("/users/{id}")
-  public ApiResponse<UserResponse> getUserById(@PathVariable Long id) {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Get User by id!");
-    apiResponse.setResult(userService.getUserById(id));
-    return apiResponse;
-  }
+    @GetMapping("/users/{id}")
+    public ApiResponse<UserResponse> getUserById(@PathVariable Long id) {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Get User by id!");
+        apiResponse.setResult(userService.getUserById(id));
+        return apiResponse;
+    }
 
-  @PutMapping("/users/{id}")
-  public ApiResponse<UserResponse> updateUser(
-      @PathVariable Long id, @RequestBody @Valid UpdateUserRequest updateUserRequest) {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("User has been updated successfully!");
-    apiResponse.setResult(userService.updateUser(id, updateUserRequest));
-    return apiResponse;
-  }
+    @PutMapping("/users/{id}")
+    public ApiResponse<UserResponse> updateUser(
+            @PathVariable Long id, @RequestBody @Valid UpdateUserRequest updateUserRequest) {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("User has been updated successfully!");
+        apiResponse.setResult(userService.updateUser(id, updateUserRequest));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/users/{id}")
-  public ApiResponse<String> deleteUser(@PathVariable Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    userService.deleteUser(id);
-    apiResponse.setMessage("User has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/users/{id}")
+    public ApiResponse<String> deleteUser(@PathVariable Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        userService.deleteUser(id);
+        apiResponse.setMessage("User has been deleted successfully!");
+        return apiResponse;
+    }
 
-  @PutMapping("/users/{id}/status")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<UserResponse> updateUserStatus(
-      @PathVariable Long id, @RequestParam com.ltweb.backend.enums.UserStatus status) {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("User status has been updated!");
-    apiResponse.setResult(userService.updateUserStatus(id, status));
-    return apiResponse;
-  }
+    @PutMapping("/users/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<UserResponse> updateUserStatus(
+            @PathVariable Long id, @RequestParam com.ltweb.backend.enums.UserStatus status) {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("User status has been updated!");
+        apiResponse.setResult(userService.updateUserStatus(id, status));
+        return apiResponse;
+    }
 
-  @GetMapping("/my-info")
-  public ApiResponse<UserResponse> getMyInfo() {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(userService.getMyInfo());
-    return apiResponse;
-  }
+    @GetMapping("/my-info")
+    public ApiResponse<UserResponse> getMyInfo() {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.getMyInfo());
+        return apiResponse;
+    }
 
-  @PutMapping("/my-info")
-  public ApiResponse<UserResponse> updateMyInfo(
-      @RequestBody @Valid UpdateUserRequest updateUserRequest) {
-    ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Your information has been updated successfully!");
-    apiResponse.setResult(userService.updateMyInfo(updateUserRequest));
-    return apiResponse;
-  }
+    @PutMapping("/my-info")
+    public ApiResponse<UserResponse> updateMyInfo(
+            @RequestBody @Valid UpdateUserRequest updateUserRequest) {
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Your information has been updated successfully!");
+        apiResponse.setResult(userService.updateMyInfo(updateUserRequest));
+        return apiResponse;
+    }
 }

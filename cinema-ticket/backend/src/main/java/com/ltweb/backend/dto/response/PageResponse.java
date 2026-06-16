@@ -10,9 +10,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PageResponse<T> {
-  private T data;
-  private int page;
-  private int size;
-  private long totalElements;
-  private int totalPages;
+    private T data;
+    private int page;
+    private int size;
+    private long totalElements;
+    private int totalPages;
 }

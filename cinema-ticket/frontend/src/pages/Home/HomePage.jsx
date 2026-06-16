@@ -405,9 +405,8 @@ export default function HomePage() {
       {/* ==================== HERO BANNER ==================== */}
       {currentBanner && (
         <div
-          className={`hero-carousel ${
-            bannerDirection >= 0 ? 'hero-carousel--next' : 'hero-carousel--prev'
-          }`}
+          className={`hero-carousel ${bannerDirection >= 0 ? 'hero-carousel--next' : 'hero-carousel--prev'
+            }`}
           onMouseEnter={() => setBannerPaused(true)}
           onMouseLeave={() => setBannerPaused(false)}
           onFocus={() => setBannerPaused(true)}
@@ -687,71 +686,71 @@ export default function HomePage() {
         {aiOpen && (
           <div className="ai-chat-panel">
             <div className="ai-chat-window" aria-label="Trợ lý MoviePTIT">
-            <div className="ai-chat-header">
-              <span className="ai-chat-avatar">
-                <MessageIcon />
-              </span>
-              <div>
-                <strong className="ai-chat-title">Trợ lý MoviePTIT</strong>
-              </div>
-              <button
-                type="button"
-                className="ai-chat-close"
-                aria-label="Đóng chatbot"
-                onClick={() => setAiOpen(false)}
-              >
-                <XCircleIcon />
-              </button>
-            </div>
-
-            <div className="ai-chat-messages" ref={aiMessagesRef}>
-              {aiMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`ai-message ai-message--${message.role}`}
-                >
-                  {message.content}
+              <div className="ai-chat-header">
+                <span className="ai-chat-avatar">
+                  <MessageIcon />
+                </span>
+                <div>
+                  <strong className="ai-chat-title">Trợ lý MoviePTIT</strong>
                 </div>
-              ))}
-              {aiSending && (
-                <div className="ai-message ai-message--assistant ai-message--typing">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              )}
-            </div>
-
-            <div className="ai-suggestion-list ai-suggestion-list--compact">
-              {AI_SUGGESTIONS.map((suggestion) => (
                 <button
-                  key={suggestion}
                   type="button"
-                  className="ai-suggestion-chip"
-                  onClick={() => sendAiMessage(suggestion)}
-                  disabled={aiSending}
+                  className="ai-chat-close"
+                  aria-label="Đóng chatbot"
+                  onClick={() => setAiOpen(false)}
                 >
-                  {suggestion}
+                  <XCircleIcon />
                 </button>
-              ))}
-            </div>
+              </div>
 
-            <form className="ai-chat-form" onSubmit={handleAiSubmit}>
-              <input
-                type="text"
-                value={aiInput}
-                onChange={(event) => setAiInput(event.target.value)}
-                placeholder="Nhập câu hỏi về phim, suất chiếu..."
-                disabled={aiSending}
-              />
-              <button
-                type="submit"
-                aria-label="Gửi tin nhắn"
-                disabled={!aiInput.trim() || aiSending}
-              >
-                <SendIcon />
-              </button>
-            </form>
+              <div className="ai-chat-messages" ref={aiMessagesRef}>
+                {aiMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`ai-message ai-message--${message.role}`}
+                  >
+                    {message.content}
+                  </div>
+                ))}
+                {aiSending && (
+                  <div className="ai-message ai-message--assistant ai-message--typing">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                )}
+              </div>
+
+              <div className="ai-suggestion-list ai-suggestion-list--compact">
+                {AI_SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="ai-suggestion-chip"
+                    onClick={() => sendAiMessage(suggestion)}
+                    disabled={aiSending}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+
+              <form className="ai-chat-form" onSubmit={handleAiSubmit}>
+                <input
+                  type="text"
+                  value={aiInput}
+                  onChange={(event) => setAiInput(event.target.value)}
+                  placeholder="Nhập câu hỏi về phim, suất chiếu..."
+                  disabled={aiSending}
+                />
+                <button
+                  type="submit"
+                  aria-label="Gửi tin nhắn"
+                  disabled={!aiInput.trim() || aiSending}
+                >
+                  <SendIcon />
+                </button>
+              </form>
             </div>
           </div>
         )}
@@ -798,7 +797,7 @@ export default function HomePage() {
         </div>
 
         {filteredNowShowing.length === 0 ? (
-          <EmptyState 
+          <EmptyState
             title="Không tìm thấy phim"
             message={search ? `Không tìm thấy kết quả nào cho "${search}".` : "Hiện tại chưa có phim nào đang chiếu."}
             buttonText="Xem tất cả phim"

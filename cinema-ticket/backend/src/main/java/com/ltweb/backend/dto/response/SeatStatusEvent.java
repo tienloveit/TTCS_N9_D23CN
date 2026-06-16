@@ -9,6 +9,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public class SeatStatusEvent {
 
-  private Long seatId;
-  private String status; // AVAILABLE, HOLDING, BOOKED
+    private Long seatId;
+    private String status; // AVAILABLE, HOLDING, BOOKED
 }

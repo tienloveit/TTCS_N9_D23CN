@@ -26,35 +26,35 @@ import org.hibernate.annotations.CreationTimestamp;
 @AllArgsConstructor
 @Builder
 public class Notification {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "notification_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "notification_id")
+    private Long id;
 
-  private Long recipientUserId;
+    private Long recipientUserId;
 
-  @Enumerated(EnumType.STRING)
-  @Column(length = 30)
-  private UserRole recipientRole;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private UserRole recipientRole;
 
-  private Long branchId;
+    private Long branchId;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 40)
-  private NotificationType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
+    private NotificationType type;
 
-  @Column(nullable = false)
-  private String title;
+    @Column(nullable = false)
+    private String title;
 
-  @Column(nullable = false, length = 1000)
-  private String message;
+    @Column(nullable = false, length = 1000)
+    private String message;
 
-  private String targetType;
+    private String targetType;
 
-  private String targetId;
+    private String targetId;
 
-  private LocalDateTime readAt;
+    private LocalDateTime readAt;
 
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }

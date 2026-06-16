@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 @Builder
 public class StaffDetailResponse {
-  private UserResponse staff;
-  private List<StaffScheduleResponse> schedules;
-  private List<StaffShiftResponse> shiftHistory;
+    private UserResponse staff;
+    private List<StaffScheduleResponse> schedules;
+    private List<StaffShiftResponse> shiftHistory;
 }

@@ -10,16 +10,16 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class UpdateSeatLayoutRequest {
-  private List<Item> seats;
+    private List<Item> seats;
 
-  @Getter
-  @Setter
-  @NoArgsConstructor
-  public static class Item {
-    private Long seatId;
-    private String rowLabel;
-    private Integer seatNumber;
-    private SeatType seatType;
-    private Boolean isActive;
-  }
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Item {
+        private Long seatId;
+        private String rowLabel;
+        private Integer seatNumber;
+        private SeatType seatType;
+        private Boolean isActive;
+    }
 }

@@ -13,66 +13,66 @@ import lombok.Data;
 @Builder
 public class BookingResponse {
 
-  private Long bookingId;
+    private Long bookingId;
 
-  private String bookingCode;
+    private String bookingCode;
 
-  private Long userId;
+    private Long userId;
 
-  private String username;
+    private String username;
 
-  private Long showtimeId;
+    private Long showtimeId;
 
-  private BigDecimal totalAmount;
+    private BigDecimal totalAmount;
 
-  private BookingStatus status;
+    private BookingStatus status;
 
-  private String promotionCode;
+    private String promotionCode;
 
-  private BigDecimal discountAmount;
+    private BigDecimal discountAmount;
 
-  private LocalDateTime expiresAt;
+    private LocalDateTime expiresAt;
 
-  private LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
-  private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
-  // Seat codes
-  private List<String> seatCodes;
+    // Seat codes
+    private List<String> seatCodes;
 
-  private PaymentMethod paymentMethod;
+    private PaymentMethod paymentMethod;
 
-  private PaymentStatus paymentStatus;
+    private PaymentStatus paymentStatus;
 
-  private String providerTxnId;
+    private String providerTxnId;
 
-  private LocalDateTime paidAt;
+    private LocalDateTime paidAt;
 
-  private LocalDateTime paymentCreatedAt;
+    private LocalDateTime paymentCreatedAt;
 
-  // chi tiết xuất chiếu để hiển thị, lấy từ showtime (bên trong có movie)
-  private String movieName;
-  private String movieThumbnailUrl;
-  private String roomName;
-  private String branchName;
-  private LocalDateTime showtimeStart;
-  private LocalDateTime showtimeEnd;
+    // chi tiết xuất chiếu để hiển thị, lấy từ showtime (bên trong có movie)
+    private String movieName;
+    private String movieThumbnailUrl;
+    private String roomName;
+    private String branchName;
+    private LocalDateTime showtimeStart;
+    private LocalDateTime showtimeEnd;
 
-  private List<TicketResponse> tickets;
+    private List<TicketResponse> tickets;
 
-  private List<BookingFoodResponse> foods;
+    private List<BookingFoodResponse> foods;
 
-  private String refundReason;
+    private String refundReason;
 
-  private String refundProcessNote;
+    private String refundProcessNote;
 
-  private Long refundProcessedById;
+    private Long refundProcessedById;
 
-  private String refundProcessedByUsername;
+    private String refundProcessedByUsername;
 
-  private LocalDateTime refundProcessedAt;
+    private LocalDateTime refundProcessedAt;
 
-  private LocalDateTime refundedAt;
+    private LocalDateTime refundedAt;
 
-  private BigDecimal refundAmount;
+    private BigDecimal refundAmount;
 }

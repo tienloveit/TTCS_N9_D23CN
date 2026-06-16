@@ -26,74 +26,74 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class FoodController {
 
-  private final FoodService foodService;
+    private final FoodService foodService;
 
-  @PostMapping
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<FoodResponse> createFood(@RequestBody @Valid CreateFoodRequest request) {
-    ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Food created successfully!");
-    apiResponse.setResult(foodService.createFood(request));
-    return apiResponse;
-  }
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<FoodResponse> createFood(@RequestBody @Valid CreateFoodRequest request) {
+        ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Food created successfully!");
+        apiResponse.setResult(foodService.createFood(request));
+        return apiResponse;
+    }
 
-  @GetMapping
-  public ApiResponse<List<FoodResponse>> getAvailableFoods() {
-    ApiResponse<List<FoodResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(foodService.getAvailableFoods());
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<FoodResponse>> getAvailableFoods() {
+        ApiResponse<List<FoodResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(foodService.getAvailableFoods());
+        return apiResponse;
+    }
 
-  @GetMapping("/all")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<FoodResponse>> getAllFoods() {
-    ApiResponse<List<FoodResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(foodService.getAllFoods());
-    return apiResponse;
-  }
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<FoodResponse>> getAllFoods() {
+        ApiResponse<List<FoodResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(foodService.getAllFoods());
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<FoodResponse> getFoodById(@PathVariable("id") Long id) {
-    ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(foodService.getFoodById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<FoodResponse> getFoodById(@PathVariable("id") Long id) {
+        ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(foodService.getFoodById(id));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<FoodResponse> updateFood(
-      @PathVariable("id") Long id, @RequestBody @Valid UpdateFoodRequest request) {
-    ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Food updated successfully!");
-    apiResponse.setResult(foodService.updateFood(id, request));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<FoodResponse> updateFood(
+            @PathVariable("id") Long id, @RequestBody @Valid UpdateFoodRequest request) {
+        ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Food updated successfully!");
+        apiResponse.setResult(foodService.updateFood(id, request));
+        return apiResponse;
+    }
 
-  @PostMapping("/{id}/stock-adjustments")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<FoodResponse> adjustStock(
-      @PathVariable("id") Long id, @RequestBody @Valid FoodStockAdjustmentRequest request) {
-    ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Food stock adjusted successfully!");
-    apiResponse.setResult(foodService.adjustStock(id, request));
-    return apiResponse;
-  }
+    @PostMapping("/{id}/stock-adjustments")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<FoodResponse> adjustStock(
+            @PathVariable("id") Long id, @RequestBody @Valid FoodStockAdjustmentRequest request) {
+        ApiResponse<FoodResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Food stock adjusted successfully!");
+        apiResponse.setResult(foodService.adjustStock(id, request));
+        return apiResponse;
+    }
 
-  @GetMapping("/stock-transactions")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<FoodStockTransactionResponse>> getStockTransactions(
-      @RequestParam(required = false) Long foodId) {
-    ApiResponse<List<FoodStockTransactionResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(foodService.getStockTransactions(foodId));
-    return apiResponse;
-  }
+    @GetMapping("/stock-transactions")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<FoodStockTransactionResponse>> getStockTransactions(
+            @RequestParam(required = false) Long foodId) {
+        ApiResponse<List<FoodStockTransactionResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(foodService.getStockTransactions(foodId));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<String> deleteFood(@PathVariable("id") Long id) {
-    foodService.deleteFood(id);
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Food disabled successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<String> deleteFood(@PathVariable("id") Long id) {
+        foodService.deleteFood(id);
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Food disabled successfully!");
+        return apiResponse;
+    }
 }

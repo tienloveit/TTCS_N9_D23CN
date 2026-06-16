@@ -23,18 +23,18 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class Director {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "director_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "director_id")
+    private Long id;
 
-  @Column(nullable = false, unique = true)
-  private String name;
+    @Column(nullable = false, unique = true)
+    private String name;
 
-  @Column(length = 1000)
-  private String bio;
+    @Column(length = 1000)
+    private String bio;
 
-  @OneToMany(mappedBy = "director")
-  @Builder.Default
-  private List<Movie> movies = new ArrayList<>();
+    @OneToMany(mappedBy = "director")
+    @Builder.Default
+    private List<Movie> movies = new ArrayList<>();
 }

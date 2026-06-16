@@ -23,23 +23,23 @@ import lombok.Setter;
 @Setter
 @Builder
 public class Branch {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "branch_id")
-  private Long branchId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "branch_id")
+    private Long branchId;
 
-  @Column(unique = true, name = "branch_code")
-  private String branchCode;
+    @Column(unique = true, name = "branch_code")
+    private String branchCode;
 
-  @Column(nullable = false)
-  private String name;
+    @Column(nullable = false)
+    private String name;
 
-  private String address;
+    private String address;
 
-  private String city;
+    private String city;
 
-  private String phone;
+    private String phone;
 
-  @Enumerated(EnumType.STRING)
-  private BranchStatus status;
+    @Enumerated(EnumType.STRING)
+    private BranchStatus status;
 }

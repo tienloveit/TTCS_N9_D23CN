@@ -32,48 +32,45 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class Movie {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "movie_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "movie_id")
+    private Long id;
 
-  @Column(nullable = false, name = "movie_name")
-  private String movieName;
+    @Column(nullable = false, name = "movie_name")
+    private String movieName;
 
-  @Column(columnDefinition = "TEXT")
-  private String description;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-  @Column(name = "thumbnail_url")
-  private String thumbnailUrl;
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl;
 
-  @Column(name = "trailer_url")
-  private String trailerUrl;
+    @Column(name = "trailer_url")
+    private String trailerUrl;
 
-  private Integer durationMinutes;
+    private Integer durationMinutes;
 
-  @Enumerated(EnumType.STRING)
-  private AgeRating ageRating;
+    @Enumerated(EnumType.STRING)
+    private AgeRating ageRating;
 
-  private String language;
+    private String language;
 
-  private String subtitle;
+    private String subtitle;
 
-  private LocalDate releaseDate;
+    private LocalDate releaseDate;
 
-  private LocalDate endDate;
+    private LocalDate endDate;
 
-  @Enumerated(EnumType.STRING)
-  private MovieStatus status;
+    @Enumerated(EnumType.STRING)
+    private MovieStatus status;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "director_id")
-  private Director director;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "director_id")
+    private Director director;
 
-  @ManyToMany
-  @JoinTable(
-      name = "movie_genres",
-      joinColumns = @JoinColumn(name = "movie_id"),
-      inverseJoinColumns = @JoinColumn(name = "genre_id"))
-  @Builder.Default
-  private Set<Genre> genres = new HashSet<>();
+    @ManyToMany
+    @JoinTable(name = "movie_genres", joinColumns = @JoinColumn(name = "movie_id"), inverseJoinColumns = @JoinColumn(name = "genre_id"))
+    @Builder.Default
+    private Set<Genre> genres = new HashSet<>();
 }

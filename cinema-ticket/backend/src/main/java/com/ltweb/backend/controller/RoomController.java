@@ -24,51 +24,51 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/room")
 @RequiredArgsConstructor
 public class RoomController {
-  private final RoomService roomService;
+    private final RoomService roomService;
 
-  @PostMapping
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<RoomResponse> createRoom(@RequestBody @Valid CreateRoomRequest request) {
-    ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create room successfully!");
-    apiResponse.setResult(roomService.createRoom(request));
-    return apiResponse;
-  }
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<RoomResponse> createRoom(@RequestBody @Valid CreateRoomRequest request) {
+        ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create room successfully!");
+        apiResponse.setResult(roomService.createRoom(request));
+        return apiResponse;
+    }
 
-  @GetMapping
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<RoomResponse>> getAllRooms(
-      @RequestParam(value = "branchId", required = false) Long branchId,
-      @RequestParam(value = "status", required = false) RoomStatus status) {
-    ApiResponse<List<RoomResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(roomService.getAllRooms(branchId, status));
-    return apiResponse;
-  }
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<RoomResponse>> getAllRooms(
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            @RequestParam(value = "status", required = false) RoomStatus status) {
+        ApiResponse<List<RoomResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(roomService.getAllRooms(branchId, status));
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<RoomResponse> getRoomById(@PathVariable("id") Long id) {
-    ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(roomService.getRoomById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<RoomResponse> getRoomById(@PathVariable("id") Long id) {
+        ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(roomService.getRoomById(id));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<RoomResponse> updateRoom(
-      @PathVariable("id") Long id, @RequestBody @Valid UpdateRoomRequest request) {
-    ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Room has been updated successfully!");
-    apiResponse.setResult(roomService.updateRoom(id, request));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<RoomResponse> updateRoom(
+            @PathVariable("id") Long id, @RequestBody @Valid UpdateRoomRequest request) {
+        ApiResponse<RoomResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Room has been updated successfully!");
+        apiResponse.setResult(roomService.updateRoom(id, request));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<String> deleteRoom(@PathVariable("id") Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    roomService.deleteRoom(id);
-    apiResponse.setMessage("Room has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<String> deleteRoom(@PathVariable("id") Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        roomService.deleteRoom(id);
+        apiResponse.setMessage("Room has been deleted successfully!");
+        return apiResponse;
+    }
 }

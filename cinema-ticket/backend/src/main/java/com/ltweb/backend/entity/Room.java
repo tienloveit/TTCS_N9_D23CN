@@ -20,33 +20,31 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(
-    name = "rooms",
-    uniqueConstraints = {@UniqueConstraint(columnNames = {"branch_id", "code"})})
+@Table(name = "rooms", uniqueConstraints = { @UniqueConstraint(columnNames = { "branch_id", "code" }) })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Room {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  private String code;
+    private String code;
 
-  private String name;
+    private String name;
 
-  @Enumerated(EnumType.STRING)
-  @Builder.Default
-  private RoomType roomType = RoomType.TWO_D;
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private RoomType roomType = RoomType.TWO_D;
 
-  private Integer seatCapacity;
+    private Integer seatCapacity;
 
-  @Enumerated(EnumType.STRING)
-  private RoomStatus status;
+    @Enumerated(EnumType.STRING)
+    private RoomStatus status;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "branch_id", nullable = false)
-  private Branch branch;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
 }

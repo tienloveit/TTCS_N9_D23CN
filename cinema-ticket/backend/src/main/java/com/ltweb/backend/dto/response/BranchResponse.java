@@ -13,11 +13,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class BranchResponse {
-  private Long branchId;
-  private String branchCode;
-  private String name;
-  private String address;
-  private String city;
-  private String phone;
-  private BranchStatus status;
+    private Long branchId;
+    private String branchCode;
+    private String name;
+    private String address;
+    private String city;
+    private String phone;
+    private BranchStatus status;
 }

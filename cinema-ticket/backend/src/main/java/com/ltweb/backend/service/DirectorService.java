@@ -18,55 +18,54 @@ import org.springframework.util.StringUtils;
 @Service
 @RequiredArgsConstructor
 public class DirectorService {
-  private final DirectorRepository directorRepository;
-  private final DirectorMapper directorMapper;
+    private final DirectorRepository directorRepository;
+    private final DirectorMapper directorMapper;
 
-  @Transactional(readOnly = true)
-  public List<DirectorResponse> getAllDirectors() {
-    return directorRepository.findAll().stream()
-        .map(directorMapper::toDirectorResponse)
-        .toList();
-  }
-
-  @Transactional(readOnly = true)
-  public DirectorResponse getDirectorById(Long id) {
-    return directorMapper.toDirectorResponse(getDirector(id));
-  }
-
-  @PreAuthorize("hasRole('ADMIN')")
-  @Transactional
-  public DirectorResponse createDirector(CreateDirectorRequest request) {
-    Director director =
-        Director.builder().name(request.getName().trim()).bio(trimToNull(request.getBio())).build();
-    return directorMapper.toDirectorResponse(directorRepository.save(director));
-  }
-
-  @PreAuthorize("hasRole('ADMIN')")
-  @Transactional
-  public DirectorResponse updateDirector(Long id, UpdateDirectorRequest request) {
-    Director director = getDirector(id);
-    if (StringUtils.hasText(request.getName())) {
-      director.setName(request.getName().trim());
+    @Transactional(readOnly = true)
+    public List<DirectorResponse> getAllDirectors() {
+        return directorRepository.findAll().stream()
+                .map(directorMapper::toDirectorResponse)
+                .toList();
     }
-    if (request.getBio() != null) {
-      director.setBio(trimToNull(request.getBio()));
+
+    @Transactional(readOnly = true)
+    public DirectorResponse getDirectorById(Long id) {
+        return directorMapper.toDirectorResponse(getDirector(id));
     }
-    return directorMapper.toDirectorResponse(directorRepository.save(director));
-  }
 
-  @PreAuthorize("hasRole('ADMIN')")
-  @Transactional
-  public void deleteDirector(Long id) {
-    directorRepository.delete(getDirector(id));
-  }
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public DirectorResponse createDirector(CreateDirectorRequest request) {
+        Director director = Director.builder().name(request.getName().trim()).bio(trimToNull(request.getBio())).build();
+        return directorMapper.toDirectorResponse(directorRepository.save(director));
+    }
 
-  private Director getDirector(Long id) {
-    return directorRepository
-        .findById(id)
-        .orElseThrow(() -> new AppException(ErrorCode.DIRECTOR_NOT_FOUND));
-  }
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public DirectorResponse updateDirector(Long id, UpdateDirectorRequest request) {
+        Director director = getDirector(id);
+        if (StringUtils.hasText(request.getName())) {
+            director.setName(request.getName().trim());
+        }
+        if (request.getBio() != null) {
+            director.setBio(trimToNull(request.getBio()));
+        }
+        return directorMapper.toDirectorResponse(directorRepository.save(director));
+    }
 
-  private String trimToNull(String value) {
-    return StringUtils.hasText(value) ? value.trim() : null;
-  }
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public void deleteDirector(Long id) {
+        directorRepository.delete(getDirector(id));
+    }
+
+    private Director getDirector(Long id) {
+        return directorRepository
+                .findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.DIRECTOR_NOT_FOUND));
+    }
+
+    private String trimToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
 }

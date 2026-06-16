@@ -15,19 +15,19 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class PromotionResponse {
-  private Long id;
-  private String code;
-  private String description;
-  private Integer discountPercent;
-  private BigDecimal maxDiscount;
-  private BigDecimal minOrderAmount;
-  private MembershipTier minMembershipTier;
-  private Long branchId;
-  private String branchName;
-  private LocalDateTime startDate;
-  private LocalDateTime endDate;
-  private Integer usageLimit;
-  private Integer usedCount;
-  private Boolean active;
-  private LocalDateTime createdAt;
+    private Long id;
+    private String code;
+    private String description;
+    private Integer discountPercent;
+    private BigDecimal maxDiscount;
+    private BigDecimal minOrderAmount;
+    private MembershipTier minMembershipTier;
+    private Long branchId;
+    private String branchName;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+    private Integer usageLimit;
+    private Integer usedCount;
+    private Boolean active;
+    private LocalDateTime createdAt;
 }

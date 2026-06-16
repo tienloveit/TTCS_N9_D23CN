@@ -17,17 +17,17 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserResponse {
-  private Long id;
-  private String fullName;
-  private String username;
-  private String email;
-  private String phoneNumber;
-  private UserRole role;
-  private Long branchId;
-  private LocalDate dob;
-  private String gender;
-  private UserStatus status;
-  private java.time.LocalDateTime createdAt;
-  private MembershipTier membershipTier;
-  private BigDecimal totalSpending;
+    private Long id;
+    private String fullName;
+    private String username;
+    private String email;
+    private String phoneNumber;
+    private UserRole role;
+    private Long branchId;
+    private LocalDate dob;
+    private String gender;
+    private UserStatus status;
+    private java.time.LocalDateTime createdAt;
+    private MembershipTier membershipTier;
+    private BigDecimal totalSpending;
 }

@@ -12,5 +12,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UpdateBookingRequest {
 
-  private BookingStatus status;
+    private BookingStatus status;
 }

@@ -23,32 +23,32 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class SystemSetting {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "setting_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "setting_id")
+    private Long id;
 
-  @Column(nullable = false, unique = true, length = 120)
-  private String settingKey;
+    @Column(nullable = false, unique = true, length = 120)
+    private String settingKey;
 
-  @Column(nullable = false, length = 1000)
-  private String settingValue;
+    @Column(nullable = false, length = 1000)
+    private String settingValue;
 
-  @Column(length = 500)
-  private String description;
+    @Column(length = 500)
+    private String description;
 
-  private LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
-  private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
-  @PrePersist
-  public void prePersist() {
-    this.createdAt = LocalDateTime.now();
-    this.updatedAt = LocalDateTime.now();
-  }
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
 
-  @PreUpdate
-  public void preUpdate() {
-    this.updatedAt = LocalDateTime.now();
-  }
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

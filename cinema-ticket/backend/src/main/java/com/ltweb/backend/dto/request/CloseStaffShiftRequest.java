@@ -7,9 +7,9 @@ import lombok.Data;
 
 @Data
 public class CloseStaffShiftRequest {
-  @NotNull
-  @DecimalMin(value = "0.0", inclusive = true)
-  private BigDecimal closingCash;
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal closingCash;
 
-  private String note;
+    private String note;
 }

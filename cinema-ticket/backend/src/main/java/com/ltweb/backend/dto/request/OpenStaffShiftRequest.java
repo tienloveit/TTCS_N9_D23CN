@@ -6,8 +6,8 @@ import lombok.Data;
 
 @Data
 public class OpenStaffShiftRequest {
-  @DecimalMin(value = "0.0", inclusive = true)
-  private BigDecimal openingCash = BigDecimal.ZERO;
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal openingCash = BigDecimal.ZERO;
 
-  private String note;
+    private String note;
 }

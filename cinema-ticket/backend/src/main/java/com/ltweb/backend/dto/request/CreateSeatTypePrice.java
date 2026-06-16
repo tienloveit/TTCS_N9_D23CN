@@ -12,6 +12,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateSeatTypePrice {
-  private SeatType seatType;
-  private BigDecimal price;
+    private SeatType seatType;
+    private BigDecimal price;
 }

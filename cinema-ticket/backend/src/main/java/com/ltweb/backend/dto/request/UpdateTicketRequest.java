@@ -7,15 +7,15 @@ import lombok.Data;
 @Data
 public class UpdateTicketRequest {
 
-  private BigDecimal price;
+    private BigDecimal price;
 
-  private TicketStatus ticketStatus;
+    private TicketStatus ticketStatus;
 
-  private Long showtimeId;
+    private Long showtimeId;
 
-  private Long seatId;
+    private Long seatId;
 
-  private Long bookingId;
+    private Long bookingId;
 
-  private String qrCode;
+    private String qrCode;
 }

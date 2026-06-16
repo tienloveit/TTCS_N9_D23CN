@@ -10,10 +10,10 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class ApplicationInitConfig {
 
-  private final DataSeedService dataSeedService;
+    private final DataSeedService dataSeedService;
 
-  @Bean
-  public ApplicationRunner applicationRunner() {
-    return args -> dataSeedService.seedInitialData();
-  }
+    @Bean
+    public ApplicationRunner applicationRunner() {
+        return args -> dataSeedService.seedInitialData();
+    }
 }

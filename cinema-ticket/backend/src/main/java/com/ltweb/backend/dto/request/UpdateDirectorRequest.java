@@ -13,9 +13,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateDirectorRequest {
-  @Size(max = 255, message = "Director name must be at most 255 characters")
-  private String name;
+    @Size(max = 255, message = "Director name must be at most 255 characters")
+    private String name;
 
-  @Size(max = 1000, message = "Director bio must be at most 1000 characters")
-  private String bio;
+    @Size(max = 1000, message = "Director bio must be at most 1000 characters")
+    private String bio;
 }

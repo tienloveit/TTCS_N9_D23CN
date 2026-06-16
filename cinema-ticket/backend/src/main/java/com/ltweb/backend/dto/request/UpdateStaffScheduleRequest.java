@@ -6,9 +6,9 @@ import lombok.Data;
 
 @Data
 public class UpdateStaffScheduleRequest {
-  private LocalDateTime startTime;
-  private LocalDateTime endTime;
-  private String position;
-  private String note;
-  private StaffScheduleStatus status;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private String position;
+    private String note;
+    private StaffScheduleStatus status;
 }

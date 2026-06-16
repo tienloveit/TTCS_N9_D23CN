@@ -22,13 +22,13 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class Genre {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  private String name;
+    private String name;
 
-  @ManyToMany(mappedBy = "genres")
-  @Builder.Default
-  private Set<Movie> movies = new HashSet<>();
+    @ManyToMany(mappedBy = "genres")
+    @Builder.Default
+    private Set<Movie> movies = new HashSet<>();
 }

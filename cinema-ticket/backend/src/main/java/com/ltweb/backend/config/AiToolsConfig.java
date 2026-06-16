@@ -139,7 +139,8 @@ public class AiToolsConfig {
             // Validate date format YYYY-MM-DD
             if (!request.date().matches("\\d{4}-\\d{2}-\\d{2}")) {
                 return new ShowtimeResponseData(
-                        "Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21). Ngày nhận được: " + request.date());
+                        "Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21). Ngày nhận được: "
+                                + request.date());
             }
 
             // Lấy toàn bộ lịch chiếu và dùng filter để chắt lọc (tránh phải query bằng
@@ -278,7 +279,8 @@ public class AiToolsConfig {
 
             // Validate date format
             if (!request.date().matches("\\d{4}-\\d{2}-\\d{2}")) {
-                return new BookTicketResponse("Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21).");
+                return new BookTicketResponse(
+                        "Lỗi format ngày. Ngày phải có định dạng YYYY-MM-DD (ví dụ: 2026-05-21).");
             }
 
             // Validate time format
@@ -514,7 +516,8 @@ public class AiToolsConfig {
                     sb.append("   🎬 Phim: ").append(b.getMovieName() != null ? b.getMovieName() : "N/A").append("\n");
                     sb.append("   🏢 Rạp: ").append(b.getBranchName() != null ? b.getBranchName() : "N/A").append("\n");
                     sb.append("   🕐 Giờ chiếu: ").append(b.getShowtimeStart() != null
-                            ? b.getShowtimeStart().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "N/A").append("\n");
+                            ? b.getShowtimeStart().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                            : "N/A").append("\n");
                     sb.append("   💺 Ghế: ");
                     if (b.getSeatCodes() != null && !b.getSeatCodes().isEmpty()) {
                         sb.append(String.join(", ", b.getSeatCodes()));
@@ -522,7 +525,9 @@ public class AiToolsConfig {
                         sb.append("N/A");
                     }
                     sb.append("\n");
-                    sb.append("   💰 Tổng tiền: ").append(b.getTotalAmount() != null ? b.getTotalAmount() + " VNĐ" : "N/A").append("\n");
+                    sb.append("   💰 Tổng tiền: ")
+                            .append(b.getTotalAmount() != null ? b.getTotalAmount() + " VNĐ" : "N/A")
+                            .append("\n");
                     sb.append("   📊 Trạng thái: ").append(b.getStatus()).append("\n");
                     sb.append("   💳 Thanh toán: ").append(b.getPaymentStatus()).append("\n");
                     sb.append("\n");

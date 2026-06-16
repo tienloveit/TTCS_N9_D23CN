@@ -32,7 +32,7 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
-  const [showQR, setShowQR] = useState(null); 
+  const [showQR, setShowQR] = useState(null);
   const [refundModal, setRefundModal] = useState(null);
   const [refundReason, setRefundReason] = useState('');
   const [submittingRefund, setSubmittingRefund] = useState(false);
@@ -187,10 +187,10 @@ export default function MyBookingsPage() {
 
         {/* Booking list */}
         {filteredBookings.length === 0 ? (
-          <EmptyState 
+          <EmptyState
             title="Bạn chưa có vé nào"
-            message={filter === 'ALL' 
-              ? "Có vẻ như bạn chưa đặt vé nào tại MoviePTIT. Hãy chọn một bộ phim và trải nghiệm ngay nhé!" 
+            message={filter === 'ALL'
+              ? "Có vẻ như bạn chưa đặt vé nào tại MoviePTIT. Hãy chọn một bộ phim và trải nghiệm ngay nhé!"
               : `Bạn không có đơn hàng nào ở trạng thái "${STATUS_MAP[filter]?.label || filter}".`}
             buttonText="Tìm phim đặt vé ngay"
           />
@@ -243,7 +243,7 @@ export default function MyBookingsPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Action buttons */}
                   {booking.status === 'PENDING' && (
                     <div style={{ marginTop: 12, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>

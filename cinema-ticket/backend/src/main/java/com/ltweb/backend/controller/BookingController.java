@@ -27,121 +27,121 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BookingController {
 
-  private final BookingService bookingService;
+    private final BookingService bookingService;
 
-  @PostMapping
-  public ApiResponse<BookingResponse> createBooking(
-      @RequestBody @Valid CreateBookingRequest request) {
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Booking created successfully!");
-    apiResponse.setResult(bookingService.createBooking(request));
-    return apiResponse;
-  }
+    @PostMapping
+    public ApiResponse<BookingResponse> createBooking(
+            @RequestBody @Valid CreateBookingRequest request) {
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Booking created successfully!");
+        apiResponse.setResult(bookingService.createBooking(request));
+        return apiResponse;
+    }
 
-  @PostMapping("/staff")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
-  public ApiResponse<BookingResponse> createStaffBooking(
-      @RequestBody @Valid StaffBookingRequest request) {
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Staff booking created successfully!");
-    apiResponse.setResult(bookingService.createStaffBooking(request));
-    return apiResponse;
-  }
+    @PostMapping("/staff")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ApiResponse<BookingResponse> createStaffBooking(
+            @RequestBody @Valid StaffBookingRequest request) {
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Staff booking created successfully!");
+        apiResponse.setResult(bookingService.createStaffBooking(request));
+        return apiResponse;
+    }
 
-  @GetMapping
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
-  public ApiResponse<List<BookingResponse>> getAllBookings() {
-    ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.getAllBookings());
-    return apiResponse;
-  }
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
+    public ApiResponse<List<BookingResponse>> getAllBookings() {
+        ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.getAllBookings());
+        return apiResponse;
+    }
 
-  @GetMapping("/refunds")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<BookingResponse>> getRefundBookings() {
-    ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.getRefundBookings());
-    return apiResponse;
-  }
+    @GetMapping("/refunds")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<BookingResponse>> getRefundBookings() {
+        ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.getRefundBookings());
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<BookingResponse> getBookingById(@PathVariable("id") Long id) {
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.getBookingById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<BookingResponse> getBookingById(@PathVariable("id") Long id) {
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.getBookingById(id));
+        return apiResponse;
+    }
 
-  @GetMapping("/my-bookings/list")
-  public ApiResponse<List<BookingResponse>> getMyBookingsList() {
-    ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.getMyBookingsList());
-    return apiResponse;
-  }
+    @GetMapping("/my-bookings/list")
+    public ApiResponse<List<BookingResponse>> getMyBookingsList() {
+        ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.getMyBookingsList());
+        return apiResponse;
+    }
 
-  @GetMapping("/my-bookings/{id}")
-  public ApiResponse<BookingResponse> getMyBooking(@PathVariable("id") Long id) {
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.getMyBookings(id));
-    return apiResponse;
-  }
+    @GetMapping("/my-bookings/{id}")
+    public ApiResponse<BookingResponse> getMyBooking(@PathVariable("id") Long id) {
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.getMyBookings(id));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
-  public ApiResponse<BookingResponse> updateBooking(
-      @PathVariable("id") Long id, @RequestBody @Valid UpdateBookingRequest request) {
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Booking updated successfully!");
-    apiResponse.setResult(bookingService.updateBooking(id, request));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ApiResponse<BookingResponse> updateBooking(
+            @PathVariable("id") Long id, @RequestBody @Valid UpdateBookingRequest request) {
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Booking updated successfully!");
+        apiResponse.setResult(bookingService.updateBooking(id, request));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  public ApiResponse<String> cancelBooking(@PathVariable("id") Long id) {
-    bookingService.cancelBooking(id);
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Booking cancelled successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> cancelBooking(@PathVariable("id") Long id) {
+        bookingService.cancelBooking(id);
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Booking cancelled successfully!");
+        return apiResponse;
+    }
 
-  @PatchMapping("/{id}/apply-promotion")
-  public ApiResponse<BookingResponse> applyPromotion(
-      @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
-    String code = body.get("promotionCode");
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.applyPromotion(id, code));
-    apiResponse.setMessage(code != null && !code.isBlank() ? "Promotion applied!" : "Promotion removed!");
-    return apiResponse;
-  }
+    @PatchMapping("/{id}/apply-promotion")
+    public ApiResponse<BookingResponse> applyPromotion(
+            @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+        String code = body.get("promotionCode");
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.applyPromotion(id, code));
+        apiResponse.setMessage(code != null && !code.isBlank() ? "Promotion applied!" : "Promotion removed!");
+        return apiResponse;
+    }
 
-  @PostMapping("/{id}/refund-request")
-  public ApiResponse<BookingResponse> requestRefund(
-      @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
-    String reason = body.getOrDefault("reason", "");
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.requestRefund(id, reason));
-    apiResponse.setMessage("Refund request submitted successfully!");
-    return apiResponse;
-  }
+    @PostMapping("/{id}/refund-request")
+    public ApiResponse<BookingResponse> requestRefund(
+            @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+        String reason = body.getOrDefault("reason", "");
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.requestRefund(id, reason));
+        apiResponse.setMessage("Refund request submitted successfully!");
+        return apiResponse;
+    }
 
-  @PostMapping("/{id}/refund-process")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<BookingResponse> processRefund(
-      @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
-    boolean approved = Boolean.TRUE.equals(body.get("approved"));
-    String note = body.get("note") == null ? null : String.valueOf(body.get("note"));
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.processRefund(id, approved, note));
-    apiResponse.setMessage(approved ? "Refund approved!" : "Refund rejected!");
-    return apiResponse;
-  }
+    @PostMapping("/{id}/refund-process")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<BookingResponse> processRefund(
+            @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
+        boolean approved = Boolean.TRUE.equals(body.get("approved"));
+        String note = body.get("note") == null ? null : String.valueOf(body.get("note"));
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.processRefund(id, approved, note));
+        apiResponse.setMessage(approved ? "Refund approved!" : "Refund rejected!");
+        return apiResponse;
+    }
 
-  @PostMapping("/{id}/refund-decision")
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<BookingResponse> decideRefund(
-      @PathVariable("id") Long id, @RequestBody @Valid ProcessRefundRequest request) {
-    ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.processRefund(id, request.getApproved(), request.getNote()));
-    apiResponse.setMessage(request.getApproved() ? "Refund approved!" : "Refund rejected!");
-    return apiResponse;
-  }
+    @PostMapping("/{id}/refund-decision")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<BookingResponse> decideRefund(
+            @PathVariable("id") Long id, @RequestBody @Valid ProcessRefundRequest request) {
+        ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookingService.processRefund(id, request.getApproved(), request.getNote()));
+        apiResponse.setMessage(request.getApproved() ? "Refund approved!" : "Refund rejected!");
+        return apiResponse;
+    }
 }

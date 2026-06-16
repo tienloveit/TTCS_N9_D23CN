@@ -16,23 +16,22 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class BookingTicketEmailListener {
 
-  private final BookingRepository bookingRepository;
-  private final EmailService emailService;
+    private final BookingRepository bookingRepository;
+    private final EmailService emailService;
 
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
-  public void sendTicketEmail(BookingPaidEvent event) {
-    try {
-      Booking booking =
-          bookingRepository
-              .findById(event.bookingId())
-              .orElseThrow(
-                  () -> new IllegalStateException("Booking not found: " + event.bookingId()));
-      emailService.sendBookingTickets(booking);
-      log.info("Sent ticket email for booking {}", event.bookingId());
-    } catch (Exception ex) {
-      log.error(
-          "Could not send ticket email for booking {}: {}", event.bookingId(), ex.getMessage(), ex);
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    public void sendTicketEmail(BookingPaidEvent event) {
+        try {
+            Booking booking = bookingRepository
+                    .findById(event.bookingId())
+                    .orElseThrow(
+                            () -> new IllegalStateException("Booking not found: " + event.bookingId()));
+            emailService.sendBookingTickets(booking);
+            log.info("Sent ticket email for booking {}", event.bookingId());
+        } catch (Exception ex) {
+            log.error(
+                    "Could not send ticket email for booking {}: {}", event.bookingId(), ex.getMessage(), ex);
+        }
     }
-  }
 }

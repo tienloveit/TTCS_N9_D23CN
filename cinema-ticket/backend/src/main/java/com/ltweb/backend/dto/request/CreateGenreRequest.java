@@ -14,7 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class CreateGenreRequest {
-  @NotBlank(message = "Genre name is required")
-  @Size(max = 100, message = "Genre name must be at most 100 characters")
-  private String name;
+    @NotBlank(message = "Genre name is required")
+    @Size(max = 100, message = "Genre name must be at most 100 characters")
+    private String name;
 }

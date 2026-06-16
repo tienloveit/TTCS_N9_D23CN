@@ -21,45 +21,45 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/director")
 @RequiredArgsConstructor
 public class DirectorController {
-  private final DirectorService directorService;
+    private final DirectorService directorService;
 
-  @GetMapping
-  public ApiResponse<List<DirectorResponse>> getAllDirectors() {
-    ApiResponse<List<DirectorResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(directorService.getAllDirectors());
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<DirectorResponse>> getAllDirectors() {
+        ApiResponse<List<DirectorResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(directorService.getAllDirectors());
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<DirectorResponse> getDirectorById(@PathVariable Long id) {
-    ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(directorService.getDirectorById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<DirectorResponse> getDirectorById(@PathVariable Long id) {
+        ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(directorService.getDirectorById(id));
+        return apiResponse;
+    }
 
-  @PostMapping
-  public ApiResponse<DirectorResponse> createDirector(
-      @RequestBody @Valid CreateDirectorRequest request) {
-    ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create director successfully!");
-    apiResponse.setResult(directorService.createDirector(request));
-    return apiResponse;
-  }
+    @PostMapping
+    public ApiResponse<DirectorResponse> createDirector(
+            @RequestBody @Valid CreateDirectorRequest request) {
+        ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create director successfully!");
+        apiResponse.setResult(directorService.createDirector(request));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  public ApiResponse<DirectorResponse> updateDirector(
-      @PathVariable Long id, @RequestBody @Valid UpdateDirectorRequest request) {
-    ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Director has been updated successfully!");
-    apiResponse.setResult(directorService.updateDirector(id, request));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    public ApiResponse<DirectorResponse> updateDirector(
+            @PathVariable Long id, @RequestBody @Valid UpdateDirectorRequest request) {
+        ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Director has been updated successfully!");
+        apiResponse.setResult(directorService.updateDirector(id, request));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  public ApiResponse<String> deleteDirector(@PathVariable Long id) {
-    directorService.deleteDirector(id);
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Director has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> deleteDirector(@PathVariable Long id) {
+        directorService.deleteDirector(id);
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Director has been deleted successfully!");
+        return apiResponse;
+    }
 }

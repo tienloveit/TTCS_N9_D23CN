@@ -15,28 +15,28 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admin/audit-logs")
 @RequiredArgsConstructor
 public class AuditLogController {
-  private final AuditLogService auditLogService;
+    private final AuditLogService auditLogService;
 
-  @GetMapping
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-  public ApiResponse<List<AuditLogResponse>> getRecentLogs() {
-    ApiResponse<List<AuditLogResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(auditLogService.getRecentLogs().stream().map(this::toResponse).toList());
-    return apiResponse;
-  }
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<AuditLogResponse>> getRecentLogs() {
+        ApiResponse<List<AuditLogResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(auditLogService.getRecentLogs().stream().map(this::toResponse).toList());
+        return apiResponse;
+    }
 
-  private AuditLogResponse toResponse(AuditLog log) {
-    return AuditLogResponse.builder()
-        .id(log.getId())
-        .actorId(log.getActorId())
-        .actorUsername(log.getActorUsername())
-        .actorRole(log.getActorRole())
-        .branchId(log.getBranchId())
-        .action(log.getAction())
-        .targetType(log.getTargetType())
-        .targetId(log.getTargetId())
-        .details(log.getDetails())
-        .createdAt(log.getCreatedAt())
-        .build();
-  }
+    private AuditLogResponse toResponse(AuditLog log) {
+        return AuditLogResponse.builder()
+                .id(log.getId())
+                .actorId(log.getActorId())
+                .actorUsername(log.getActorUsername())
+                .actorRole(log.getActorRole())
+                .branchId(log.getBranchId())
+                .action(log.getAction())
+                .targetType(log.getTargetType())
+                .targetId(log.getTargetId())
+                .details(log.getDetails())
+                .createdAt(log.getCreatedAt())
+                .build();
+    }
 }

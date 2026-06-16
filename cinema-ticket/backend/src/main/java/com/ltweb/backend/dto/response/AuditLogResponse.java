@@ -9,14 +9,14 @@ import lombok.Data;
 @Data
 @Builder
 public class AuditLogResponse {
-  private Long id;
-  private Long actorId;
-  private String actorUsername;
-  private UserRole actorRole;
-  private Long branchId;
-  private AuditAction action;
-  private String targetType;
-  private String targetId;
-  private String details;
-  private LocalDateTime createdAt;
+    private Long id;
+    private Long actorId;
+    private String actorUsername;
+    private UserRole actorRole;
+    private Long branchId;
+    private AuditAction action;
+    private String targetType;
+    private String targetId;
+    private String details;
+    private LocalDateTime createdAt;
 }

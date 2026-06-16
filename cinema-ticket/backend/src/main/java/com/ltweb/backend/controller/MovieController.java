@@ -24,87 +24,87 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/movie")
 @RequiredArgsConstructor
 public class MovieController {
-  private final MovieService movieService;
+    private final MovieService movieService;
 
-  @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
-  public ApiResponse<MovieResponse> createMovie(
-      @RequestBody @Valid CreateMovieRequest createMovieRequest) {
-    ApiResponse<MovieResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Create movie successfully!");
-    apiResponse.setResult(movieService.createMovie(createMovieRequest));
-    return apiResponse;
-  }
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<MovieResponse> createMovie(
+            @RequestBody @Valid CreateMovieRequest createMovieRequest) {
+        ApiResponse<MovieResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Create movie successfully!");
+        apiResponse.setResult(movieService.createMovie(createMovieRequest));
+        return apiResponse;
+    }
 
-  @GetMapping
-  public ApiResponse<List<MovieResponse>> getAllMovies(
-      @org.springframework.web.bind.annotation.RequestParam(required = false) String movieName) {
-    ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getAllMovies(movieName));
-    return apiResponse;
-  }
+    @GetMapping
+    public ApiResponse<List<MovieResponse>> getAllMovies(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String movieName) {
+        ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(movieService.getAllMovies(movieName));
+        return apiResponse;
+    }
 
-  @GetMapping("/upcoming")
-  public ApiResponse<List<MovieResponse>> getUpcomingMovies() {
-    ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getUpcomingMovies());
-    return apiResponse;
-  }
+    @GetMapping("/upcoming")
+    public ApiResponse<List<MovieResponse>> getUpcomingMovies() {
+        ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(movieService.getUpcomingMovies());
+        return apiResponse;
+    }
 
-  @GetMapping("/now-showing")
-  public ApiResponse<List<MovieResponse>> getNowShowingMovies() {
-    ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getNowShowingMovies());
-    return apiResponse;
-  }
+    @GetMapping("/now-showing")
+    public ApiResponse<List<MovieResponse>> getNowShowingMovies() {
+        ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(movieService.getNowShowingMovies());
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}")
-  public ApiResponse<MovieResponse> getMovieById(@PathVariable("id") Long id) {
-    ApiResponse<MovieResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getMovieById(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}")
+    public ApiResponse<MovieResponse> getMovieById(@PathVariable("id") Long id) {
+        ApiResponse<MovieResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(movieService.getMovieById(id));
+        return apiResponse;
+    }
 
-  @PutMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
-  public ApiResponse<MovieResponse> updateMovie(
-      @PathVariable("id") Long id, @RequestBody @Valid UpdateMovieRequest updateMovieRequest) {
-    ApiResponse<MovieResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Movie has been updated successfully!");
-    apiResponse.setResult(movieService.updateMovie(id, updateMovieRequest));
-    return apiResponse;
-  }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<MovieResponse> updateMovie(
+            @PathVariable("id") Long id, @RequestBody @Valid UpdateMovieRequest updateMovieRequest) {
+        ApiResponse<MovieResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Movie has been updated successfully!");
+        apiResponse.setResult(movieService.updateMovie(id, updateMovieRequest));
+        return apiResponse;
+    }
 
-  @DeleteMapping("/{id}")
-  @PreAuthorize("hasRole('ADMIN')")
-  public ApiResponse<String> deleteMovie(@PathVariable("id") Long id) {
-    ApiResponse<String> apiResponse = new ApiResponse<>();
-    movieService.deleteMovie(id);
-    apiResponse.setMessage("Movie has been deleted successfully!");
-    return apiResponse;
-  }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<String> deleteMovie(@PathVariable("id") Long id) {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        movieService.deleteMovie(id);
+        apiResponse.setMessage("Movie has been deleted successfully!");
+        return apiResponse;
+    }
 
-  @PostMapping("/{id}/rating")
-  public ApiResponse<MovieRatingResponse> rateMovie(
-      @PathVariable("id") Long id, @RequestBody @Valid RateMovieRequest request) {
-    ApiResponse<MovieRatingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setMessage("Movie rating saved successfully!");
-    apiResponse.setResult(movieService.rateMovie(id, request));
-    return apiResponse;
-  }
+    @PostMapping("/{id}/rating")
+    public ApiResponse<MovieRatingResponse> rateMovie(
+            @PathVariable("id") Long id, @RequestBody @Valid RateMovieRequest request) {
+        ApiResponse<MovieRatingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setMessage("Movie rating saved successfully!");
+        apiResponse.setResult(movieService.rateMovie(id, request));
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}/rating/my")
-  @PreAuthorize("isAuthenticated()")
-  public ApiResponse<MovieRatingResponse> getMyRating(@PathVariable("id") Long id) {
-    ApiResponse<MovieRatingResponse> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getMyRating(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}/rating/my")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<MovieRatingResponse> getMyRating(@PathVariable("id") Long id) {
+        ApiResponse<MovieRatingResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(movieService.getMyRating(id));
+        return apiResponse;
+    }
 
-  @GetMapping("/{id}/ratings")
-  public ApiResponse<List<MovieRatingResponse>> getMovieRatings(@PathVariable("id") Long id) {
-    ApiResponse<List<MovieRatingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getMovieRatings(id));
-    return apiResponse;
-  }
+    @GetMapping("/{id}/ratings")
+    public ApiResponse<List<MovieRatingResponse>> getMovieRatings(@PathVariable("id") Long id) {
+        ApiResponse<List<MovieRatingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(movieService.getMovieRatings(id));
+        return apiResponse;
+    }
 }

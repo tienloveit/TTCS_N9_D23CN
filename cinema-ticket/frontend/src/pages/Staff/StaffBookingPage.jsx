@@ -40,16 +40,16 @@ const buildPrintDocument = (booking) => {
   const foods = booking.foods || [];
   const foodRows = foods.length
     ? foods
-        .map(
-          (food) => `
+      .map(
+        (food) => `
             <tr>
               <td>${escapeHtml(food.foodName)}</td>
               <td>${escapeHtml(food.quantity)}</td>
               <td>${formatCurrency(food.subtotal)}</td>
             </tr>
           `
-        )
-        .join('')
+      )
+      .join('')
     : '<tr><td colspan="3">Không có đồ ăn kèm</td></tr>';
 
   return `
@@ -464,7 +464,7 @@ export default function StaffBookingPage() {
       setPromoDiscount(0);
       setPromoError('Giỏ hàng thay đổi, vui lòng áp dụng lại mã');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
   function isShowtimeAvailable(showtime) {
@@ -670,171 +670,171 @@ export default function StaffBookingPage() {
       )}
 
       {currentStep === 'SELECTION' && (
-      <div className="admin-table-card counter-panel counter-showtime-card">
-        <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-            <div>
-              <h3>Suất chiếu</h3>
-              <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
-                {filteredShowtimes.length}/{showtimes.length} suất chiếu được lấy từ hệ thống
-              </p>
+        <div className="admin-table-card counter-panel counter-showtime-card">
+          <div className="table-header" style={{ padding: 0, borderBottom: 0, marginBottom: 18, flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <h3>Suất chiếu</h3>
+                <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>
+                  {filteredShowtimes.length}/{showtimes.length} suất chiếu được lấy từ hệ thống
+                </p>
+              </div>
+            </div>
+
+            {/* Filter row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+              <label>
+                <span className="form-label">Tìm kiếm</span>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Tên phim, rạp, phòng..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </label>
+
+              <label>
+                <span className="form-label">Ngày chiếu</span>
+                <input
+                  type="date"
+                  className="input"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </label>
+
+              <label>
+                <span className="form-label">Rạp</span>
+                <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
+                  <option value="ALL">Tất cả rạp</option>
+                  {branchOptions.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span className="form-label">Khung giờ</span>
+                <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
+                  <option value="ALL">Tất cả</option>
+                  <option value="MORNING">Sáng (6h-12h)</option>
+                  <option value="AFTERNOON">Chiều (12h-18h)</option>
+                  <option value="EVENING">Tối (18h-22h)</option>
+                  <option value="NIGHT">Khuya (22h-6h)</option>
+                  <option value="UPCOMING">Chưa chiếu</option>
+                  <option value="ONGOING">Đang chiếu</option>
+                </select>
+              </label>
+
+              <label>
+                <span className="form-label">Trạng thái</span>
+                <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="ALL">Tất cả</option>
+                  <option value="AVAILABLE">Có thể bán</option>
+                  <option value="UNAVAILABLE">Không bán</option>
+                </select>
+              </label>
+
+              <label>
+                <span className="form-label">Loại phòng</span>
+                <select className="input" value={roomTypeFilter} onChange={(e) => setRoomTypeFilter(e.target.value)}>
+                  <option value="ALL">Tất cả</option>
+                  {roomTypeOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Clear filters button */}
+              {hasActiveFilters && (
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={clearFilters}
+                    style={{ width: '100%' }}
+                  >
+                    Xóa bộ lọc
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Filter row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-            <label>
-              <span className="form-label">Tìm kiếm</span>
-              <input
-                type="text"
-                className="input"
-                placeholder="Tên phim, rạp, phòng..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </label>
-
-            <label>
-              <span className="form-label">Ngày chiếu</span>
-              <input
-                type="date"
-                className="input"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-              />
-            </label>
-
-            <label>
-              <span className="form-label">Rạp</span>
-              <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
-                <option value="ALL">Tất cả rạp</option>
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="form-label">Khung giờ</span>
-              <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
-                <option value="ALL">Tất cả</option>
-                <option value="MORNING">Sáng (6h-12h)</option>
-                <option value="AFTERNOON">Chiều (12h-18h)</option>
-                <option value="EVENING">Tối (18h-22h)</option>
-                <option value="NIGHT">Khuya (22h-6h)</option>
-                <option value="UPCOMING">Chưa chiếu</option>
-                <option value="ONGOING">Đang chiếu</option>
-              </select>
-            </label>
-
-            <label>
-              <span className="form-label">Trạng thái</span>
-              <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="ALL">Tất cả</option>
-                <option value="AVAILABLE">Có thể bán</option>
-                <option value="UNAVAILABLE">Không bán</option>
-              </select>
-            </label>
-
-            <label>
-              <span className="form-label">Loại phòng</span>
-              <select className="input" value={roomTypeFilter} onChange={(e) => setRoomTypeFilter(e.target.value)}>
-                <option value="ALL">Tất cả</option>
-                {roomTypeOptions.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {/* Clear filters button */}
-            {hasActiveFilters && (
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={clearFilters}
-                  style={{ width: '100%' }}
-                >
-                  Xóa bộ lọc
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {filteredShowtimes.length === 0 ? (
-          <div className="empty-state">
-            {hasActiveFilters
-              ? 'Không tìm thấy suất chiếu nào phù hợp với bộ lọc'
-              : 'Không có suất chiếu phù hợp với MoviePTIT đã chọn.'}
-          </div>
-        ) : (
-          <div className="counter-showtime-list">
-            {showtimeGroups.map((group) => (
-              <section key={group.branchName} className="counter-showtime-group">
-                <h2 style={{ fontSize: 16, margin: '0 0 10px' }}>{group.branchName}</h2>
-                <div className="counter-showtime-options">
-                  {group.items.map((showtime) => {
-                    const available = isShowtimeAvailable(showtime);
-                    const selected = String(showtime.showtimeId) === String(showtimeId);
-
-                    return (
-                      <button
-                        key={showtime.showtimeId}
-                        type="button"
-                        onClick={() => available && setShowtimeId(String(showtime.showtimeId))}
-                        disabled={!available}
-                        className={`counter-showtime-option ${selected ? 'counter-showtime-option--active' : ''}`}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                          <strong style={{ color: 'var(--text-primary)' }}>{formatTime(showtime.startTime)}</strong>
-                          <span className={`status-badge ${available ? 'status--active' : 'status--inactive'}`}>
-                            {available ? 'Có thể bán' : 'Không bán'}
-                          </span>
-                        </div>
-                        <div style={{ marginTop: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {showtime.movieName}
-                        </div>
-                        <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                          {showtime.roomName} - {showtime.roomType}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-
-        <div className="counter-step-actions">
-          {selectedShowtime ? (
-            <div>
-              <span className="form-label">Suất đã chọn</span>
-              <strong>{selectedShowtime.movieName}</strong>
-              <span>{formatDateTime(selectedShowtime.startTime)}</span>
+          {filteredShowtimes.length === 0 ? (
+            <div className="empty-state">
+              {hasActiveFilters
+                ? 'Không tìm thấy suất chiếu nào phù hợp với bộ lọc'
+                : 'Không có suất chiếu phù hợp với MoviePTIT đã chọn.'}
             </div>
           ) : (
-            <div>
-              <span className="form-label">Suất đã chọn</span>
-              <strong>Chưa chọn suất chiếu</strong>
-              <span>Chọn một suất còn bán để qua bước chọn ghế.</span>
+            <div className="counter-showtime-list">
+              {showtimeGroups.map((group) => (
+                <section key={group.branchName} className="counter-showtime-group">
+                  <h2 style={{ fontSize: 16, margin: '0 0 10px' }}>{group.branchName}</h2>
+                  <div className="counter-showtime-options">
+                    {group.items.map((showtime) => {
+                      const available = isShowtimeAvailable(showtime);
+                      const selected = String(showtime.showtimeId) === String(showtimeId);
+
+                      return (
+                        <button
+                          key={showtime.showtimeId}
+                          type="button"
+                          onClick={() => available && setShowtimeId(String(showtime.showtimeId))}
+                          disabled={!available}
+                          className={`counter-showtime-option ${selected ? 'counter-showtime-option--active' : ''}`}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                            <strong style={{ color: 'var(--text-primary)' }}>{formatTime(showtime.startTime)}</strong>
+                            <span className={`status-badge ${available ? 'status--active' : 'status--inactive'}`}>
+                              {available ? 'Có thể bán' : 'Không bán'}
+                            </span>
+                          </div>
+                          <div style={{ marginTop: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {showtime.movieName}
+                          </div>
+                          <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                            {showtime.roomName} - {showtime.roomType}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
           )}
-          <button
-            className="btn btn-primary"
-            type="button"
-            disabled={!canContinueSelection}
-            onClick={continueFromSelection}
-          >
-            Chọn ghế
-          </button>
+
+          <div className="counter-step-actions">
+            {selectedShowtime ? (
+              <div>
+                <span className="form-label">Suất đã chọn</span>
+                <strong>{selectedShowtime.movieName}</strong>
+                <span>{formatDateTime(selectedShowtime.startTime)}</span>
+              </div>
+            ) : (
+              <div>
+                <span className="form-label">Suất đã chọn</span>
+                <strong>Chưa chọn suất chiếu</strong>
+                <span>Chọn một suất còn bán để qua bước chọn ghế.</span>
+              </div>
+            )}
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled={!canContinueSelection}
+              onClick={continueFromSelection}
+            >
+              Chọn ghế
+            </button>
+          </div>
         </div>
-      </div>
       )}
 
       {selectedShowtime && currentStep !== 'SELECTION' && (
@@ -863,72 +863,72 @@ export default function StaffBookingPage() {
           </div>
 
           {currentStep === 'SEATS' && (
-          <div className="admin-table-card counter-panel counter-seat-card">
-            {loadingTickets ? (
-              <div className="loading"><div className="spinner" /></div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-                  <div className="seat-screen" />
-                </div>
+            <div className="admin-table-card counter-panel counter-seat-card">
+              {loadingTickets ? (
+                <div className="loading"><div className="spinner" /></div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
+                    <div className="seat-screen" />
+                  </div>
 
-                <div className="seat-map-wrapper">
-                  <div className="seat-map">
-                    {sortedRows.map(([row, seats]) => (
-                      <div key={row} className="seat-row">
-                        <span className="seat-row-label">{row}</span>
-                        {seats.map((ticket) => (
-                          <div
-                            key={ticket.id}
-                            className={getSeatClass(ticket)}
-                            onClick={() => toggleSeat(ticket)}
-                            title={`${ticket.seatCode} - ${ticket.displayStatus || ticket.ticketStatus}`}
-                          >
-                            {ticket.seatNumber || ''}
-                          </div>
-                        ))}
-                        <span className="seat-row-label">{row}</span>
-                      </div>
-                    ))}
+                  <div className="seat-map-wrapper">
+                    <div className="seat-map">
+                      {sortedRows.map(([row, seats]) => (
+                        <div key={row} className="seat-row">
+                          <span className="seat-row-label">{row}</span>
+                          {seats.map((ticket) => (
+                            <div
+                              key={ticket.id}
+                              className={getSeatClass(ticket)}
+                              onClick={() => toggleSeat(ticket)}
+                              title={`${ticket.seatCode} - ${ticket.displayStatus || ticket.ticketStatus}`}
+                            >
+                              {ticket.seatNumber || ''}
+                            </div>
+                          ))}
+                          <span className="seat-row-label">{row}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="seat-legend">
-                  <div className="seat-legend-item">
-                    <div className="seat-legend-dot" style={{ background: 'rgba(16,185,129,0.15)', borderColor: 'var(--seat-available)' }} />
-                    Trống
+                  <div className="seat-legend">
+                    <div className="seat-legend-item">
+                      <div className="seat-legend-dot" style={{ background: 'rgba(16,185,129,0.15)', borderColor: 'var(--seat-available)' }} />
+                      Trống
+                    </div>
+                    <div className="seat-legend-item">
+                      <div className="seat-legend-dot" style={{ background: 'rgba(59,130,246,0.3)', borderColor: 'var(--seat-selected)' }} />
+                      Đang chọn
+                    </div>
+                    <div className="seat-legend-item">
+                      <div className="seat-legend-dot" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'var(--seat-holding)' }} />
+                      Đang giữ
+                    </div>
+                    <div className="seat-legend-item">
+                      <div className="seat-legend-dot" style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'var(--seat-booked)' }} />
+                      Đã đặt
+                    </div>
                   </div>
-                  <div className="seat-legend-item">
-                    <div className="seat-legend-dot" style={{ background: 'rgba(59,130,246,0.3)', borderColor: 'var(--seat-selected)' }} />
-                    Đang chọn
-                  </div>
-                  <div className="seat-legend-item">
-                    <div className="seat-legend-dot" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'var(--seat-holding)' }} />
-                    Đang giữ
-                  </div>
-                  <div className="seat-legend-item">
-                    <div className="seat-legend-dot" style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'var(--seat-booked)' }} />
-                    Đã đặt
-                  </div>
-                </div>
 
-                <div className="counter-seat-summary">
-                  <span>
-                    <strong>{selectedSeats.length}</strong> ghế
-                  </span>
-                  <strong>{formatCurrency(finalPrice)}</strong>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    disabled={!canContinueSeats}
-                    onClick={continueFromSeats}
-                  >
-                    Tiếp tục
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                  <div className="counter-seat-summary">
+                    <span>
+                      <strong>{selectedSeats.length}</strong> ghế
+                    </span>
+                    <strong>{formatCurrency(finalPrice)}</strong>
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      disabled={!canContinueSeats}
+                      onClick={continueFromSeats}
+                    >
+                      Tiếp tục
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {currentStep === 'ADDONS' && (foods.length > 0 || foodError) && (
@@ -1011,44 +1011,44 @@ export default function StaffBookingPage() {
 
           {currentStep === 'CHECKOUT' && (
             <div className="admin-table-card counter-panel counter-checkout-card">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
-              <div>
-                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thông tin khách</h2>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <input
-                    className="input"
-                    placeholder="Họ tên"
-                    value={customer.customerName}
-                    onChange={(e) => setCustomer({ ...customer, customerName: e.target.value })}
-                  />
-                  <input
-                    className="input"
-                    placeholder="Email để gửi vé"
-                    value={customer.customerEmail}
-                    onChange={(e) => setCustomer({ ...customer, customerEmail: e.target.value })}
-                  />
-                  <input
-                    className="input"
-                    placeholder="Số điện thoại"
-                    value={customer.customerPhone}
-                    onChange={(e) => setCustomer({ ...customer, customerPhone: e.target.value })}
-                  />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+                <div>
+                  <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thông tin khách</h2>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <input
+                      className="input"
+                      placeholder="Họ tên"
+                      value={customer.customerName}
+                      onChange={(e) => setCustomer({ ...customer, customerName: e.target.value })}
+                    />
+                    <input
+                      className="input"
+                      placeholder="Email để gửi vé"
+                      value={customer.customerEmail}
+                      onChange={(e) => setCustomer({ ...customer, customerEmail: e.target.value })}
+                    />
+                    <input
+                      className="input"
+                      placeholder="Số điện thoại"
+                      value={customer.customerPhone}
+                      onChange={(e) => setCustomer({ ...customer, customerPhone: e.target.value })}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thanh toán tại quầy</h2>
-                <select
-                  className="input"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="CASH">Tiền mặt</option>
-                  <option value="CARD">Thẻ</option>
-                </select>
+                <div>
+                  <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Thanh toán tại quầy</h2>
+                  <select
+                    className="input"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  >
+                    <option value="CASH">Tiền mặt</option>
+                    <option value="CARD">Thẻ</option>
+                  </select>
 
-                {/* Mã khuyến mãi — hiện với cả CASH và CARD */}
-                <div style={{ marginTop: 16 }}>
+                  {/* Mã khuyến mãi — hiện với cả CASH và CARD */}
+                  <div style={{ marginTop: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="form-label" style={{ margin: 0 }}>Mã khuyến mãi</span>
                       <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
@@ -1083,12 +1083,12 @@ export default function StaffBookingPage() {
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {availablePromos.map(promo => (
-                              <div key={promo.id} 
-                                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                                 onClick={() => {
-                                   setPromoCode(promo.code);
-                                   setShowPromos(false);
-                                 }}>
+                              <div key={promo.id}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                                onClick={() => {
+                                  setPromoCode(promo.code);
+                                  setShowPromos(false);
+                                }}>
                                 <div>
                                   <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
                                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1110,22 +1110,22 @@ export default function StaffBookingPage() {
                         ✓ Giảm: {formatCurrency(promoDiscount)}
                       </div>
                     )}
-                </div>
+                  </div>
 
-                <div style={{ marginTop: 16 }}>
-                  <span className="form-label">Tổng tiền</span>
-                  {promoDiscount > 0 && (
-                    <div style={{ fontSize: 14, color: 'var(--text-muted)', textDecoration: 'line-through', marginTop: 4 }}>
-                      {formatCurrency(total)}
+                  <div style={{ marginTop: 16 }}>
+                    <span className="form-label">Tổng tiền</span>
+                    {promoDiscount > 0 && (
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', textDecoration: 'line-through', marginTop: 4 }}>
+                        {formatCurrency(total)}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: promoDiscount > 0 ? 2 : 6 }}>
+                      {formatCurrency(finalPrice)}
                     </div>
-                  )}
-                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: promoDiscount > 0 ? 2 : 6 }}>
-                    {formatCurrency(finalPrice)}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
           )}
         </>
       )}

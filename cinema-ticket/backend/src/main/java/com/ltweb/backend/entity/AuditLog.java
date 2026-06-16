@@ -26,31 +26,31 @@ import org.hibernate.annotations.CreationTimestamp;
 @AllArgsConstructor
 @Builder
 public class AuditLog {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "audit_id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "audit_id")
+    private Long id;
 
-  private Long actorId;
+    private Long actorId;
 
-  private String actorUsername;
+    private String actorUsername;
 
-  @Enumerated(EnumType.STRING)
-  private UserRole actorRole;
+    @Enumerated(EnumType.STRING)
+    private UserRole actorRole;
 
-  private Long branchId;
+    private Long branchId;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private AuditAction action;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuditAction action;
 
-  private String targetType;
+    private String targetType;
 
-  private String targetId;
+    private String targetId;
 
-  @Column(length = 1000)
-  private String details;
+    @Column(length = 1000)
+    private String details;
 
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }

@@ -216,9 +216,8 @@ export default function MovieDetailPage() {
       }
 
       const branchGroup = branchMap.get(showtime.branchKey);
-      const rowKey = `${showtime.roomId || showtime.roomName}:${showtime.roomTypeLabel}:${
-        showtime.subtitleLabel
-      }`;
+      const rowKey = `${showtime.roomId || showtime.roomName}:${showtime.roomTypeLabel}:${showtime.subtitleLabel
+        }`;
 
       if (!branchGroup.rows.has(rowKey)) {
         branchGroup.rows.set(rowKey, {
@@ -333,15 +332,15 @@ export default function MovieDetailPage() {
       setMovie((prev) =>
         prev
           ? {
-              ...prev,
-              averageRating: rating.averageRating,
-              ratingCount: rating.ratingCount,
-            }
+            ...prev,
+            averageRating: rating.averageRating,
+            ratingCount: rating.ratingCount,
+          }
           : prev
       );
       setRatingMessage('Đã lưu đánh giá của bạn.');
       // Refresh reviews list
-      movieApi.getRatings(id).then((r) => setReviews(r.data.result || [])).catch(() => {});
+      movieApi.getRatings(id).then((r) => setReviews(r.data.result || [])).catch(() => { });
     } catch {
       setRatingMessage('Không thể lưu đánh giá. Vui lòng thử lại.');
     } finally {

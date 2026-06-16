@@ -318,12 +318,12 @@ export default function PaymentPage() {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {availablePromos.map(promo => (
-                          <div key={promo.id} 
-                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                             onClick={() => {
-                               setPromoCode(promo.code);
-                               setShowPromos(false);
-                             }}>
+                          <div key={promo.id}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
+                            onClick={() => {
+                              setPromoCode(promo.code);
+                              setShowPromos(false);
+                            }}>
                             <div>
                               <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
                               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>

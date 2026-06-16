@@ -11,17 +11,17 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CreateSeatRequest {
 
-  @NotNull(message = "RoomId is required")
-  private Long roomId;
+    @NotNull(message = "RoomId is required")
+    private Long roomId;
 
-  @NotNull(message = "SeatCode is required")
-  private String seatCode;
+    @NotNull(message = "SeatCode is required")
+    private String seatCode;
 
-  private String rowLabel;
+    private String rowLabel;
 
-  private Integer seatNumber;
+    private Integer seatNumber;
 
-  private SeatType seatType;
+    private SeatType seatType;
 
-  private Boolean isActive;
+    private Boolean isActive;
 }

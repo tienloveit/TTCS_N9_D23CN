@@ -12,48 +12,45 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-  @EntityGraph(
-      attributePaths = {
-        "user",
-        "staffUser",
-        "showtime",
-        "showtime.movie",
-        "showtime.room",
-        "showtime.room.branch",
-        "tickets",
-        "tickets.seat"
-      })
-  List<Booking> findAll();
+    @EntityGraph(attributePaths = {
+            "user",
+            "staffUser",
+            "showtime",
+            "showtime.movie",
+            "showtime.room",
+            "showtime.room.branch",
+            "tickets",
+            "tickets.seat"
+    })
+    List<Booking> findAll();
 
-  @EntityGraph(
-      attributePaths = {
-        "user",
-        "staffUser",
-        "showtime",
-        "showtime.movie",
-        "showtime.room",
-        "showtime.room.branch",
-        "tickets",
-        "tickets.seat"
-      })
-  Optional<Booking> findById(Long id);
+    @EntityGraph(attributePaths = {
+            "user",
+            "staffUser",
+            "showtime",
+            "showtime.movie",
+            "showtime.room",
+            "showtime.room.branch",
+            "tickets",
+            "tickets.seat"
+    })
+    Optional<Booking> findById(Long id);
 
-  List<Booking> findByUserId(Long userId);
+    List<Booking> findByUserId(Long userId);
 
-  @EntityGraph(
-      attributePaths = {
-        "user",
-        "staffUser",
-        "showtime",
-        "showtime.movie",
-        "showtime.room",
-        "showtime.room.branch",
-        "tickets",
-        "tickets.seat"
-      })
-  Optional<Booking> findByBookingCode(String bookingCode);
+    @EntityGraph(attributePaths = {
+            "user",
+            "staffUser",
+            "showtime",
+            "showtime.movie",
+            "showtime.room",
+            "showtime.room.branch",
+            "tickets",
+            "tickets.seat"
+    })
+    Optional<Booking> findByBookingCode(String bookingCode);
 
-  List<Booking> findByStatusAndExpiresAtBefore(BookingStatus status, LocalDateTime time);
+    List<Booking> findByStatusAndExpiresAtBefore(BookingStatus status, LocalDateTime time);
 
-  List<Booking> findByShowtimeIdAndStatus(Long showtimeId, BookingStatus status);
+    List<Booking> findByShowtimeIdAndStatus(Long showtimeId, BookingStatus status);
 }

@@ -11,23 +11,23 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
-  @Value("${app.oauth2.redirect-failure-url}")
-  private String failureUrl;
+    @Value("${app.oauth2.redirect-failure-url}")
+    private String failureUrl;
 
-  @Override
-  public void onAuthenticationFailure(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      AuthenticationException exception)
-      throws IOException {
-    response.sendRedirect(buildFailureRedirect(exception.getMessage()));
-  }
+    @Override
+    public void onAuthenticationFailure(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException exception)
+            throws IOException {
+        response.sendRedirect(buildFailureRedirect(exception.getMessage()));
+    }
 
-  private String buildFailureRedirect(String message) {
-    return UriComponentsBuilder.fromUriString(failureUrl)
-        .queryParam("oauth2Error", message == null ? "Google login failed" : message)
-        .build()
-        .encode()
-        .toUriString();
-  }
+    private String buildFailureRedirect(String message) {
+        return UriComponentsBuilder.fromUriString(failureUrl)
+                .queryParam("oauth2Error", message == null ? "Google login failed" : message)
+                .build()
+                .encode()
+                .toUriString();
+    }
 }

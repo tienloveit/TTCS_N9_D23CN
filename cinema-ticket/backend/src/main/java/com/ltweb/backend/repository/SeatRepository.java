@@ -8,13 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SeatRepository extends JpaRepository<Seat, Long> {
 
-  @EntityGraph(attributePaths = {"room"})
-  Optional<Seat> findById(Long id);
+    @EntityGraph(attributePaths = { "room" })
+    Optional<Seat> findById(Long id);
 
-  @EntityGraph(attributePaths = {"room"})
-  List<Seat> findByRoomId(Long roomId);
+    @EntityGraph(attributePaths = { "room" })
+    List<Seat> findByRoomId(Long roomId);
 
-  boolean existsByRoomIdAndSeatCode(Long roomId, String seatCode);
+    boolean existsByRoomIdAndSeatCode(Long roomId, String seatCode);
 
-  void deleteByRoomId(Long roomId);
+    void deleteByRoomId(Long roomId);
 }
