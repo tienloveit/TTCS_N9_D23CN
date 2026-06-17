@@ -53,14 +53,14 @@ Backend:
 - Java 21
 - Spring Boot 3.4.0
 - Spring Web MVC, Spring Data JPA/JDBC, Validation
-- Spring Security OAuth2 Resource Server + JWT HS512
+- Spring Security OAuth2 Resource Server + JWT HS512 + Google OAuth2 Login
 - MySQL
 - Redis
 - WebSocket/STOMP/SockJS
 - MapStruct, Lombok
 - Java Mail
 - ZXing QR
-- VNPay sandbox
+- VNPay sandbox (Payment & Refund)
 - Spring AI OpenAI starter, cấu hình gọi Gemini qua OpenAI-compatible API
 
 Frontend:
@@ -252,6 +252,8 @@ Admin:
 - `/admin/bookings`
 - `/admin/foods`
 - `/admin/promotions`
+- `/admin/analytics`
+- `/admin/audit-logs`
 
 ## 9. API backend thường dùng
 
@@ -296,6 +298,9 @@ Booking/thanh toán:
 - `POST /v1/vnpay/payment-url`
 - `GET /v1/vnpay/return`
 - `GET /v1/vnpay/ipn`
+- `POST /v1/vnpay/refund`
+- `GET /promotion`
+- `POST /promotion/validate`
 
 Staff/admin:
 
@@ -306,6 +311,9 @@ Staff/admin:
 - `POST /showtime`, `PUT /showtime/{id}`, `DELETE /showtime/{id}`
 - `POST /branch`, `PUT /branch/{id}`, `DELETE /branch/{id}`
 - `POST /food`, `PUT /food/{id}`, `DELETE /food/{id}`
+- `/admin/analytics/**`
+- `/reports/**`
+- `/staff/**`
 
 AI:
 
@@ -319,10 +327,17 @@ AI:
 2. Frontend gọi `POST /booking`.
 3. Backend kiểm tra vé còn trống, khóa ghế trong Redis 6 phút, chuyển ticket sang `HOLDING`.
 4. Backend broadcast trạng thái ghế qua WebSocket topic `/topic/showtime/{showtimeId}/seats`.
-5. Frontend gọi `POST /v1/vnpay/payment-url` để lấy URL thanh toán.
-6. Sau khi VNPay trả kết quả, backend xác thực chữ ký.
-7. Nếu thanh toán thành công, booking thành `COMPLETED`, payment thành `PAID`, ticket thành `BOOKED`, sinh QR và gửi email.
-8. Nếu thanh toán lỗi/hủy/hết hạn, booking bị hủy và ghế được trả về `AVAILABLE`.
+5. User áp dụng mã khuyến mãi (nếu có) thông qua `POST /promotion/validate`.
+6. Frontend gọi `POST /v1/vnpay/payment-url` để lấy URL thanh toán.
+7. Sau khi VNPay trả kết quả, backend xác thực chữ ký.
+8. Nếu thanh toán thành công, booking thành `COMPLETED`, payment thành `PAID`, ticket thành `BOOKED`, sinh QR và gửi email.
+9. Nếu thanh toán lỗi/hủy/hết hạn, booking bị hủy và ghế được trả về `AVAILABLE`.
+
+### Hoàn tiền (Refund)
+
+1. Nếu vé bị hủy hoặc khách yêu cầu trả vé, Admin/Staff có thể thực hiện Refund.
+2. Gọi API `POST /v1/vnpay/refund` để gửi yêu cầu hoàn tiền về hệ thống VNPay.
+3. Trạng thái payment được cập nhật thành `REFUNDED` nếu thành công.
 
 ### Đặt vé tại quầy
 
