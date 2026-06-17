@@ -1,4 +1,4 @@
-﻿# Codex Project Context
+# Codex Project Context
 
 Last refreshed: 2026-06-17
 
@@ -621,10 +621,223 @@ Seed branches:
 
 - `CN-HCM-01`
 - `CN-HCM-02`
+- `Movie` belongs to one `Director` and many `Genre` records.
+- `MovieRating` belongs to one movie and one user, unique per pair.
+- `Branch` has many rooms.
+- `Room` belongs to one branch and has many seats.
+- `Seat` belongs to one room and has a type.
+- `SeatTypePrice` defines base ticket price by seat type.
+- `Showtime` connects movie and room for a time interval.
+- `Ticket` connects showtime and seat; it optionally belongs to a booking.
+- `Booking` connects user and showtime; it owns booked tickets and food lines.
+- `BookingFood` snapshots food quantity and price at booking time.
+- `Food` is a soft-disabled concession catalog item.
+- `RedisToken` stores token IDs with TTL in Redis.
+
+Important uniqueness constraints:
+
+- `users.username`, `users.email`, `users.phoneNumber`
+- `directors.name`
+- `branches.branch_code`
+- `rooms`: `(branch_id, code)`
+- `seats`: `(room_id, seat_code)`
+- `seat_type_prices.seat_type`
+- `tickets`: `(showtime_id, seat_id)`
+- `movie_ratings`: `(movie_id, user_id)`
+- `bookings.bookingCode`
+
+## API Surface
+
+All backend paths below are relative to `http://localhost:8081/api`.
+
+Auth/user:
+
+- `POST /auth/login`
+- `POST /auth/logout`
+- `POST /auth/refresh`
+- `POST /auth/change-password`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `POST /sign-up`
+- `GET /users?page=1&size=10&username=&email=&phone=`
+- `GET /users/{id}`
+- `PUT /users/{id}`
+- `DELETE /users/{id}`
+- `PUT /users/{id}/status?status=ACTIVE|INACTIVE|BLOCKED`
+- `GET /my-info`
+- `PUT /my-info`
+
+Movies/genres/directors:
+
+- `GET /movie?movieName=`
+- `GET /movie/now-showing`
+- `GET /movie/upcoming`
+- `GET /movie/{id}`
+- `POST /movie`
+- `PUT /movie/{id}`
+- `DELETE /movie/{id}`
+- `POST /movie/{id}/rating`
+- `GET /movie/{id}/rating/my`
+- `GET /genre`
+- `GET /genre/{id}`
+- `POST /genre`
+- `PUT /genre/{id}`
+- `DELETE /genre/{id}`
+- `GET /director`
+- `GET /director/{id}`
+- `POST /director`
+- `PUT /director/{id}`
+- `DELETE /director/{id}`
+
+Cinema structure:
+
+- `GET /branch`
+- `GET /branch/{id}`
+- `POST /branch`
+- `PUT /branch/{id}`
+- `DELETE /branch/{id}`
+- `GET /room?branchId=&status=`
+- `GET /room/{id}`
+- `POST /room`
+- `PUT /room/{id}`
+- `DELETE /room/{id}`
+- `GET /seat/{id}`
+- `GET /seat/room/{roomId}`
+- `POST /seat`
+- `PUT /seat/{id}`
+- `DELETE /seat/{id}`
+- `GET /seat-type-price`
+- `POST /seat-type-price`
+- `PUT /seat-type-price/{seatType}`
+
+Showtimes/tickets:
+
+- `GET /showtime`
+- `GET /showtime/today`
+- `GET /showtime/{id}`
+- `GET /showtime/room/{roomId}`
+- `GET /showtime/movie/{movieId}`
+- `GET /showtime/branch/{branchId}?date=YYYY-MM-DD`
+- `POST /showtime`
+- `PUT /showtime/{id}`
+- `DELETE /showtime/{id}`
+- `GET /ticket`
+- `GET /ticket/{id}`
+- `GET /ticket/showtime/{showtimeId}`
+- `PUT /ticket/{id}`
+- `DELETE /ticket/{id}`
+- `POST /ticket/check-in`
+- `POST /ticket/check-in/qr-image` with multipart field `qrImage`
+
+Booking/payment/food:
+
+- `GET /booking`
+- `GET /booking/{id}`
+- `GET /booking/my-bookings/list`
+- `GET /booking/my-bookings/{id}`
+- `POST /booking`
+- `POST /booking/staff`
+- `PUT /booking/{id}`
+- `DELETE /booking/{id}`
+- `GET /food`
+- `GET /food/all`
+- `GET /food/{id}`
+- `POST /food`
+- `PUT /food/{id}`
+- `DELETE /food/{id}`
+- `POST /v1/vnpay/payment-url`
+- `POST /v1/vnpay/querydr`
+- `POST /v1/vnpay/refund`
+- `GET /v1/vnpay/return`
+- `GET /v1/vnpay/ipn`
+
+AI/dev:
+
+- `POST /chat`
+- `DELETE /v1/cleanup/database`
+
+## API Response Shape
+
+Successful controller responses usually use:
+
+```json
+{
+  "code": 200,
+  "message": "optional message",
+  "result": {}
+}
+```
+
+Errors use `ErrorResponse` with:
+
+```json
+{
+  "timestamp": "...",
+  "code": 400,
+  "error": "Bad Request",
+  "message": "...",
+  "path": "/api/..."
+}
+```
+
+`GlobalExceptionHandler` handles custom `AppException`, validation errors, auth errors, access denied, missing headers, data integrity, and catch-all errors.
+
+## Seed/Data Notes
+
+At startup `ApplicationInitConfig` runs `DataSeedService.seedInitialData()`.
+
+Seed behavior:
+
+- Alters `users.role` to `VARCHAR(20)` when possible so `STAFF` fits.
+- Upserts demo users.
+- Upserts seat prices.
+- Upserts foods.
+- Upserts genres.
+- Upserts directors.
+- Upserts movies and assigns directors/genres.
+- Upserts branches and rooms.
+- Seeds a 5x10 seat grid for each seeded room.
+- Seeds showtimes and tickets for now-showing movies from today through the next 3 days.
+
+Demo users:
+
+- `admin / admin@123`
+- `staff / staff@123`
+- `user / user@123`
+- `user2 / user2@123`
+
+Seed seat prices:
+
+- `STANDARD`: `75000`
+- `VIP`: `105000`
+- `COUPLE`: `180000`
+
+Seed branches:
+
+- `CN-HCM-01`
+- `CN-HCM-02`
 - `CN-HN-01`
 - `CN-DN-01`
 
 There is also `backend/seed-data.ps1`, which waits for backend readiness, calls `DELETE /v1/cleanup/database`, logs in as admin, and creates demo data through APIs. Because the backend already seeds on startup, use the script only when a full reset/demo dataset is desired.
+
+### Frontend Stack & Architecture
+
+Core dependencies:
+- **React 19 & Vite 8**: Fast development server and modern React features.
+- **React Router DOM 7**: Client-side routing with `BrowserRouter` and nested routes (`AnimatedRoutes.jsx`).
+- **Framer Motion**: Page transitions, smooth UI animations, and micro-interactions.
+- **Recharts**: Data visualization for Admin Dashboard, Revenue, and Operations reports.
+- **Axios**: HTTP client with global interceptors for automatic JWT attachment and token refresh logic.
+- **StompJS & SockJS-Client**: WebSocket integration for real-time seat holding status.
+- **Canvas Confetti**: Celebratory effects (e.g., successful booking).
+- **React Toastify**: Global toast notifications.
+
+State Management & Architecture:
+- Uses standard **React Context** (`AuthContext.jsx`) to manage global authentication state (`user`, `role` flags like `isAdmin`, `isStaff`).
+- No external state managers (like Redux or Zustand) are used; relies on local component state (`useState`, `useMemo`) and Context API.
+- All API calls are centralized in `frontend/src/api/` via individual modules (`authApi`, `movieApi`, `bookingApi`, `vnpayApi`, `promotionApi`, `analyticsApi`, `staffApi`, etc.) and exported through `index.js`.
+- Axios interceptor automatically detects 401 Unauthorized responses, calls `/auth/refresh` to get a new token pair, updates `localStorage`, and replays the failed request without dropping the user session.
 
 ## Frontend Integration Notes
 
@@ -638,24 +851,10 @@ Frontend auth behavior:
 Known frontend routes:
 
 - Auth: `/login`, `/register`, `/forgot-password`, `/oauth2/callback`
-- Admin: `/admin/*` includes movies, showtimes, branches, users, bookings, foods, promotions, audit logs, analytics.
-- Staff: `/staff`, `/staff/booking`, `/staff/check-in`, `/staff/bookings`.
+- Admin: `/admin/*` includes dashboards, movies, showtimes, branches, users, bookings, foods, promotions, audit-logs, analytics, operations, revenue, inventory, refunds, settings.
+- Manager: `/manager/*` mirrors Admin but relies on `AdminOnlyRoute` to block access to certain settings.
+- Staff: `/staff/*` includes dashboard, schedules, booking, check-in, bookings, notifications.
   - Note: Staff Booking layout has been modified to mirror the customer's UI (5-step process, sidebar details) for consistency.
-  - Note: Check-In page removed the manual QR upload button from the UI (but the backend endpoint `POST /ticket/check-in/qr-image` still exists).
-- Public/customer: `/`, `/movies`, `/movie/:id`, `/branches`, `/branch/:branchId`, `/profile`, `/my-bookings`, `/showtime/:showtimeId/seats`, `/booking/:bookingId/payment`, `/payment/vnpay-return`
-
-Frontend/backend integration points:
-
-- Backend endpoints include `/api` due context path, but controller annotations are written without `/api`.
-- WebSocket URL from the frontend is `${API_BASE_URL}/ws`, so default is `http://localhost:8081/api/ws`.
-- Seat selection subscribes to `/topic/showtime/{showtimeId}/seats`.
-- Movie detail showtime rendering depends on `ShowtimeResponse.branchId`, `branchName`, `roomName`, and `roomType`.
-- Movie management requires `directorId` for create and supports director fields in responses.
-
-## Current Testing State
-
-- No test files were found under `backend/src/test`.
-- Existing backend verification is compile/package oriented:
   - `mvn -q -DskipTests compile`
   - `mvn -q -DskipTests package`
 - No frontend test framework is configured in `frontend/package.json`.
