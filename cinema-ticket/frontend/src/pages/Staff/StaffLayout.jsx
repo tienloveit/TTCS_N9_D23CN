@@ -113,7 +113,7 @@ export default function StaffLayout() {
 
   const pageTitle = TITLE_MAP[location.pathname] || 'Nhân viên';
   const initials = (user?.username || 'S').charAt(0).toUpperCase();
-  const roleLabel = isAdmin ? 'Quản trị viên' : 'Nhân viên';
+  const roleLabel = isAdmin ? 'Admin' : 'Staff';
 
   return (
     <div className="admin-layout staff-layout">

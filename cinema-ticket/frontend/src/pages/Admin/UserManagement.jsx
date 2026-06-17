@@ -48,8 +48,8 @@ const DetailIcon = () => (
 /* ─── Constants ──────────────────────────────────────────── */
 const ROLE_OPTIONS = [
   { value: 'MANAGER', label: 'Manager' },
-  { value: 'USER', label: 'Khách hàng' },
-  { value: 'STAFF', label: 'Nhân viên' },
+  { value: 'USER', label: 'User' },
+  { value: 'STAFF', label: 'Staff' },
   { value: 'ADMIN', label: 'Admin' },
 ];
 
@@ -308,8 +308,8 @@ const UserManagement = () => {
     const map = {
       MANAGER: { label: 'Manager', color: 'rgba(139,92,246,0.1)', text: 'var(--purple)' },
       ADMIN: { label: 'Admin', color: 'rgba(229,9,20,0.1)', text: 'var(--accent)' },
-      STAFF: { label: 'Nhân viên', color: 'rgba(59,130,246,0.1)', text: 'var(--blue)' },
-      USER: { label: 'Khách hàng', color: 'rgba(16,185,129,0.1)', text: 'var(--green)' },
+      STAFF: { label: 'Staff', color: 'rgba(59,130,246,0.1)', text: 'var(--blue)' },
+      USER: { label: 'User', color: 'rgba(16,185,129,0.1)', text: 'var(--green)' },
     };
     return map[role] || { label: role, color: 'transparent', text: 'var(--text-muted)' };
   };

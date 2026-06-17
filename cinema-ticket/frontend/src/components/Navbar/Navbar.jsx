@@ -213,12 +213,12 @@ export default function Navbar() {
               </div>
               {(isAdmin || isManager) && (
                 <Link to={isManager ? '/manager' : '/admin'} className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                  Quản trị
+                  Admin
                 </Link>
               )}
               {isStaff && (
                 <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                  Nhân viên
+                  Staff
                 </Link>
               )}
             </div>
