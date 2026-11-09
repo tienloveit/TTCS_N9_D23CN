@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
+import jsQR from 'jsqr';
 import { bookingApi, ticketApi } from '../../api';
 import {
   AlertTriangleIcon,
@@ -9,13 +10,11 @@ import {
   CheckCircleIcon,
   CheckIcon,
   ClockIcon,
-  ImageFileIcon,
   MapPinIcon,
   RefreshIcon,
   SearchIcon,
   SparkIcon,
   TicketIcon,
-  UploadIcon,
   XCircleIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
@@ -40,20 +39,35 @@ const formatTimeOnly = (value) =>
       })
     : '—';
 
+const CHECKIN_STORAGE_KEY = 'movieptit_checkin_session_v1';
+
+const getTodayDateKey = () => new Date().toLocaleDateString('en-CA');
+
+const loadPersistedSession = () => {
+  try {
+    const raw = localStorage.getItem(CHECKIN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.dateKey !== getTodayDateKey()) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
 export default function CheckInPage() {
-  const [activeTab, setActiveTab] = useState('SCANNER'); // 'SCANNER' | 'IMAGE' | 'LOOKUP'
+  const initialSession = useMemo(() => loadPersistedSession(), []);
+
+  const [activeTab, setActiveTab] = useState(initialSession?.activeTab || 'SCANNER'); // 'SCANNER' | 'LOOKUP'
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
 
   // Verdict state: { type: 'VALID' | 'WARNING' | 'ERROR', data?: TicketCheckInResponse, errorMsg?: string, scannedCode?: string }
-  const [verdict, setVerdict] = useState(null);
+  const [verdict, setVerdict] = useState(initialSession?.verdict || null);
 
-  // Image upload / Drag & drop
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [dragging, setDragging] = useState(false);
-
-  // Live WebRTC Camera (with BarcodeDetector when supported + frame capture fallback)
+  // Live WebRTC Camera (with BarcodeDetector when supported + jsQR fallback)
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const videoRef = useRef(null);
@@ -64,14 +78,15 @@ export default function CheckInPage() {
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [lookupQuery, setLookupQuery] = useState('');
-  const [lookupFilter, setLookupFilter] = useState('TODAY'); // 'TODAY' | 'ALL'
+  const [lookupFilter, setLookupFilter] = useState(initialSession?.lookupFilter || 'TODAY'); // 'TODAY' | 'ALL'
 
   // Session History & Counters
-  const [recentCheckIns, setRecentCheckIns] = useState([]);
-  const [historyFilter, setHistoryFilter] = useState('ALL'); // 'ALL' | 'SUCCESS' | 'DUPLICATE' | 'ERROR'
+  const [recentCheckIns, setRecentCheckIns] = useState(() =>
+    Array.isArray(initialSession?.recentCheckIns) ? initialSession.recentCheckIns : []
+  );
+  const [historyFilter, setHistoryFilter] = useState(initialSession?.historyFilter || 'ALL'); // 'ALL' | 'SUCCESS' | 'DUPLICATE' | 'ERROR'
 
   const codeInputRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   // Stop camera on unmount or tab switch
   const stopCamera = () => {
@@ -86,11 +101,7 @@ export default function CheckInPage() {
     setCameraActive(false);
   };
 
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
-  // Load bookings when switching to LOOKUP tab
+  // Load bookings & sync already checked-in tickets of today
   const fetchBookingsForLookup = async () => {
     setLoadingBookings(true);
     try {
@@ -100,12 +111,92 @@ export default function CheckInPage() {
       );
       all.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setBookings(all);
+
+      // Hydrate today's already checked-in bookings from DB into recentCheckIns if not yet recorded
+      const todayKey = getTodayDateKey();
+      const dbCheckedToday = [];
+      all.forEach((b) => {
+        const checkedTickets = (b.tickets || []).filter((t) => {
+          if (!t.checkedInAt) return false;
+          const checkedDate = new Date(t.checkedInAt).toLocaleDateString('en-CA');
+          return checkedDate === todayKey;
+        });
+
+        if (checkedTickets.length > 0) {
+          const latestTime = checkedTickets
+            .map((t) => new Date(t.checkedInAt).getTime())
+            .reduce((max, cur) => Math.max(max, cur), 0);
+
+          dbCheckedToday.push({
+            id: `db-${b.bookingId}`,
+            sortTime: latestTime,
+            time: formatTimeOnly(new Date(latestTime).toISOString()),
+            code: b.bookingCode || `#${b.bookingId}`,
+            movieName: b.movieName || 'Vé xem phim',
+            seats: checkedTickets.map((t) => t.seatCode).filter(Boolean).join(', '),
+            roomName: b.roomName || '',
+            status: 'SUCCESS',
+            statusLabel: `Hợp lệ (${checkedTickets.length} ghế)`,
+            rawResponse: {
+              bookingId: b.bookingId,
+              bookingCode: b.bookingCode,
+              customerName: b.username,
+              movieName: b.movieName,
+              branchName: b.branchName,
+              roomName: b.roomName,
+              showtimeStart: b.showtimeStart,
+              tickets: (b.tickets || []).map((t) => ({
+                ticketId: t.id,
+                seatCode: t.seatCode,
+                checkedInAt: t.checkedInAt,
+                alreadyCheckedIn: false,
+              })),
+            },
+          });
+        }
+      });
+
+      if (dbCheckedToday.length > 0) {
+        dbCheckedToday.sort((a, b) => b.sortTime - a.sortTime);
+        setRecentCheckIns((prev) => {
+          const existingCodes = new Set(prev.map((item) => item.code));
+          const missingFromDb = dbCheckedToday.filter((item) => !existingCodes.has(item.code));
+          if (missingFromDb.length === 0) return prev;
+          return [...prev, ...missingFromDb].slice(0, 50);
+        });
+      }
     } catch {
       toast.error('Không tải được danh sách đơn đặt vé');
     } finally {
       setLoadingBookings(false);
     }
   };
+
+  // Persist check-in state to localStorage so F5 does not lose session data
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        CHECKIN_STORAGE_KEY,
+        JSON.stringify({
+          dateKey: getTodayDateKey(),
+          recentCheckIns,
+          verdict,
+          activeTab,
+          lookupFilter,
+          historyFilter,
+        })
+      );
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [recentCheckIns, verdict, activeTab, lookupFilter, historyFilter]);
+
+  // Fetch bookings on initial mount to restore/sync DB check-in stats
+  useEffect(() => {
+    fetchBookingsForLookup();
+    return () => stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'LOOKUP' && bookings.length === 0) {
@@ -216,7 +307,7 @@ export default function CheckInPage() {
     await performCodeCheckIn(code);
   };
 
-  // Start Live Camera
+  // Start Live Camera with automatic continuous QR detection (BarcodeDetector + jsQR universal fallback)
   const startCamera = async () => {
     setCameraError('');
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -237,37 +328,85 @@ export default function CheckInPage() {
         }
       }, 50);
 
-      // Use native BarcodeDetector if available in Chromium/Edge/Android
-      if ('BarcodeDetector' in window) {
-        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-        scanLoopRef.current = setInterval(async () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) return;
-          try {
-            const barcodes = await detector.detect(videoRef.current);
-            if (barcodes.length > 0 && barcodes[0].rawValue) {
-              const detected = barcodes[0].rawValue;
+      const nativeDetector =
+        'BarcodeDetector' in window ? new window.BarcodeDetector({ formats: ['qr_code'] }) : null;
+      const scanCanvas = document.createElement('canvas');
+      const scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+      let isProcessingFrame = false;
+
+      scanLoopRef.current = setInterval(async () => {
+        if (isProcessingFrame) return;
+        const video = videoRef.current;
+        if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+
+        isProcessingFrame = true;
+        try {
+          // 1. Try native BarcodeDetector first if supported
+          if (nativeDetector) {
+            try {
+              const barcodes = await nativeDetector.detect(video);
+              if (barcodes.length > 0 && barcodes[0].rawValue) {
+                const detected = barcodes[0].rawValue.trim();
+                if (detected) {
+                  stopCamera();
+                  performCodeCheckIn(detected);
+                  return;
+                }
+              }
+            } catch {
+              // Fall through to jsQR canvas scanner
+            }
+          }
+
+          // 2. Universal Canvas + jsQR real-time decoder (works on Windows/macOS/Linux/iOS/Android)
+          if (scanCtx) {
+            scanCanvas.width = video.videoWidth;
+            scanCanvas.height = video.videoHeight;
+            scanCtx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
+            const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+            const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+            if (qrResult && qrResult.data && qrResult.data.trim()) {
+              const detected = qrResult.data.trim();
               stopCamera();
               performCodeCheckIn(detected);
             }
-          } catch {
-            // ignore frame error
           }
-        }, 450);
-      }
+        } catch {
+          // ignore transient frame error
+        } finally {
+          isProcessingFrame = false;
+        }
+      }, 250);
     } catch {
       setCameraError('Không thể cấp quyền truy cập Camera. Bạn có thể chụp/tải ảnh QR lên.');
     }
   };
 
-  // Capture current video frame & send to backend QR decoder
+  // Capture current video frame & decode via jsQR first (or fallback to backend QR decoder)
   const captureCameraFrameAndCheckIn = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'attemptBoth',
+      });
+      if (qrResult && qrResult.data && qrResult.data.trim()) {
+        stopCamera();
+        await performCodeCheckIn(qrResult.data.trim());
+        return;
+      }
+    } catch {
+      // Fallback to backend image upload below
+    }
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
@@ -277,38 +416,16 @@ export default function CheckInPage() {
     }, 'image/png');
   };
 
-  const applySelectedFile = (file) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Vui lòng chọn định dạng file ảnh (PNG, JPG, WEBP...)');
-      return;
-    }
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (file) applySelectedFile(file);
-    event.target.value = '';
-  };
-
-  const checkInWithFile = async (fileToUse) => {
-    const targetFile = fileToUse || selectedFile;
-    if (!targetFile) {
-      toast.error('Vui lòng chọn ảnh QR code');
-      return;
-    }
+  const checkInWithFile = async (targetFile) => {
+    if (!targetFile) return;
 
     setChecking(true);
     try {
       const res = await ticketApi.checkInByQRImage(targetFile);
       const data = res.data.result;
       evaluateCheckInResult(data, targetFile.name);
-      setSelectedFile(null);
-      setPreviewUrl(null);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Không đọc được mã QR từ ảnh này';
+      const msg = err.response?.data?.message || 'Không đọc được mã QR từ khung hình này';
       setVerdict({
         type: 'ERROR',
         errorMsg: msg,
@@ -326,16 +443,6 @@ export default function CheckInPage() {
     } finally {
       setChecking(false);
     }
-  };
-
-  const handleImageSubmit = async (event) => {
-    event.preventDefault();
-    await checkInWithFile(selectedFile);
-  };
-
-  const handleClearImage = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
   };
 
   // Filtered bookings for Lookup tab
@@ -437,15 +544,6 @@ export default function CheckInPage() {
 
               <button
                 type="button"
-                className={`gate-mode-tab ${activeTab === 'IMAGE' ? 'gate-mode-tab--active' : ''}`}
-                onClick={() => setActiveTab('IMAGE')}
-              >
-                <ImageFileIcon size={18} />
-                <span>Ảnh QR / Camera</span>
-              </button>
-
-              <button
-                type="button"
                 className={`gate-mode-tab ${activeTab === 'LOOKUP' ? 'gate-mode-tab--active' : ''}`}
                 onClick={() => setActiveTab('LOOKUP')}
               >
@@ -461,8 +559,7 @@ export default function CheckInPage() {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     <SparkIcon size={16} />
                     <span>
-                      Hỗ trợ súng bắn mã vạch/QR (tự động Enter) hoặc nhập trực tiếp{' '}
-                      <strong>Mã đơn (BK...)</strong>, <strong>Mã QR</strong>, <strong>ID vé</strong>.
+                      Quét QR/mã vạch hoặc nhập <strong>Mã đơn</strong>, <strong>Mã vé</strong>.
                     </span>
                   </span>
                   <button
@@ -479,7 +576,7 @@ export default function CheckInPage() {
                     ) : (
                       <>
                         <CameraIcon size={15} />
-                        <span>Bật Camera trực tiếp</span>
+                        <span>Bật Camera</span>
                       </>
                     )}
                   </button>
@@ -497,19 +594,28 @@ export default function CheckInPage() {
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Đưa mã QR của khách vào khung ngắm hoặc bấm chụp để giải mã:
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: '#10b981',
+                            boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.2)',
+                          }}
+                        />
+                        Đang tự động quét QR thời gian thực (đưa mã vào khung sẽ tự nhận diện & check-in ngay)
                       </span>
                       <button
                         type="button"
-                        className="btn btn-primary"
-                        style={{ padding: '8px 16px', fontSize: '0.84rem' }}
+                        className="btn btn-secondary"
+                        style={{ padding: '7px 14px', fontSize: '0.8rem' }}
                         onClick={captureCameraFrameAndCheckIn}
                         disabled={checking}
                       >
-                        <CameraIcon size={16} />
-                        <span>Chụp & Check-in ngay</span>
+                        <CameraIcon size={15} />
+                        <span>Chụp thủ công</span>
                       </button>
                     </div>
                   </div>
@@ -565,87 +671,7 @@ export default function CheckInPage() {
               </div>
             )}
 
-            {/* TAB 2: UPLOAD / DRAG & DROP QR IMAGE */}
-            {activeTab === 'IMAGE' && (
-              <div style={{ display: 'grid', gap: 16 }}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="checkin-hidden-input"
-                />
-
-                {!previewUrl ? (
-                  <div
-                    className={`gate-dropzone ${dragging ? 'gate-dropzone--drag' : ''}`}
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragging(true);
-                    }}
-                    onDragLeave={() => setDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragging(false);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) applySelectedFile(file);
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: '50%',
-                        background: 'rgba(7, 86, 166, 0.1)',
-                        color: 'var(--blue)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <UploadIcon size={28} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block' }}>
-                        Nhấn để chọn ảnh QR hoặc kéo thả ảnh vào đây
-                      </strong>
-                      <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                        Hỗ trợ ảnh chụp màn hình vé điện tử MoviePTIT (PNG, JPG, WEBP)
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <form className="checkin-preview" onSubmit={handleImageSubmit}>
-                    <img src={previewUrl} alt="QR Preview" />
-                    <div>
-                      <strong>{selectedFile?.name}</strong>
-                      <span>Ảnh QR đã sẵn sàng để giải mã và soát vé.</span>
-                    </div>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={checking || !selectedFile}
-                    >
-                      {checking ? (
-                        'Đang giải mã...'
-                      ) : (
-                        <>
-                          <CheckIcon size={16} />
-                          <span>Xác nhận Check-in</span>
-                        </>
-                      )}
-                    </button>
-                    <button type="button" className="btn btn-secondary" onClick={handleClearImage}>
-                      Đổi ảnh
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
-
-            {/* TAB 3: QUICK CUSTOMER / BOOKING LOOKUP */}
+            {/* TAB 2: QUICK CUSTOMER / BOOKING LOOKUP */}
             {activeTab === 'LOOKUP' && (
               <div style={{ display: 'grid', gap: 14 }}>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -799,7 +825,15 @@ export default function CheckInPage() {
                     type="button"
                     className="btn btn-ghost btn-sm"
                     style={{ fontSize: '0.76rem', padding: '4px 8px' }}
-                    onClick={() => setRecentCheckIns([])}
+                    onClick={() => {
+                      setRecentCheckIns([]);
+                      setVerdict(null);
+                      try {
+                        localStorage.removeItem(CHECKIN_STORAGE_KEY);
+                      } catch {
+                        // ignore
+                      }
+                    }}
                   >
                     Xóa nhật ký
                   </button>
