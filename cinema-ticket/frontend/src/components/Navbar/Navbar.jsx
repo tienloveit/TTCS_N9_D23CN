@@ -5,6 +5,7 @@ import { movieApi } from '../../api';
 import SafeImage from '../Common/SafeImage';
 import {
   CalendarIcon,
+  ChevronDownIcon,
   FilmIcon,
   KeyIcon,
   LogoutIcon,
@@ -150,9 +151,7 @@ export default function Navbar() {
               onClick={() => setShowScheduleMenu(!showScheduleMenu)}
             >
               Lịch chiếu
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`navbar-chevron ${showScheduleMenu ? 'navbar-chevron--open' : ''}`}>
-                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <ChevronDownIcon size={14} className={`navbar-chevron ${showScheduleMenu ? 'navbar-chevron--open' : ''}`} />
             </button>
             {showScheduleMenu && (
               <div className="navbar-dropdown-menu">

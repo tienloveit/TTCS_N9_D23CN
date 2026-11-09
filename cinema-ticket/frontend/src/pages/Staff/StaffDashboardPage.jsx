@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api';
+import { ReportIcon } from '../../components/Common/CinemaIcons';
 
 const emptyDashboard = {
   summary: {
@@ -50,13 +51,7 @@ const formatDuration = (minutes) => {
 const StatCard = ({ label, value, note, color = '#0756a6' }) => (
   <div className="stat-card">
     <div className="stat-icon" style={{ backgroundColor: `${color}18`, color }}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 19V5" />
-        <path d="M4 19h16" />
-        <path d="M8 16v-5" />
-        <path d="M12 16V8" />
-        <path d="M16 16v-3" />
-      </svg>
+      <ReportIcon size={24} />
     </div>
     <div className="stat-info">
       <span className="stat-label">{label}</span>

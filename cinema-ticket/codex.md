@@ -826,12 +826,20 @@ There is also `backend/seed-data.ps1`, which waits for backend readiness, calls 
 Core dependencies:
 - **React 19 & Vite 8**: Fast development server and modern React features.
 - **React Router DOM 7**: Client-side routing with `BrowserRouter` and nested routes (`AnimatedRoutes.jsx`).
+- **Lucide React (`lucide-react`)**: Standard developer icon library used across the entire UI (wrapped and exported via `frontend/src/components/Common/CinemaIcons.jsx`).
 - **Framer Motion**: Page transitions, smooth UI animations, and micro-interactions.
 - **Recharts**: Data visualization for Admin Dashboard, Revenue, and Operations reports.
 - **Axios**: HTTP client with global interceptors for automatic JWT attachment and token refresh logic.
 - **StompJS & SockJS-Client**: WebSocket integration for real-time seat holding status.
 - **Canvas Confetti**: Celebratory effects (e.g., successful booking).
 - **React Toastify**: Global toast notifications.
+
+### Frontend Icon System Rule (`lucide-react` Mandatory)
+
+- **Always use `lucide-react` icons**: Import icons from `frontend/src/components/Common/CinemaIcons.jsx` (or directly from `lucide-react` and re-export in `CinemaIcons.jsx` when adding new semantic icons).
+- **NO AI-generated inline SVGs**: Never write raw `<svg>...</svg>` elements or hand-crafted SVG paths inside pages/components. The only permitted custom SVG is the official brand mark `MoviePTITLogoIcon` inside `CinemaIcons.jsx`.
+- **NO Emoji UI Icons**: Never use Unicode emojis (`🎬`, `🍿`, `🎟️`, `💳`, `🔔`, `⏳`, `✅`, `❌`, etc.) as UI icons in buttons, navigation menus, table actions, badges, or headers. Always use the corresponding Lucide component (`FilmIcon`, `PopcornIcon`, `TicketIcon`, `CreditCardIcon`, `BellIcon`, `TimerIcon`, `CheckCircleIcon`, `XCircleIcon`, etc.).
+- **Consistent Sizing & Stroke**: `CinemaIcons.jsx` normalizes Lucide icons with `strokeWidth={2}` and responsive `width`/`height` inheritance so CSS classes (`.btn-icon`, `.nav-link-icon`, `.admin-nav-icon`, etc.) control dimensions cleanly.
 
 State Management & Architecture:
 - Uses standard **React Context** (`AuthContext.jsx`) to manage global authentication state (`user`, `role` flags like `isAdmin`, `isStaff`).

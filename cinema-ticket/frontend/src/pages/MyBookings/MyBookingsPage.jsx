@@ -5,7 +5,9 @@ import { bookingApi } from '../../api';
 import EmptyState from '../../components/Common/EmptyState';
 import DigitalTicket from '../../components/Ticket/DigitalTicket';
 import {
+  BanknoteIcon,
   CheckCircleIcon,
+  CreditCardIcon,
   TicketIcon,
   TimerIcon,
   XCircleIcon,
@@ -214,7 +216,7 @@ export default function MyBookingsPage() {
                       background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)',
                       display: 'flex', alignItems: 'center', gap: 10
                     }}>
-                      <span style={{ fontSize: '1.2rem' }}>⏳</span>
+                      <TimerIcon style={{ width: 20, height: 20, color: '#f97316', flexShrink: 0 }} />
                       <div>
                         <div style={{ fontWeight: 600, color: '#f97316' }}>Đang chờ duyệt hoàn tiền</div>
                         {booking.refundReason && (
@@ -232,7 +234,7 @@ export default function MyBookingsPage() {
                       background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)',
                       display: 'flex', alignItems: 'center', gap: 10
                     }}>
-                      <span style={{ fontSize: '1.2rem' }}>✅</span>
+                      <CheckCircleIcon style={{ width: 20, height: 20, color: '#8b5cf6', flexShrink: 0 }} />
                       <div>
                         <div style={{ fontWeight: 600, color: '#8b5cf6' }}>Đã hoàn tiền: {FORMAT_CURRENCY(booking.refundAmount)}</div>
                         {booking.refundedAt && (
@@ -250,7 +252,10 @@ export default function MyBookingsPage() {
                       <button
                         className="btn btn-primary"
                         onClick={() => navigate(`/booking/${booking.bookingId}/payment`)}
-                      > 💳 Thanh toán ngay </button>
+                      >
+                        <CreditCardIcon className="btn-icon" />
+                        Thanh toán ngay
+                      </button>
                       <button
                         className="btn btn-secondary"
                         onClick={() => handleCancel(booking.bookingId)}
@@ -263,15 +268,17 @@ export default function MyBookingsPage() {
 
                   {booking.status === 'COMPLETED' && canRequestRefund(booking) && (
                     <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        ⏰ {getRefundTimeLeft(booking)}
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <TimerIcon style={{ width: 15, height: 15 }} />
+                        {getRefundTimeLeft(booking)}
                       </span>
                       <button
                         className="btn btn-secondary"
                         onClick={() => { setRefundModal(booking.bookingId); setRefundReason(''); }}
                         style={{ fontSize: '0.9rem' }}
                       >
-                        💰 Yêu cầu hoàn tiền
+                        <BanknoteIcon className="btn-icon" />
+                        Yêu cầu hoàn tiền
                       </button>
                     </div>
                   )}
@@ -304,7 +311,10 @@ export default function MyBookingsPage() {
         <div className="modal-overlay" onClick={() => setRefundModal(null)}>
           <div className="modal-content" style={{ maxWidth: 480, aspectRatio: 'auto', padding: 32 }} onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setRefundModal(null)}>×</button>
-            <h3 style={{ marginBottom: 8 }}>💰 Yêu cầu hoàn tiền</h3>
+            <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <BanknoteIcon style={{ width: 20, height: 20, color: 'var(--accent-primary)' }} />
+              Yêu cầu hoàn tiền
+            </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 20 }}>
               Yêu cầu sẽ được Admin/Nhân viên xem xét và duyệt. Bạn sẽ được hoàn 100% số tiền đã thanh toán.
             </p>

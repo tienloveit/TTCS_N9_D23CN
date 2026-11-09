@@ -4,35 +4,64 @@ import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from '../../context/useAuth';
-import { bookingApi, foodApi, showtimeApi, ticketApi, promotionApi } from '../../api';
+import { bookingApi, foodApi, movieApi, showtimeApi, ticketApi, promotionApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
 import DigitalTicket from '../../components/Ticket/DigitalTicket';
-import { ClockIcon } from '../../components/Common/CinemaIcons';
+import SafeImage from '../../components/Common/SafeImage';
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BanknoteIcon,
+  CalculatorIcon,
+  CheckIcon,
+  ClockIcon,
+  CreditCardIcon,
+  GiftIcon,
+  PopcornIcon,
+  PrinterIcon,
+  SearchIcon,
+  TicketIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
 
 const formatTime = (value) =>
   value
-    ? new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
     : '';
 
 const formatDateTime = (value) =>
   value
     ? new Date(value).toLocaleString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
     : '';
 
 const formatDate = (value) => {
   if (!value) return '';
   const d = new Date(value);
   const weekdays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-  return `${weekdays[d.getDay()]}, ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+  return `${weekdays[d.getDay()]}, ${d.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })}`;
+};
+
+const toLocalDateKey = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 };
 
 const escapeHtml = (value) =>
@@ -48,16 +77,16 @@ const buildPrintDocument = (booking) => {
   const foods = booking.foods || [];
   const foodRows = foods.length
     ? foods
-      .map(
-        (food) => `
+        .map(
+          (food) => `
             <tr>
               <td>${escapeHtml(food.foodName)}</td>
               <td>${escapeHtml(food.quantity)}</td>
               <td>${formatCurrency(food.subtotal)}</td>
             </tr>
           `
-      )
-      .join('')
+        )
+        .join('')
     : '<tr><td colspan="3">Không có đồ ăn kèm</td></tr>';
 
   return `
@@ -110,7 +139,7 @@ const buildPrintDocument = (booking) => {
             </table>
           </div>
 
-          ${booking.discountAmount > 0 ? `<div class="row section"><span>Giảm giá</span><strong>${formatCurrency(booking.discountAmount)}</strong></div>` : ''}
+          ${booking.discountAmount > 0 ? `<div class="row section"><span>Giảm giá</span><strong>-${formatCurrency(booking.discountAmount)}</strong></div>` : ''}
           <div class="total">${formatCurrency(booking.totalAmount)}</div>
           <div class="code">${escapeHtml(booking.bookingCode)}</div>
           <p class="muted" style="text-align:center;margin-top:10px">Vui lòng giữ vé để check-in.</p>
@@ -126,20 +155,35 @@ const buildPrintDocument = (booking) => {
   `;
 };
 
+const TIME_FILTERS = [
+  { key: 'ALL', label: 'Tất cả khung giờ' },
+  { key: 'UPCOMING', label: 'Sắp chiếu' },
+  { key: 'MORNING', label: 'Sáng (6h - 12h)' },
+  { key: 'AFTERNOON', label: 'Chiều (12h - 18h)' },
+  { key: 'EVENING', label: 'Tối (18h - 22h)' },
+  { key: 'NIGHT', label: 'Khuya (22h+)' },
+];
+
 export default function StaffBookingPage() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+
   const [showtimes, setShowtimes] = useState([]);
+  const [moviesMap, setMoviesMap] = useState({});
   const [foods, setFoods] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [showtimeId, setShowtimeId] = useState('');
   const [currentStep, setCurrentStep] = useState('SELECTION');
+
+  // Filters
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [timeFilter, setTimeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('AVAILABLE');
   const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
+
+  // Cart & Checkout
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedFoods, setSelectedFoods] = useState({});
   const [customer, setCustomer] = useState({
@@ -148,6 +192,9 @@ export default function StaffBookingPage() {
     customerPhone: '',
   });
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [cashReceived, setCashReceived] = useState('');
+
+  // Promotions
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoError, setPromoError] = useState('');
@@ -155,6 +202,8 @@ export default function StaffBookingPage() {
   const [availablePromos, setAvailablePromos] = useState([]);
   const [showPromos, setShowPromos] = useState(false);
   const [loadingPromos, setLoadingPromos] = useState(false);
+
+  // Status
   const [loading, setLoading] = useState(true);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -166,8 +215,8 @@ export default function StaffBookingPage() {
   useEffect(() => {
     let mounted = true;
 
-    Promise.allSettled([showtimeApi.getAll(), foodApi.getAll()])
-      .then(([showtimeResult, foodResult]) => {
+    Promise.allSettled([showtimeApi.getAll(), foodApi.getAll(), movieApi.getAll({ size: 200 })])
+      .then(([showtimeResult, foodResult, movieResult]) => {
         if (!mounted) return;
 
         if (showtimeResult.status === 'fulfilled') {
@@ -180,6 +229,17 @@ export default function StaffBookingPage() {
           setFoods((foodResult.value.data.result || []).filter((food) => food.active !== false));
         } else {
           setFoodError('Không tải được menu đồ ăn');
+        }
+
+        if (movieResult.status === 'fulfilled') {
+          const rawMovies = movieResult.value.data.result;
+          const list = Array.isArray(rawMovies) ? rawMovies : rawMovies?.content || [];
+          const map = {};
+          list.forEach((m) => {
+            const id = m.movieId ?? m.id;
+            if (id != null) map[String(id)] = m;
+          });
+          setMoviesMap(map);
         }
       })
       .finally(() => {
@@ -197,7 +257,7 @@ export default function StaffBookingPage() {
     setSelectedFoods({});
     setLastBooking(null);
     setError('');
-    setCurrentStep('SELECTION');
+    setCashReceived('');
 
     if (stompClient.current) {
       stompClient.current.deactivate();
@@ -252,19 +312,52 @@ export default function StaffBookingPage() {
     };
   }, [showtimeId]);
 
-  const selectedShowtime = showtimes.find(
-    (item) => String(item.showtimeId) === String(showtimeId)
+  function isShowtimeAvailable(showtime) {
+    const now = new Date();
+    const startTime = showtime.startTime ? new Date(showtime.startTime) : null;
+    if (!startTime) return false;
+    const cutoffTime = new Date(startTime.getTime() + 15 * 60 * 1000);
+    const notExpired = now < cutoffTime;
+    const statusOk = !showtime.status || showtime.status === 'OPEN';
+    return notExpired && statusOk;
+  }
+
+  const selectedShowtime = useMemo(
+    () => showtimes.find((item) => String(item.showtimeId) === String(showtimeId)),
+    [showtimes, showtimeId]
   );
+
+  const selectedMovieMeta = useMemo(() => {
+    if (!selectedShowtime) return null;
+    return moviesMap[String(selectedShowtime.movieId)] || null;
+  }, [selectedShowtime, moviesMap]);
+
+  // Quick date strip (Today + next 6 days)
+  const quickDates = useMemo(() => {
+    const days = [];
+    const weekdaysShort = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const base = new Date();
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const key = toLocalDateKey(d);
+      const label = i === 0 ? 'Hôm nay' : i === 1 ? 'Ngày mai' : weekdaysShort[d.getDay()];
+      const display = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+      days.push({ key, label, display });
+    }
+    return days;
+  }, []);
 
   const branchOptions = useMemo(() => {
     const branchMap = new Map();
-
-    const allowedShowtimes = (!isAdmin && user?.branchId)
-      ? showtimes.filter(s => String(s.branchId) === String(user.branchId))
-      : showtimes;
+    const allowedShowtimes =
+      !isAdmin && user?.branchId
+        ? showtimes.filter((s) => String(s.branchId) === String(user.branchId))
+        : showtimes;
 
     allowedShowtimes.forEach((showtime) => {
-      const key = showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
+      const key =
+        showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
       if (!branchMap.has(key)) {
         branchMap.set(key, {
           id: key,
@@ -289,40 +382,37 @@ export default function StaffBookingPage() {
   const filteredShowtimes = useMemo(() => {
     let result = showtimes;
 
-    // Chỉ cho phép STAFF/MANAGER xem suất chiếu của chi nhánh mình
     if (!isAdmin && user?.branchId) {
-      result = result.filter(showtime => String(showtime.branchId) === String(user.branchId));
+      result = result.filter((showtime) => String(showtime.branchId) === String(user.branchId));
     }
 
-    // Filter by branch
     if (branchFilter !== 'ALL') {
       result = result.filter((showtime) => {
-        const key = showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
+        const key =
+          showtime.branchId == null ? showtime.branchName || 'UNKNOWN' : String(showtime.branchId);
         return key === branchFilter;
       });
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter((showtime) => {
         const movieName = (showtime.movieName || '').toLowerCase();
         const branchName = (showtime.branchName || '').toLowerCase();
         const roomName = (showtime.roomName || '').toLowerCase();
-        return movieName.includes(query) || branchName.includes(query) || roomName.includes(query);
+        return (
+          movieName.includes(query) || branchName.includes(query) || roomName.includes(query)
+        );
       });
     }
 
-    // Filter by date
     if (dateFilter) {
       result = result.filter((showtime) => {
         if (!showtime.startTime) return false;
-        const showtimeDate = new Date(showtime.startTime).toISOString().split('T')[0];
-        return showtimeDate === dateFilter;
+        return toLocalDateKey(showtime.startTime) === dateFilter;
       });
     }
 
-    // Filter by time
     if (timeFilter !== 'ALL') {
       const now = new Date();
       result = result.filter((showtime) => {
@@ -331,27 +421,22 @@ export default function StaffBookingPage() {
         const hour = startTime.getHours();
 
         switch (timeFilter) {
-          case 'MORNING': // 6h - 12h
+          case 'MORNING':
             return hour >= 6 && hour < 12;
-          case 'AFTERNOON': // 12h - 18h
+          case 'AFTERNOON':
             return hour >= 12 && hour < 18;
-          case 'EVENING': // 18h - 22h
+          case 'EVENING':
             return hour >= 18 && hour < 22;
-          case 'NIGHT': // 22h - 6h
+          case 'NIGHT':
             return hour >= 22 || hour < 6;
-          case 'UPCOMING': // Chưa chiếu (sau thời điểm hiện tại)
+          case 'UPCOMING':
             return startTime > now;
-          case 'ONGOING': {
-            const endTime = showtime.endTime ? new Date(showtime.endTime) : null;
-            return startTime <= now && (!endTime || endTime > now);
-          }
           default:
             return true;
         }
       });
     }
 
-    // Filter by status
     if (statusFilter !== 'ALL') {
       result = result.filter((showtime) => {
         const available = isShowtimeAvailable(showtime);
@@ -361,7 +446,6 @@ export default function StaffBookingPage() {
       });
     }
 
-    // Filter by room type
     if (roomTypeFilter !== 'ALL') {
       result = result.filter((showtime) => {
         const roomType = (showtime.roomType || '').toUpperCase();
@@ -370,30 +454,67 @@ export default function StaffBookingPage() {
     }
 
     return result;
-  }, [branchFilter, showtimes, searchQuery, dateFilter, timeFilter, statusFilter, roomTypeFilter, isAdmin, user]);
+  }, [
+    branchFilter,
+    showtimes,
+    searchQuery,
+    dateFilter,
+    timeFilter,
+    statusFilter,
+    roomTypeFilter,
+    isAdmin,
+    user,
+  ]);
 
-  const showtimeGroups = useMemo(() => {
-    const grouped = filteredShowtimes.reduce((acc, showtime) => {
-      const branch = showtime.branchName || 'Rạp chưa xác định';
-      if (!acc[branch]) acc[branch] = [];
-      acc[branch].push(showtime);
-      return acc;
-    }, {});
+  // Group filtered showtimes by Movie -> then by Branch for fast POS visual scanning
+  const movieGroups = useMemo(() => {
+    const map = new Map();
 
-    return Object.entries(grouped).map(([branchName, items]) => ({
-      branchName,
-      items: [...items].sort((a, b) => new Date(a.startTime || 0) - new Date(b.startTime || 0)),
+    filteredShowtimes.forEach((st) => {
+      const mKey = st.movieId != null ? String(st.movieId) : st.movieName || 'UNKNOWN';
+      if (!map.has(mKey)) {
+        const meta = moviesMap[String(st.movieId)] || {};
+        map.set(mKey, {
+          movieKey: mKey,
+          movieId: st.movieId,
+          movieName: st.movieName || meta.movieName || 'Phim chưa rõ tên',
+          thumbnailUrl: st.thumbnailUrl || meta.thumbnailUrl || meta.posterUrl || '',
+          ageRating: st.ageRating || meta.ageRating || 'P',
+          duration: meta.duration || meta.durationMinutes || null,
+          language: meta.language || '2D Phụ Đề',
+          branches: new Map(),
+        });
+      }
+
+      const group = map.get(mKey);
+      const bName = st.branchName || 'Rạp chưa xác định';
+      if (!group.branches.has(bName)) {
+        group.branches.set(bName, []);
+      }
+      group.branches.get(bName).push(st);
+    });
+
+    return [...map.values()].map((m) => ({
+      ...m,
+      branches: [...m.branches.entries()].map(([branchName, items]) => ({
+        branchName,
+        items: [...items].sort((a, b) => new Date(a.startTime || 0) - new Date(b.startTime || 0)),
+      })),
     }));
-  }, [filteredShowtimes]);
+  }, [filteredShowtimes, moviesMap]);
 
   const handleBranchFilterChange = (event) => {
     const nextBranchFilter = event.target.value;
     setBranchFilter(nextBranchFilter);
 
     if (showtimeId && nextBranchFilter !== 'ALL') {
-      const selected = showtimes.find((showtime) => String(showtime.showtimeId) === String(showtimeId));
+      const selected = showtimes.find(
+        (showtime) => String(showtime.showtimeId) === String(showtimeId)
+      );
       const selectedBranchKey =
-        selected?.branchId == null ? selected?.branchName || 'UNKNOWN' : String(selected.branchId);
+        selected?.branchId == null
+          ? selected?.branchName || 'UNKNOWN'
+          : String(selected.branchId);
 
       if (selectedBranchKey !== nextBranchFilter) {
         setShowtimeId('');
@@ -417,12 +538,24 @@ export default function StaffBookingPage() {
       ]);
   }, [tickets]);
 
+  const seatMapStats = useMemo(() => {
+    let available = 0;
+    let holding = 0;
+    let booked = 0;
+    tickets.forEach((t) => {
+      const st = t.displayStatus || t.ticketStatus;
+      if (st === 'BOOKED') booked += 1;
+      else if (st === 'HOLDING') holding += 1;
+      else available += 1;
+    });
+    return { total: tickets.length, available, holding, booked };
+  }, [tickets]);
+
   const selectedSeatTickets = useMemo(
     () => tickets.filter((ticket) => selectedSeats.includes(ticket.seatId)),
     [tickets, selectedSeats]
   );
 
-  // Group selected seats by seat type (matching user page pattern)
   const seatGroups = useMemo(() => {
     const groups = {};
     selectedSeatTickets.forEach((t) => {
@@ -461,6 +594,25 @@ export default function StaffBookingPage() {
   const foodQuantity = selectedFoodItems.reduce((sum, food) => sum + food.quantity, 0);
   const total = seatTotal + foodTotal;
   const finalPrice = Math.max(0, total - promoDiscount);
+
+  // Quick cash presets based on finalPrice
+  const cashPresets = useMemo(() => {
+    if (finalPrice <= 0) return [];
+    const base = new Set([finalPrice]);
+    const roundTargets = [50000, 100000, 200000, 500000];
+    roundTargets.forEach((step) => {
+      const rounded = Math.ceil(finalPrice / step) * step;
+      if (rounded >= finalPrice) base.add(rounded);
+    });
+    [100000, 200000, 500000, 1000000].forEach((bill) => {
+      if (bill >= finalPrice) base.add(bill);
+    });
+    return [...base].sort((a, b) => a - b).slice(0, 5);
+  }, [finalPrice]);
+
+  const numericCashReceived = Number(cashReceived || 0);
+  const cashChange = numericCashReceived - finalPrice;
+
   const hasActiveFilters =
     searchQuery ||
     dateFilter ||
@@ -468,26 +620,27 @@ export default function StaffBookingPage() {
     timeFilter !== 'ALL' ||
     statusFilter !== 'AVAILABLE' ||
     roomTypeFilter !== 'ALL';
+
   const canContinueSelection = Boolean(showtimeId);
   const canContinueSeats = selectedSeats.length > 0;
+
   const stepItems = [
-    { key: 'SELECTION', label: 'Chọn phim / Rạp / Suất' },
-    { key: 'SEATS', label: 'Chọn ghế' },
-    { key: 'ADDONS', label: 'Chọn thức ăn' },
-    { key: 'CHECKOUT', label: 'Thanh toán' },
-    { key: 'CONFIRM', label: 'Xác nhận' },
+    { key: 'SELECTION', label: 'Suất chiếu', badge: selectedShowtime ? '1' : null },
+    { key: 'SEATS', label: 'Chọn ghế', badge: selectedSeats.length > 0 ? String(selectedSeats.length) : null },
+    { key: 'ADDONS', label: 'Bắp nước', badge: foodQuantity > 0 ? String(foodQuantity) : null },
+    { key: 'CHECKOUT', label: 'Thu tiền & Xuất vé', badge: null },
   ];
 
-  // Compute sibling showtimes (same movie, same branch, same date)
   const siblingShowtimes = useMemo(() => {
     if (!selectedShowtime) return [];
-    const stDate = selectedShowtime.startTime?.split('T')[0];
+    const stDate = toLocalDateKey(selectedShowtime.startTime);
     return showtimes
-      .filter(s =>
-        s.movieId === selectedShowtime.movieId &&
-        s.branchId === selectedShowtime.branchId &&
-        s.startTime?.split('T')[0] === stDate &&
-        isShowtimeAvailable(s)
+      .filter(
+        (s) =>
+          s.movieId === selectedShowtime.movieId &&
+          s.branchId === selectedShowtime.branchId &&
+          toLocalDateKey(s.startTime) === stDate &&
+          isShowtimeAvailable(s)
       )
       .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
   }, [selectedShowtime, showtimes]);
@@ -501,28 +654,58 @@ export default function StaffBookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
-  function isShowtimeAvailable(showtime) {
-    const now = new Date();
-    const startTime = showtime.startTime ? new Date(showtime.startTime) : null;
+  const handleSelectShowtime = (st, jumpToSeats = false) => {
+    if (!isShowtimeAvailable(st)) return;
+    const nextId = String(st.showtimeId);
+    setShowtimeId(nextId);
+    if (jumpToSeats) {
+      setCurrentStep('SEATS');
+    }
+  };
 
-    // Suất chiếu có thể bán nếu:
-    // 1. Có startTime và chưa chiếu (hoặc vừa mới bắt đầu trong vòng 15 phút)
-    // 2. Status là OPEN (nếu có)
-    if (!startTime) return false;
+  const handleStepNavigation = (targetStep) => {
+    if (targetStep === 'SELECTION') {
+      setCurrentStep('SELECTION');
+      return;
+    }
+    if (!showtimeId) {
+      toast.info('Vui lòng chọn suất chiếu trước');
+      return;
+    }
+    if (targetStep === 'SEATS') {
+      setCurrentStep('SEATS');
+      return;
+    }
+    if (selectedSeats.length === 0) {
+      toast.info('Vui lòng chọn ít nhất 1 ghế');
+      setCurrentStep('SEATS');
+      return;
+    }
+    setCurrentStep(targetStep);
+  };
 
-    // Cho phép bán vé cho đến khi phim bắt đầu chiếu + 15 phút
-    const cutoffTime = new Date(startTime.getTime() + 15 * 60 * 1000);
-    const notExpired = now < cutoffTime;
-
-    // Nếu có status, kiểm tra status === 'OPEN', nếu không có status thì coi như OK
-    const statusOk = !showtime.status || showtime.status === 'OPEN';
-
-    return notExpired && statusOk;
-  }
+  const handleResetOrder = () => {
+    setSelectedSeats([]);
+    setSelectedFoods({});
+    setPromoCode('');
+    setPromoDiscount(0);
+    setPromoError('');
+    setCashReceived('');
+    setCustomer({ customerName: '', customerEmail: '', customerPhone: '' });
+    setCurrentStep('SELECTION');
+    setShowtimeId('');
+  };
 
   const handleValidatePromo = async () => {
-    if (!promoCode.trim()) { setPromoDiscount(0); setPromoError(''); return; }
-    if (total === 0) { setPromoError('Vui lòng chọn ghế trước khi áp dụng mã'); return; }
+    if (!promoCode.trim()) {
+      setPromoDiscount(0);
+      setPromoError('');
+      return;
+    }
+    if (total === 0) {
+      setPromoError('Vui lòng chọn ghế trước khi áp dụng mã');
+      return;
+    }
     setValidatingPromo(true);
     setPromoError('');
     try {
@@ -650,6 +833,7 @@ export default function StaffBookingPage() {
       setPromoCode('');
       setPromoDiscount(0);
       setPromoError('');
+      setCashReceived('');
 
       const ticketRes = await ticketApi.getByShowtimeId(showtimeId);
       setTickets(ticketRes.data.result || []);
@@ -678,172 +862,462 @@ export default function StaffBookingPage() {
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
   const activeIndex = stepItems.findIndex((item) => item.key === currentStep);
-
-  // Build steps matching user page pattern
-  const steps = stepItems.map((step, index) => ({
-    label: step.label,
-    key: step.key,
-    active: step.key === currentStep,
-    done: index < activeIndex,
-  }));
+  const posterUrl =
+    selectedShowtime?.thumbnailUrl ||
+    selectedMovieMeta?.thumbnailUrl ||
+    selectedMovieMeta?.posterUrl ||
+    '';
 
   return (
-    <form onSubmit={handleSubmit} className="page">
-      <div className="container">
-        {/* Booking Steps (matching user page stepper) */}
-        {!lastBooking && (
-          <div className="booking-steps">
-            {steps.map((step, i) => (
-              <div
-                key={step.key}
-                className={`booking-step ${step.active ? 'booking-step--active' : ''} ${step.done ? 'booking-step--done' : ''}`}
-              >
-                <div className="booking-step-dot">{step.done ? '✓' : i + 1}</div>
-                <span className="booking-step-label">{step.label}</span>
-                {i < steps.length - 1 && <div className="booking-step-line" />}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div className="error-message" style={{ marginBottom: 20 }}>
-            {error}
-          </div>
-        )}
-
-        {lastBooking ? (
-          /* SUCCESS PAGE */
-          <div className="card checkin-result-card" style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: 40 }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green)' }}>
-              <span style={{ fontSize: '2.5rem' }}>✓</span>
-              <h2 style={{ margin: 0 }}>ĐẶT VÉ THÀNH CÔNG!</h2>
+    <form onSubmit={handleSubmit} className="pos-page">
+      {/* ===== TOP POS CONTROL BAR ===== */}
+      {!lastBooking && (
+        <div className="pos-top-bar">
+          <div className="pos-top-bar-left">
+            <span className="pos-badge-live">
+              <span className="pos-badge-live-dot" />
+              POS Quầy vé
+            </span>
+            <div className="pos-top-title">
+              <h1>Bán vé trực tiếp tại quầy</h1>
+              <p>
+                {selectedShowtime
+                  ? `${selectedShowtime.movieName} • ${formatTime(selectedShowtime.startTime)} (${selectedShowtime.roomName || 'Phòng chiếu'})`
+                  : 'Chọn suất chiếu để mở sơ đồ ghế thời gian thực'}
+              </p>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-              <DigitalTicket booking={{
+          </div>
+
+          <div className="pos-stepper">
+            {stepItems.map((step, index) => {
+              const isActive = step.key === currentStep;
+              const isDone =
+                (step.key === 'SELECTION' && Boolean(showtimeId) && currentStep !== 'SELECTION') ||
+                (step.key === 'SEATS' && selectedSeats.length > 0 && activeIndex > 1) ||
+                (step.key === 'ADDONS' && activeIndex > 2);
+              const disabled =
+                (step.key === 'SEATS' && !showtimeId) ||
+                ((step.key === 'ADDONS' || step.key === 'CHECKOUT') &&
+                  (!showtimeId || selectedSeats.length === 0));
+
+              return (
+                <button
+                  key={step.key}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleStepNavigation(step.key)}
+                  className={`pos-step-pill ${isActive ? 'pos-step-pill--active' : ''} ${
+                    isDone ? 'pos-step-pill--done' : ''
+                  }`}
+                >
+                  <span className="pos-step-pill-num">
+                    {isDone ? <CheckIcon size={13} strokeWidth={3} /> : index + 1}
+                  </span>
+                  <span>{step.label}</span>
+                  {step.badge && <span className="pos-step-badge">{step.badge}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {error && <div className="error-message">{error}</div>}
+
+      {lastBooking ? (
+        /* ===== SUCCESS RECEIPT PAGE ===== */
+        <div
+          className="card checkin-result-card"
+          style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', padding: 36 }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 18px',
+              borderRadius: 999,
+              background: 'rgba(22, 163, 74, 0.12)',
+              color: 'var(--green)',
+              fontWeight: 800,
+              marginBottom: 20,
+            }}
+          >
+            <CheckIcon size={18} strokeWidth={3} />
+            <span>XUẤT VÉ TẠI QUẦY THÀNH CÔNG</span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+            <DigitalTicket
+              booking={{
                 ...lastBooking,
                 startTime: lastBooking.showtimeStart,
-                seatCodes: lastBooking.seatCodes || (lastBooking.tickets || []).map(t => t.seatCode),
-                status: 'COMPLETED'
-              }} />
-            </div>
-            {lastBooking.foods && lastBooking.foods.length > 0 && (
-              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '2px dashed var(--border)', textAlign: 'left' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>🍿 Đồ ăn cần giao cho khách:</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                  {lastBooking.foods.map((bf) => (
-                    <div key={bf.id} style={{ background: 'var(--bg-card)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--border)', fontSize: '0.95rem' }}>
-                      <strong style={{ color: 'var(--accent)' }}>{bf.quantity}x</strong> {bf.foodName}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div style={{ marginTop: 32, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-secondary" onClick={handlePrintLastBooking}>
-                In vé / hóa đơn
-              </button>
-              <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
-                Tạo đơn hàng mới
-              </button>
-            </div>
+                seatCodes:
+                  lastBooking.seatCodes || (lastBooking.tickets || []).map((t) => t.seatCode),
+                status: 'COMPLETED',
+              }}
+            />
           </div>
-        ) : (
-          <div className="seat-page-layout">
-            {/* ===== LEFT: Main Content ===== */}
-            <div className="seat-page-main">
 
-              {currentStep === 'SELECTION' && (
-                <div className="card" style={{ padding: 24 }}>
-                  <div className="showtime-switcher" style={{ marginBottom: 20 }}>
-                    <div className="showtime-switcher-label">Lọc suất chiếu</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, padding: 12 }}>
-                      <input type="text" className="input" placeholder="Tìm tên phim, rạp..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                      <input type="date" className="input" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
-                      <select className="input" value={branchFilter} onChange={handleBranchFilterChange}>
-                        <option value="ALL">Tất cả rạp</option>
-                        {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                      </select>
-                      <select className="input" value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)}>
-                        <option value="ALL">Khung giờ: Tất cả</option>
-                        <option value="MORNING">Sáng (6h-12h)</option>
-                        <option value="AFTERNOON">Chiều (12h-18h)</option>
-                        <option value="EVENING">Tối (18h-22h)</option>
-                        <option value="NIGHT">Khuya (22h-6h)</option>
-                      </select>
-                      <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="AVAILABLE">Chỉ suất có thể bán</option>
-                        <option value="ALL">Tất cả trạng thái</option>
-                      </select>
-                      {hasActiveFilters && (
-                        <button type="button" className="btn" onClick={clearFilters}>Xóa lọc</button>
-                      )}
-                    </div>
+          {lastBooking.foods && lastBooking.foods.length > 0 && (
+            <div
+              style={{
+                marginTop: 20,
+                paddingTop: 18,
+                borderTop: '2px dashed var(--border)',
+                textAlign: 'left',
+              }}
+            >
+              <h3 style={{ margin: '0 0 12px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <PopcornIcon size={18} />
+                <span>Đồ ăn cần chuẩn bị giao khách:</span>
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {lastBooking.foods.map((bf) => (
+                  <div
+                    key={bf.id}
+                    style={{
+                      background: '#f8fafc',
+                      padding: '8px 14px',
+                      borderRadius: 10,
+                      border: '1px solid var(--border)',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <strong style={{ color: 'var(--accent)', marginRight: 6 }}>
+                      {bf.quantity}x
+                    </strong>
+                    {bf.foodName}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: 28,
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <button type="button" className="btn btn-secondary" onClick={handlePrintLastBooking}>
+              <PrinterIcon size={18} />
+              <span>In vé / Hóa đơn nhiệt (80mm)</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setLastBooking(null);
+                handleResetOrder();
+              }}
+            >
+              + Tạo đơn bán vé mới
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ===== 2-COLUMN POS WORKSPACE ===== */
+        <div className="pos-workspace">
+          {/* LEFT WORKSPACE */}
+          <div className="pos-main">
+            {/* STEP 1: SHOWTIME SELECTION */}
+            {currentStep === 'SELECTION' && (
+              <>
+                <div className="pos-filter-card">
+                  {/* Quick Date Strip */}
+                  <div className="pos-date-ribbon">
+                    <button
+                      type="button"
+                      className={`pos-date-chip ${dateFilter === '' ? 'pos-date-chip--active' : ''}`}
+                      onClick={() => setDateFilter('')}
+                    >
+                      <span>Tất cả</span>
+                      <strong>Mọi ngày</strong>
+                    </button>
+                    {quickDates.map((d) => (
+                      <button
+                        key={d.key}
+                        type="button"
+                        className={`pos-date-chip ${
+                          dateFilter === d.key ? 'pos-date-chip--active' : ''
+                        }`}
+                        onClick={() => setDateFilter(d.key === dateFilter ? '' : d.key)}
+                      >
+                        <span>{d.label}</span>
+                        <strong>{d.display}</strong>
+                      </button>
+                    ))}
                   </div>
 
-                  {filteredShowtimes.length === 0 ? (
-                    <div className="empty-state">Không có suất chiếu phù hợp.</div>
-                  ) : (
-                    <div className="cinema-schedule-list">
-                      {showtimeGroups.map((group) => (
-                        <div key={group.branchName} className="cinema-schedule-branch">
-                          <h3 className="cinema-schedule-branch-name">{group.branchName}</h3>
-                          <div className="cinema-schedule-times" style={{ flexWrap: 'wrap' }}>
-                            {group.items.map((showtime) => {
-                              const available = isShowtimeAvailable(showtime);
-                              const selected = String(showtime.showtimeId) === String(showtimeId);
-                              return (
-                                <button
-                                  key={showtime.showtimeId}
-                                  type="button"
-                                  className={`cinema-showtime-btn ${selected ? 'showtime-switcher-btn--active' : ''}`}
-                                  onClick={() => available && setShowtimeId(String(showtime.showtimeId))}
-                                  disabled={!available}
-                                  style={{
-                                    opacity: available ? 1 : 0.5,
-                                    cursor: available ? 'pointer' : 'not-allowed',
-                                    ...(selected ? {
-                                      background: 'var(--blue)',
-                                      color: '#fff',
-                                      borderColor: 'var(--blue)',
-                                      boxShadow: '0 2px 8px rgba(7, 86, 166, 0.25)'
-                                    } : {})
-                                  }}
-                                  title={`${showtime.movieName} - ${showtime.roomName}`}
-                                >
-                                  <span>{formatTime(showtime.startTime)}</span>
-                                  <small className="showtime-seats-info" style={selected ? { color: 'rgba(255,255,255,0.8)' } : {}}>
-                                    {showtime.movieName}
-                                  </small>
-                                  <small className="showtime-seats-info" style={selected ? { color: 'rgba(255,255,255,0.6)' } : {}}>
-                                    {showtime.roomName} - {showtime.roomType}
-                                  </small>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                  {/* Search & Dropdown Filters */}
+                  <div className="pos-filter-row">
+                    <div className="pos-search-box">
+                      <SearchIcon />
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="Tìm nhanh tên phim, phòng chiếu, rạp..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+
+                    <input
+                      type="date"
+                      className="pos-filter-select"
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      title="Chọn ngày cụ thể"
+                    />
+
+                    <select
+                      className="pos-filter-select"
+                      value={branchFilter}
+                      onChange={handleBranchFilterChange}
+                    >
+                      <option value="ALL">Tất cả chi nhánh</option>
+                      {branchOptions.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="pos-filter-select"
+                      value={roomTypeFilter}
+                      onChange={(e) => setRoomTypeFilter(e.target.value)}
+                    >
+                      <option value="ALL">Mọi định dạng phòng</option>
+                      {roomTypeOptions.map((rt) => (
+                        <option key={rt} value={rt}>
+                          Phòng {rt}
+                        </option>
+                      ))}
+                    </select>
+
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ height: 42, padding: '0 14px', fontSize: '0.82rem' }}
+                        onClick={clearFilters}
+                      >
+                        Đặt lại
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Time of day pills + Status toggle */}
+                  <div className="pos-time-pills">
+                    <div className="pos-time-pill-group">
+                      {TIME_FILTERS.map((tf) => (
+                        <button
+                          key={tf.key}
+                          type="button"
+                          className={`pos-time-pill ${
+                            timeFilter === tf.key ? 'pos-time-pill--active' : ''
+                          }`}
+                          onClick={() => setTimeFilter(tf.key)}
+                        >
+                          {tf.label}
+                        </button>
                       ))}
                     </div>
-                  )}
-                </div>
-              )}
 
-              {currentStep === 'SEATS' && (
-                <>
-                {/* Showtime Switcher (matching user page) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <label
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          color: '#475569',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={statusFilter === 'AVAILABLE'}
+                          onChange={(e) =>
+                            setStatusFilter(e.target.checked ? 'AVAILABLE' : 'ALL')
+                          }
+                        />
+                        Chỉ hiện suất còn mở bán
+                      </label>
+                      <span className="pos-result-Summary">
+                        ({filteredShowtimes.length} suất chiếu)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Movie Grouped Showtime Cards */}
+                {movieGroups.length === 0 ? (
+                  <div
+                    className="card"
+                    style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}
+                  >
+                    <p style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>
+                      Không tìm thấy suất chiếu phù hợp với bộ lọc hiện tại.
+                    </p>
+                    {hasActiveFilters && (
+                      <button type="button" className="btn btn-secondary" onClick={clearFilters}>
+                        Xóa toàn bộ bộ lọc
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="pos-movie-list">
+                    {movieGroups.map((movie) => {
+                      const hasSelectedInMovie = movie.branches.some((b) =>
+                        b.items.some((s) => String(s.showtimeId) === String(showtimeId))
+                      );
+
+                      return (
+                        <div
+                          key={movie.movieKey}
+                          className={`pos-movie-card ${
+                            hasSelectedInMovie ? 'pos-movie-card--selected' : ''
+                          }`}
+                        >
+                          <SafeImage
+                            src={movie.thumbnailUrl}
+                            alt={movie.movieName}
+                            className="pos-movie-poster"
+                          />
+
+                          <div className="pos-movie-body">
+                            <div className="pos-movie-header">
+                              <div>
+                                <h2 className="pos-movie-title">{movie.movieName}</h2>
+                                <div className="pos-movie-badges">
+                                  <span className="pos-meta-tag pos-meta-tag--age">
+                                    {movie.ageRating}
+                                  </span>
+                                  <span className="pos-meta-tag pos-meta-tag--format">
+                                    {movie.language}
+                                  </span>
+                                  {movie.duration && (
+                                    <span className="pos-meta-tag">
+                                      <ClockIcon size={12} /> {movie.duration} phút
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  color: '#64748b',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Nhấp chọn giờ chiếu (Nhấp đúp để vào chọn ghế ngay)
+                              </span>
+                            </div>
+
+                            {movie.branches.map((branch) => (
+                              <div key={branch.branchName} className="pos-branch-group">
+                                <div className="pos-branch-label">{branch.branchName}</div>
+                                <div className="pos-slot-grid">
+                                  {branch.items.map((st) => {
+                                    const available = isShowtimeAvailable(st);
+                                    const selected = String(st.showtimeId) === String(showtimeId);
+                                    const availSeats = st.availableSeats;
+                                    const totalSeats = st.totalSeats;
+                                    const hasSeatCount =
+                                      availSeats != null && totalSeats != null && totalSeats > 0;
+                                    const isLow = hasSeatCount && availSeats > 0 && availSeats <= 15;
+                                    const isFull = hasSeatCount && availSeats === 0;
+
+                                    return (
+                                      <button
+                                        key={st.showtimeId}
+                                        type="button"
+                                        disabled={!available || isFull}
+                                        onClick={() => handleSelectShowtime(st, false)}
+                                        onDoubleClick={() => handleSelectShowtime(st, true)}
+                                        className={`pos-slot-btn ${
+                                          selected ? 'pos-slot-btn--selected' : ''
+                                        }`}
+                                        title="Nhấp để chọn suất, nhấp đúp để chuyển thẳng sang sơ đồ ghế"
+                                      >
+                                        <div className="pos-slot-top">
+                                          <span className="pos-slot-time">
+                                            {formatTime(st.startTime)}
+                                          </span>
+                                          {st.roomType && (
+                                            <span className="pos-slot-type">{st.roomType}</span>
+                                          )}
+                                        </div>
+                                        <div className="pos-slot-room">
+                                          {st.roomName || 'Phòng chiếu'}
+                                          {!dateFilter && st.startTime
+                                            ? ` • ${new Date(st.startTime).toLocaleDateString(
+                                                'vi-VN',
+                                                { day: '2-digit', month: '2-digit' }
+                                              )}`
+                                            : ''}
+                                        </div>
+                                        {hasSeatCount ? (
+                                          <div
+                                            className={`pos-slot-seats ${
+                                              isFull
+                                                ? 'pos-slot-seats--full'
+                                                : isLow
+                                                ? 'pos-slot-seats--low'
+                                                : ''
+                                            }`}
+                                          >
+                                            {isFull
+                                              ? 'Hết ghế'
+                                              : `Còn ${availSeats}/${totalSeats} ghế`}
+                                          </div>
+                                        ) : (
+                                          <div className="pos-slot-seats">
+                                            {available ? 'Đang mở bán' : 'Đã đóng'}
+                                          </div>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* STEP 2: SEAT MAP SELECTION */}
+            {currentStep === 'SEATS' && (
+              <>
                 {siblingShowtimes.length > 1 && (
-                  <div className="showtime-switcher">
+                  <div className="showtime-switcher" style={{ marginBottom: 0 }}>
                     <div className="showtime-switcher-label">
                       <ClockIcon className="inline-icon" />
-                      Đổi suất chiếu
+                      Đổi giờ chiếu cùng ngày:
                     </div>
                     <div className="showtime-switcher-list">
                       {siblingShowtimes.map((st) => (
                         <button
                           key={st.showtimeId}
                           type="button"
-                          className={`showtime-switcher-btn ${String(st.showtimeId) === String(showtimeId) ? 'showtime-switcher-btn--active' : ''}`}
+                          className={`showtime-switcher-btn ${
+                            String(st.showtimeId) === String(showtimeId)
+                              ? 'showtime-switcher-btn--active'
+                              : ''
+                          }`}
                           onClick={() => {
                             if (String(st.showtimeId) !== String(showtimeId)) {
                               setSelectedSeats([]);
@@ -853,32 +1327,78 @@ export default function StaffBookingPage() {
                             }
                           }}
                         >
-                          {formatTime(st.startTime)}
+                          {formatTime(st.startTime)} ({st.roomName})
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div className="card" style={{ padding: 32 }}>
+                <div className="pos-seat-card">
+                  <div className="pos-seat-toolbar">
+                    <div className="pos-seat-stats">
+                      <span className="pos-seat-stat-pill">
+                        Trống:{' '}
+                        <strong style={{ color: 'var(--seat-available)' }}>
+                          {seatMapStats.available}
+                        </strong>
+                      </span>
+                      <span className="pos-seat-stat-pill">
+                        Đang chọn:{' '}
+                        <strong style={{ color: 'var(--seat-selected)' }}>
+                          {selectedSeats.length}
+                        </strong>
+                      </span>
+                      <span className="pos-seat-stat-pill">
+                        Đang giữ:{' '}
+                        <strong style={{ color: 'var(--seat-holding)' }}>
+                          {seatMapStats.holding}
+                        </strong>
+                      </span>
+                      <span className="pos-seat-stat-pill">
+                        Đã bán:{' '}
+                        <strong style={{ color: 'var(--seat-booked)' }}>
+                          {seatMapStats.booked}
+                        </strong>
+                      </span>
+                    </div>
+
+                    {selectedSeats.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                        onClick={() => setSelectedSeats([])}
+                      >
+                        Bỏ chọn tất cả ({selectedSeats.length})
+                      </button>
+                    )}
+                  </div>
+
                   {loadingTickets ? (
-                    <div className="loading"><div className="spinner" /></div>
+                    <div className="loading">
+                      <div className="spinner" />
+                    </div>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-                        <div className="seat-screen" />
+                      <div className="pos-screen-stage">
+                        <div className="pos-screen-arc" />
+                        <span className="pos-screen-label">Màn hình chiếu</span>
                       </div>
+
                       <div className="seat-map-wrapper">
-                        <div className="seat-map">
+                        <div className="seat-map" style={{ padding: '12px 16px 24px' }}>
                           {sortedRows.map(([row, seats]) => (
                             <div key={row} className="seat-row">
                               <span className="seat-row-label">{row}</span>
                               {seats.map((ticket) => (
                                 <div
-                                  key={ticket.id}
+                                  key={ticket.id || ticket.seatId}
                                   className={getSeatClass(ticket)}
                                   onClick={() => toggleSeat(ticket)}
-                                  title={`${ticket.seatCode} - ${ticket.displayStatus || ticket.ticketStatus}`}
+                                  title={`${ticket.seatCode} • ${formatCurrency(ticket.price)} (${
+                                    ticket.displayStatus || ticket.ticketStatus
+                                  })`}
                                 >
                                   {ticket.seatNumber || ''}
                                 </div>
@@ -888,309 +1408,647 @@ export default function StaffBookingPage() {
                           ))}
                         </div>
                       </div>
+
                       <div className="seat-legend">
                         <div className="seat-legend-item">
-                          <div className="seat-legend-dot" style={{ background: 'rgba(16,185,129,0.15)', borderColor: 'var(--seat-available)' }} />
+                          <div
+                            className="seat-legend-dot"
+                            style={{
+                              background: 'rgba(16,185,129,0.15)',
+                              borderColor: 'var(--seat-available)',
+                            }}
+                          />
                           Trống
                         </div>
                         <div className="seat-legend-item">
-                          <div className="seat-legend-dot" style={{ background: 'rgba(59,130,246,0.3)', borderColor: 'var(--seat-selected)' }} />
+                          <div
+                            className="seat-legend-dot"
+                            style={{
+                              background: 'rgba(59,130,246,0.3)',
+                              borderColor: 'var(--seat-selected)',
+                            }}
+                          />
                           Đang chọn
                         </div>
                         <div className="seat-legend-item">
-                          <div className="seat-legend-dot" style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'var(--seat-holding)' }} />
-                          Đang giữ
+                          <div
+                            className="seat-legend-dot"
+                            style={{
+                              background: 'rgba(245,158,11,0.15)',
+                              borderColor: 'var(--seat-holding)',
+                            }}
+                          />
+                          Khách khác đang giữ
                         </div>
                         <div className="seat-legend-item">
-                          <div className="seat-legend-dot" style={{ background: 'rgba(239,68,68,0.15)', borderColor: 'var(--seat-booked)' }} />
+                          <div
+                            className="seat-legend-dot"
+                            style={{
+                              background: 'rgba(239,68,68,0.15)',
+                              borderColor: 'var(--seat-booked)',
+                            }}
+                          />
                           Đã đặt
                         </div>
                       </div>
                     </>
                   )}
                 </div>
-                </>
-              )}
+              </>
+            )}
 
-              {currentStep === 'ADDONS' && (foods.length > 0 || foodError) && (
-                <div className="card food-select-card">
-                  <div className="food-select-header">
-                    <div>
-                      <h2>Chọn đồ ăn</h2>
-                      <p>Bắp nước và combo có thể thêm vào cùng đơn đặt vé.</p>
-                    </div>
-                    {foodTotal > 0 && <strong>{formatCurrency(foodTotal)}</strong>}
-                  </div>
-                  {foodError && <div className="error-message" style={{ marginBottom: 16 }}>{foodError}</div>}
-                  <div className="food-select-grid">
-                    {foods.map((food) => {
-                      const quantity = selectedFoods[food.id] || 0;
-                      const stockLimited = food.stockQuantity != null;
-                      const stockLeft = stockLimited ? Number(food.stockQuantity) - quantity : null;
-                      const cannotAdd = stockLimited && stockLeft <= 0;
-
-                      return (
-                        <div key={food.id} className={`food-option ${quantity > 0 ? 'food-option--selected' : ''}`}>
-                          <div className="food-option-media">
-                            {food.imageUrl ? <img src={food.imageUrl} alt={food.name} /> : <span>{food.name?.charAt(0) || 'F'}</span>}
-                          </div>
-                          <div className="food-option-body">
-                            <h3>{food.name}</h3>
-                            {food.description && <p>{food.description}</p>}
-                            <strong>{formatCurrency(food.price)}</strong>
-                            {stockLimited && (
-                              <p style={{ color: stockLeft <= 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: 700 }}>Còn {Math.max(stockLeft, 0)}</p>
-                            )}
-                          </div>
-                          <div className="food-stepper">
-                            <button type="button" onClick={() => updateFoodQuantity(food.id, -1)} disabled={quantity === 0 || submitting}>-</button>
-                            <span>{quantity}</span>
-                            <button type="button" onClick={() => updateFoodQuantity(food.id, 1)} disabled={submitting || cannotAdd}>+</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 'CHECKOUT' && (
-                <div className="card" style={{ padding: 32 }}>
-                  <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-                    <h3 style={{ marginBottom: 16 }}>Thông tin khách hàng (Không bắt buộc)</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      <input className="input" placeholder="Họ và tên" value={customer.customerName} onChange={(e) => setCustomer({ ...customer, customerName: e.target.value })} />
-                      <input className="input" placeholder="Email nhận vé" value={customer.customerEmail} onChange={(e) => setCustomer({ ...customer, customerEmail: e.target.value })} />
-                      <input className="input" placeholder="Số điện thoại" value={customer.customerPhone} onChange={(e) => setCustomer({ ...customer, customerPhone: e.target.value })} />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-                    <h3 style={{ marginBottom: 12 }}>Phương thức thanh toán</h3>
-                    <select className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                      <option value="CASH">Thanh toán Tiền mặt</option>
-                      <option value="CARD">Thanh toán Online (VNPay)</option>
-                    </select>
-                  </div>
-
-                  {/* Mã khuyến mãi - matching PaymentPage style */}
-                  <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <h3 style={{ margin: 0 }}>Mã khuyến mãi</h3>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
-                        {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="text"
-                        className="input"
-                        placeholder="Nhập mã giảm giá..."
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase', flex: 1 }}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleValidatePromo())}
-                      />
-                      <button type="button" className="btn btn-secondary" onClick={handleValidatePromo} disabled={validatingPromo || !promoCode.trim()}>
-                        {validatingPromo ? '...' : 'Áp dụng'}
-                      </button>
-                    </div>
-                    {promoError && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>}
-
-                    {showPromos && (
-                      <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
-                        {loadingPromos ? (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
-                        ) : availablePromos.length === 0 ? (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {availablePromos.map(promo => (
-                              <div key={promo.id}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                                onClick={() => { setPromoCode(promo.code); setShowPromos(false); }}>
-                                <div>
-                                  <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
-                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    {promo.description || `Giảm ${promo.discountPercent}%`}
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tổng tiền - matching PaymentPage style */}
+            {/* STEP 3: ADDONS (FOOD & COMBOS) */}
+            {currentStep === 'ADDONS' && (
+              <div className="card food-select-card" style={{ marginTop: 0 }}>
+                <div className="food-select-header">
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: promoDiscount > 0 ? 8 : 0 }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Tạm tính:</span>
-                      <span>{formatCurrency(total)}</span>
-                    </div>
-                    {promoDiscount > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, color: 'var(--seat-available)', fontWeight: 600 }}>
-                        <span>Giảm giá:</span>
-                        <span>-{formatCurrency(promoDiscount)}</span>
-                      </div>
+                    <h2>Chọn bắp nước & Combo</h2>
+                    <p>Thêm nhanh đồ ăn kèm vào hóa đơn tại quầy (có thể bỏ qua nếu khách không mua).</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {foodTotal > 0 && <strong>{formatCurrency(foodTotal)}</strong>}
+                    {foodQuantity > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                        onClick={() => setSelectedFoods({})}
+                      >
+                        Xóa bắp nước
+                      </button>
                     )}
-                    <div style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      paddingTop: 12, borderTop: '1px dashed var(--border)'
-                    }}>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Tổng tiền:</span>
-                      <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--gold)' }}>
-                        {formatCurrency(finalPrice)}
-                      </span>
+                  </div>
+                </div>
+
+                {foodError && (
+                  <div className="error-message" style={{ marginBottom: 16 }}>
+                    {foodError}
+                  </div>
+                )}
+
+                <div className="food-select-grid">
+                  {foods.map((food) => {
+                    const quantity = selectedFoods[food.id] || 0;
+                    const stockLimited = food.stockQuantity != null;
+                    const stockLeft = stockLimited ? Number(food.stockQuantity) - quantity : null;
+                    const cannotAdd = stockLimited && stockLeft <= 0;
+
+                    return (
+                      <div
+                        key={food.id}
+                        className={`food-option ${quantity > 0 ? 'food-option--selected' : ''}`}
+                      >
+                        <div className="food-option-media">
+                          {food.imageUrl ? (
+                            <img src={food.imageUrl} alt={food.name} />
+                          ) : (
+                            <PopcornIcon size={24} />
+                          )}
+                        </div>
+                        <div className="food-option-body">
+                          <h3>{food.name}</h3>
+                          {food.description && <p>{food.description}</p>}
+                          <strong>{formatCurrency(food.price)}</strong>
+                          {stockLimited && (
+                            <p
+                              style={{
+                                color: stockLeft <= 0 ? '#ef4444' : 'var(--text-muted)',
+                                fontWeight: 700,
+                                marginTop: 2,
+                              }}
+                            >
+                              Kho còn: {Math.max(stockLeft, 0)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="food-stepper">
+                          <button
+                            type="button"
+                            onClick={() => updateFoodQuantity(food.id, -1)}
+                            disabled={quantity === 0 || submitting}
+                          >
+                            -
+                          </button>
+                          <span>{quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateFoodQuantity(food.id, 1)}
+                            disabled={submitting || cannotAdd}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4: CHECKOUT & CASH REGISTER */}
+            {currentStep === 'CHECKOUT' && (
+              <div className="pos-checkout-card">
+                {/* Payment Method Cards */}
+                <div>
+                  <h3 className="pos-section-title">
+                    <span>1. Phương thức thanh toán</span>
+                    <small>Chọn hình thức thu tiền tại quầy</small>
+                  </h3>
+                  <div className="pos-payment-methods">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('CASH')}
+                      className={`pos-pay-card ${
+                        paymentMethod === 'CASH' ? 'pos-pay-card--active' : ''
+                      }`}
+                    >
+                      <div className="pos-pay-icon">
+                        <BanknoteIcon size={22} />
+                      </div>
+                      <div className="pos-pay-info">
+                        <strong>Tiền mặt tại quầy</strong>
+                        <span>Thu tiền trực tiếp & in vé ngay</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('CARD')}
+                      className={`pos-pay-card ${
+                        paymentMethod === 'CARD' ? 'pos-pay-card--active' : ''
+                      }`}
+                    >
+                      <div className="pos-pay-icon">
+                        <CreditCardIcon size={22} />
+                      </div>
+                      <div className="pos-pay-info">
+                        <strong>VNPay / QR Ngân hàng</strong>
+                        <span>Chuyển sang cổng thanh toán VNPay</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Cash Calculator (Only for CASH) */}
+                {paymentMethod === 'CASH' && (
+                  <div className="pos-cash-calc">
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                      }}
+                    >
+                      <strong style={{ fontSize: '0.88rem', color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <CalculatorIcon size={16} />
+                        <span>Công cụ tính tiền thừa nhanh (Không bắt buộc)</span>
+                      </strong>
+                      <div className="pos-cash-presets">
+                        {cashPresets.map((amount) => (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() => setCashReceived(String(amount))}
+                            className={`pos-cash-preset-btn ${
+                              Number(cashReceived) === amount ? 'pos-cash-preset-btn--active' : ''
+                            }`}
+                          >
+                            {amount === finalPrice ? 'Đúng số tiền' : formatCurrency(amount)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pos-cash-row">
+                      <div className="pos-field">
+                        <label>Tiền khách đưa (VNĐ)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          className="input"
+                          placeholder={`Nhập số tiền (VD: ${finalPrice})`}
+                          value={cashReceived}
+                          onChange={(e) => setCashReceived(e.target.value)}
+                        />
+                      </div>
+
+                      <div
+                        className={`pos-change-box ${
+                          cashReceived && cashChange < 0 ? 'pos-change-box--short' : ''
+                        }`}
+                      >
+                        <span>
+                          {!cashReceived
+                            ? 'Tiền thừa trả khách'
+                            : cashChange >= 0
+                            ? 'Tiền thừa trả khách'
+                            : 'Khách đưa còn thiếu'}
+                        </span>
+                        <strong>
+                          {!cashReceived
+                            ? formatCurrency(0)
+                            : formatCurrency(Math.abs(cashChange))}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Promotion Code */}
+                <div>
+                  <div className="pos-section-title">
+                    <span>2. Mã khuyến mãi / Voucher</span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={handleShowPromos}
+                      style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+                    >
+                      <GiftIcon size={15} />
+                      <span>{showPromos ? 'Đóng danh sách mã' : 'Xem mã khả dụng'}</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="Nhập mã giảm giá (nếu có)..."
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      style={{ textTransform: 'uppercase', flex: 1 }}
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' && (e.preventDefault(), handleValidatePromo())
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleValidatePromo}
+                      disabled={validatingPromo || !promoCode.trim()}
+                    >
+                      {validatingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>
+                      {promoError}
+                    </div>
+                  )}
+
+                  {showPromos && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        background: '#f8fafc',
+                        padding: 12,
+                        borderRadius: 10,
+                        border: '1px solid var(--border)',
+                        maxHeight: 210,
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {loadingPromos ? (
+                        <div
+                          style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--text-muted)',
+                            textAlign: 'center',
+                          }}
+                        >
+                          Đang tải...
+                        </div>
+                      ) : availablePromos.length === 0 ? (
+                        <div
+                          style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--text-muted)',
+                            textAlign: 'center',
+                          }}
+                        >
+                          Không có mã khuyến mãi khả dụng
+                        </div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          {availablePromos.map((promo) => (
+                            <div
+                              key={promo.id}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: '#ffffff',
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                border: '1px solid var(--border)',
+                              }}
+                              onClick={() => {
+                                setPromoCode(promo.code);
+                                setShowPromos(false);
+                              }}
+                            >
+                              <div>
+                                <strong style={{ color: 'var(--seat-available)' }}>
+                                  {promo.code}
+                                </strong>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                  {promo.description || `Giảm ${promo.discountPercent}%`}
+                                </div>
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.8rem',
+                                  fontWeight: 700,
+                                  color: 'var(--blue)',
+                                }}
+                              >
+                                Chọn mã
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Customer Info */}
+                <div>
+                  <h3 className="pos-section-title">
+                    <span>3. Thông tin khách hàng (Tùy chọn)</span>
+                    <small>Dùng để gửi vé điện tử hoặc tra cứu bảo hành vé</small>
+                  </h3>
+                  <div className="pos-customer-grid">
+                    <div className="pos-field">
+                      <label>Họ và tên khách</label>
+                      <input
+                        className="input"
+                        placeholder="Khách vãng lai"
+                        value={customer.customerName}
+                        onChange={(e) =>
+                          setCustomer({ ...customer, customerName: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="pos-field">
+                      <label>Số điện thoại</label>
+                      <input
+                        className="input"
+                        placeholder="09xx..."
+                        value={customer.customerPhone}
+                        onChange={(e) =>
+                          setCustomer({ ...customer, customerPhone: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="pos-field">
+                      <label>Email nhận vé</label>
+                      <input
+                        className="input"
+                        placeholder="example@email.com"
+                        value={customer.customerEmail}
+                        onChange={(e) =>
+                          setCustomer({ ...customer, customerEmail: e.target.value })
+                        }
+                      />
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT STICKY POS RECEIPT SIDEBAR */}
+          <aside className="pos-receipt">
+            <div className="pos-receipt-banner">
+              <div className="pos-receipt-banner-title">
+                <TicketIcon style={{ width: 18, height: 18 }} />
+                <span>Phiếu thanh toán quầy</span>
+              </div>
+              {(showtimeId || selectedSeats.length > 0 || foodQuantity > 0) && (
+                <button type="button" className="pos-receipt-reset" onClick={handleResetOrder}>
+                  Làm mới
+                </button>
               )}
             </div>
 
-            {/* ===== RIGHT: Sidebar (matching user page pattern) ===== */}
-            <aside className="seat-sidebar">
-              <div className="seat-sidebar-card">
-                {/* Poster + Movie Info */}
-                <div className="seat-sidebar-header">
-                  {selectedShowtime?.thumbnailUrl && (
-                    <img
-                      src={selectedShowtime.thumbnailUrl}
-                      alt={selectedShowtime.movieName}
-                      className="seat-sidebar-poster"
-                      onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
-                    />
-                  )}
-                  <div className="seat-sidebar-info">
-                    <h3 className="seat-sidebar-title">
-                      {selectedShowtime ? selectedShowtime.movieName : 'Chưa chọn suất'}
-                    </h3>
-                    {selectedShowtime && (
-                      <div className="seat-sidebar-subtitle">
-                        <span>2D Phụ Đề</span>
-                        <span> - </span>
-                        <span className="seat-sidebar-age-badge">{selectedShowtime.ageRating || 'P'}</span>
-                      </div>
-                    )}
+            {/* Movie & Showtime Header */}
+            <div className="pos-receipt-movie">
+              {selectedShowtime && (
+                <SafeImage
+                  src={posterUrl}
+                  alt={selectedShowtime.movieName}
+                  className="pos-receipt-poster"
+                />
+              )}
+              <div className="pos-receipt-movie-info">
+                <h3>
+                  {selectedShowtime ? selectedShowtime.movieName : 'Chưa chọn suất chiếu'}
+                </h3>
+                {selectedShowtime ? (
+                  <div className="pos-receipt-meta">
+                    <span>
+                      Rạp: <strong>{selectedShowtime.branchName}</strong>
+                    </span>
+                    <span>
+                      Phòng:{' '}
+                      <strong>
+                        {selectedShowtime.roomName}
+                        {selectedShowtime.roomType ? ` (${selectedShowtime.roomType})` : ''}
+                      </strong>
+                    </span>
+                    <span>
+                      Suất:{' '}
+                      <strong style={{ color: 'var(--blue)' }}>
+                        {formatTime(selectedShowtime.startTime)}
+                      </strong>{' '}
+                      • {formatDate(selectedShowtime.startTime)}
+                    </span>
                   </div>
-                </div>
-
-                {/* Cinema + Showtime info (matching user page) */}
-                <div className="seat-sidebar-cinema">
-                  <div className="seat-sidebar-cinema-name">
-                    {selectedShowtime
-                      ? `${selectedShowtime.branchName}${selectedShowtime.roomName ? ` - ${selectedShowtime.roomName} (${selectedShowtime.roomType})` : ''}`
-                      : '-'}
-                  </div>
-                  {selectedShowtime?.startTime && (
-                    <div className="seat-sidebar-cinema-time">
-                      Suất <strong>{formatTime(selectedShowtime.startTime)}</strong> - {formatDate(selectedShowtime.startTime)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Ticket Items (matching user page seat groups) */}
-                {seatGroups.length > 0 && (
-                  <div className="seat-sidebar-items">
-                    {seatGroups.map(([type, data]) => (
-                      <div key={type} className="seat-sidebar-item">
-                        <div className="seat-sidebar-item-info">
-                          <span className="seat-sidebar-item-qty">{data.seats.length}x</span>
-                          <div>
-                            <div className="seat-sidebar-item-name">{type}</div>
-                            <div className="seat-sidebar-item-detail">Ghế: {data.seats.join(', ')}</div>
-                          </div>
-                        </div>
-                        <span className="seat-sidebar-item-price">{formatCurrency(data.price * data.seats.length)}</span>
-                      </div>
-                    ))}
+                ) : (
+                  <div className="pos-receipt-empty">
+                    Vui lòng chọn một suất chiếu ở bảng bên trái để bắt đầu tạo hóa đơn.
                   </div>
                 )}
-
-                {/* Food Items (matching user page) */}
-                {selectedFoodItems.length > 0 && (
-                  <div className="seat-sidebar-items">
-                    {selectedFoodItems.map((food) => (
-                      <div key={food.id} className="seat-sidebar-item">
-                        <div className="seat-sidebar-item-info">
-                          <span className="seat-sidebar-item-qty">{food.quantity}x</span>
-                          <div>
-                            <div className="seat-sidebar-item-name">{food.name}</div>
-                          </div>
-                        </div>
-                        <span className="seat-sidebar-item-price">{formatCurrency(food.price * food.quantity)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Promo discount */}
-                {promoDiscount > 0 && (
-                  <div className="seat-sidebar-items" style={{ color: 'var(--seat-available)' }}>
-                    <div className="seat-sidebar-item">
-                      <div className="seat-sidebar-item-info">
-                        <div>
-                          <div className="seat-sidebar-item-name" style={{ color: 'var(--seat-available)' }}>Mã giảm giá</div>
-                        </div>
-                      </div>
-                      <span className="seat-sidebar-item-price" style={{ color: 'var(--seat-available)' }}>- {formatCurrency(promoDiscount)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Total (matching user page) */}
-                <div className="seat-sidebar-total">
-                  <span>Tổng cộng</span>
-                  <strong>{formatCurrency(finalPrice)}</strong>
-                </div>
-
-                {/* Actions (matching user page button style) */}
-                <div className="seat-sidebar-actions">
-                  {currentStep === 'SELECTION' && (
-                    <button
-                      type="button"
-                      className="btn btn-primary seat-sidebar-btn"
-                      style={{ width: '100%' }}
-                      disabled={!canContinueSelection}
-                      onClick={continueFromSelection}
-                    >
-                      Tiếp tục chọn ghế
-                    </button>
-                  )}
-                  {currentStep === 'SEATS' && (
-                    <>
-                      <button type="button" className="btn btn-secondary seat-sidebar-btn" onClick={() => setCurrentStep('SELECTION')}>Quay lại</button>
-                      <button type="button" className="btn btn-primary seat-sidebar-btn" disabled={!canContinueSeats} onClick={continueFromSeats}>
-                        Tiếp tục
-                      </button>
-                    </>
-                  )}
-                  {currentStep === 'ADDONS' && (
-                    <>
-                      <button type="button" className="btn btn-secondary seat-sidebar-btn" onClick={() => setCurrentStep('SEATS')}>Quay lại</button>
-                      <button type="button" className="btn btn-primary seat-sidebar-btn" onClick={continueToCheckout}>
-                        Thanh toán
-                      </button>
-                    </>
-                  )}
-                  {currentStep === 'CHECKOUT' && (
-                    <>
-                      <button type="button" className="btn btn-secondary seat-sidebar-btn" onClick={() => setCurrentStep(foods.length > 0 ? 'ADDONS' : 'SEATS')}>Quay lại</button>
-                      <button type="submit" className="btn btn-primary seat-sidebar-btn" disabled={submitting}>
-                        {submitting ? 'Đang xử lý...' : 'Xác nhận đơn'}
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
-            </aside>
-          </div>
-        )}
-      </div>
+            </div>
 
-      {/* Mobile booking bar (matching user page) */}
+            {/* Selected Seats Section */}
+            <div className="pos-receipt-section">
+              <div className="pos-receipt-section-head">
+                <span>Ghế đã chọn ({selectedSeats.length})</span>
+                {selectedSeats.length > 0 && <span>{formatCurrency(seatTotal)}</span>}
+              </div>
+
+              {selectedSeatTickets.length === 0 ? (
+                <div className="pos-receipt-empty">Chưa chọn ghế nào</div>
+              ) : (
+                <>
+                  <div className="pos-seat-chips">
+                    {selectedSeatTickets.map((t) => (
+                      <span key={t.seatId} className="pos-seat-chip">
+                        {t.seatCode || `${t.rowLabel || ''}${t.seatNumber || ''}`}
+                        <button
+                          type="button"
+                          onClick={() => toggleSeat(t)}
+                          title="Bỏ ghế này"
+                        >
+                          <XIcon size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  {seatGroups.map(([type, data]) => (
+                    <div key={type} className="pos-receipt-line">
+                      <span className="pos-receipt-line-name">
+                        {data.seats.length}x {type}
+                      </span>
+                      <span className="pos-receipt-line-price">
+                        {formatCurrency(data.price * data.seats.length)}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+
+            {/* Selected Foods Section */}
+            <div className="pos-receipt-section">
+              <div className="pos-receipt-section-head">
+                <span>Bắp nước kèm ({foodQuantity})</span>
+                {foodTotal > 0 && <span>{formatCurrency(foodTotal)}</span>}
+              </div>
+
+              {selectedFoodItems.length === 0 ? (
+                <div className="pos-receipt-empty">Không có đồ ăn kèm</div>
+              ) : (
+                selectedFoodItems.map((food) => (
+                  <div key={food.id} className="pos-receipt-line">
+                    <span className="pos-receipt-line-name">
+                      {food.quantity}x {food.name}
+                    </span>
+                    <span className="pos-receipt-line-price">
+                      {formatCurrency(food.price * food.quantity)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Totals Summary */}
+            <div className="pos-receipt-summary">
+              <div className="pos-receipt-line">
+                <span style={{ color: '#64748b' }}>Tạm tính</span>
+                <strong>{formatCurrency(total)}</strong>
+              </div>
+              {promoDiscount > 0 && (
+                <div className="pos-receipt-line" style={{ color: 'var(--green)' }}>
+                  <span>Mã giảm giá ({promoCode})</span>
+                  <strong>-{formatCurrency(promoDiscount)}</strong>
+                </div>
+              )}
+              <div className="pos-receipt-total-row">
+                <span>Tổng thu</span>
+                <strong>{formatCurrency(finalPrice)}</strong>
+              </div>
+            </div>
+
+            {/* Step Navigation Buttons */}
+            <div className="pos-receipt-actions">
+              {currentStep === 'SELECTION' && (
+                <button
+                  type="button"
+                  className="btn btn-primary seat-sidebar-btn"
+                  style={{ width: '100%' }}
+                  disabled={!canContinueSelection}
+                  onClick={continueFromSelection}
+                >
+                  <span>Tiếp tục chọn ghế</span>
+                  <ArrowRightIcon size={16} />
+                </button>
+              )}
+
+              {currentStep === 'SEATS' && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary seat-sidebar-btn"
+                    onClick={() => setCurrentStep('SELECTION')}
+                  >
+                    <ArrowLeftIcon size={16} />
+                    <span>Đổi suất</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary seat-sidebar-btn"
+                    disabled={!canContinueSeats}
+                    onClick={continueFromSeats}
+                  >
+                    <span>Tiếp tục</span>
+                    <ArrowRightIcon size={16} />
+                  </button>
+                </>
+              )}
+
+              {currentStep === 'ADDONS' && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary seat-sidebar-btn"
+                    onClick={() => setCurrentStep('SEATS')}
+                  >
+                    <ArrowLeftIcon size={16} />
+                    <span>Sơ đồ ghế</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary seat-sidebar-btn"
+                    onClick={continueToCheckout}
+                  >
+                    <span>Sang thanh toán</span>
+                    <ArrowRightIcon size={16} />
+                  </button>
+                </>
+              )}
+
+              {currentStep === 'CHECKOUT' && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary seat-sidebar-btn"
+                    onClick={() => setCurrentStep(foods.length > 0 ? 'ADDONS' : 'SEATS')}
+                  >
+                    <ArrowLeftIcon size={16} />
+                    <span>Quay lại</span>
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary seat-sidebar-btn"
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      'Đang xử lý...'
+                    ) : paymentMethod === 'CASH' ? (
+                      <>
+                        <CheckIcon size={16} />
+                        <span>Thu tiền & Xuất vé</span>
+                      </>
+                    ) : (
+                      'Chuyển sang VNPay'
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Mobile bottom bar */}
       {!lastBooking && selectedSeats.length > 0 && (
         <div className="booking-bar seat-page-mobile-bar">
           <span>
@@ -1204,7 +2062,7 @@ export default function StaffBookingPage() {
           <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
           {currentStep === 'CHECKOUT' ? (
             <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+              {submitting ? 'Đang xử lý...' : 'Xuất vé'}
             </button>
           ) : (
             <button

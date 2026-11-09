@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { foodApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
+import { EditIcon, PlusIcon, SearchIcon, TrashIcon } from '../../components/Common/CinemaIcons';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', {
@@ -145,19 +146,7 @@ const FoodManagement = () => {
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            width="18"
-            height="18"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <PlusIcon size={18} />
           Thêm sản phẩm
         </button>
       </div>
@@ -165,15 +154,8 @@ const FoodManagement = () => {
       <div className="admin-table-card">
         <div className="table-header">
           <div style={{ position: 'relative', maxWidth: '320px', flex: 1 }}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              width="16"
-              height="16"
+            <SearchIcon
+              size={16}
               style={{
                 position: 'absolute',
                 left: '14px',
@@ -182,10 +164,7 @@ const FoodManagement = () => {
                 color: 'var(--text-muted)',
                 pointerEvents: 'none',
               }}
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            />
             <input
               type="text"
               className="input"
@@ -297,19 +276,7 @@ const FoodManagement = () => {
                         title="Sửa"
                         onClick={() => handleOpenModal(food)}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          width="15"
-                          height="15"
-                        >
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
+                        <EditIcon size={15} />
                       </button>
                       <button
                         className="btn btn-ghost btn-sm"
@@ -317,19 +284,7 @@ const FoodManagement = () => {
                         style={{ color: '#ef4444' }}
                         onClick={() => handleDelete(food.id, food.name)}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          width="15"
-                          height="15"
-                        >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
+                        <TrashIcon size={15} />
                       </button>
                     </div>
                   </td>

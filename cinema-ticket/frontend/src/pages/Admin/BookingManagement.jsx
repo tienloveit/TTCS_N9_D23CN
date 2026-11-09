@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { bookingApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
+import { BellIcon, SearchIcon } from '../../components/Common/CinemaIcons';
 
 const BookingManagement = () => {
   const { isAdmin, isManager } = useAuth();
@@ -96,8 +97,8 @@ const BookingManagement = () => {
           <p className="page-subtitle">
             <strong>{bookings.length}</strong> đơn · Doanh thu: <strong style={{ color: 'var(--green)' }}>{formatCurrency(totalRevenue)}</strong>
             {refundRequestCount > 0 && (
-              <span style={{ marginLeft: 12, color: '#f97316', fontWeight: 700 }}>
-                · 🔔 {refundRequestCount} yêu cầu hoàn tiền
+              <span style={{ marginLeft: 12, color: '#f97316', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                · <BellIcon size={15} /> {refundRequestCount} yêu cầu hoàn tiền
               </span>
             )}
           </p>
@@ -108,10 +109,10 @@ const BookingManagement = () => {
         <div className="table-header" style={{ gap: '12px', flexWrap: 'wrap' }}>
           {/* Search */}
           <div style={{ position: 'relative', maxWidth: '280px', flex: 1 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            <SearchIcon
+              size={16}
+              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+            />
             <input
               type="text"
               className="input"
