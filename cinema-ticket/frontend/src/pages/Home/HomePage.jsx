@@ -12,13 +12,17 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
+  FilmIcon,
   GlobeIcon,
   MessageIcon,
+  PlayIcon,
   SearchIcon,
   SendIcon,
   SparkIcon,
+  StarIcon,
   TicketIcon,
   XCircleIcon,
+  XIcon,
 } from '../../components/Common/CinemaIcons';
 
 const AI_SUGGESTIONS = [
@@ -74,6 +78,7 @@ export default function HomePage() {
   const [showtimes, setShowtimes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [activeFeedTab, setActiveFeedTab] = useState('ALL');
   const [bannerIndex, setBannerIndex] = useState(0);
   const [bannerDirection, setBannerDirection] = useState(1);
   const [bannerPaused, setBannerPaused] = useState(false);
@@ -769,121 +774,192 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* ==================== SEARCH ==================== */}
-      <div className="container" style={{ marginTop: 32 }}>
-        <div className="search-bar">
-          <SearchIcon className="search-icon" />
-          <input
-            className="search-input"
-            type="text"
-            placeholder="Tìm kiếm phim theo tên..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="search-clear" onClick={() => setSearch('')}>✕</button>
-          )}
+      {/* ==================== DISCOVERY BAR ==================== */}
+      <div className="container">
+        <div className="home-discovery-bar">
+          <div className="home-tab-pills" role="tablist" aria-label="Lọc danh mục phim">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeFeedTab === 'ALL'}
+              className={`home-tab-pill ${activeFeedTab === 'ALL' ? 'is-active' : ''}`}
+              onClick={() => setActiveFeedTab('ALL')}
+            >
+              <FilmIcon size={16} />
+              Tất cả
+              <span className="home-tab-count">{filteredNowShowing.length + filteredUpcoming.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeFeedTab === 'NOW_SHOWING'}
+              className={`home-tab-pill ${activeFeedTab === 'NOW_SHOWING' ? 'is-active' : ''}`}
+              onClick={() => setActiveFeedTab('NOW_SHOWING')}
+            >
+              <SparkIcon size={16} />
+              Đang chiếu
+              <span className="home-tab-count">{filteredNowShowing.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeFeedTab === 'UPCOMING'}
+              className={`home-tab-pill ${activeFeedTab === 'UPCOMING' ? 'is-active' : ''}`}
+              onClick={() => setActiveFeedTab('UPCOMING')}
+            >
+              <CalendarIcon size={16} />
+              Sắp chiếu
+              <span className="home-tab-count">{filteredUpcoming.length}</span>
+            </button>
+          </div>
+
+          <div className="home-inline-search">
+            <SearchIcon size={16} className="home-inline-search-icon" />
+            <input
+              type="text"
+              aria-label="Lọc nhanh tên phim"
+              placeholder="Lọc nhanh tên phim..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                className="home-inline-search-clear"
+                aria-label="Xoá từ khoá lọc"
+                onClick={() => setSearch('')}
+              >
+                <XIcon size={13} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ==================== PHIM ĐANG CHIẾU ==================== */}
-      <section className="container section">
-        <div className="section-header">
-          <h2 className="section-title">
-            <SparkIcon className="section-icon" />
-            Phim đang chiếu
-          </h2>
-          <span className="section-count">{filteredNowShowing.length} phim</span>
-        </div>
-
-        {filteredNowShowing.length === 0 ? (
-          <EmptyState
-            title="Không tìm thấy phim"
-            message={search ? `Không tìm thấy kết quả nào cho "${search}".` : "Hiện tại chưa có phim nào đang chiếu."}
-            buttonText="Xem tất cả phim"
-          />
-        ) : (
-          <div className="movie-grid">
-            {filteredNowShowing.map((movie) => (
-              <Motion.div
-                key={movie.movieId}
-                className="card movie-card"
-                onClick={() => navigate(`/movie/${movie.movieId}`)}
-                whileHover={{ y: -3, scale: 1.01 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="movie-poster-wrap">
-                  <SafeImage
-                    className="movie-poster"
-                    src={movie.thumbnailUrl}
-                    alt={movie.movieName}
-                  />
-                  <div className="movie-overlay">
-                    <button className="btn btn-primary btn-sm">Đặt vé</button>
-                  </div>
-                </div>
-                <div className="movie-info">
-                  <h3 className="movie-title">{movie.movieName}</h3>
-                  <div className="movie-meta">
-                    {movie.durationMinutes && (
-                      <span>
-                        <ClockIcon className="inline-icon" />
-                        {movie.durationMinutes}p
-                      </span>
-                    )}
-                    {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
-                  </div>
-                </div>
-              </Motion.div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ==================== PHIM SẮP CHIẾU ==================== */}
-      {filteredUpcoming.length > 0 && (
+      {(activeFeedTab === 'ALL' || activeFeedTab === 'NOW_SHOWING') && (
         <section className="container section">
           <div className="section-header">
             <h2 className="section-title">
-              <CalendarIcon className="section-icon" />
-              Phim sắp chiếu
+              <SparkIcon className="section-icon" />
+              Phim đang chiếu
             </h2>
-            <span className="section-count">{filteredUpcoming.length} phim</span>
+            <span className="section-count">{filteredNowShowing.length} phim</span>
           </div>
 
-          <div className="movie-grid">
-            {filteredUpcoming.map((movie) => (
-              <Motion.div
-                key={movie.movieId}
-                className="card movie-card movie-card--upcoming"
-                onClick={() => navigate(`/movie/${movie.movieId}`)}
-                whileHover={{ y: -3, scale: 1.01 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="movie-poster-wrap">
-                  <SafeImage
-                    className="movie-poster"
-                    src={movie.thumbnailUrl}
-                    alt={movie.movieName}
-                  />
-                  <div className="movie-upcoming-badge">Sắp chiếu</div>
-                </div>
-                <div className="movie-info">
-                  <h3 className="movie-title">{movie.movieName}</h3>
-                  <div className="movie-meta">
-                    {movie.releaseDate && (
-                      <span>
-                        <CalendarIcon className="inline-icon" />
-                        {formatDate(movie.releaseDate)}
-                      </span>
-                    )}
-                    {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
+          {filteredNowShowing.length === 0 ? (
+            <EmptyState
+              title="Không tìm thấy phim"
+              message={search ? `Không tìm thấy kết quả nào cho "${search}".` : 'Hiện tại chưa có phim nào đang chiếu.'}
+              buttonText="Xem tất cả phim"
+            />
+          ) : (
+            <div className="movie-grid">
+              {filteredNowShowing.map((movie) => (
+                <Motion.div
+                  key={movie.movieId}
+                  className="card movie-card"
+                  onClick={() => navigate(`/movie/${movie.movieId}`)}
+                  whileHover={{ y: -3, scale: 1.01 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="movie-poster-wrap">
+                    <SafeImage
+                      className="movie-poster"
+                      src={movie.thumbnailUrl}
+                      alt={movie.movieName}
+                    />
+                    <div className="movie-overlay">
+                      <button type="button" className="btn btn-primary btn-sm">
+                        <TicketIcon size={15} /> Đặt vé
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Motion.div>
-            ))}
-          </div>
+                  <div className="movie-info">
+                    <h3 className="movie-title">{movie.movieName}</h3>
+                    <div className="movie-meta">
+                      {movie.durationMinutes && (
+                        <span>
+                          <ClockIcon className="inline-icon" />
+                          {movie.durationMinutes}p
+                        </span>
+                      )}
+                      {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
+                    </div>
+                    {movie.ratingCount > 0 && (
+                      <div className="movie-card-rating">
+                        <StarIcon size={14} style={{ color: 'var(--gold)', fill: 'var(--gold)' }} />
+                        {Number(movie.averageRating || 0).toFixed(1)} ({movie.ratingCount})
+                      </div>
+                    )}
+                  </div>
+                </Motion.div>
+              ))}
+            </div>
+          )}
         </section>
+      )}
+
+      {/* ==================== PHIM SẮP CHIẾU ==================== */}
+      {(activeFeedTab === 'ALL' || activeFeedTab === 'UPCOMING') && (
+        filteredUpcoming.length > 0 || activeFeedTab === 'UPCOMING' ? (
+          <section className="container section">
+            <div className="section-header">
+              <h2 className="section-title">
+                <CalendarIcon className="section-icon" />
+                Phim sắp chiếu
+              </h2>
+              <span className="section-count">{filteredUpcoming.length} phim</span>
+            </div>
+
+            {filteredUpcoming.length === 0 ? (
+              <EmptyState
+                title="Chưa có phim sắp chiếu"
+                message={search ? `Không tìm thấy phim sắp chiếu nào cho "${search}".` : 'Hiện tại chưa có phim sắp chiếu.'}
+                buttonText="Xem phim đang chiếu"
+                onAction={() => setActiveFeedTab('NOW_SHOWING')}
+              />
+            ) : (
+              <div className="movie-grid">
+                {filteredUpcoming.map((movie) => (
+                  <Motion.div
+                    key={movie.movieId}
+                    className="card movie-card movie-card--upcoming"
+                    onClick={() => navigate(`/movie/${movie.movieId}`)}
+                    whileHover={{ y: -3, scale: 1.01 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="movie-poster-wrap">
+                      <SafeImage
+                        className="movie-poster"
+                        src={movie.thumbnailUrl}
+                        alt={movie.movieName}
+                      />
+                      <div className="movie-upcoming-badge">Sắp chiếu</div>
+                      <div className="movie-overlay">
+                        <button type="button" className="btn btn-secondary btn-sm">
+                          <PlayIcon size={14} /> Chi tiết
+                        </button>
+                      </div>
+                    </div>
+                    <div className="movie-info">
+                      <h3 className="movie-title">{movie.movieName}</h3>
+                      <div className="movie-meta">
+                        {movie.releaseDate && (
+                          <span>
+                            <CalendarIcon className="inline-icon" />
+                            {formatDate(movie.releaseDate)}
+                          </span>
+                        )}
+                        {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
+                      </div>
+                    </div>
+                  </Motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null
       )}
     </div>
   );

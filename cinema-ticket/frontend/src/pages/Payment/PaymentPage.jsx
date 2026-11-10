@@ -2,6 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { bookingApi, vnpayApi, promotionApi } from '../../api';
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  CreditCardIcon,
+  GiftIcon,
+  PopcornIcon,
+  ShieldIcon,
+  TicketIcon,
+  TimerIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
 
 export default function PaymentPage() {
   const { bookingId } = useParams();
@@ -9,6 +20,8 @@ export default function PaymentPage() {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(null);
   const [promoCode, setPromoCode] = useState('');
@@ -20,15 +33,21 @@ export default function PaymentPage() {
 
   const handleCancel = useCallback(
     async (auto = false) => {
+      if (!auto) setCancelling(true);
       try {
         await bookingApi.cancel(bookingId);
         if (auto) {
           toast.error('Hết thời gian giữ ghế. Đơn hàng của bạn đã bị huỷ.');
+        } else {
+          toast.info('Đã huỷ đơn đặt vé.');
         }
         navigate('/movies');
       } catch {
         if (auto) toast.error('Hết thời gian giữ ghế.');
         navigate('/movies');
+      } finally {
+        setCancelling(false);
+        setShowCancelConfirm(false);
       }
     },
     [bookingId, navigate]
@@ -99,15 +118,17 @@ export default function PaymentPage() {
 
   const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
 
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim()) return;
+  const handleApplyPromo = async (overrideCode) => {
+    const codeToApply = (typeof overrideCode === 'string' ? overrideCode : promoCode).trim();
+    if (!codeToApply) return;
     setApplyingPromo(true);
     setPromoError('');
     try {
-      const res = await bookingApi.applyPromotion(bookingId, promoCode);
+      const res = await bookingApi.applyPromotion(bookingId, codeToApply);
       setBooking(res.data.result);
       setPromoCode('');
       setShowPromos(false);
+      toast.success(`Đã áp dụng mã ${codeToApply}!`);
     } catch (err) {
       setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
     } finally {
@@ -195,212 +216,310 @@ export default function PaymentPage() {
     { label: 'Xác nhận' },
   ];
 
+  const isUrgent = timeLeft !== null && timeLeft < 60;
+
   return (
     <div className="page">
       <div className="container">
         <div className="booking-steps">
           {steps.map((step, i) => (
             <div key={i} className={`booking-step ${step.active ? 'booking-step--active' : ''} ${step.done ? 'booking-step--done' : ''}`}>
-              <div className="booking-step-dot">{step.done ? '✓' : i + 1}</div>
+              <div className="booking-step-dot">{step.done ? <CheckIcon size={14} /> : i + 1}</div>
               <span className="booking-step-label">{step.label}</span>
               {i < steps.length - 1 && <div className="booking-step-line" />}
             </div>
           ))}
         </div>
-      </div>
-      <div className="container" style={{ maxWidth: 600 }}>
-        <div className="page-header" style={{ textAlign: 'center' }}>
-          <h1 className="page-title">Thanh toán</h1>
-          <p className="page-subtitle">Hoàn tất bước cuối cùng để nhận vé</p>
 
-          {timeLeft !== null && (
-            <div
-              style={{
-                marginTop: 16,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 20px',
-                background:
-                  timeLeft < 60 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                color: timeLeft < 60 ? '#ef4444' : '#f59e0b',
-                borderRadius: 100,
-                fontWeight: 700,
-                fontSize: '1.2rem',
-                border: `1px solid ${timeLeft < 60 ? '#ef444430' : '#f59e0b30'}`,
-              }}
-            >
-              <span>{formatTimeLimit(timeLeft)}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="card" style={{ padding: 32 }}>
-          <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-            <h3 style={{ marginBottom: 12 }}>Thông tin vé</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Phim:</span>
-              <strong style={{ textAlign: 'right' }}>{booking.movieName}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Suất chiếu:</span>
-              <span>{formatShowtime(booking.showtimeStart)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Phòng:</span>
-              <span>{booking.roomName}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Ghế:</span>
-              <strong style={{ color: 'var(--accent)', textAlign: 'right' }}>{seatCodes}</strong>
-            </div>
-          </div>
-
-          {bookingFoods.length > 0 && (
-            <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-              <h3 style={{ marginBottom: 12 }}>Đồ ăn</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {bookingFoods.map((food) => (
-                  <div
-                    key={food.foodId}
-                    style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}
-                  >
-                    <span style={{ color: 'var(--text-secondary)' }}>
-                      {food.foodName} x{food.quantity}
-                    </span>
-                    <strong>{formatCurrency(food.subtotal)}</strong>
-                  </div>
-                ))}
+        <div className="pay-layout" style={{ marginTop: 12 }}>
+          {/* ===== LEFT COLUMN: Timer + Promotions + Payment Method ===== */}
+          <div className="pay-main">
+            {timeLeft !== null && (
+              <div className={`pay-timer-banner ${isUrgent ? 'is-urgent' : ''}`} role="timer" aria-live="polite">
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.95rem' }}>
+                    Thời gian giữ ghế còn lại
+                  </strong>
+                  <span style={{ fontSize: '0.82rem', opacity: 0.9 }}>
+                    Vui lòng hoàn tất thanh toán trước khi hết giờ
+                  </span>
+                </div>
+                <div className="pay-timer-clock">
+                  <TimerIcon size={20} />
+                  <span>{formatTimeLimit(timeLeft)}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Mã khuyến mãi */}
-          <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Mã khuyến mãi</h3>
-              {!booking.promotionCode && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={handleShowPromos} style={{ fontSize: '0.85rem' }}>
-                  {showPromos ? 'Đóng' : 'Xem mã khả dụng'}
-                </button>
+            {/* Mã khuyến mãi */}
+            <div className="pay-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <h2 className="pay-section-title" style={{ margin: 0 }}>
+                  <GiftIcon size={18} style={{ color: 'var(--accent)' }} />
+                  Ưu đãi & Mã giảm giá
+                </h2>
+                {!booking.promotionCode && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleShowPromos}
+                    style={{ fontSize: '0.85rem', color: 'var(--blue)' }}
+                  >
+                    {showPromos ? 'Ẩn danh sách mã' : 'Xem mã khả dụng'}
+                  </button>
+                )}
+              </div>
+
+              {booking.promotionCode ? (
+                <div className="pay-promo-applied">
+                  <div>
+                    <div style={{ fontWeight: 800, color: 'var(--seat-available)', letterSpacing: 0.8 }}>
+                      {booking.promotionCode}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                      Đã giảm: <strong>-{formatCurrency(booking.discountAmount)}</strong>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleRemovePromo}
+                    disabled={applyingPromo}
+                    aria-label="Gỡ mã giảm giá"
+                    style={{ color: '#ef4444', padding: 6 }}
+                  >
+                    <XIcon size={18} />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <input
+                      type="text"
+                      className="input"
+                      aria-label="Nhập mã giảm giá"
+                      placeholder="Nhập mã khuyến mãi (VD: MOVIEPTIT)..."
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      style={{ textTransform: 'uppercase', flex: 1 }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => handleApplyPromo()}
+                      disabled={applyingPromo || !promoCode.trim()}
+                    >
+                      {applyingPromo ? 'Đang áp dụng...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 8 }}>{promoError}</div>
+                  )}
+                  {showPromos && (
+                    <div className="pay-promo-list">
+                      {loadingPromos ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: 8 }}>
+                          Đang tải danh sách mã...
+                        </div>
+                      ) : availablePromos.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: 8 }}>
+                          Hiện chưa có mã giảm giá khả dụng
+                        </div>
+                      ) : (
+                        availablePromos.map((promo) => (
+                          <button
+                            key={promo.id || promo.code}
+                            type="button"
+                            className="pay-promo-option"
+                            disabled={applyingPromo}
+                            onClick={() => handleApplyPromo(promo.code)}
+                          >
+                            <div>
+                              <strong style={{ color: 'var(--seat-available)', fontSize: '0.92rem' }}>
+                                {promo.code}
+                              </strong>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                {promo.description ||
+                                  `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--blue)' }}>
+                              Dùng ngay
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
-            {booking.promotionCode ? (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)',
-                borderRadius: 8, padding: '10px 14px'
-              }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--seat-available)', letterSpacing: 1 }}>
-                    {booking.promotionCode}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                    Giảm: -{formatCurrency(booking.discountAmount)}
-                  </div>
+            {/* Phương thức thanh toán */}
+            <div className="pay-card">
+              <h2 className="pay-section-title">
+                <CreditCardIcon size={18} style={{ color: 'var(--blue)' }} />
+                Phương thức thanh toán
+              </h2>
+              <div className="pay-method-box">
+                <span className="pay-method-badge">VNPAY</span>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    Cổng thanh toán VNPay QR / Thẻ ATM / Quốc tế
+                  </strong>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    Xác nhận vé tự động ngay sau khi giao dịch thành công
+                  </span>
                 </div>
-                <button type="button" className="btn btn-ghost btn-sm"
-                  onClick={handleRemovePromo} disabled={applyingPromo}
-                  style={{ color: '#ef4444', fontSize: '1.2rem', lineHeight: 1 }}>
-                  ×
+                <CheckIcon size={18} style={{ color: 'var(--blue)' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <ShieldIcon size={15} style={{ color: 'var(--green)' }} />
+                <span>Giao dịch được bảo mật 100% qua cổng VNPay chuẩn PCI-DSS.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ===== RIGHT COLUMN: Ticket Receipt Summary ===== */}
+          <aside className="pay-sidebar">
+            <div className="pay-card">
+              <h2 className="pay-section-title">
+                <TicketIcon size={18} style={{ color: 'var(--accent)' }} />
+                Chi tiết đơn đặt vé
+              </h2>
+
+              <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 10 }}>
+                  {booking.movieName}
+                </div>
+                <div className="pay-summary-row">
+                  <span style={{ color: 'var(--text-secondary)' }}>Suất chiếu:</span>
+                  <strong>{formatShowtime(booking.showtimeStart)}</strong>
+                </div>
+                {booking.branchName && (
+                  <div className="pay-summary-row">
+                    <span style={{ color: 'var(--text-secondary)' }}>Rạp:</span>
+                    <span>{booking.branchName}</span>
+                  </div>
+                )}
+                <div className="pay-summary-row">
+                  <span style={{ color: 'var(--text-secondary)' }}>Phòng chiếu:</span>
+                  <span>{booking.roomName}</span>
+                </div>
+                <div className="pay-summary-row">
+                  <span style={{ color: 'var(--text-secondary)' }}>Ghế đã chọn:</span>
+                  <strong style={{ color: 'var(--accent)' }}>{seatCodes}</strong>
+                </div>
+              </div>
+
+              {bookingFoods.length > 0 && (
+                <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.88rem', fontWeight: 700, marginBottom: 8 }}>
+                    <PopcornIcon size={15} style={{ color: 'var(--gold)' }} />
+                    <span>Bắp nước đi kèm</span>
+                  </div>
+                  {bookingFoods.map((food) => (
+                    <div key={food.foodId} className="pay-summary-row" style={{ padding: '4px 0' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>
+                        {food.foodName} x{food.quantity}
+                      </span>
+                      <strong>{formatCurrency(food.subtotal)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <div className="pay-summary-row">
+                  <span style={{ color: 'var(--text-secondary)' }}>Tạm tính:</span>
+                  <span>{formatCurrency(Number(booking.totalAmount) + Number(booking.discountAmount || 0))}</span>
+                </div>
+                {booking.discountAmount > 0 && (
+                  <div className="pay-summary-row" style={{ color: 'var(--seat-available)', fontWeight: 700 }}>
+                    <span>Giảm giá ({booking.promotionCode}):</span>
+                    <span>-{formatCurrency(booking.discountAmount)}</span>
+                  </div>
+                )}
+                <div className="pay-summary-total">
+                  <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>Tổng thanh toán:</span>
+                  <strong style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--accent)' }}>
+                    {formatCurrency(booking.totalAmount)}
+                  </strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 22 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ width: '100%', height: 52, fontSize: '1.02rem' }}
+                  onClick={handleVNPayPayment}
+                  disabled={paying || cancelling}
+                >
+                  <CreditCardIcon size={18} />
+                  {paying ? 'Đang chuyển hướng VNPay...' : 'Thanh toán qua VNPay'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                  onClick={() => setShowCancelConfirm(true)}
+                  disabled={paying || cancelling}
+                >
+                  Huỷ đặt vé
                 </button>
               </div>
-            ) : (
-              <div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Nhập mã giảm giá..."
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    style={{ textTransform: 'uppercase', flex: 1 }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
-                  />
-                  <button type="button" className="btn btn-secondary"
-                    onClick={handleApplyPromo}
-                    disabled={applyingPromo || !promoCode.trim()}>
-                    {
-                      applyingPromo ? '...' : 'Áp dụng'}
-                  </button>
-                </div>
-                {promoError && (
-                  <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>{promoError}</div>
-                )}
-                {showPromos && (
-                  <div style={{ marginTop: 12, background: 'var(--bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', maxHeight: 200, overflowY: 'auto' }}>
-                    {loadingPromos ? (
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải...</div>
-                    ) : availablePromos.length === 0 ? (
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Không có mã khả dụng</div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {availablePromos.map(promo => (
-                          <div key={promo.id}
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--border)' }}
-                            onClick={() => {
-                              setPromoCode(promo.code);
-                              setShowPromos(false);
-                            }}>
-                            <div>
-                              <strong style={{ color: 'var(--seat-available)' }}>{promo.code}</strong>
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                {promo.description || `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
-                              </div>
-                            </div>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chọn</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: booking.discountAmount > 0 ? 8 : 0 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Tạm tính:</span>
-              <span>{formatCurrency((Number(booking.totalAmount) + Number(booking.discountAmount || 0)))}</span>
             </div>
-            {booking.discountAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, color: 'var(--seat-available)', fontWeight: 600 }}>
-                <span>Giảm giá:</span>
-                <span>-{formatCurrency(booking.discountAmount)}</span>
-              </div>
-            )}
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              paddingTop: 12, borderTop: '1px dashed var(--border)'
-            }}>
-              <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Tổng tiền:</span>
-              <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--gold)' }}>
-                {formatCurrency(booking.totalAmount)}
-              </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button
-              className="btn btn-primary"
-              style={{ width: '100%', height: 54, fontSize: '1.1rem' }}
-              onClick={handleVNPayPayment}
-              disabled={paying}
-            >
-              {paying ? 'Đang chuyển hướng...' : 'Thanh toán qua VNPay'}
-            </button>
-            <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => handleCancel(false)}>
-              Huỷ đặt vé
-            </button>
-          </div>
-
-          <p style={{ marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-            Bạn có 6 phút để hoàn tất thanh toán trước khi ghế được mở lại.
-          </p>
+          </aside>
         </div>
       </div>
+
+      {/* Confirm Cancel Modal */}
+      {showCancelConfirm && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Xác nhận huỷ đặt vé"
+          onClick={() => !cancelling && setShowCancelConfirm(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: 440, width: '92%', padding: '28px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: '#dc2626' }}>
+              <AlertTriangleIcon size={22} />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Xác nhận huỷ đơn đặt vé?
+              </h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: 22 }}>
+              Ghế <strong>{seatCodes}</strong> của phim <strong>{booking.movieName}</strong> sẽ được mở lại ngay cho khán giả khác.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={cancelling}
+              >
+                Tiếp tục thanh toán
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{ background: '#dc2626' }}
+                onClick={() => handleCancel(false)}
+                disabled={cancelling}
+              >
+                {cancelling ? 'Đang huỷ...' : 'Đồng ý huỷ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

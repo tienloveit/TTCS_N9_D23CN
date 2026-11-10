@@ -6,7 +6,7 @@ import { bookingApi, foodApi, ticketApi, promotionApi, showtimeApi, movieApi } f
 import { API_BASE_URL } from '../../api/axiosClient';
 import { useAuth } from '../../context/useAuth';
 import SafeImage from '../../components/Common/SafeImage';
-import { ClockIcon } from '../../components/Common/CinemaIcons';
+import { CheckIcon, ClockIcon, RotateCcwIcon } from '../../components/Common/CinemaIcons';
 
 export default function SeatSelectPage() {
   const { showtimeId } = useParams();
@@ -222,11 +222,30 @@ export default function SeatSelectPage() {
 
   const getSeatClass = (ticket) => {
     const status = ticket.displayStatus || ticket.ticketStatus;
-    if (selectedSeats.includes(ticket.seatId)) return 'seat seat--selected';
-    if (status === 'BOOKED') return 'seat seat--booked';
-    if (status === 'HOLDING') return 'seat seat--holding';
-    return 'seat seat--available';
+    const rawType = (ticket.seatType || '').toUpperCase();
+    const tierClass = rawType.includes('VIP')
+      ? ' seat--vip'
+      : rawType.includes('COUPLE') || rawType.includes('ĐÔI')
+        ? ' seat--couple'
+        : '';
+
+    if (selectedSeats.includes(ticket.seatId)) return `seat seat--selected${tierClass}`;
+    if (status === 'BOOKED') return `seat seat--booked${tierClass}`;
+    if (status === 'HOLDING') return `seat seat--holding${tierClass}`;
+    return `seat seat--available${tierClass}`;
   };
+
+  // Distinct seat tiers + prices for legend display
+  const seatTierPricing = useMemo(() => {
+    const map = new Map();
+    tickets.forEach((t) => {
+      const label = t.seatType || 'Ghế thường';
+      if (!map.has(label) && t.price != null) {
+        map.set(label, Number(t.price));
+      }
+    });
+    return Array.from(map.entries());
+  }, [tickets]);
 
   const handleSwitchShowtime = (newShowtimeId) => {
     if (String(newShowtimeId) === String(showtimeId)) return;
@@ -320,7 +339,7 @@ export default function SeatSelectPage() {
         <div className="booking-steps">
           {steps.map((step, i) => (
             <div key={i} className={`booking-step ${step.active ? 'booking-step--active' : ''} ${step.done ? 'booking-step--done' : ''}`}>
-              <div className="booking-step-dot">{step.done ? '✓' : i + 1}</div>
+              <div className="booking-step-dot">{step.done ? <CheckIcon size={14} /> : i + 1}</div>
               <span className="booking-step-label">{step.label}</span>
               {i < steps.length - 1 && <div className="booking-step-line" />}
             </div>
@@ -339,103 +358,148 @@ export default function SeatSelectPage() {
             {bookingStep === 1 && (
               <>
                 {/* Showtime Switcher */}
-            {siblingShowtimes.length > 1 && (
-              <div className="showtime-switcher">
-                <div className="showtime-switcher-label">
-                  <ClockIcon className="inline-icon" />
-                  Đổi suất chiếu
-                </div>
-                <div className="showtime-switcher-list">
-                  {siblingShowtimes.map((st) => (
-                    <button
-                      key={st.showtimeId}
-                      type="button"
-                      className={`showtime-switcher-btn ${String(st.showtimeId) === String(showtimeId) ? 'showtime-switcher-btn--active' : ''}`}
-                      onClick={() => handleSwitchShowtime(st.showtimeId)}
-                    >
-                      {formatTime(st.startTime)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Seat Map */}
-            <div className="card" style={{ padding: 32 }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-                <div className="seat-screen" />
-              </div>
-
-              <div className="seat-map-wrapper">
-                <div className="seat-map">
-                  {sortedRows.map(([row, seats]) => (
-                    <div key={row} className="seat-row">
-                      <span className="seat-row-label">{row}</span>
-                      {seats.map((ticket) => {
-                        const seatLabel = ticket.seatCode || `${row}${ticket.seatNumber || ''}`;
-
-                        return (
-                          <div
-                            key={ticket.ticketId}
-                            className={getSeatClass(ticket)}
-                            onClick={() => toggleSeat(ticket)}
-                            title={`${seatLabel} - ${ticket.displayStatus || ticket.ticketStatus}`}
-                          >
-                            {ticket.seatNumber || ''}
-                          </div>
-                        );
-                      })}
-                      <span className="seat-row-label">{row}</span>
+                {siblingShowtimes.length > 1 && (
+                  <div className="showtime-switcher">
+                    <div className="showtime-switcher-label">
+                      <ClockIcon className="inline-icon" />
+                      Đổi suất chiếu
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="showtime-switcher-list">
+                      {siblingShowtimes.map((st) => (
+                        <button
+                          key={st.showtimeId}
+                          type="button"
+                          className={`showtime-switcher-btn ${String(st.showtimeId) === String(showtimeId) ? 'showtime-switcher-btn--active' : ''}`}
+                          onClick={() => handleSwitchShowtime(st.showtimeId)}
+                        >
+                          {formatTime(st.startTime)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-              <div className="seat-legend">
-                <div className="seat-legend-item">
-                  <div
-                    className="seat-legend-dot"
-                    style={{
-                      background: 'rgba(16,185,129,0.15)',
-                      borderColor: 'var(--seat-available)',
-                    }}
-                  />
-                  Trống
+                {/* Seat Map */}
+                <div className="card" style={{ padding: 32 }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
+                    <div className="seat-screen" />
+                  </div>
+
+                  <div className="seat-scroll-hint">
+                    <span>Vuốt ngang để xem toàn bộ sơ đồ ghế</span>
+                  </div>
+
+                  <div className="seat-map-wrapper">
+                    <div className="seat-map" role="group" aria-label="Sơ đồ ghế ngồi">
+                      {sortedRows.map(([row, seats]) => (
+                        <div key={row} className="seat-row">
+                          <span className="seat-row-label">{row}</span>
+                          {seats.map((ticket) => {
+                            const seatLabel = ticket.seatCode || `${row}${ticket.seatNumber || ''}`;
+                            const status = ticket.displayStatus || ticket.ticketStatus;
+                            const isUnavailable = status === 'BOOKED' || status === 'HOLDING';
+                            const isSelected = selectedSeats.includes(ticket.seatId);
+
+                            return (
+                              <button
+                                key={ticket.ticketId}
+                                type="button"
+                                disabled={isUnavailable}
+                                aria-pressed={isSelected}
+                                aria-label={`Ghế ${seatLabel} - ${ticket.seatType || 'Thường'} - ${formatCurrency(ticket.price)}`}
+                                className={getSeatClass(ticket)}
+                                onClick={() => toggleSeat(ticket)}
+                                title={`${seatLabel} • ${ticket.seatType || 'Ghế thường'} • ${formatCurrency(ticket.price)}`}
+                              >
+                                {ticket.seatNumber || ''}
+                              </button>
+                            );
+                          })}
+                          <span className="seat-row-label">{row}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="seat-legend-wrap">
+                    <div className="seat-legend" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+                      <div className="seat-legend-item">
+                        <div
+                          className="seat-legend-dot"
+                          style={{
+                            background: 'rgba(16,185,129,0.15)',
+                            borderColor: 'var(--seat-available)',
+                          }}
+                        />
+                        Trống
+                      </div>
+                      <div className="seat-legend-item">
+                        <div
+                          className="seat-legend-dot"
+                          style={{
+                            background: 'rgba(59,130,246,0.3)',
+                            borderColor: 'var(--seat-selected)',
+                          }}
+                        />
+                        Đang chọn
+                      </div>
+                      <div className="seat-legend-item">
+                        <div
+                          className="seat-legend-dot"
+                          style={{
+                            background: 'rgba(245,158,11,0.15)',
+                            borderColor: 'var(--seat-holding)',
+                          }}
+                        />
+                        Đang giữ
+                      </div>
+                      <div className="seat-legend-item">
+                        <div
+                          className="seat-legend-dot"
+                          style={{
+                            background: 'rgba(239,68,68,0.15)',
+                            borderColor: 'var(--seat-booked)',
+                          }}
+                        />
+                        Đã đặt
+                      </div>
+                    </div>
+
+                    {seatTierPricing.length > 0 && (
+                      <div className="seat-legend" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+                        {seatTierPricing.map(([tierName, tierPrice]) => {
+                          const upper = tierName.toUpperCase();
+                          const isVip = upper.includes('VIP');
+                          const isCouple = upper.includes('COUPLE') || upper.includes('ĐÔI');
+                          return (
+                            <div key={tierName} className="seat-legend-item">
+                              <div
+                                className="seat-legend-dot"
+                                style={{
+                                  background: isVip
+                                    ? 'rgba(245,158,11,0.14)'
+                                    : isCouple
+                                      ? 'rgba(124,58,237,0.14)'
+                                      : 'rgba(16,185,129,0.15)',
+                                  borderColor: isVip
+                                    ? 'var(--gold)'
+                                    : isCouple
+                                      ? 'var(--purple)'
+                                      : 'var(--seat-available)',
+                                }}
+                              />
+                              <span>
+                                {tierName}: <strong>{formatCurrency(tierPrice)}</strong>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="seat-legend-item">
-                  <div
-                    className="seat-legend-dot"
-                    style={{
-                      background: 'rgba(59,130,246,0.3)',
-                      borderColor: 'var(--seat-selected)',
-                    }}
-                  />
-                  Đang chọn
-                </div>
-                <div className="seat-legend-item">
-                  <div
-                    className="seat-legend-dot"
-                    style={{
-                      background: 'rgba(245,158,11,0.15)',
-                      borderColor: 'var(--seat-holding)',
-                    }}
-                  />
-                  Đang giữ
-                </div>
-                <div className="seat-legend-item">
-                  <div
-                    className="seat-legend-dot"
-                    style={{
-                      background: 'rgba(239,68,68,0.15)',
-                      borderColor: 'var(--seat-booked)',
-                    }}
-                  />
-                  Đã đặt
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+              </>
+            )}
 
             {bookingStep === 2 && (
               <>
@@ -556,6 +620,21 @@ export default function SeatSelectPage() {
               {/* Ticket Items (separated by divider) */}
               {seatGroups.length > 0 && (
                 <div className="seat-sidebar-items">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px 2px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                      Ghế đã chọn ({selectedSeats.length})
+                    </span>
+                    {bookingStep === 1 && (
+                      <button
+                        type="button"
+                        className="seat-clear-btn"
+                        onClick={() => setSelectedSeats([])}
+                      >
+                        <RotateCcwIcon size={12} style={{ marginRight: 4, verticalAlign: '-1px' }} />
+                        Bỏ chọn
+                      </button>
+                    )}
+                  </div>
                   {seatGroups.map(([type, data]) => (
                     <div key={type} className="seat-sidebar-item">
                       <div className="seat-sidebar-item-info">

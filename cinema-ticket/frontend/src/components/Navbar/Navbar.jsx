@@ -4,15 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 import { movieApi } from '../../api';
 import SafeImage from '../Common/SafeImage';
 import {
+  BuildingIcon,
   CalendarIcon,
   ChevronDownIcon,
   FilmIcon,
   KeyIcon,
   LogoutIcon,
+  MenuIcon,
   MoviePTITLogoIcon,
   SearchIcon,
   SparkIcon,
+  TicketIcon,
   UserIcon,
+  XIcon,
 } from '../Common/CinemaIcons';
 
 export default function Navbar() {
@@ -22,8 +26,10 @@ export default function Navbar() {
   const [showScheduleMenu, setShowScheduleMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -62,17 +68,26 @@ export default function Navbar() {
   // Debounced search
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
+      setSearching(false);
       return undefined;
     }
+
+    setSearching(true);
+    setShowSearch(true);
 
     const timer = setTimeout(async () => {
       try {
         const res = await movieApi.getAll({ movieName: searchQuery });
-        const movies = (res.data.result || []).slice(0, 5); // Show top 5
+        const q = searchQuery.trim().toLowerCase();
+        const movies = (res.data.result || [])
+          .filter((m) => m.movieName?.toLowerCase().includes(q))
+          .slice(0, 5);
         setSearchResults(movies);
         setShowSearch(true);
       } catch (err) {
         console.error('Search error:', err);
+      } finally {
+        setSearching(false);
       }
     }, 300);
 
@@ -85,6 +100,7 @@ export default function Navbar() {
       setShowScheduleMenu(false);
       setShowSearch(false);
       setShowUserMenu(false);
+      setMobileMenuOpen(false);
       setSearchQuery('');
     }, 0);
 
@@ -94,7 +110,17 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
   const goToProfileSection = (hash) => {
     setShowUserMenu(false);
+    setMobileMenuOpen(false);
     navigate(`/profile${hash}`);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      setShowSearch(false);
+      navigate(`/movies?movieName=${encodeURIComponent(searchQuery.trim())}`);
+    } else if (e.key === 'Escape') {
+      setShowSearch(false);
+    }
   };
 
   return (
@@ -112,41 +138,89 @@ export default function Navbar() {
             <input
               type="text"
               placeholder="Tìm phim..."
+              aria-label="Tìm kiếm phim"
               value={searchQuery}
               onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
               onFocus={() => searchQuery.trim().length >= 2 && setShowSearch(true)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="navbar-search-clear"
+                aria-label="Xoá từ khoá tìm kiếm"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setShowSearch(false);
+                }}
+              >
+                <XIcon size={13} />
+              </button>
+            )}
           </div>
 
-          {showSearch && searchResults.length > 0 && (
-            <div className="navbar-search-dropdown">
-              {searchResults.map(movie => (
-                <div
-                  key={movie.movieId}
-                  className="search-result-item"
-                  onClick={() => navigate(`/movie/${movie.movieId}`)}
-                >
-                  <SafeImage
-                    src={movie.thumbnailUrl}
-                    alt={movie.movieName}
-                    className="search-result-image"
-                  />
-                  <div className="search-result-info">
-                    <p className="search-result-name">{movie.movieName}</p>
-                    <p className="search-result-meta">{movie.durationMinutes} phút | {movie.ageRating}</p>
-                  </div>
+          {showSearch && searchQuery.trim().length >= 2 && (
+            <div className="navbar-search-dropdown" role="listbox" aria-label="Kết quả tìm kiếm">
+              {searching ? (
+                <div className="search-empty-state">Đang tìm phim...</div>
+              ) : searchResults.length === 0 ? (
+                <div className="search-empty-state">
+                  Không tìm thấy phim phù hợp với "{searchQuery}"
                 </div>
-              ))}
-              <Link to={`/movies?movieName=${searchQuery}`} className="search-view-all">
-                Xem tất cả kết quả cho "{searchQuery}"
-              </Link>
+              ) : (
+                <>
+                  {searchResults.map((movie) => (
+                    <div
+                      key={movie.movieId}
+                      role="option"
+                      tabIndex={0}
+                      className="search-result-item"
+                      onClick={() => navigate(`/movie/${movie.movieId}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') navigate(`/movie/${movie.movieId}`);
+                      }}
+                    >
+                      <SafeImage
+                        src={movie.thumbnailUrl}
+                        alt={movie.movieName}
+                        className="search-result-image"
+                      />
+                      <div className="search-result-info">
+                        <p className="search-result-name">{movie.movieName}</p>
+                        <p className="search-result-meta">
+                          {movie.durationMinutes} phút | {movie.ageRating}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <Link
+                    to={`/movies?movieName=${encodeURIComponent(searchQuery.trim())}`}
+                    className="search-view-all"
+                  >
+                    Xem tất cả kết quả cho "{searchQuery}"
+                  </Link>
+                </>
+              )}
             </div>
           )}
         </div>
 
+        <button
+          type="button"
+          className="navbar-mobile-toggle"
+          aria-label={mobileMenuOpen ? 'Đóng menu điều hướng' : 'Mở menu điều hướng'}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          {mobileMenuOpen ? <XIcon size={20} /> : <MenuIcon size={20} />}
+        </button>
+
         <div className="navbar-links">
           <div className="navbar-dropdown" ref={dropdownRef}>
             <button
+              type="button"
+              aria-expanded={showScheduleMenu}
               className={`navbar-link-btn ${isActive('/movies') ? 'navbar-link--active' : ''}`}
               onClick={() => setShowScheduleMenu(!showScheduleMenu)}
             >
@@ -186,6 +260,7 @@ export default function Navbar() {
               <div className="navbar-user-menu" ref={userMenuRef}>
                 <button
                   type="button"
+                  aria-expanded={showUserMenu}
                   className={`navbar-user-name navbar-user-trigger ${isActive('/profile') ? 'navbar-link--active' : ''}`}
                   onClick={() => setShowUserMenu((open) => !open)}
                 >
@@ -231,6 +306,48 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      {mobileMenuOpen && (
+        <div className="navbar-mobile-drawer">
+          <Link to="/movies?status=NOW_SHOWING">
+            <SparkIcon size={16} /> Phim đang chiếu
+          </Link>
+          <Link to="/movies?status=UPCOMING">
+            <CalendarIcon size={16} /> Phim sắp chiếu
+          </Link>
+          <Link to="/movies">
+            <FilmIcon size={16} /> Tất cả phim
+          </Link>
+          <Link to="/branches">
+            <BuildingIcon size={16} /> Rạp chiếu & Lịch chiếu
+          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link to="/my-bookings">
+                <TicketIcon size={16} /> Vé của tôi
+              </Link>
+              <button type="button" onClick={() => goToProfileSection('#info')}>
+                <UserIcon size={16} /> Thông tin cá nhân ({user?.username})
+              </button>
+              <button type="button" onClick={() => goToProfileSection('#password')}>
+                <KeyIcon size={16} /> Đổi mật khẩu
+              </button>
+              <button type="button" onClick={handleLogout} style={{ color: '#dc2626' }}>
+                <LogoutIcon size={16} /> Đăng xuất
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <UserIcon size={16} /> Đăng nhập
+              </Link>
+              <Link to="/register" style={{ color: 'var(--accent)' }}>
+                <SparkIcon size={16} /> Đăng ký tài khoản
+              </Link>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   );
 }

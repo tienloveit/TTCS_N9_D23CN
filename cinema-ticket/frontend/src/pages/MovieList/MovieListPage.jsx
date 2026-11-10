@@ -1,23 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { movieApi, genreApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import EmptyState from '../../components/Common/EmptyState';
-import { CalendarIcon, ClockIcon, FilmIcon, SparkIcon } from '../../components/Common/CinemaIcons';
+import {
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  FilmIcon,
+  SearchIcon,
+  SparkIcon,
+  StarIcon,
+  TicketIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
 
 const MotionDiv = motion.div;
+
+const STATUS_TABS = [
+  { key: 'ALL', label: 'Tất cả phim', icon: FilmIcon },
+  { key: 'NOW_SHOWING', label: 'Đang chiếu', icon: SparkIcon },
+  { key: 'UPCOMING', label: 'Sắp chiếu', icon: CalendarIcon },
+];
 
 export default function MovieListPage() {
   const [movies, setMovies] = useState([]);
   const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Filters - read initial status from URL
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('ALL'); // 'ALL' or genreId
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('movieName') || '');
+  const [selectedGenre, setSelectedGenre] = useState('ALL');
+  const [ageFilter, setAgeFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState('DEFAULT');
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'ALL');
 
   // Sync filters when URL query params change (e.g. navbar search or dropdown navigation)
@@ -51,7 +70,7 @@ export default function MovieListPage() {
           setGenres(genreRes.value.data.result || []);
         }
       } catch (err) {
-        console.error("Lỗi khi tải danh sách phim", err);
+        console.error('Lỗi khi tải danh sách phim', err);
       } finally {
         setLoading(false);
       }
@@ -59,35 +78,68 @@ export default function MovieListPage() {
     fetchData();
   }, []);
 
-  // Handler for filters
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset page on filter
+  const handleStatusChange = (nextStatus) => {
+    setStatusFilter(nextStatus);
+    setCurrentPage(1);
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextStatus === 'ALL') {
+      nextParams.delete('status');
+    } else {
+      nextParams.set('status', nextStatus);
+    }
+    setSearchParams(nextParams, { replace: true });
   };
 
-  const handleGenreChange = (e) => {
-    setSelectedGenre(e.target.value);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
-  // Filter Logic
-  const filteredMovies = movies.filter((movie) => {
-    // 1. Search text
-    const matchSearch = movie.movieName?.toLowerCase().includes(searchTerm.toLowerCase());
+  const handleGenreSelect = (genreVal) => {
+    setSelectedGenre(genreVal);
+    setCurrentPage(1);
+  };
 
-    // 2. Genre
-    const matchGenre = selectedGenre === 'ALL'
-      ? true
-      : movie.genres?.some(g => String(g.id) === String(selectedGenre) || String(g.genreId) === String(selectedGenre) || g.name === selectedGenre);
-    // Note: adjust the some() condition depending exactly on what GenreResponse returns
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setSelectedGenre('ALL');
+    setAgeFilter('ALL');
+    setSortBy('DEFAULT');
+    handleStatusChange('ALL');
+  };
 
-    // 3. Status
-    const matchStatus = statusFilter === 'ALL'
-      ? true
-      : movie.status === statusFilter;
+  // Filter + Sort Logic
+  const filteredMovies = useMemo(() => {
+    const list = movies.filter((movie) => {
+      const matchSearch = movie.movieName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchGenre =
+        selectedGenre === 'ALL'
+          ? true
+          : movie.genres?.some(
+              (g) =>
+                String(g.id) === String(selectedGenre) ||
+                String(g.genreId) === String(selectedGenre) ||
+                g.name === selectedGenre
+            );
+      const matchStatus = statusFilter === 'ALL' ? true : movie.status === statusFilter;
+      const matchAge = ageFilter === 'ALL' ? true : movie.ageRating === ageFilter;
 
-    return matchSearch && matchGenre && matchStatus;
-  });
+      return matchSearch && matchGenre && matchStatus && matchAge;
+    });
+
+    if (sortBy === 'RATING') {
+      return [...list].sort((a, b) => Number(b.averageRating || 0) - Number(a.averageRating || 0));
+    }
+    if (sortBy === 'NEWEST') {
+      return [...list].sort(
+        (a, b) => new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime()
+      );
+    }
+    if (sortBy === 'DURATION') {
+      return [...list].sort((a, b) => Number(b.durationMinutes || 0) - Number(a.durationMinutes || 0));
+    }
+    return list;
+  }, [movies, searchTerm, selectedGenre, statusFilter, ageFilter, sortBy]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredMovies.length / itemsPerPage);
@@ -122,51 +174,128 @@ export default function MovieListPage() {
       <div className="container">
         <div className="page-header" style={{ marginBottom: 24 }}>
           <h1 className="page-title page-title-with-icon">
-            {statusFilter === 'NOW_SHOWING' ? <SparkIcon className="page-title-icon" />
-              : statusFilter === 'UPCOMING' ? <CalendarIcon className="page-title-icon" />
-                : <FilmIcon className="page-title-icon" />}
-            {statusFilter === 'NOW_SHOWING' ? 'Phim đang chiếu'
-              : statusFilter === 'UPCOMING' ? 'Phim sắp chiếu'
+            {statusFilter === 'NOW_SHOWING' ? (
+              <SparkIcon className="page-title-icon" />
+            ) : statusFilter === 'UPCOMING' ? (
+              <CalendarIcon className="page-title-icon" />
+            ) : (
+              <FilmIcon className="page-title-icon" />
+            )}
+            {statusFilter === 'NOW_SHOWING'
+              ? 'Phim đang chiếu'
+              : statusFilter === 'UPCOMING'
+                ? 'Phim sắp chiếu'
                 : 'Danh sách phim'}
           </h1>
-          <p className="page-subtitle">Khám phá toàn bộ phim tại MoviePTIT</p>
+          <p className="page-subtitle">
+            Khám phá toàn bộ phim điện ảnh tại MoviePTIT ({filteredMovies.length} phim)
+          </p>
         </div>
 
-        {/* ================= FILTERS ================= */}
-        <div style={{
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-          marginBottom: 32,
-          padding: '24px',
-          background: 'var(--bg-card)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border)'
-        }}>
-          {/* Search */}
-          <div style={{ flex: '1 1 250px' }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>Tìm kiếm</label>
-            <input
-              type="text"
-              className="input"
-              placeholder="Nhập tên phim..."
-              value={searchTerm}
-              onChange={handleSearch}
-            />
+        {/* ================= FILTER & SORT TOOLBAR ================= */}
+        <div className="ml-toolbar">
+          <div className="ml-toolbar-top">
+            <div className="ml-status-tabs" role="tablist" aria-label="Trạng thái chiếu">
+              {STATUS_TABS.map((tab) => {
+                const IconComponent = tab.icon;
+                const isActive = statusFilter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`ml-status-tab ${isActive ? 'is-active' : ''}`}
+                    onClick={() => handleStatusChange(tab.key)}
+                  >
+                    <IconComponent size={15} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="ml-controls-row">
+              <div className="ml-search-box">
+                <SearchIcon size={16} className="ml-search-icon" />
+                <input
+                  type="text"
+                  aria-label="Tìm kiếm phim theo tên"
+                  placeholder="Tìm tên phim..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="home-inline-search-clear"
+                    aria-label="Xoá từ khoá"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <XIcon size={12} />
+                  </button>
+                )}
+              </div>
+
+              <select
+                className="ml-select"
+                aria-label="Lọc theo phân loại độ tuổi"
+                value={ageFilter}
+                onChange={(e) => {
+                  setAgeFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="ALL">Mọi độ tuổi</option>
+                <option value="P">P - Phổ biến</option>
+                <option value="T13">T13 - Từ 13 tuổi</option>
+                <option value="T16">T16 - Từ 16 tuổi</option>
+                <option value="T18">T18 - Từ 18 tuổi</option>
+              </select>
+
+              <select
+                className="ml-select"
+                aria-label="Sắp xếp danh sách phim"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="DEFAULT">Sắp xếp: Mặc định</option>
+                <option value="RATING">Đánh giá cao nhất</option>
+                <option value="NEWEST">Mới khởi chiếu</option>
+                <option value="DURATION">Thời lượng dài nhất</option>
+              </select>
+            </div>
           </div>
 
-          {/* Genre */}
           {genres.length > 0 && (
-            <div style={{ flex: '1 1 150px' }}>
-              <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>Thể loại</label>
-              <select className="input" value={selectedGenre} onChange={handleGenreChange}>
-                <option value="ALL">Tất cả thể loại</option>
-                {genres.map(g => (
-                  <option key={g.genreId || g.id} value={g.name || g.genreId}>
+            <div className="ml-genre-pills" role="group" aria-label="Lọc theo thể loại">
+              <button
+                type="button"
+                className={`ml-genre-pill ${selectedGenre === 'ALL' ? 'is-active' : ''}`}
+                onClick={() => handleGenreSelect('ALL')}
+              >
+                Tất cả thể loại
+              </button>
+              {genres.map((g) => {
+                const val = g.name || g.genreId;
+                const isActive = String(selectedGenre) === String(val);
+                return (
+                  <button
+                    key={g.genreId || g.id || g.name}
+                    type="button"
+                    className={`ml-genre-pill ${isActive ? 'is-active' : ''}`}
+                    onClick={() => handleGenreSelect(val)}
+                  >
                     {g.name}
-                  </option>
-                ))}
-              </select>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -174,10 +303,10 @@ export default function MovieListPage() {
         {/* ================= GRID ================= */}
         {filteredMovies.length === 0 ? (
           <EmptyState
-            title="Không tìm thấy phim"
-            message="Rất tiếc, không có bộ phim nào khớp với tìm kiếm của bạn. Hãy thử đổi từ khoá hoặc xem các thể loại khác."
-            buttonText="Xem tất cả phim"
-            buttonLink="/movies"
+            title="Không tìm thấy phim phù hợp"
+            message="Không có bộ phim nào khớp với bộ lọc hiện tại. Hãy thử đặt lại bộ lọc hoặc đổi từ khoá khác."
+            buttonText="Đặt lại bộ lọc"
+            onAction={resetAllFilters}
           />
         ) : (
           <>
@@ -200,7 +329,9 @@ export default function MovieListPage() {
                       <div className="movie-upcoming-badge">Sắp chiếu</div>
                     )}
                     <div className="movie-overlay">
-                      <button className="btn btn-primary btn-sm">Chi tiết</button>
+                      <button type="button" className="btn btn-primary btn-sm">
+                        <TicketIcon size={15} /> Chi tiết & Đặt vé
+                      </button>
                     </div>
                   </div>
                   <div className="movie-info">
@@ -220,7 +351,7 @@ export default function MovieListPage() {
                       {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
                     </div>
                     <div className="movie-card-rating">
-                      <span>★</span>
+                      <StarIcon size={14} style={{ color: 'var(--gold)', fill: 'var(--gold)' }} />
                       {movie.ratingCount > 0
                         ? `${Number(movie.averageRating || 0).toFixed(1)} (${movie.ratingCount})`
                         : 'Chưa có đánh giá'}
@@ -238,37 +369,39 @@ export default function MovieListPage() {
 
             {/* ================= PAGINATION ================= */}
             {totalPages > 1 && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 8,
-                marginTop: 40
-              }}>
+              <div className="ml-pagination">
                 <button
+                  type="button"
                   className="btn btn-secondary btn-sm"
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => p - 1)}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                  aria-label="Trang trước"
                 >
-                  &laquo; Trước
+                  <ChevronLeftIcon size={16} /> Trước
                 </button>
 
                 {[...Array(totalPages)].map((_, i) => (
                   <button
                     key={i}
+                    type="button"
                     className={`btn btn-sm ${currentPage === i + 1 ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setCurrentPage(i + 1)}
                     style={{ width: 40, padding: 0 }}
+                    aria-label={`Trang ${i + 1}`}
+                    aria-current={currentPage === i + 1 ? 'page' : undefined}
                   >
                     {i + 1}
                   </button>
                 ))}
 
                 <button
+                  type="button"
                   className="btn btn-secondary btn-sm"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(p => p + 1)}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  aria-label="Trang sau"
                 >
-                  Sau &raquo;
+                  Sau <ChevronRightIcon size={16} />
                 </button>
               </div>
             )}

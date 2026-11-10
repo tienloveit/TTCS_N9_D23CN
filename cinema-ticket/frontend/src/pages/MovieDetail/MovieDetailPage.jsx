@@ -3,6 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { branchApi, movieApi, roomApi, showtimeApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { useAuth } from '../../context/useAuth';
+import {
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  GlobeIcon,
+  PlayIcon,
+  StarIcon,
+  TicketIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
 
 const DATE_WINDOW_SIZE = 5;
 
@@ -315,11 +326,21 @@ export default function MovieDetailPage() {
     }
   };
 
-  const handleRateMovie = async (score) => {
+  const handleSelectStar = (score) => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: `/movie/${id}` } });
       return;
     }
+    setUserRating(score);
+    setRatingMessage('');
+  };
+
+  const handleRateMovie = async (score = userRating) => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/movie/${id}` } });
+      return;
+    }
+    if (!score) return;
 
     setRatingSaving(true);
     setRatingMessage('');
@@ -404,11 +425,14 @@ export default function MovieDetailPage() {
           {ratingCount > 0 ? averageRating.toFixed(1) : 'Chưa có'}
         </span>
         <span className="movie-rating-stars" aria-label={`Điểm trung bình ${averageRating}`}>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <span key={star} className={star <= Math.round(averageRating) ? 'is-active' : ''}>
-              ★
-            </span>
-          ))}
+          {[1, 2, 3, 4, 5].map((star) => {
+            const isFilled = star <= Math.round(averageRating);
+            return (
+              <span key={star} className={isFilled ? 'is-active' : ''}>
+                <StarIcon size={16} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+              </span>
+            );
+          })}
         </span>
         <span className="movie-rating-count">
           {ratingCount > 0 ? `${ratingCount} đánh giá` : 'Hãy là người đầu tiên đánh giá'}
@@ -416,42 +440,47 @@ export default function MovieDetailPage() {
       </div>
 
       <div className="movie-rating-action">
-        <span>{userRating ? 'Đánh giá của bạn' : 'Bạn đánh giá phim này'}</span>
+        <span>{userRating ? `Bạn đã chọn ${userRating}/5 sao` : 'Chọn số sao để đánh giá phim'}</span>
         <div className="movie-rating-input" onMouseLeave={() => setHoverRating(0)}>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              type="button"
-              className={star <= activeRating ? 'is-active' : ''}
-              onMouseEnter={() => setHoverRating(star)}
-              onFocus={() => setHoverRating(star)}
-              onClick={() => handleRateMovie(star)}
-              disabled={ratingSaving}
-              aria-label={`Đánh giá ${star} sao`}
-            >
-              ★
-            </button>
-          ))}
+          {[1, 2, 3, 4, 5].map((star) => {
+            const isFilled = star <= activeRating;
+            return (
+              <button
+                key={star}
+                type="button"
+                className={isFilled ? 'is-active' : ''}
+                onMouseEnter={() => setHoverRating(star)}
+                onFocus={() => setHoverRating(star)}
+                onClick={() => handleSelectStar(star)}
+                disabled={ratingSaving}
+                aria-label={`Chọn ${star} sao`}
+                aria-pressed={userRating === star}
+              >
+                <StarIcon size={22} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+              </button>
+            );
+          })}
         </div>
         <textarea
           className="movie-rating-comment"
-          placeholder="Viết nhận xét của bạn (không bắt buộc)..."
+          aria-label="Nhận xét về bộ phim"
+          placeholder="Viết cảm nhận của bạn sau khi chọn số sao (không bắt buộc)..."
           value={userComment}
           onChange={(e) => setUserComment(e.target.value)}
           maxLength={500}
           rows={3}
         />
-        {userRating && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', marginTop: 4 }}>
           <button
+            type="button"
             className="btn btn-primary btn-sm"
             onClick={() => handleRateMovie(userRating)}
-            disabled={ratingSaving}
-            style={{ marginTop: '8px' }}
+            disabled={ratingSaving || !userRating}
           >
-            {ratingSaving ? 'Đang lưu...' : 'Lưu đánh giá'}
+            {ratingSaving ? 'Đang gửi...' : 'Gửi đánh giá'}
           </button>
-        )}
-        {ratingMessage && <small>{ratingMessage}</small>}
+          {ratingMessage && <small style={{ color: 'var(--green)', fontWeight: 600 }}>{ratingMessage}</small>}
+        </div>
       </div>
     </div>
   );
@@ -459,79 +488,113 @@ export default function MovieDetailPage() {
   return (
     <div className="page">
       <div className="container">
-        <div className="movie-detail-layout">
-          <div className="movie-detail-poster-wrap">
-            <SafeImage
-              src={movie.thumbnailUrl}
-              alt={movie.movieName}
-              className="movie-detail-poster"
-            />
+        <div className="md-hero-card">
+          <div className="movie-detail-layout">
+            <div className="movie-detail-poster-wrap">
+              <SafeImage
+                src={movie.thumbnailUrl}
+                alt={movie.movieName}
+                className="movie-detail-poster"
+              />
 
-            {movie.trailerUrl && (
-              <button
-                className="btn btn-primary movie-trailer-play"
-                onClick={() => setShowTrailer(true)}
-                title="Xem trailer"
-              >
-                ▶
-              </button>
-            )}
-          </div>
-
-          <div className="movie-detail-content">
-            <h1 className="page-title movie-detail-title">{movie.movieName}</h1>
-
-            <div className="movie-detail-meta">
-              {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
-              {movie.durationMinutes && <span>{movie.durationMinutes} phút</span>}
-              {movie.language && <span>{movie.language}</span>}
+              {movie.trailerUrl && (
+                <button
+                  type="button"
+                  className="btn btn-primary movie-trailer-play"
+                  onClick={() => setShowTrailer(true)}
+                  title="Xem trailer"
+                  aria-label="Phát trailer phim"
+                >
+                  <PlayIcon size={26} />
+                </button>
+              )}
             </div>
 
-            {(movie.genres?.length > 0 || movie.directorName) && (
-              <div className="movie-detail-facts">
-                {movie.genres?.length > 0 && (
-                  <div className="movie-detail-fact-row">
-                    <span className="movie-detail-fact-label">Thể loại:</span>
-                    <div className="movie-detail-pills">
-                      {movie.genres.map((genre) => (
-                        <span key={genre.id || genre.genreId || genre.name} className="movie-detail-pill">
-                          {genre.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            <div className="movie-detail-content">
+              <h1 className="page-title movie-detail-title">{movie.movieName}</h1>
 
-                {movie.directorName && (
-                  <div className="movie-detail-fact-row">
-                    <span className="movie-detail-fact-label">Đạo diễn:</span>
-                    <div className="movie-detail-pills">
-                      <span className="movie-detail-pill">{movie.directorName}</span>
-                    </div>
-                  </div>
+              <div className="movie-detail-meta">
+                {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
+                {movie.durationMinutes && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <ClockIcon size={16} />
+                    {movie.durationMinutes} phút
+                  </span>
+                )}
+                {movie.language && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <GlobeIcon size={16} />
+                    {movie.language}
+                  </span>
+                )}
+                {ratingCount > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <StarIcon size={16} style={{ fill: 'var(--gold)', color: 'var(--gold)' }} />
+                    {averageRating.toFixed(1)} ({ratingCount})
+                  </span>
                 )}
               </div>
-            )}
 
-            {movie.description && <p className="movie-detail-description">{movie.description}</p>}
+              {(movie.genres?.length > 0 || movie.directorName) && (
+                <div className="movie-detail-facts">
+                  {movie.genres?.length > 0 && (
+                    <div className="movie-detail-fact-row">
+                      <span className="movie-detail-fact-label">Thể loại:</span>
+                      <div className="movie-detail-pills">
+                        {movie.genres.map((genre) => (
+                          <span key={genre.id || genre.genreId || genre.name} className="movie-detail-pill">
+                            {genre.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-            {movie.releaseDate && (
-              <p className="movie-detail-release">Khởi chiếu: {formatDate(movie.releaseDate)}</p>
-            )}
+                  {movie.directorName && (
+                    <div className="movie-detail-fact-row">
+                      <span className="movie-detail-fact-label">Đạo diễn:</span>
+                      <div className="movie-detail-pills">
+                        <span className="movie-detail-pill">{movie.directorName}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {movie.trailerUrl && (
-              <button className="btn btn-secondary" onClick={() => setShowTrailer(true)}>
-                Xem trailer
-              </button>
-            )}
+              {movie.description && <p className="movie-detail-description">{movie.description}</p>}
+
+              {movie.releaseDate && (
+                <p className="movie-detail-release" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <CalendarIcon size={15} />
+                  Khởi chiếu: {formatDate(movie.releaseDate)}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => document.getElementById('movie-schedule')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  <TicketIcon size={18} />
+                  Chọn suất chiếu
+                </button>
+                {movie.trailerUrl && (
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowTrailer(true)}>
+                    <PlayIcon size={16} />
+                    Xem trailer
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <section className="movie-schedule-panel">
+        <section id="movie-schedule" className="movie-schedule-panel">
           <h2 className="movie-section-title">Lịch Chiếu</h2>
 
           <div className="movie-schedule-toolbar">
-            <div className="movie-date-strip">
+            <div className="movie-date-strip" role="tablist" aria-label="Chọn ngày xem phim">
               <button
                 type="button"
                 className="movie-date-nav"
@@ -539,7 +602,7 @@ export default function MovieDetailPage() {
                 disabled={dateWindowOffset === 0}
                 aria-label="Ngày trước"
               >
-                ‹
+                <ChevronLeftIcon size={22} />
               </button>
 
               {scheduleDates.map((dateKey) => {
@@ -549,6 +612,8 @@ export default function MovieDetailPage() {
                   <button
                     key={dateKey}
                     type="button"
+                    role="tab"
+                    aria-selected={isActive}
                     className={`movie-date-tab ${isActive ? 'movie-date-tab--active' : ''}`}
                     onClick={() => setSelectedDate(dateKey)}
                   >
@@ -564,12 +629,17 @@ export default function MovieDetailPage() {
                 onClick={() => moveDateWindow(1)}
                 aria-label="Ngày sau"
               >
-                ›
+                <ChevronRightIcon size={22} />
               </button>
             </div>
 
             <div className="movie-schedule-filters">
-              <select className="movie-schedule-select" value={selectedCity} onChange={handleCityChange}>
+              <select
+                className="movie-schedule-select"
+                aria-label="Lọc theo thành phố"
+                value={selectedCity}
+                onChange={handleCityChange}
+              >
                 <option value="ALL">Toàn quốc</option>
                 {cityOptions.map((city) => (
                   <option key={city} value={city}>
@@ -580,6 +650,7 @@ export default function MovieDetailPage() {
 
               <select
                 className="movie-schedule-select"
+                aria-label="Lọc theo cụm rạp"
                 value={selectedBranchKey}
                 onChange={(event) => setSelectedBranchKey(event.target.value)}
               >
@@ -611,30 +682,44 @@ export default function MovieDetailPage() {
                       </div>
 
                       <div className="cinema-schedule-times">
-                        {row.showtimes.map((showtime) => (
-                          <button
-                            key={showtime.showtimeId}
-                            type="button"
-                            className="cinema-showtime-btn"
-                            onClick={() => {
-                              if (!isAuthenticated) {
-                                navigate('/login', { state: { from: `/movie/${id}` } });
-                                return;
-                              }
-                              navigate(`/showtime/${showtime.showtimeId}/seats`);
-                            }}
-                            title={`${row.roomName} • ${formatTime(showtime.startTime)} - ${formatTime(
-                              showtime.endTime
-                            )}`}
-                          >
-                            <span>{formatTime(showtime.startTime)}</span>
-                            {showtime.availableSeats != null && (
-                              <small className="showtime-seats-info">
-                                {showtime.availableSeats} ghế trống
-                              </small>
-                            )}
-                          </button>
-                        ))}
+                        {row.showtimes.map((showtime) => {
+                          const avail = showtime.availableSeats;
+                          const isSoldOut = avail != null && Number(avail) <= 0;
+                          const isLow = !isSoldOut && avail != null && Number(avail) <= 12;
+
+                          return (
+                            <button
+                              key={showtime.showtimeId}
+                              type="button"
+                              disabled={isSoldOut}
+                              className={`cinema-showtime-btn ${isLow ? 'cinema-showtime-btn--low' : ''} ${
+                                isSoldOut ? 'cinema-showtime-btn--soldout' : ''
+                              }`}
+                              onClick={() => {
+                                if (!isAuthenticated) {
+                                  navigate('/login', { state: { from: `/movie/${id}` } });
+                                  return;
+                                }
+                                navigate(`/showtime/${showtime.showtimeId}/seats`);
+                              }}
+                              title={`${row.roomName} • ${formatTime(showtime.startTime)} - ${formatTime(
+                                showtime.endTime
+                              )}`}
+                            >
+                              <div className="showtime-time-range">
+                                <span>{formatTime(showtime.startTime)}</span>
+                                {showtime.endTime && (
+                                  <span className="showtime-end-time">~{formatTime(showtime.endTime)}</span>
+                                )}
+                              </div>
+                              {avail != null && (
+                                <small className="showtime-seats-info">
+                                  {isSoldOut ? 'Hết ghế' : `${avail} ghế trống`}
+                                </small>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -659,9 +744,14 @@ export default function MovieDetailPage() {
                     <div className="movie-review-meta">
                       <strong>{review.username || 'Ẩn danh'}</strong>
                       <div className="movie-review-stars">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <span key={s} className={s <= review.score ? 'is-active' : ''}>★</span>
-                        ))}
+                        {[1, 2, 3, 4, 5].map((s) => {
+                          const isFilled = s <= review.score;
+                          return (
+                            <span key={s} className={isFilled ? 'is-active' : ''}>
+                              <StarIcon size={13} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                            </span>
+                          );
+                        })}
                         <span className="movie-review-time">{formatRelativeTime(review.createdAt)}</span>
                       </div>
                     </div>
@@ -675,10 +765,10 @@ export default function MovieDetailPage() {
       </div>
 
       {showTrailer && movie.trailerUrl && (
-        <div className="modal-overlay" onClick={() => setShowTrailer(false)}>
+        <div className="modal-overlay" onClick={() => setShowTrailer(false)} role="dialog" aria-modal="true" aria-label="Trailer phim">
           <div className="modal-content modal-video" onClick={(event) => event.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowTrailer(false)}>
-              ×
+            <button type="button" className="modal-close" aria-label="Đóng trailer" onClick={() => setShowTrailer(false)}>
+              <XIcon size={20} />
             </button>
             <iframe
               width="100%"

@@ -12,6 +12,7 @@ import {
   Armchair,
   ArrowLeft,
   ArrowRight,
+  Award,
   Banknote,
   BarChart3,
   Bell,
@@ -26,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Copy,
   CreditCard,
   Download,
   ExternalLink,
@@ -47,6 +49,7 @@ import {
   MessageSquare,
   Pencil,
   Phone,
+  Play,
   Plus,
   Popcorn,
   Printer,
@@ -58,7 +61,9 @@ import {
   Send,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
+  Star,
   Ticket,
   Timer,
   Trash2,
@@ -175,3 +180,8 @@ export const CheckIcon = withLucideDefaults(Check);
 export const XIcon = withLucideDefaults(X);
 export const ArrowLeftIcon = withLucideDefaults(ArrowLeft);
 export const ArrowRightIcon = withLucideDefaults(ArrowRight);
+export const StarIcon = withLucideDefaults(Star);
+export const PlayIcon = withLucideDefaults(Play);
+export const CopyIcon = withLucideDefaults(Copy);
+export const AwardIcon = withLucideDefaults(Award);
+export const SlidersIcon = withLucideDefaults(SlidersHorizontal);
