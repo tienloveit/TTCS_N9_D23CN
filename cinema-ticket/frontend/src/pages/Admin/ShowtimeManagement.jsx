@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import {
   CalendarIcon as LucideCalendarIcon,
   EditIcon as LucideEditIcon,
   PlusIcon,
   SearchIcon,
   TrashIcon as LucideTrashIcon,
+  XIcon,
 } from '../../components/Common/CinemaIcons';
 
 const EditIcon = () => <LucideEditIcon size={15} />;
@@ -63,6 +65,9 @@ const ShowtimeManagement = () => {
   const [viewMode, setViewMode] = useState('calendar');
   const [selectedDate, setSelectedDate] = useState(toDateInputValue());
   const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -198,15 +203,34 @@ const ShowtimeManagement = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const computeEndTimeFromMovie = (movieId, startTimeStr) => {
+    if (!movieId || !startTimeStr) return '';
+    const found = movies.find((m) => String(m.movieId || m.id) === String(movieId));
+    const duration = Number(found?.durationMinutes || found?.duration || 120);
+    const start = new Date(startTimeStr);
+    if (Number.isNaN(start.getTime())) return '';
+    const end = new Date(start.getTime() + duration * 60000);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  };
+
+  const handleDelete = (id) => {
     if (!isAdmin) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')) return;
+    setDeleteTargetId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
     try {
-      await showtimeApi.delete(id);
-      toast.success('Xóa thành công!');
+      await showtimeApi.delete(deleteTargetId);
+      toast.success('Xóa suất chiếu thành công!');
+      setDeleteTargetId(null);
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Xóa thất bại');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -214,11 +238,12 @@ const ShowtimeManagement = () => {
     return showtimes.filter((showtime) => !selectedBranchId || String(showtime.branchId) === String(selectedBranchId));
   }, [showtimes, selectedBranchId]);
 
-  const filtered = listShowtimes.filter((showtime) =>
-    [showtime.movieName, showtime.roomName, showtime.branchName].some((field) =>
+  const filtered = listShowtimes.filter((showtime) => {
+    if (statusFilter !== 'ALL' && showtime.status !== statusFilter) return false;
+    return [showtime.movieName, showtime.roomName, showtime.branchName].some((field) =>
       field?.toLowerCase().includes(searchTerm.toLowerCase()),
-    ),
-  );
+    );
+  });
 
   const getShowtimesForRoom = (roomId) =>
     calendarShowtimes.filter((showtime) => String(showtime.roomId) === String(roomId));
@@ -404,8 +429,33 @@ const ShowtimeManagement = () => {
         </div>
       ) : (
         <div className="admin-table-card">
-          <div className="table-header">
-            <div style={{ position: 'relative', maxWidth: 320, flex: 1 }}>
+          <div className="console-toolbar">
+            <div className="console-status-tabs">
+              {[
+                { key: 'ALL', label: 'Tất cả' },
+                { key: 'OPEN', label: 'Đang mở' },
+                { key: 'CLOSED', label: 'Đã đóng' },
+                { key: 'CANCELLED', label: 'Đã hủy' },
+              ].map((tab) => {
+                const count =
+                  tab.key === 'ALL'
+                    ? listShowtimes.length
+                    : listShowtimes.filter((s) => s.status === tab.key).length;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={`console-status-tab ${statusFilter === tab.key ? 'is-active' : ''}`}
+                    onClick={() => setStatusFilter(tab.key)}
+                  >
+                    <span>{tab.label}</span>
+                    <span className="console-status-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ position: 'relative', maxWidth: 320, flex: '0 1 320px' }}>
               <SearchIcon
                 size={16}
                 style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
@@ -416,10 +466,9 @@ const ShowtimeManagement = () => {
                 placeholder="Tìm phim, phòng, chi nhánh..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ paddingLeft: 40, background: 'var(--bg-input)' }}
+                style={{ paddingLeft: 40, height: 38, background: 'var(--bg-input)' }}
               />
             </div>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{filtered.length} kết quả</span>
           </div>
 
           <table className="admin-table">
@@ -483,24 +532,58 @@ const ShowtimeManagement = () => {
       )}
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{
-            maxWidth: 650,
-            height: 'auto',
-            aspectRatio: 'unset',
-            overflowY: 'auto',
-            maxHeight: '90vh',
-            background: 'var(--bg-card)',
-            padding: '28px 32px',
-            borderRadius: 'var(--radius-lg)',
-          }}>
-            <h2 style={{ marginBottom: 20, fontSize: '1.4rem', fontWeight: 700 }}>{isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}</h2>
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: 650,
+              height: 'auto',
+              aspectRatio: 'unset',
+              overflowY: 'auto',
+              maxHeight: '90vh',
+              background: 'var(--bg-card)',
+              padding: '28px 32px',
+              borderRadius: 'var(--radius-lg)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
+                {isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}
+              </h2>
+              <button
+                type="button"
+                className="modal-close"
+                style={{ position: 'static', width: 34, height: 34 }}
+                onClick={() => setShowModal(false)}
+                aria-label="Đóng"
+              >
+                <XIcon size={18} />
+              </button>
+            </div>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div className="form-group">
                 <label className="form-label">Chọn phim</label>
-                <select className="input" value={formData.movieId} onChange={(e) => setFormData({ ...formData, movieId: e.target.value })} required>
+                <select
+                  className="input"
+                  value={formData.movieId}
+                  onChange={(e) => {
+                    const nextMovieId = e.target.value;
+                    const autoEnd = computeEndTimeFromMovie(nextMovieId, formData.startTime);
+                    setFormData({
+                      ...formData,
+                      movieId: nextMovieId,
+                      endTime: autoEnd || formData.endTime,
+                    });
+                  }}
+                  required
+                >
                   <option value="">-- Chọn phim --</option>
-                  {movies.map((movie) => <option key={movie.movieId} value={movie.movieId}>{movie.movieName}</option>)}
+                  {movies.map((movie) => (
+                    <option key={movie.movieId} value={movie.movieId}>
+                      {movie.movieName} {movie.durationMinutes ? `(${movie.durationMinutes} phút)` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -524,10 +607,24 @@ const ShowtimeManagement = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
                   <label className="form-label">Bắt đầu</label>
-                  <input type="datetime-local" className="input" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required />
+                  <input
+                    type="datetime-local"
+                    className="input"
+                    value={formData.startTime}
+                    onChange={(e) => {
+                      const nextStart = e.target.value;
+                      const autoEnd = computeEndTimeFromMovie(formData.movieId, nextStart);
+                      setFormData({
+                        ...formData,
+                        startTime: nextStart,
+                        endTime: autoEnd || formData.endTime,
+                      });
+                    }}
+                    required
+                  />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Kết thúc</label>
+                  <label className="form-label">Kết thúc (tự động tính theo thời lượng)</label>
                   <input type="datetime-local" className="input" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required />
                 </div>
               </div>
@@ -549,6 +646,16 @@ const ShowtimeManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        title="Xóa suất chiếu"
+        message="Bạn có chắc chắn muốn xóa suất chiếu này? Thao tác này không thể hoàn tác."
+        confirmText="Xóa suất chiếu"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 };

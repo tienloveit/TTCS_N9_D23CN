@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { movieApi, genreApi, directorApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import { useAuth } from '../../context/useAuth';
-import { EditIcon, PlusIcon, SearchIcon, TrashIcon } from '../../components/Common/CinemaIcons';
+import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
+
+const MOVIE_STATUS_TABS = [
+  { key: 'ALL', label: 'Tất cả' },
+  { key: 'NOW_SHOWING', label: 'Đang chiếu' },
+  { key: 'UPCOMING', label: 'Sắp chiếu' },
+  { key: 'ENDED', label: 'Đã kết thúc' },
+];
 
 const MovieManagement = () => {
   const { isAdmin } = useAuth();
@@ -12,6 +20,9 @@ const MovieManagement = () => {
   const [directors, setDirectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deleteTarget, setDeleteTarget] = useState(null); // { movieId, movieName }
+  const [deleting, setDeleting] = useState(false);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -176,22 +187,37 @@ const MovieManagement = () => {
     }
   };
 
-  const handleDelete = async (movieId, movieName) => {
+  const handleDelete = (movieId, movieName) => {
     if (!isAdmin) return;
-    if (window.confirm(`Bạn có chắc chắn muốn xoá phim "${movieName}"?`)) {
-      try {
-        await movieApi.delete(movieId);
-        toast.success(`Xoá phim "${movieName}" thành công!`);
-        fetchMovies();
-      } catch (err) {
-        toast.error('Lỗi khi xoá: ' + (err.response?.data?.message || err.message));
-      }
+    setDeleteTarget({ movieId, movieName });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await movieApi.delete(deleteTarget.movieId);
+      toast.success(`Xoá phim "${deleteTarget.movieName}" thành công!`);
+      setDeleteTarget(null);
+      fetchMovies();
+    } catch (err) {
+      toast.error('Lỗi khi xoá: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const filteredMovies = movies.filter((movie) =>
-    movie.movieName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMovies = useMemo(() => {
+    return movies.filter((movie) => {
+      if (statusFilter !== 'ALL' && movie.status !== statusFilter) return false;
+      const q = searchTerm.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        movie.movieName?.toLowerCase().includes(q) ||
+        movie.directorName?.toLowerCase().includes(q)
+      );
+    });
+  }, [movies, statusFilter, searchTerm]);
 
   const getStatusInfo = (status) => {
     const map = {
@@ -223,8 +249,28 @@ const MovieManagement = () => {
       </div>
 
       <div className="admin-table-card">
-        <div className="table-header">
-          <div style={{ position: 'relative', maxWidth: '320px', flex: 1 }}>
+        <div className="console-toolbar">
+          <div className="console-status-tabs">
+            {MOVIE_STATUS_TABS.map((tab) => {
+              const count =
+                tab.key === 'ALL'
+                  ? movies.length
+                  : movies.filter((m) => m.status === tab.key).length;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={`console-status-tab ${statusFilter === tab.key ? 'is-active' : ''}`}
+                  onClick={() => setStatusFilter(tab.key)}
+                >
+                  <span>{tab.label}</span>
+                  <span className="console-status-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 320px' }}>
             <SearchIcon
               size={16}
               style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
@@ -232,15 +278,12 @@ const MovieManagement = () => {
             <input
               type="text"
               className="input"
-              placeholder="Tìm tên phim..."
+              placeholder="Tìm tên phim, đạo diễn..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', background: 'var(--bg-input)' }}
+              style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
             />
           </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            {filteredMovies.length} kết quả
-          </span>
         </div>
         <table className="admin-table">
           <thead>
@@ -336,7 +379,9 @@ const MovieManagement = () => {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{editingMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}</h2>
-              <button onClick={handleCloseModal} className="modal-close" style={{ position: 'static', fontSize: '1.5rem' }}>✕</button>
+              <button type="button" onClick={handleCloseModal} className="modal-close" style={{ position: 'static', width: 34, height: 34 }} aria-label="Đóng">
+                <XIcon size={18} />
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -451,6 +496,16 @@ const MovieManagement = () => {
               <div className="form-group">
                 <label className="form-label">Poster URL</label>
                 <input type="text" name="thumbnailUrl" className="input" value={formData.thumbnailUrl} onChange={handleInputChange} placeholder="https://..." />
+                {formData.thumbnailUrl && (
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <SafeImage
+                      src={formData.thumbnailUrl}
+                      alt="Poster preview"
+                      style={{ width: 52, height: 74, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }}
+                    />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Xem trước Poster</span>
+                  </div>
+                )}
               </div>
 
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -487,6 +542,16 @@ const MovieManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Xoá phim"
+        message={`Bạn có chắc chắn muốn xoá phim "${deleteTarget?.movieName}" khỏi hệ thống?`}
+        confirmText="Xoá phim"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

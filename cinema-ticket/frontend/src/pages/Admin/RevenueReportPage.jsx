@@ -1,11 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { branchApi, movieApi, reportsApi, userApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
+import {
+  CalculatorIcon,
+  DownloadIcon,
+  PopcornIcon,
+  RotateCcwIcon,
+  SparkIcon,
+  TicketIcon,
+} from '../../components/Common/CinemaIcons';
 
 const dateDaysAgo = (days) => {
   const date = new Date();
   date.setDate(date.getDate() - days);
   return date.toISOString().slice(0, 10);
+};
+
+const firstDayOfMonth = () => {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 };
 
 const formatCurrency = (amount) =>
@@ -15,21 +29,24 @@ const formatCurrency = (amount) =>
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 const formatDateTime = (value) => value ? new Date(value).toLocaleString('vi-VN') : '-';
 
+const DEFAULT_FILTERS = () => ({
+  from: dateDaysAgo(29),
+  to: dateDaysAgo(0),
+  branchId: '',
+  movieId: '',
+  staffId: '',
+  paymentMethod: '',
+});
+
 const RevenueReportPage = () => {
   const { user } = useAuth();
-  const [filters, setFilters] = useState({
-    from: dateDaysAgo(29),
-    to: dateDaysAgo(0),
-    branchId: '',
-    movieId: '',
-    staffId: '',
-    paymentMethod: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [report, setReport] = useState(null);
   const [branches, setBranches] = useState([]);
   const [movies, setMovies] = useState([]);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -64,23 +81,64 @@ const RevenueReportPage = () => {
 
   const summary = report?.summary || {};
   const cards = useMemo(() => [
-    ['Doanh thu', formatCurrency(summary.revenue), `${formatNumber(summary.bookings)} đơn`],
-    ['Vé', formatCurrency(summary.ticketRevenue), `${formatNumber(summary.ticketsSold)} vé`],
-    ['Bắp nước', formatCurrency(summary.foodRevenue), 'Doanh thu phụ trợ'],
-    ['AOV', formatCurrency(summary.averageOrderValue), 'Giá trị đơn trung bình'],
+    {
+      label: 'Tổng doanh thu',
+      value: formatCurrency(summary.revenue),
+      note: `${formatNumber(summary.bookings)} đơn hoàn tất`,
+      icon: SparkIcon,
+      color: '#16a34a',
+    },
+    {
+      label: 'Doanh thu vé',
+      value: formatCurrency(summary.ticketRevenue),
+      note: `${formatNumber(summary.ticketsSold)} vé đã bán`,
+      icon: TicketIcon,
+      color: '#0756a6',
+    },
+    {
+      label: 'Doanh thu bắp nước',
+      value: formatCurrency(summary.foodRevenue),
+      note: 'Doanh thu phụ trợ F&B',
+      icon: PopcornIcon,
+      color: '#d97706',
+    },
+    {
+      label: 'Giá trị đơn TB (AOV)',
+      value: formatCurrency(summary.averageOrderValue),
+      note: 'Trung bình mỗi giao dịch',
+      icon: CalculatorIcon,
+      color: '#7c3aed',
+    },
   ], [summary]);
 
   const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
 
+  const applyPreset = (days) => {
+    const todayStr = dateDaysAgo(0);
+    if (days === 'MONTH') {
+      setFilters((prev) => ({ ...prev, from: firstDayOfMonth(), to: todayStr }));
+    } else {
+      setFilters((prev) => ({ ...prev, from: dateDaysAgo(days), to: todayStr }));
+    }
+  };
+
   const exportExcel = async () => {
-    const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''));
-    const res = await reportsApi.exportRevenue(params);
-    const url = URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'revenue-report.xlsx';
-    link.click();
-    URL.revokeObjectURL(url);
+    setExporting(true);
+    try {
+      const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''));
+      const res = await reportsApi.exportRevenue(params);
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `revenue-report-${filters.from}-to-${filters.to}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Đã xuất file Excel doanh thu chi tiết');
+    } catch {
+      toast.error('Không thể xuất file Excel');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -90,10 +148,46 @@ const RevenueReportPage = () => {
           <h1 className="page-title">Doanh thu chi tiết</h1>
           <p className="page-subtitle">Lọc doanh thu theo chi nhánh, phim, nhân viên, phương thức thanh toán và khoảng ngày.</p>
         </div>
-        <button className="btn btn-primary" onClick={exportExcel}>Xuất Excel</button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setFilters(DEFAULT_FILTERS())}
+          >
+            <RotateCcwIcon size={16} />
+            <span>Đặt lại</span>
+          </button>
+          <button type="button" className="btn btn-primary" onClick={exportExcel} disabled={exporting}>
+            <DownloadIcon size={16} />
+            <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="admin-table-card" style={{ padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            Khoảng thời gian nhanh:
+          </span>
+          <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { key: 0, label: 'Hôm nay' },
+              { key: 6, label: '7 ngày qua' },
+              { key: 29, label: '30 ngày qua' },
+              { key: 'MONTH', label: 'Tháng này' },
+            ].map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                className="pos-time-pill"
+                onClick={() => applyPreset(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
           <input className="input" type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
           <input className="input" type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
@@ -121,12 +215,15 @@ const RevenueReportPage = () => {
       </div>
 
       <div className="stats-grid">
-        {cards.map(([label, value, note]) => (
-          <div className="stat-card" key={label}>
+        {cards.map((card) => (
+          <div className="stat-card" key={card.label}>
+            <div className="stat-icon" style={{ backgroundColor: `${card.color}18`, color: card.color }}>
+              {createElement(card.icon, { size: 22 })}
+            </div>
             <div className="stat-info">
-              <span className="stat-label">{label}</span>
-              <h3 className="stat-value">{loading ? '...' : value}</h3>
-              <span className="stat-note">{note}</span>
+              <span className="stat-label">{card.label}</span>
+              <h3 className="stat-value">{loading ? '...' : card.value}</h3>
+              <span className="stat-note">{card.note}</span>
             </div>
           </div>
         ))}

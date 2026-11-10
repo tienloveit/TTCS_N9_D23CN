@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { foodApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
-import { EditIcon, PlusIcon, SearchIcon, TrashIcon } from '../../components/Common/CinemaIcons';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', {
@@ -15,6 +16,9 @@ const FoodManagement = () => {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
+  const [deleting, setDeleting] = useState(false);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -105,21 +109,33 @@ const FoodManagement = () => {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Bạn có chắc chắn muốn vô hiệu hoá "${name}"?`)) {
-      try {
-        await foodApi.delete(id);
-        toast.success(`Đã vô hiệu hoá "${name}"!`);
-        fetchFoods();
-      } catch (err) {
-        toast.error('Lỗi: ' + (err.response?.data?.message || err.message));
-      }
+  const handleDelete = (id, name) => {
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await foodApi.delete(deleteTarget.id);
+      toast.success(`Đã vô hiệu hoá "${deleteTarget.name}"!`);
+      setDeleteTarget(null);
+      fetchFoods();
+    } catch (err) {
+      toast.error('Lỗi: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const filteredFoods = foods.filter((food) =>
-    food.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFoods = useMemo(() => {
+    return foods.filter((food) => {
+      if (statusFilter === 'ACTIVE' && food.active === false) return false;
+      if (statusFilter === 'INACTIVE' && food.active !== false) return false;
+      if (statusFilter === 'LOW_STOCK' && !(food.lowStock || (food.stockQuantity != null && food.stockQuantity <= 0))) return false;
+      return food.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [foods, statusFilter, searchTerm]);
 
   if (loading && !isModalOpen) {
     return (
@@ -148,8 +164,31 @@ const FoodManagement = () => {
       </div>
 
       <div className="admin-table-card">
-        <div className="table-header">
-          <div style={{ position: 'relative', maxWidth: '320px', flex: 1 }}>
+        <div className="console-toolbar">
+          <div className="console-status-tabs">
+            {[
+              { key: 'ALL', label: 'Tất cả', count: foods.length },
+              { key: 'ACTIVE', label: 'Đang bán', count: foods.filter((f) => f.active !== false).length },
+              {
+                key: 'LOW_STOCK',
+                label: 'Sắp hết / Hết hàng',
+                count: foods.filter((f) => f.lowStock || (f.stockQuantity != null && f.stockQuantity <= 0)).length,
+              },
+              { key: 'INACTIVE', label: 'Ngừng bán', count: foods.filter((f) => f.active === false).length },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={`console-status-tab ${statusFilter === tab.key ? 'is-active' : ''}`}
+                onClick={() => setStatusFilter(tab.key)}
+              >
+                <span>{tab.label}</span>
+                <span className="console-status-count">{tab.count}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 300px' }}>
             <SearchIcon
               size={16}
               style={{
@@ -167,12 +206,9 @@ const FoodManagement = () => {
               placeholder="Tìm tên sản phẩm..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', background: 'var(--bg-input)' }}
+              style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
             />
           </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            {filteredFoods.length} kết quả
-          </span>
         </div>
         <table className="admin-table">
           <thead>
@@ -316,11 +352,13 @@ const FoodManagement = () => {
                 {editingFood ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
               <button
+                type="button"
                 onClick={handleCloseModal}
                 className="modal-close"
-                style={{ position: 'static', fontSize: '1.5rem' }}
+                style={{ position: 'static', width: 34, height: 34 }}
+                aria-label="Đóng"
               >
-                ✕
+                <XIcon size={18} />
               </button>
             </div>
 
@@ -453,6 +491,16 @@ const FoodManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Vô hiệu hoá sản phẩm"
+        message={`Bạn có chắc chắn muốn ngừng bán sản phẩm "${deleteTarget?.name}"?`}
+        confirmText="Ngừng bán"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

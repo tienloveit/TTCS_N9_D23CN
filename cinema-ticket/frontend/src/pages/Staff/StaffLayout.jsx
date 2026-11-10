@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/useAuth';
+import { notificationApi } from '../../api';
 import {
   BellIcon,
   CalendarIcon,
@@ -39,14 +40,19 @@ const TITLE_MAP = {
 
 const NAV_SECTIONS = [
   {
-    label: 'Nghiệp vụ',
+    label: 'Bán vé & Soát vé',
+    items: [
+      { path: '/staff/booking', label: 'Đặt vé tại quầy (POS)', Icon: Icons.Ticket },
+      { path: '/staff/check-in', label: 'Cổng Check-in', Icon: Icons.Scan },
+      { path: '/staff/bookings', label: 'Tra cứu đơn vé', Icon: Icons.List },
+    ],
+  },
+  {
+    label: 'Ca làm & Thông báo',
     items: [
       { path: '/staff/dashboard', label: 'Tổng quan ca', Icon: Icons.Dashboard },
-      { path: '/staff/schedules', label: 'Lịch trực', Icon: Icons.Calendar },
-      { path: '/staff/booking', label: 'Đặt vé tại quầy', Icon: Icons.Ticket },
-      { path: '/staff/check-in', label: 'Check-in', Icon: Icons.Scan },
-      { path: '/staff/bookings', label: 'Đơn đặt vé', Icon: Icons.List },
-      { path: '/staff/notifications', label: 'Thông báo', Icon: Icons.Bell },
+      { path: '/staff/schedules', label: 'Lịch trực của tôi', Icon: Icons.Calendar },
+      { path: '/staff/notifications', label: 'Thông báo', Icon: Icons.Bell, isNotification: true },
     ],
   },
 ];
@@ -56,6 +62,17 @@ export default function StaffLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    notificationApi
+      .getAll()
+      .then((res) => {
+        const list = res.data?.result || [];
+        setUnreadCount(list.filter((n) => !n.read).length);
+      })
+      .catch(() => {});
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -97,6 +114,9 @@ export default function StaffLayout() {
                 >
                   <span className="nav-icon"><item.Icon /></span>
                   <span>{item.label}</span>
+                  {item.isNotification && unreadCount > 0 && (
+                    <span className="nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -134,6 +154,18 @@ export default function StaffLayout() {
           </div>
 
           <div className="admin-header-right">
+            <NavLink
+              to="/staff/notifications"
+              className="topbar-bell-btn"
+              title="Thông báo ca trực"
+              aria-label="Thông báo ca trực"
+            >
+              <Icons.Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="topbar-bell-dot">{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
+            </NavLink>
+
             {isAdmin && (
               <NavLink to="/admin" className="admin-header-link">
                 Admin panel

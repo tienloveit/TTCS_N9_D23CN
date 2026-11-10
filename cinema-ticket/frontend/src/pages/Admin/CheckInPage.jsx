@@ -85,6 +85,7 @@ export default function CheckInPage() {
     Array.isArray(initialSession?.recentCheckIns) ? initialSession.recentCheckIns : []
   );
   const [historyFilter, setHistoryFilter] = useState(initialSession?.historyFilter || 'ALL'); // 'ALL' | 'SUCCESS' | 'DUPLICATE' | 'ERROR'
+  const [historySearch, setHistorySearch] = useState('');
 
   const codeInputRef = useRef(null);
 
@@ -472,9 +473,17 @@ export default function CheckInPage() {
   }, [recentCheckIns]);
 
   const filteredHistory = useMemo(() => {
-    if (historyFilter === 'ALL') return recentCheckIns;
-    return recentCheckIns.filter((item) => item.status === historyFilter);
-  }, [recentCheckIns, historyFilter]);
+    return recentCheckIns.filter((item) => {
+      if (historyFilter !== 'ALL' && item.status !== historyFilter) return false;
+      if (!historySearch.trim()) return true;
+      const q = historySearch.toLowerCase().trim();
+      return (
+        (item.code || '').toLowerCase().includes(q) ||
+        (item.movieName || '').toLowerCase().includes(q) ||
+        (item.seats || '').toLowerCase().includes(q)
+      );
+    });
+  }, [recentCheckIns, historyFilter, historySearch]);
 
   return (
     <div className="gate-page">
@@ -649,7 +658,14 @@ export default function CheckInPage() {
                       className="btn gate-code-submit"
                       disabled={checking || !code.trim()}
                     >
-                      {checking ? 'Đang soát...' : 'Soát vé ↵'}
+                      {checking ? (
+                        'Đang soát...'
+                      ) : (
+                        <>
+                          <span>Soát vé</span>
+                          <CheckIcon size={16} />
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
@@ -802,7 +818,15 @@ export default function CheckInPage() {
               <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800 }}>
                 Nhật ký soát vé trong phiên ({filteredHistory.length})
               </h3>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Lọc mã, ghế, phim..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  style={{ height: 30, width: 150, fontSize: '0.78rem', padding: '0 10px' }}
+                />
                 {[
                   { key: 'ALL', label: 'Tất cả' },
                   { key: 'SUCCESS', label: 'Hợp lệ' },

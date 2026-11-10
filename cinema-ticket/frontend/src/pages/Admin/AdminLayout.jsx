@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useState, useEffect } from 'react';
+import { notificationApi } from '../../api';
 import {
   BellIcon,
   BoxIcon,
@@ -81,31 +82,36 @@ const TITLE_MAP = {
 /* ── Navigation definition ── */
 const NAV_SECTIONS = [
   {
-    label: 'Tổng quan',
+    label: 'Bàn làm việc & Báo cáo',
     items: [
       { path: '/admin', label: 'Dashboard', Icon: Icons.Dashboard, end: true },
+      { path: '/admin/operations', label: 'Báo cáo vận hành', Icon: Icons.Report },
+      { path: '/admin/revenue', label: 'Doanh thu chi tiết', Icon: Icons.Report },
     ],
   },
   {
-    label: 'Quản lý',
+    label: 'Vận hành Rạp & Vé',
     items: [
       { path: '/admin/movies', label: 'Phim', Icon: Icons.Movie },
       { path: '/admin/showtimes', label: 'Suất chiếu', Icon: Icons.Calendar },
       { path: '/admin/branches', label: 'Rạp & Phòng', Icon: Icons.Building },
       { path: '/admin/bookings', label: 'Đơn đặt vé', Icon: Icons.Ticket },
-      { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
-      { path: '/admin/inventory', label: 'Nhập xuất kho', Icon: Icons.Box },
-      { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
-      { path: '/admin/operations', label: 'Báo cáo vận hành', Icon: Icons.Report },
-      { path: '/admin/revenue', label: 'Doanh thu chi tiết', Icon: Icons.Report },
-      { path: '/admin/refunds', label: 'Hoàn tiền', Icon: Icons.Ticket },
+      { path: '/admin/refunds', label: 'Hoàn tiền', Icon: Icons.Refund },
     ],
   },
   {
-    label: 'Hệ thống',
+    label: 'Quầy F&B & Khuyến mãi',
     items: [
-      { path: '/admin/users', label: 'Người dùng', Icon: Icons.Users },
-      { path: '/admin/notifications', label: 'Thông báo', Icon: Icons.Bell },
+      { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
+      { path: '/admin/inventory', label: 'Nhập xuất kho', Icon: Icons.Box },
+      { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
+    ],
+  },
+  {
+    label: 'Hệ thống & Nhân sự',
+    items: [
+      { path: '/admin/users', label: 'Người dùng & Ca trực', Icon: Icons.Users },
+      { path: '/admin/notifications', label: 'Thông báo', Icon: Icons.Bell, isNotification: true },
       { path: '/admin/audit-logs', label: 'Nhật ký hệ thống', Icon: Icons.Shield },
       { path: '/admin/settings', label: 'Cấu hình', Icon: Icons.Settings },
     ],
@@ -118,12 +124,21 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Close mobile sidebar on route change
+  // Close mobile sidebar on route change & refresh unread notifications
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setSidebarOpen(false);
     }, 0);
+
+    notificationApi
+      .getAll()
+      .then((res) => {
+        const list = res.data?.result || [];
+        setUnreadCount(list.filter((n) => !n.read).length);
+      })
+      .catch(() => {});
 
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
@@ -135,7 +150,8 @@ const AdminLayout = () => {
 
   const pageTitle = TITLE_MAP[location.pathname] || 'Quản trị';
   const initials = (user?.username || 'A').charAt(0).toUpperCase();
-  const basePath = user?.role === 'MANAGER' ? '/manager' : '/admin';
+  const isManagerRole = user?.role === 'MANAGER';
+  const basePath = isManagerRole ? '/manager' : '/admin';
   const managerPaths = [
     '/admin',
     '/admin/showtimes',
@@ -159,8 +175,8 @@ const AdminLayout = () => {
       ),
     }))
     .filter((section) => section.items.length > 0);
-  const displayRoleLabel =
-    user?.role === 'MANAGER' ? 'Manager' : 'Admin';
+  const displayRoleLabel = isManagerRole ? 'Manager' : 'Admin';
+  const portalSubtitle = isManagerRole ? 'Manager Portal' : 'Admin Panel';
 
   return (
     <div className="admin-layout">
@@ -174,7 +190,7 @@ const AdminLayout = () => {
             </div>
             <div className="admin-logo-text">
               <strong>MoviePTIT</strong>
-              <small>Admin Panel</small>
+              <small>{portalSubtitle}</small>
             </div>
           </NavLink>
         </div>
@@ -194,7 +210,10 @@ const AdminLayout = () => {
                   }
                 >
                   <span className="nav-icon"><item.Icon /></span>
-                  <span>{item.label}</span>
+                  <span>{isManagerRole && item.path === '/admin/users' ? 'Nhân viên & Ca trực' : item.label}</span>
+                  {item.isNotification && unreadCount > 0 && (
+                    <span className="nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -236,6 +255,18 @@ const AdminLayout = () => {
           </div>
 
           <div className="admin-header-right">
+            <NavLink
+              to={`${basePath}/notifications`}
+              className="topbar-bell-btn"
+              title="Thông báo vận hành"
+              aria-label="Thông báo vận hành"
+            >
+              <Icons.Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="topbar-bell-dot">{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
+            </NavLink>
+
             <a href="/" className="admin-header-link" target="_blank" rel="noopener noreferrer">
               <Icons.ExternalLink />
               Xem trang chủ

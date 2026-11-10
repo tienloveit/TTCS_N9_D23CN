@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { branchApi, staffApi, userApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import {
   EditIcon as LucideEditIcon,
   EyeIcon,
@@ -10,6 +11,7 @@ import {
   SearchIcon,
   TrashIcon as LucideTrashIcon,
   UnlockIcon as LucideUnlockIcon,
+  XIcon,
 } from '../../components/Common/CinemaIcons';
 
 /* ─── Icons ─────────────────────────────────────────────── */
@@ -53,6 +55,10 @@ const UserManagement = () => {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [confirmState, setConfirmState] = useState(null); // { type: 'DELETE' | 'STATUS' | 'SCHEDULE', payload }
+  const [confirming, setConfirming] = useState(false);
 
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -179,15 +185,8 @@ const UserManagement = () => {
     }
   };
 
-  const handleCancelSchedule = async (scheduleId) => {
-    if (!window.confirm('Huỷ lịch trực này?')) return;
-    try {
-      await staffApi.cancelSchedule(scheduleId);
-      toast.success('Đã huỷ lịch trực');
-      await reloadStaffDetail();
-    } catch (err) {
-      toast.error('Không huỷ được lịch trực: ' + (err.response?.data?.message || err.message));
-    }
+  const handleCancelSchedule = (scheduleId) => {
+    setConfirmState({ type: 'SCHEDULE', payload: scheduleId });
   };
 
   /* ── Submit (Add / Edit) ── */
@@ -234,30 +233,40 @@ const UserManagement = () => {
   };
 
   /* ── Delete ── */
-  const handleDelete = async (user) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xoá tài khoản "${user.username}"?\nHành động này không thể hoàn tác.`)) return;
-    try {
-      await userApi.delete(user.id);
-      toast.success(`Đã xoá tài khoản "${user.username}"`);
-      fetchUsers();
-    } catch (err) {
-      toast.error('Xoá thất bại: ' + (err.response?.data?.message || err.message));
-    }
+  const handleDelete = (targetUser) => {
+    setConfirmState({ type: 'DELETE', payload: targetUser });
   };
 
   /* ── Toggle status ── */
-  const handleToggleStatus = async (user) => {
-    const newStatus = user.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
-    const msg = user.status === 'BLOCKED'
-      ? `Mở khoá tài khoản "${user.username}"?`
-      : `Khoá tài khoản "${user.username}"?`;
-    if (!window.confirm(msg)) return;
+  const handleToggleStatus = (targetUser) => {
+    setConfirmState({ type: 'STATUS', payload: targetUser });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (!confirmState) return;
+    setConfirming(true);
     try {
-      await userApi.updateStatus(user.id, newStatus);
-      toast.success(newStatus === 'BLOCKED' ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản');
-      fetchUsers();
-    } catch {
-      toast.error('Cập nhật trạng thái thất bại');
+      if (confirmState.type === 'DELETE') {
+        const target = confirmState.payload;
+        await userApi.delete(target.id);
+        toast.success(`Đã xoá tài khoản "${target.username}"`);
+        fetchUsers();
+      } else if (confirmState.type === 'STATUS') {
+        const target = confirmState.payload;
+        const newStatus = target.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
+        await userApi.updateStatus(target.id, newStatus);
+        toast.success(newStatus === 'BLOCKED' ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản');
+        fetchUsers();
+      } else if (confirmState.type === 'SCHEDULE') {
+        await staffApi.cancelSchedule(confirmState.payload);
+        toast.success('Đã huỷ lịch trực');
+        await reloadStaffDetail();
+      }
+      setConfirmState(null);
+    } catch (err) {
+      toast.error('Thao tác thất bại: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -289,11 +298,17 @@ const UserManagement = () => {
     return map[role] || { label: role, color: 'transparent', text: 'var(--text-muted)' };
   };
 
-  const filtered = users.filter((u) =>
-    [u.username, u.fullName, u.email, u.phoneNumber].some((f) =>
-      f?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const filtered = useMemo(() => {
+    return users.filter((u) => {
+      if (roleFilter !== 'ALL' && u.role !== roleFilter) return false;
+      if (statusFilter !== 'ALL' && u.status !== statusFilter) return false;
+      const q = searchTerm.toLowerCase().trim();
+      if (!q) return true;
+      return [u.username, u.fullName, u.email, u.phoneNumber].some((f) =>
+        f?.toLowerCase().includes(q)
+      );
+    });
+  }, [users, roleFilter, statusFilter, searchTerm]);
 
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
@@ -316,24 +331,63 @@ const UserManagement = () => {
 
       {/* Table card */}
       <div className="admin-table-card">
-        <div className="table-header">
-          <div style={{ position: 'relative', maxWidth: '340px', flex: 1 }}>
-            <SearchIcon
-              size={16}
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
-            />
-            <input
-              type="text"
-              className="input"
-              placeholder="Tìm username, tên, email, SĐT..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', background: 'var(--bg-input)' }}
-            />
+        <div className="console-toolbar">
+          <div className="console-status-tabs">
+            {(isManager
+              ? [{ key: 'ALL', label: 'Tất cả' }, { key: 'STAFF', label: 'Staff' }]
+              : [
+                  { key: 'ALL', label: 'Tất cả' },
+                  { key: 'ADMIN', label: 'Admin' },
+                  { key: 'MANAGER', label: 'Manager' },
+                  { key: 'STAFF', label: 'Staff' },
+                  { key: 'USER', label: 'User' },
+                ]
+            ).map((tab) => {
+              const count =
+                tab.key === 'ALL'
+                  ? users.length
+                  : users.filter((u) => u.role === tab.key).length;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={`console-status-tab ${roleFilter === tab.key ? 'is-active' : ''}`}
+                  onClick={() => setRoleFilter(tab.key)}
+                >
+                  <span>{tab.label}</span>
+                  <span className="console-status-count">{count}</span>
+                </button>
+              );
+            })}
           </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            {filtered.length} kết quả
-          </span>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select
+              className="input"
+              style={{ width: 'auto', height: 38, fontSize: '0.84rem' }}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">Mọi trạng thái</option>
+              <option value="ACTIVE">Đang hoạt động</option>
+              <option value="BLOCKED">Bị khoá</option>
+            </select>
+
+            <div style={{ position: 'relative', minWidth: '250px' }}>
+              <SearchIcon
+                size={16}
+                style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+              />
+              <input
+                type="text"
+                className="input"
+                placeholder="Tìm username, tên, email, SĐT..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
+              />
+            </div>
+          </div>
         </div>
 
         <table className="admin-table">
@@ -454,7 +508,9 @@ const UserManagement = () => {
                   Xem lịch trực được phân công và lịch sử ca làm tại chi nhánh.
                 </p>
               </div>
-              <button onClick={() => setDetailOpen(false)} className="modal-close" style={{ position: 'static', fontSize: '1.5rem' }}>×</button>
+              <button type="button" onClick={() => setDetailOpen(false)} className="modal-close" style={{ position: 'static', width: 34, height: 34 }} aria-label="Đóng">
+                <XIcon size={18} />
+              </button>
             </div>
 
             {detailLoading ? (
@@ -632,7 +688,9 @@ const UserManagement = () => {
                     : 'Điền đầy đủ thông tin để tạo tài khoản mới'}
                 </p>
               </div>
-              <button onClick={closeModal} className="modal-close" style={{ position: 'static', fontSize: '1.5rem' }}>✕</button>
+              <button type="button" onClick={closeModal} className="modal-close" style={{ position: 'static', width: 34, height: 34 }} aria-label="Đóng">
+                <XIcon size={18} />
+              </button>
             </div>
 
             {/* Form */}
@@ -773,6 +831,37 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmState)}
+        title={
+          confirmState?.type === 'DELETE'
+            ? 'Xoá tài khoản người dùng'
+            : confirmState?.type === 'STATUS'
+            ? confirmState?.payload?.status === 'BLOCKED'
+              ? 'Mở khoá tài khoản'
+              : 'Khoá tài khoản'
+            : 'Huỷ lịch trực'
+        }
+        message={
+          confirmState?.type === 'DELETE'
+            ? `Bạn có chắc chắn muốn xoá tài khoản "${confirmState?.payload?.username}"?\nHành động này không thể hoàn tác.`
+            : confirmState?.type === 'STATUS'
+            ? confirmState?.payload?.status === 'BLOCKED'
+              ? `Mở khoá hoạt động cho tài khoản "${confirmState?.payload?.username}"?`
+              : `Khoá quyền truy cập của tài khoản "${confirmState?.payload?.username}"?`
+            : 'Bạn có chắc chắn muốn huỷ ca trực này?'
+        }
+        confirmText="Xác nhận"
+        variant={
+          confirmState?.type === 'STATUS' && confirmState?.payload?.status === 'BLOCKED'
+            ? 'primary'
+            : 'danger'
+        }
+        loading={confirming}
+        onConfirm={executeConfirmedAction}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   );
 };

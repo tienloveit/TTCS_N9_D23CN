@@ -7196,5 +7196,210 @@ button.seat {
   color: var(--accent);
 }
 
+/* ==================== UI/UX PRO MAX: STAFF, MANAGER & ADMIN CONSOLE UPGRADES ==================== */
+
+/* 1. Sidebar Grouping & Notification Unread Badge */
+.sidebar-section-label {
+  padding: 12px 14px 4px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.48);
+  user-select: none;
+}
+
+.admin-sidebar.collapsed .sidebar-section-label {
+  display: none;
+}
+
+.nav-unread-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+}
+
+.admin-sidebar.collapsed .nav-unread-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  font-size: 0.65rem;
+  padding: 0 4px;
+}
+
+.topbar-bell-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.topbar-bell-btn:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: #ffffff;
+}
+
+.topbar-bell-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+/* 2. Console Filter Bar & Segmented Status Pills */
+.console-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  flex-wrap: wrap;
+}
+
+.console-status-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.console-status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid #dbe4ef;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.console-status-tab:hover {
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.console-status-tab.is-active {
+  background: #0756a6;
+  border-color: #0756a6;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(7, 86, 166, 0.22);
+}
+
+.console-status-count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.console-status-tab.is-active .console-status-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* 3. Data-Dense Table Refinements & Tabular Numerals */
+.admin-table td,
+.admin-table th,
+.stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.console-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: #f8fafc;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.console-page-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 4. Mini Progress Bar for Occupancy / Promo Usage */
+.mini-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 110px;
+}
+
+.mini-progress-track {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #0756a6;
+  transition: width 0.25s ease;
+}
+
+.mini-progress-fill.is-high {
+  background: #16a34a;
+}
+
+.mini-progress-fill.is-warn {
+  background: #f59e0b;
+}
+
+.mini-progress-fill.is-danger {
+  background: #dc2626;
+}
+
+
 
 

@@ -12,7 +12,15 @@ import {
   YAxis,
 } from 'recharts';
 import { analyticsApi } from '../../api';
-import { FilmIcon, MapPinIcon, SparkIcon, TicketIcon } from '../../components/Common/CinemaIcons';
+import { useAuth } from '../../context/useAuth';
+import {
+  FilmIcon,
+  MapPinIcon,
+  RefreshIcon,
+  ReportIcon,
+  SparkIcon,
+  TicketIcon,
+} from '../../components/Common/CinemaIcons';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 
 const emptyAnalytics = {
@@ -119,49 +127,43 @@ const PercentTooltip = ({ active, payload, label }) => {
 };
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
+  const isManager = user?.role === 'MANAGER';
+  const basePath = isManager ? '/manager' : '/admin';
+
   const [analytics, setAnalytics] = useState(emptyAnalytics);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [trendDays, setTrendDays] = useState(30); // 7 | 14 | 30
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const response = await analyticsApi.getDashboard();
+      setAnalytics(response.data.result || emptyAnalytics);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể tải dữ liệu thống kê');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-
-    const fetchAnalytics = async () => {
-      try {
-        const response = await analyticsApi.getDashboard();
-        if (!active) {
-          return;
-        }
-        setAnalytics(response.data.result || emptyAnalytics);
-        setError('');
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-        setError(err.response?.data?.message || 'Không thể tải dữ liệu thống kê');
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
     fetchAnalytics();
-
-    return () => {
-      active = false;
-    };
   }, []);
 
   const summary = analytics.summary || emptyAnalytics.summary;
-  const revenueTrend = useMemo(
-    () =>
-      (analytics.revenueTrend || []).map((item) => ({
-        ...item,
-        revenue: Number(item.revenue || 0),
-      })),
-    [analytics.revenueTrend]
-  );
+  const revenueTrend = useMemo(() => {
+    const all = (analytics.revenueTrend || []).map((item) => ({
+      ...item,
+      revenue: Number(item.revenue || 0),
+    }));
+    if (trendDays && all.length > trendDays) {
+      return all.slice(all.length - trendDays);
+    }
+    return all;
+  }, [analytics.revenueTrend, trendDays]);
   const occupancyByBranch = useMemo(
     () =>
       (analytics.occupancyByBranch || []).map((item) => ({
@@ -182,10 +184,32 @@ const AdminDashboard = () => {
     <div className="dashboard-container">
       <div className="dashboard-header">
         <div>
-          <h1 className="page-title">Tổng quan hệ thống</h1>
-          <p className="page-subtitle">Doanh thu, sức chứa phòng, phim bán chạy và doanh số bắp nước.</p>
+          <h1 className="page-title">
+            {isManager ? 'Tổng quan Chi nhánh' : 'Tổng quan Hệ thống'}
+          </h1>
+          <p className="page-subtitle">
+            Doanh thu, sức chứa phòng, phim bán chạy và doanh số bắp nước ({periodLabel}).
+          </p>
         </div>
-        <span className="analytics-period">{periodLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Link to={`${basePath}/operations`} className="btn btn-secondary btn-sm">
+            <ReportIcon size={15} />
+            <span>Báo cáo vận hành</span>
+          </Link>
+          <Link to={`${basePath}/revenue`} className="btn btn-secondary btn-sm">
+            <ReportIcon size={15} />
+            <span>Doanh thu chi tiết</span>
+          </Link>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={fetchAnalytics}
+            disabled={loading}
+          >
+            <RefreshIcon size={15} />
+            <span>Làm mới</span>
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -227,9 +251,25 @@ const AdminDashboard = () => {
 
       <div className="analytics-grid analytics-grid--wide">
         <section className="analytics-card">
-          <div className="analytics-card-header">
-            <h3>Doanh thu theo ngày</h3>
-            <span>{formatCurrency(summary.revenue)}</span>
+          <div className="analytics-card-header" style={{ flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <h3>Doanh thu theo ngày</h3>
+              <small style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                Tổng kỳ: {formatCurrency(summary.revenue)}
+              </small>
+            </div>
+            <div style={{ display: 'inline-flex', gap: 6 }}>
+              {[7, 14, 30].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`pos-time-pill ${trendDays === d ? 'pos-time-pill--active' : ''}`}
+                  onClick={() => setTrendDays(d)}
+                >
+                  {d} ngày
+                </button>
+              ))}
+            </div>
           </div>
           {loading ? (
             <SkeletonBox height="280px" />
@@ -294,8 +334,11 @@ const AdminDashboard = () => {
         <section className="analytics-card">
           <div className="analytics-card-header">
             <h3>Top phim</h3>
-            <Link to="/admin/movies" className="btn btn-ghost btn-sm">
-              Quản lý phim
+            <Link
+              to={isManager ? `${basePath}/showtimes` : '/admin/movies'}
+              className="btn btn-ghost btn-sm"
+            >
+              {isManager ? 'Quản lý suất chiếu' : 'Quản lý phim'}
             </Link>
           </div>
           {loading ? (
@@ -320,7 +363,9 @@ const AdminDashboard = () => {
         <section className="analytics-card">
           <div className="analytics-card-header">
             <h3>Doanh số bắp nước</h3>
-            <span>{formatCurrency(summary.foodRevenue)}</span>
+            <Link to={`${basePath}/foods`} className="btn btn-ghost btn-sm">
+              Quản lý F&B
+            </Link>
           </div>
           {loading ? (
             <SkeletonList />
@@ -344,7 +389,7 @@ const AdminDashboard = () => {
       <div className="admin-table-card">
         <div className="table-header">
           <h3 className="section-title">Đơn hàng mới nhất</h3>
-          <Link to="/admin/bookings" className="btn btn-ghost btn-sm">
+          <Link to={`${basePath}/bookings`} className="btn btn-ghost btn-sm">
             Quản lý vé
           </Link>
         </div>

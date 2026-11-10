@@ -1,6 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { branchApi, operationsApi, reportsApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
+import {
+  AlertTriangleIcon,
+  BanknoteIcon,
+  DownloadIcon,
+  RefreshIcon,
+  SparkIcon,
+  TicketIcon,
+} from '../../components/Common/CinemaIcons';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -23,6 +32,7 @@ const OperationsReportPage = () => {
   const [branches, setBranches] = useState([]);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,43 +44,73 @@ const OperationsReportPage = () => {
       .catch(() => setBranches([]));
   }, [user?.role]);
 
-  useEffect(() => {
-    let active = true;
+  const fetchReport = useCallback(() => {
     setLoading(true);
     operationsApi.getDailyReport({ date, branchId: branchId || undefined })
       .then((res) => {
-        if (!active) return;
         setReport(res.data.result);
         setError('');
       })
       .catch((err) => {
-        if (!active) return;
         setError(err.response?.data?.message || 'Không thể tải báo cáo vận hành');
       })
       .finally(() => {
-        if (active) setLoading(false);
+        setLoading(false);
       });
-    return () => {
-      active = false;
-    };
   }, [date, branchId]);
+
+  useEffect(() => {
+    fetchReport();
+  }, [fetchReport]);
 
   const summary = report?.summary || {};
   const statCards = useMemo(() => [
-    ['Doanh thu', formatCurrency(summary.revenue), `${formatNumber(summary.completedBookings)} đơn hoàn tất`],
-    ['Tiền mặt dự kiến', formatCurrency(summary.expectedCash), `Chênh lệch ${formatCurrency(summary.cashDifference)}`],
-    ['Vé đã bán', formatNumber(summary.ticketsSold), `Lấp đầy ${Number(summary.occupancyRate || 0).toFixed(1)}%`],
-    ['Cần xử lý', formatNumber(summary.refundRequests), `${formatNumber(summary.lowStockItems)} món sắp hết`],
+    {
+      label: 'Doanh thu trong ngày',
+      value: formatCurrency(summary.revenue),
+      note: `${formatNumber(summary.completedBookings)} đơn hoàn tất`,
+      icon: SparkIcon,
+      color: '#16a34a',
+    },
+    {
+      label: 'Tiền mặt dự kiến',
+      value: formatCurrency(summary.expectedCash),
+      note: `Chênh lệch ${formatCurrency(summary.cashDifference)}`,
+      icon: BanknoteIcon,
+      color: Number(summary.cashDifference || 0) !== 0 ? '#dc2626' : '#0756a6',
+    },
+    {
+      label: 'Vé đã bán',
+      value: formatNumber(summary.ticketsSold),
+      note: `Lấp đầy ${Number(summary.occupancyRate || 0).toFixed(1)}%`,
+      icon: TicketIcon,
+      color: '#7c3aed',
+    },
+    {
+      label: 'Cảnh báo cần xử lý',
+      value: formatNumber(summary.refundRequests),
+      note: `${formatNumber(summary.lowStockItems)} món sắp hết hàng`,
+      icon: AlertTriangleIcon,
+      color: '#d97706',
+    },
   ], [summary]);
 
   const exportExcel = async () => {
-    const res = await reportsApi.exportOperations({ date, branchId: branchId || undefined });
-    const url = URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'operations-report.xlsx';
-    link.click();
-    URL.revokeObjectURL(url);
+    setExporting(true);
+    try {
+      const res = await reportsApi.exportOperations({ date, branchId: branchId || undefined });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `operations-report-${date}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Đã xuất file Excel báo cáo vận hành');
+    } catch {
+      toast.error('Không thể xuất file Excel');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -80,29 +120,46 @@ const OperationsReportPage = () => {
           <h1 className="page-title">Báo cáo vận hành</h1>
           <p className="page-subtitle">Đối soát doanh thu, ca làm, tồn kho và yêu cầu hoàn tiền theo ngày.</p>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            className={`pos-time-pill ${date === today() ? 'pos-time-pill--active' : ''}`}
+            onClick={() => setDate(today())}
+          >
+            Hôm nay
+          </button>
+          <input className="input" style={{ width: 'auto' }} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           {user?.role === 'ADMIN' && (
-            <select className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <select className="input" style={{ width: 'auto' }} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
               <option value="">Tất cả chi nhánh</option>
               {branches.map((branch) => (
                 <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
               ))}
             </select>
           )}
-          <button className="btn btn-primary" onClick={exportExcel}>Xuất Excel</button>
+          <button type="button" className="btn btn-secondary" onClick={fetchReport} disabled={loading}>
+            <RefreshIcon size={16} />
+            <span>Làm mới</span>
+          </button>
+          <button type="button" className="btn btn-primary" onClick={exportExcel} disabled={exporting}>
+            <DownloadIcon size={16} />
+            <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+          </button>
         </div>
       </div>
 
       {error && <div className="error-message">{error}</div>}
 
       <div className="stats-grid">
-        {statCards.map(([label, value, note]) => (
-          <div className="stat-card" key={label}>
+        {statCards.map((card) => (
+          <div className="stat-card" key={card.label}>
+            <div className="stat-icon" style={{ backgroundColor: `${card.color}18`, color: card.color }}>
+              {createElement(card.icon, { size: 22 })}
+            </div>
             <div className="stat-info">
-              <span className="stat-label">{label}</span>
-              <h3 className="stat-value">{loading ? '...' : value}</h3>
-              <span className="stat-note">{note}</span>
+              <span className="stat-label">{card.label}</span>
+              <h3 className="stat-value">{loading ? '...' : card.value}</h3>
+              <span className="stat-note">{card.note}</span>
             </div>
           </div>
         ))}
@@ -113,18 +170,18 @@ const OperationsReportPage = () => {
           title="Đối soát thanh toán"
           headers={['Phương thức', 'Số đơn', 'Doanh thu']}
           rows={(report?.paymentBreakdown || []).map((item) => [
-            item.paymentMethod || '-',
+            <strong key="m">{item.paymentMethod || '-'}</strong>,
             formatNumber(item.bookings),
-            formatCurrency(item.amount),
+            <strong key="a" style={{ color: 'var(--text-primary)' }}>{formatCurrency(item.amount)}</strong>,
           ])}
         />
         <ReportTable
-          title="Yêu cầu hoàn tiền"
+          title="Yêu cầu hoàn tiền chờ duyệt"
           headers={['Mã đơn', 'Khách hàng', 'Số tiền', 'Lý do']}
           rows={(report?.refundQueue || []).map((item) => [
-            item.bookingCode,
+            <span key="c" style={{ fontFamily: 'monospace', fontWeight: 700 }}>{item.bookingCode}</span>,
             item.customerName || '-',
-            formatCurrency(item.amount),
+            <strong key="amt" style={{ color: '#dc2626' }}>{formatCurrency(item.amount)}</strong>,
             item.reason || '-',
           ])}
         />
@@ -134,36 +191,56 @@ const OperationsReportPage = () => {
         <ReportTable
           title="Ca làm trong ngày"
           headers={['Nhân viên', 'Mở ca', 'Đóng ca', 'Tiền dự kiến', 'Chênh lệch']}
-          rows={(report?.staffShifts || []).map((item) => [
-            item.staffName || '-',
-            formatDateTime(item.openedAt),
-            formatDateTime(item.closedAt),
-            formatCurrency(item.expectedCash),
-            formatCurrency(item.cashDifference),
-          ])}
+          rows={(report?.staffShifts || []).map((item) => {
+            const diff = Number(item.cashDifference || 0);
+            return [
+              <strong key="st">{item.staffName || '-'}</strong>,
+              formatDateTime(item.openedAt),
+              item.closedAt ? formatDateTime(item.closedAt) : <span key="op" className="status-badge status--pending">Đang mở</span>,
+              formatCurrency(item.expectedCash),
+              <strong key="df" style={{ color: diff === 0 ? '#16a34a' : '#dc2626' }}>
+                {diff > 0 ? `+${formatCurrency(diff)}` : formatCurrency(diff)}
+              </strong>,
+            ];
+          })}
         />
         <ReportTable
           title="Tồn kho cần nhập"
           headers={['Sản phẩm', 'Tồn', 'Ngưỡng', 'Trạng thái']}
           rows={(report?.lowStockFoods || []).map((item) => [
-            item.foodName,
-            formatNumber(item.stockQuantity),
+            <strong key="fn">{item.foodName}</strong>,
+            <strong key="sq" style={{ color: Number(item.stockQuantity) <= 0 ? '#dc2626' : '#d97706' }}>
+              {formatNumber(item.stockQuantity)}
+            </strong>,
             formatNumber(item.lowStockThreshold),
-            item.active === false ? 'Ngừng bán' : 'Đang bán',
+            <span key="st" className={`status-badge ${item.active === false ? 'status--inactive' : 'status--pending'}`}>
+              {item.active === false ? 'Ngừng bán' : Number(item.stockQuantity) <= 0 ? 'Hết hàng' : 'Sắp hết'}
+            </span>,
           ])}
         />
       </div>
 
       <ReportTable
-        title="Tải suất chiếu"
-        headers={['Phim', 'Phòng', 'Giờ chiếu', 'Vé bán', 'Lấp đầy']}
-        rows={(report?.showtimeLoads || []).map((item) => [
-          item.movieName,
-          item.roomName,
-          formatDateTime(item.startTime),
-          `${formatNumber(item.ticketsSold)} / ${formatNumber(item.capacity)}`,
-          `${Number(item.occupancyRate || 0).toFixed(1)}%`,
-        ])}
+        title="Tải suất chiếu trong ngày"
+        headers={['Phim', 'Phòng', 'Giờ chiếu', 'Vé bán', 'Tỷ lệ lấp đầy']}
+        rows={(report?.showtimeLoads || []).map((item) => {
+          const occ = Number(item.occupancyRate || 0);
+          const fillClass = occ >= 70 ? 'is-high' : occ >= 35 ? '' : 'is-warn';
+          return [
+            <strong key="mv">{item.movieName}</strong>,
+            item.roomName,
+            formatDateTime(item.startTime),
+            `${formatNumber(item.ticketsSold)} / ${formatNumber(item.capacity)}`,
+            <div key="occ" className="mini-progress-wrap">
+              <div className="mini-progress-track">
+                <div className={`mini-progress-fill ${fillClass}`} style={{ width: `${Math.min(occ, 100)}%` }} />
+              </div>
+              <strong style={{ fontSize: '0.82rem', minWidth: 44, textAlign: 'right' }}>
+                {occ.toFixed(1)}%
+              </strong>
+            </div>,
+          ];
+        })}
       />
     </div>
   );
@@ -173,6 +250,7 @@ const ReportTable = ({ title, headers, rows }) => (
   <section className="admin-table-card">
     <div className="table-header">
       <h3 className="section-title">{title}</h3>
+      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{rows.length} dòng</span>
     </div>
     <table className="admin-table">
       <thead>
@@ -180,7 +258,7 @@ const ReportTable = ({ title, headers, rows }) => (
       </thead>
       <tbody>
         {rows.length === 0 ? (
-          <tr><td colSpan={headers.length} style={{ textAlign: 'center', padding: 28 }}>Chưa có dữ liệu</td></tr>
+          <tr><td colSpan={headers.length} style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)' }}>Chưa có dữ liệu</td></tr>
         ) : (
           rows.map((row, index) => (
             <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>
@@ -192,3 +270,4 @@ const ReportTable = ({ title, headers, rows }) => (
 );
 
 export default OperationsReportPage;
+

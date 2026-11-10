@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { branchApi, roomApi, seatApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
-import { ArmchairIcon, EditIcon, PlusIcon, TrashIcon } from '../../components/Common/CinemaIcons';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import {
+  ArmchairIcon,
+  EditIcon,
+  PlusIcon,
+  SearchIcon,
+  TrashIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
 
 const roomTypeMap = {
   TWO_D: '2D',
@@ -67,6 +75,15 @@ const BranchManagement = () => {
   const [draggedSeatId, setDraggedSeatId] = useState(null);
   const [selectedSeatId, setSelectedSeatId] = useState(null);
   const [extraColumns, setExtraColumns] = useState(2);
+
+  // Room filter states
+  const [roomBranchFilter, setRoomBranchFilter] = useState('ALL');
+  const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
+  const [roomSearch, setRoomSearch] = useState('');
+
+  // Confirm Dialog state
+  const [confirmTarget, setConfirmTarget] = useState(null); // { type: 'BRANCH' | 'ROOM', id, name }
+  const [deleting, setDeleting] = useState(false);
 
   const [branchForm, setBranchForm] = useState({
     branchCode: '',
@@ -212,26 +229,53 @@ const BranchManagement = () => {
     }
   };
 
-  const handleDeleteBranch = async (id) => {
-    if (!window.confirm('Xóa chi nhánh này sẽ ảnh hưởng đến các phòng thuộc rạp. Tiếp tục?')) return;
+  const handleDeleteBranch = (id, name = '') => {
+    setConfirmTarget({ type: 'BRANCH', id, name });
+  };
+
+  const handleDeleteRoom = (id, name = '') => {
+    setConfirmTarget({ type: 'ROOM', id, name });
+  };
+
+  const executeConfirmDelete = async () => {
+    if (!confirmTarget) return;
+    setDeleting(true);
     try {
-      await branchApi.delete(id);
+      if (confirmTarget.type === 'BRANCH') {
+        await branchApi.delete(confirmTarget.id);
+      } else {
+        await roomApi.delete(confirmTarget.id);
+      }
       toast.success('Xóa thành công');
+      setConfirmTarget(null);
       fetchData();
     } catch {
       toast.error('Xóa thất bại');
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleDeleteRoom = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa phòng này?')) return;
-    try {
-      await roomApi.delete(id);
-      toast.success('Xóa thành công');
-      fetchData();
-    } catch {
-      toast.error('Xóa thất bại');
-    }
+  const filteredRooms = useMemo(() => {
+    return rooms.filter((room) => {
+      if (roomBranchFilter !== 'ALL' && String(room.branchId) !== String(roomBranchFilter)) return false;
+      if (roomTypeFilter !== 'ALL' && room.roomType !== roomTypeFilter) return false;
+      if (!roomSearch.trim()) return true;
+      const q = roomSearch.toLowerCase().trim();
+      return (
+        (room.name || '').toLowerCase().includes(q) ||
+        (room.code || '').toLowerCase().includes(q)
+      );
+    });
+  }, [rooms, roomBranchFilter, roomTypeFilter, roomSearch]);
+
+  const updateRowSeatsLocal = (rowLabel, patch) => {
+    if (!rowLabel) return;
+    setSeats((currentSeats) =>
+      currentSeats.map((seat) =>
+        seat.rowLabel === rowLabel ? { ...seat, ...patch } : seat
+      )
+    );
   };
 
   const getRoomCount = (branchId) => rooms.filter((room) => room.branchId === branchId).length;
@@ -386,7 +430,7 @@ const BranchManagement = () => {
                         <Icon name="edit" />
                       </button>
                       {isAdmin && (
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDeleteBranch(branch.branchId)}>
+                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDeleteBranch(branch.branchId, branch.name)}>
                           <Icon name="trash" />
                         </button>
                       )}
@@ -400,8 +444,49 @@ const BranchManagement = () => {
       </div>
 
       <div className="admin-table-card">
-        <div className="table-header">
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Phòng chiếu</h3>
+        <div className="console-toolbar">
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+            Phòng chiếu ({filteredRooms.length})
+          </h3>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', minWidth: 200 }}>
+              <SearchIcon
+                size={15}
+                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+              />
+              <input
+                type="text"
+                className="input"
+                placeholder="Tìm mã, tên phòng..."
+                value={roomSearch}
+                onChange={(e) => setRoomSearch(e.target.value)}
+                style={{ paddingLeft: 34, height: 36, fontSize: '0.84rem' }}
+              />
+            </div>
+            <select
+              className="input"
+              style={{ width: 'auto', height: 36, fontSize: '0.84rem' }}
+              value={roomBranchFilter}
+              onChange={(e) => setRoomBranchFilter(e.target.value)}
+            >
+              <option value="ALL">Tất cả chi nhánh</option>
+              {branches.map((b) => (
+                <option key={b.branchId} value={b.branchId}>{b.name}</option>
+              ))}
+            </select>
+            <select
+              className="input"
+              style={{ width: 'auto', height: 36, fontSize: '0.84rem' }}
+              value={roomTypeFilter}
+              onChange={(e) => setRoomTypeFilter(e.target.value)}
+            >
+              <option value="ALL">Mọi loại phòng</option>
+              <option value="TWO_D">2D</option>
+              <option value="THREE_D">3D</option>
+              <option value="IMAX">IMAX</option>
+              <option value="FOUR_DX">4DX</option>
+            </select>
+          </div>
         </div>
         <table className="admin-table">
           <thead>
@@ -417,14 +502,14 @@ const BranchManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {rooms.length === 0 ? (
+            {filteredRooms.length === 0 ? (
               <tr>
                 <td colSpan="8" style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                  Chưa có phòng chiếu
+                  Không tìm thấy phòng chiếu phù hợp
                 </td>
               </tr>
             ) : (
-              rooms.map((room, index) => {
+              filteredRooms.map((room, index) => {
                 const branch = branches.find((item) => item.branchId === room.branchId);
                 return (
                   <tr key={room.id || index}>
@@ -451,7 +536,7 @@ const BranchManagement = () => {
                         <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => openRoomModal(room)}>
                           <Icon name="edit" />
                         </button>
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDeleteRoom(room.id)}>
+                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDeleteRoom(room.id, room.name)}>
                           <Icon name="trash" />
                         </button>
                       </div>
@@ -465,9 +550,14 @@ const BranchManagement = () => {
       </div>
 
       {branchModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
-            <h2 style={{ marginBottom: 24 }}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
+        <div className="modal-overlay" onClick={() => setBranchModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ margin: 0 }}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
+              <button type="button" className="modal-close" style={{ position: 'static', width: 32, height: 32 }} onClick={() => setBranchModal(false)} aria-label="Đóng">
+                <XIcon size={16} />
+              </button>
+            </div>
             <form onSubmit={handleBranchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">Mã chi nhánh</label>
@@ -508,9 +598,14 @@ const BranchManagement = () => {
       )}
 
       {roomModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
-            <h2 style={{ marginBottom: 24 }}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
+        <div className="modal-overlay" onClick={() => setRoomModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ margin: 0 }}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
+              <button type="button" className="modal-close" style={{ position: 'static', width: 32, height: 32 }} onClick={() => setRoomModal(false)} aria-label="Đóng">
+                <XIcon size={16} />
+              </button>
+            </div>
             <form onSubmit={handleRoomSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">Thuộc chi nhánh</label>
@@ -701,6 +796,38 @@ const BranchManagement = () => {
                         </button>
                       </div>
 
+                      <div style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                          Đổi nhanh cả Hàng {selectedSeat.rowLabel}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '0.74rem', padding: '5px 6px' }}
+                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: 'STANDARD' })}
+                          >
+                            Thường
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '0.74rem', padding: '5px 6px' }}
+                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: 'VIP' })}
+                          >
+                            VIP
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '0.74rem', padding: '5px 6px' }}
+                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: 'COUPLE' })}
+                          >
+                            Ghế đôi
+                          </button>
+                        </div>
+                      </div>
+
                       <div style={{ display: 'grid', gap: 8, paddingTop: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ width: 22, height: 18, borderRadius: 4, background: seatTypeStyles.STANDARD.background, border: `1px solid ${seatTypeStyles.STANDARD.borderColor}` }} />
@@ -729,6 +856,20 @@ const BranchManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title={confirmTarget?.type === 'BRANCH' ? 'Xóa chi nhánh' : 'Xóa phòng chiếu'}
+        message={
+          confirmTarget?.type === 'BRANCH'
+            ? `Xóa chi nhánh "${confirmTarget?.name || ''}" sẽ ảnh hưởng đến các phòng chiếu thuộc rạp. Tiếp tục?`
+            : `Bạn có chắc chắn muốn xóa phòng "${confirmTarget?.name || ''}"?`
+        }
+        confirmText="Xóa"
+        loading={deleting}
+        onConfirm={executeConfirmDelete}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 };

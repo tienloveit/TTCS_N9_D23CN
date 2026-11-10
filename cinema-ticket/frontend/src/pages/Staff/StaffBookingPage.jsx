@@ -747,10 +747,17 @@ export default function StaffBookingPage() {
 
   const getSeatClass = (ticket) => {
     const status = ticket.displayStatus || ticket.ticketStatus;
-    if (selectedSeats.includes(ticket.seatId)) return 'seat seat--selected';
+    const type = String(ticket.seatType || '').toUpperCase();
+    const tierClass =
+      type === 'VIP'
+        ? 'seat--tier-vip'
+        : type === 'COUPLE'
+        ? 'seat--tier-couple'
+        : '';
+    if (selectedSeats.includes(ticket.seatId)) return `seat seat--selected ${tierClass}`.trim();
     if (status === 'BOOKED') return 'seat seat--booked';
     if (status === 'HOLDING') return 'seat seat--holding';
-    return 'seat seat--available';
+    return `seat seat--available ${tierClass}`.trim();
   };
 
   const updateFoodQuantity = (foodId, delta) => {
@@ -1391,18 +1398,26 @@ export default function StaffBookingPage() {
                           {sortedRows.map(([row, seats]) => (
                             <div key={row} className="seat-row">
                               <span className="seat-row-label">{row}</span>
-                              {seats.map((ticket) => (
-                                <div
-                                  key={ticket.id || ticket.seatId}
-                                  className={getSeatClass(ticket)}
-                                  onClick={() => toggleSeat(ticket)}
-                                  title={`${ticket.seatCode} • ${formatCurrency(ticket.price)} (${
-                                    ticket.displayStatus || ticket.ticketStatus
-                                  })`}
-                                >
-                                  {ticket.seatNumber || ''}
-                                </div>
-                              ))}
+                              {seats.map((ticket) => {
+                                const status = ticket.displayStatus || ticket.ticketStatus;
+                                const isAvailable = status === 'AVAILABLE';
+                                const isSelected = selectedSeats.includes(ticket.seatId);
+                                return (
+                                  <button
+                                    key={ticket.id || ticket.seatId}
+                                    type="button"
+                                    disabled={!isAvailable}
+                                    aria-pressed={isSelected}
+                                    className={getSeatClass(ticket)}
+                                    onClick={() => toggleSeat(ticket)}
+                                    title={`${ticket.seatCode}${ticket.seatType ? ` (${ticket.seatType})` : ''} • ${formatCurrency(ticket.price)} (${
+                                      ticket.displayStatus || ticket.ticketStatus
+                                    })`}
+                                  >
+                                    {ticket.seatNumber || ''}
+                                  </button>
+                                );
+                              })}
                               <span className="seat-row-label">{row}</span>
                             </div>
                           ))}
@@ -1418,7 +1433,15 @@ export default function StaffBookingPage() {
                               borderColor: 'var(--seat-available)',
                             }}
                           />
-                          Trống
+                          Ghế thường
+                        </div>
+                        <div className="seat-legend-item">
+                          <div className="seat-legend-dot seat-legend-dot--vip" />
+                          Ghế VIP
+                        </div>
+                        <div className="seat-legend-item">
+                          <div className="seat-legend-dot seat-legend-dot--couple" />
+                          Ghế đôi
                         </div>
                         <div className="seat-legend-item">
                           <div
