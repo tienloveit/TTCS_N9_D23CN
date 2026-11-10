@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './context/useAuth';
+import { ROLE_HOME_PATHS } from './context/roleHomePaths';
 import Layout from './components/Layout/Layout';
 import LoginPage from './pages/Login/LoginPage';
 import ForgotPasswordPage from './pages/Login/ForgotPasswordPage';
@@ -99,6 +100,12 @@ const StaffRoute = ({ children }) => {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  const roleHome = ROLE_HOME_PATHS[user?.role];
+
+  if (location.pathname === '/' && roleHome) {
+    return <Navigate to={roleHome} replace />;
+  }
 
   return (
     <AnimatePresence mode="wait">

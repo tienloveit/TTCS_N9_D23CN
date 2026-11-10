@@ -1,190 +1,306 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { branchApi, showtimeApi } from '../../api';
-import { ClockIcon, FilmIcon, GlobeIcon, MapPinIcon } from '../../components/Common/CinemaIcons';
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  ExternalLinkIcon,
+  FilmIcon,
+  MapPinIcon,
+  PhoneIcon,
+  SearchIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
+import { MovieScheduleCard } from './BranchListPage';
+import { buildUpcomingDays } from './branchUtils';
+import './BranchPages.css';
 
 export default function BranchDetailPage() {
   const { branchId } = useParams();
   const navigate = useNavigate();
+  const days = useMemo(() => buildUpcomingDays(7), []);
+
+  const [branches, setBranches] = useState([]);
   const [branch, setBranch] = useState(null);
+  const [loadingBranch, setLoadingBranch] = useState(true);
+
+  const [selectedDate, setSelectedDate] = useState(() => days[0]?.iso || '');
+  const [movieSearch, setMovieSearch] = useState('');
   const [movieShowtimes, setMovieShowtimes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD
-  });
+  const [loadingShowtimes, setLoadingShowtimes] = useState(true);
 
-  // Generate 7 days from today
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return d.toISOString().split('T')[0];
-  });
-
+  // Dùng branchApi.getAll() (public endpoint) thay vì getById (vốn bị giới hạn ADMIN/MANAGER ở backend)
   useEffect(() => {
-    const fetchBranch = async () => {
+    let ignore = false;
+    const fetchBranchData = async () => {
+      setLoadingBranch(true);
       try {
-        const res = await branchApi.getById(branchId);
-        setBranch(res.data.result);
+        const res = await branchApi.getAll();
+        const list = (res.data?.result || []).filter(
+          (b) => !b.status || b.status === 'ACTIVE'
+        );
+        if (!ignore) {
+          setBranches(list);
+          const found =
+            list.find((b) => String(b.branchId) === String(branchId)) || null;
+          setBranch(found);
+        }
       } catch (err) {
         console.error('Lỗi khi tải thông tin rạp', err);
+      } finally {
+        if (!ignore) setLoadingBranch(false);
       }
     };
-    fetchBranch();
+    fetchBranchData();
+    return () => {
+      ignore = true;
+    };
   }, [branchId]);
 
   useEffect(() => {
+    let ignore = false;
     const fetchShowtimes = async () => {
-      setLoading(true);
+      setLoadingShowtimes(true);
       try {
         const res = await showtimeApi.getByBranch(branchId, selectedDate);
-        setMovieShowtimes(res.data.result || []);
+        if (!ignore) {
+          setMovieShowtimes(res.data?.result || []);
+        }
       } catch (err) {
         console.error('Lỗi khi tải suất chiếu', err);
-        setMovieShowtimes([]);
+        if (!ignore) setMovieShowtimes([]);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoadingShowtimes(false);
       }
     };
     fetchShowtimes();
+    return () => {
+      ignore = true;
+    };
   }, [branchId, selectedDate]);
 
-  const formatDate = (dateStr) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    return {
-      dayName: dayNames[d.getDay()],
-      dayNum: d.getDate(),
-      monthNum: d.getMonth() + 1,
-    };
-  };
+  const activeDayMeta = useMemo(
+    () => days.find((d) => d.iso === selectedDate) || days[0],
+    [days, selectedDate]
+  );
 
-  const formatTime = (dateTimeStr) => {
-    if (!dateTimeStr) return '';
-    const d = new Date(dateTimeStr);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const visibleMovieGroups = useMemo(() => {
+    const q = movieSearch.trim().toLowerCase();
+    if (!q) return movieShowtimes;
+    return movieShowtimes.filter((m) =>
+      m.movieName?.toLowerCase().includes(q)
+    );
+  }, [movieShowtimes, movieSearch]);
+
+  const totalShowtimeCount = useMemo(
+    () =>
+      visibleMovieGroups.reduce(
+        (sum, m) => sum + (m.showtimes?.length || 0),
+        0
+      ),
+    [visibleMovieGroups]
+  );
+
+  const getMapUrl = (b) => {
+    if (!b) return 'https://www.google.com/maps';
+    const query = [b.name, b.address, b.city].filter(Boolean).join(', ');
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   };
 
   return (
-    <div className="page">
-      <div className="container">
-        {/* Header */}
-        <div className="page-header">
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/branches')} style={{ marginBottom: 12 }}>
-            ← Quay lại danh sách rạp
-          </button>
-          <h1 className="page-title page-title-with-icon">
-            <FilmIcon className="page-title-icon" />
-            {branch?.name || 'Đang tải...'}
-          </h1>
-          {branch?.address && (
-            <p className="page-subtitle page-subtitle-with-icon">
-              <MapPinIcon className="inline-icon" />
-              {branch.address}{branch.city ? `, ${branch.city}` : ''}
-            </p>
+    <div className="page br-page">
+      <div className="container br-wrap">
+        {/* Thanh điều hướng quay lại + đổi nhanh cụm rạp */}
+        <div className="br-detail-topbar">
+          <Link to="/branches" className="br-back-link">
+            <ArrowLeftIcon size={16} />
+            Hệ thống rạp MoviePTIT
+          </Link>
+
+          {branches.length > 1 && (
+            <div className="br-quick-switcher">
+              <span>Đổi rạp nhanh:</span>
+              <div className="br-quick-switcher-pills">
+                {branches.map((b) => {
+                  const isCurrent = String(b.branchId) === String(branchId);
+                  return (
+                    <button
+                      key={b.branchId}
+                      type="button"
+                      className={`br-switch-pill ${isCurrent ? 'is-active' : ''}`}
+                      onClick={() => navigate(`/branch/${b.branchId}`)}
+                    >
+                      {b.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Date Picker */}
-        <div className="date-picker-bar">
-          {dates.map((date) => {
-            const { dayName, dayNum, monthNum } = formatDate(date);
-            const isActive = date === selectedDate;
-            const isToday = date === new Date().toISOString().split('T')[0];
-            return (
-              <button
-                key={date}
-                className={`date-picker-item ${isActive ? 'date-picker-item--active' : ''}`}
-                onClick={() => setSelectedDate(date)}
-              >
-                <span className="date-picker-day">{dayName}</span>
-                <span className="date-picker-num">{dayNum}</span>
-                <span className="date-picker-month">Th{monthNum}</span>
-                {isToday && <span className="date-picker-today">Hôm nay</span>}
-              </button>
-            );
-          })}
-        </div>
+        {/* Spotlight Banner của Rạp */}
+        <section className="br-spotlight br-spotlight--detail">
+          <div className="br-spotlight-info">
+            <div className="br-spotlight-badges">
+              <span className="br-status-dot-badge">
+                <span className="br-live-dot" />
+                Đang mở cửa
+              </span>
+              {branch?.branchCode && (
+                <span className="br-code-badge">{branch.branchCode}</span>
+              )}
+              {branch?.city && (
+                <span className="br-city-badge">{branch.city}</span>
+              )}
+            </div>
 
-        {/* Showtimes by Movie */}
-        {loading ? (
-          <div className="loading">
-            <div className="spinner" />
+            <h1 className="br-spotlight-name">
+              {loadingBranch
+                ? 'Đang tải thông tin rạp...'
+                : branch?.name || `Cụm rạp #${branchId}`}
+            </h1>
+
+            <div className="br-spotlight-meta">
+              {branch?.address && (
+                <div className="br-spotlight-meta-row">
+                  <MapPinIcon size={16} className="br-meta-icon" />
+                  <span>
+                    {branch.address}
+                    {branch.city ? `, ${branch.city}` : ''}
+                  </span>
+                </div>
+              )}
+              {branch?.phone && (
+                <div className="br-spotlight-meta-row">
+                  <PhoneIcon size={16} className="br-meta-icon" />
+                  <a href={`tel:${branch.phone}`} className="br-phone-link">
+                    {branch.phone}
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
-        ) : movieShowtimes.length === 0 ? (
-          <div className="empty-text">
-            Không có suất chiếu nào cho ngày này.
+
+          {branch && (
+            <div className="br-spotlight-actions">
+              <a
+                href={getMapUrl(branch)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="br-btn br-btn--outline"
+              >
+                <ExternalLinkIcon size={15} />
+                Mở Google Maps
+              </a>
+            </div>
+          )}
+        </section>
+
+        {/* Thanh chọn ngày 7 ngày tới */}
+        <section className="br-schedule-bar">
+          <div className="br-date-strip" role="tablist" aria-label="Chọn ngày chiếu">
+            {days.map((d) => {
+              const isActive = d.iso === selectedDate;
+              return (
+                <button
+                  key={d.iso}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`br-date-pill ${isActive ? 'is-active' : ''}`}
+                  onClick={() => setSelectedDate(d.iso)}
+                >
+                  <span className="br-date-top">{d.relativeLabel}</span>
+                  <strong className="br-date-num">
+                    {d.dayNum}/{d.monthNum}
+                  </strong>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="br-schedule-Subbar">
+            <div className="br-schedule-summary">
+              <CalendarIcon size={15} />
+              <span>{activeDayMeta?.fullLabel}</span>
+              {!loadingShowtimes && (
+                <span className="br-schedule-counter">
+                  · <strong>{visibleMovieGroups.length}</strong> phim ·{' '}
+                  <strong>{totalShowtimeCount}</strong> suất chiếu
+                </span>
+              )}
+            </div>
+
+            {movieShowtimes.length > 1 && (
+              <div className="br-movie-filter">
+                <SearchIcon size={14} className="br-movie-filter-icon" />
+                <input
+                  type="text"
+                  placeholder="Lọc nhanh tên phim..."
+                  value={movieSearch}
+                  onChange={(e) => setMovieSearch(e.target.value)}
+                />
+                {movieSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setMovieSearch('')}
+                    aria-label="Xoá lọc phim"
+                  >
+                    <XIcon size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Danh sách suất chiếu */}
+        {loadingShowtimes ? (
+          <div className="br-movie-list">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="br-sk br-sk-movie" />
+            ))}
+          </div>
+        ) : visibleMovieGroups.length === 0 ? (
+          <div className="br-empty-schedule">
+            <FilmIcon size={32} className="br-empty-icon" />
+            <h3>
+              {movieSearch
+                ? `Không có phim nào khớp "${movieSearch}"`
+                : 'Không có suất chiếu nào cho ngày này'}
+            </h3>
+            <p>
+              {movieSearch
+                ? 'Hãy thử xoá từ khoá lọc hoặc chọn ngày chiếu khác.'
+                : 'Bạn có thể chọn một ngày khác trên thanh lịch hoặc xem các cụm rạp khác của MoviePTIT.'}
+            </p>
+            <div className="br-empty-actions">
+              {movieSearch && (
+                <button
+                  type="button"
+                  className="br-btn br-btn--outline"
+                  onClick={() => setMovieSearch('')}
+                >
+                  Xoá bộ lọc phim
+                </button>
+              )}
+              <Link to="/branches" className="br-btn br-btn--primary">
+                Xem tất cả cụm rạp
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className="branch-showtimes">
-            {movieShowtimes.map((movieGroup) => (
-              <div key={movieGroup.movieId} className="branch-movie-card card">
-                <div className="branch-movie-header">
-                  <img
-                    className="branch-movie-poster"
-                    src={movieGroup.thumbnailUrl || 'https://placehold.co/120x180/1a2235/64748b?text=No+Image'}
-                    alt={movieGroup.movieName}
-                    onClick={() => navigate(`/movie/${movieGroup.movieId}`)}
-                    onError={(e) => {
-                      e.target.src = 'https://placehold.co/120x180/1a2235/64748b?text=No+Image';
-                    }}
-                  />
-                  <div className="branch-movie-info">
-                    <h3
-                      className="branch-movie-name"
-                      onClick={() => navigate(`/movie/${movieGroup.movieId}`)}
-                    >
-                      {movieGroup.movieName}
-                    </h3>
-                    <div className="branch-movie-meta">
-                      {movieGroup.durationMinutes && (
-                        <span>
-                          <ClockIcon className="inline-icon" />
-                          {movieGroup.durationMinutes} phút
-                        </span>
-                      )}
-                      {movieGroup.ageRating && <span className="movie-badge">{movieGroup.ageRating}</span>}
-                      {movieGroup.language && (
-                        <span>
-                          <GlobeIcon className="inline-icon" />
-                          {movieGroup.language}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Showtimes grouped by room type */}
-                    <div className="branch-showtime-groups">
-                      {(() => {
-                        // Group showtimes by roomType
-                        const byType = {};
-                        movieGroup.showtimes?.forEach((st) => {
-                          const type = st.roomType || '2D';
-                          if (!byType[type]) byType[type] = [];
-                          byType[type].push(st);
-                        });
-
-                        return Object.entries(byType).map(([type, sts]) => (
-                          <div key={type} className="showtime-type-group">
-                            <span className="showtime-type-label">{type.replace('_', ' ')}</span>
-                            <div className="showtime-time-list">
-                              {sts.map((st) => (
-                                <button
-                                  key={st.showtimeId}
-                                  className="showtime-time-btn"
-                                  onClick={() => navigate(`/showtime/${st.showtimeId}/seats`)}
-                                  title={`${st.roomName} • ${formatTime(st.startTime)} - ${formatTime(st.endTime)}`}
-                                >
-                                  {formatTime(st.startTime)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="br-movie-list">
+            {visibleMovieGroups.map((movieGroup) => (
+              <MovieScheduleCard
+                key={movieGroup.movieId}
+                movieGroup={movieGroup}
+                onSelectMovie={() => navigate(`/movie/${movieGroup.movieId}`)}
+                onSelectShowtime={(showtimeId) =>
+                  navigate(`/showtime/${showtimeId}/seats`)
+                }
+              />
             ))}
           </div>
         )}

@@ -24,7 +24,6 @@ const FoodManagement = () => {
     description: '',
     price: '',
     imageUrl: '',
-    stockQuantity: '',
     lowStockThreshold: 5,
     active: true,
   });
@@ -53,7 +52,6 @@ const FoodManagement = () => {
         description: food.description || '',
         price: food.price || '',
         imageUrl: food.imageUrl || '',
-        stockQuantity: food.stockQuantity ?? '',
         lowStockThreshold: food.lowStockThreshold ?? 5,
         active: food.active !== false,
       });
@@ -64,7 +62,6 @@ const FoodManagement = () => {
         description: '',
         price: '',
         imageUrl: '',
-        stockQuantity: '',
         lowStockThreshold: 5,
         active: true,
       });
@@ -91,7 +88,6 @@ const FoodManagement = () => {
       const payload = {
         ...formData,
         price: formData.price ? Number(formData.price) : 0,
-        stockQuantity: formData.stockQuantity === '' ? null : Number(formData.stockQuantity),
         lowStockThreshold: Number(formData.lowStockThreshold || 0),
       };
 
@@ -373,18 +369,9 @@ const FoodManagement = () => {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Tồn kho</label>
-                  <input
-                    type="number"
-                    name="stockQuantity"
-                    className="input"
-                    value={formData.stockQuantity}
-                    onChange={handleInputChange}
-                    min="0"
-                    placeholder="Để trống nếu không theo dõi"
-                  />
-                </div>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  {editingFood ? 'Tồn kho được cập nhật tại mục Nhập xuất kho.' : 'Sản phẩm mới có tồn bằng 0. Hãy nhập hàng tại mục Nhập xuất kho trước khi bán.'}
+                </p>
 
                 <div className="form-group">
                   <label className="form-label">Ngưỡng cảnh báo</label>

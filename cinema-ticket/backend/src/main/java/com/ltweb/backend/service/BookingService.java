@@ -856,7 +856,8 @@ public class BookingService {
             booking.setPaymentStatus(PaymentStatus.REFUNDED);
             booking.setRefundedAt(LocalDateTime.now());
             booking.setRefundAmount(booking.getTotalAmount());
-            foodInventoryService.restoreForBooking(booking);
+            // A financial refund does not prove that food has physically returned to stock.
+            // Managers record usable returned goods separately in the inventory screen.
 
             // Trả ghế về AVAILABLE
             booking

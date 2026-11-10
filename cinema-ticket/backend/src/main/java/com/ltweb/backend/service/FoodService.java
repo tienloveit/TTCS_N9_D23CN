@@ -23,6 +23,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +36,11 @@ public class FoodService {
     private final FoodStockTransactionRepository stockTransactionRepository;
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Transactional
     public FoodResponse createFood(CreateFoodRequest request) {
+        if (request.getStockQuantity() != null && request.getStockQuantity() != 0) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
         Long branchId = resolveWritableBranchId(request.getBranchId());
         Food food = Food.builder()
                 .name(request.getName())
@@ -43,7 +48,7 @@ public class FoodService {
                 .price(request.getPrice())
                 .imageUrl(request.getImageUrl())
                 .branchId(branchId)
-                .stockQuantity(normalizeStockQuantity(request.getStockQuantity()))
+                .stockQuantity(0)
                 .lowStockThreshold(normalizeLowStockThreshold(request.getLowStockThreshold()))
                 .active(request.getActive() == null || request.getActive())
                 .build();
@@ -87,8 +92,13 @@ public class FoodService {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Transactional
     public FoodResponse updateFood(Long foodId, UpdateFoodRequest request) {
-        Food food = getFood(foodId);
+        if (request.getStockQuantity() != null) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+        Food food = foodRepository.findByIdIn(List.of(foodId)).stream().findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.FOOD_NOT_FOUND));
         requireFoodAccess(food);
 
         if (request.getName() != null && !request.getName().isBlank()) {
@@ -106,9 +116,6 @@ public class FoodService {
         if (request.getBranchId() != null) {
             food.setBranchId(resolveWritableBranchId(request.getBranchId()));
         }
-        if (request.getStockQuantity() != null) {
-            food.setStockQuantity(normalizeStockQuantity(request.getStockQuantity()));
-        }
         if (request.getLowStockThreshold() != null) {
             food.setLowStockThreshold(normalizeLowStockThreshold(request.getLowStockThreshold()));
         }
@@ -122,8 +129,10 @@ public class FoodService {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Transactional
     public void deleteFood(Long foodId) {
-        Food food = getFood(foodId);
+        Food food = foodRepository.findByIdIn(List.of(foodId)).stream().findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.FOOD_NOT_FOUND));
         requireFoodAccess(food);
         food.setActive(false);
         Food saved = foodRepository.save(food);
@@ -131,12 +140,14 @@ public class FoodService {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Transactional
     public FoodResponse adjustStock(Long foodId, FoodStockAdjustmentRequest request) {
         Food saved = foodInventoryService.adjustStock(
                 foodId,
                 request.getQuantityChange(),
-                Boolean.TRUE.equals(request.getSetAbsoluteQuantity()),
-                request.getNote());
+                request.getType(),
+                request.getNote(),
+                request.getExpectedQuantity());
         auditLogService.record(
                 AuditAction.FOOD_UPDATED,
                 "Food",

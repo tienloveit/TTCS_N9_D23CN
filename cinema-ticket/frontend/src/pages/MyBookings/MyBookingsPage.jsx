@@ -1,353 +1,304 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
 import EmptyState from '../../components/Common/EmptyState';
-import DigitalTicket from '../../components/Ticket/DigitalTicket';
-import {
-  BanknoteIcon,
-  CheckCircleIcon,
-  CreditCardIcon,
-  TicketIcon,
-  TimerIcon,
-  XCircleIcon,
-} from '../../components/Common/CinemaIcons';
+import BookingCard from './BookingCard';
+import TicketPassModal from './TicketPassModal';
+import RefundDialog from './RefundDialog';
+import { ConfirmDialog } from './Dialogs';
+import { getBookingPhase, getShowStart, parseLocalDateTime } from './bookingFormat';
+import './MyBookingsPage.css';
 
-const STATUS_MAP = {
-  PENDING: { label: 'Chờ thanh toán', color: '#f59e0b' },
-  COMPLETED: { label: 'Đã hoàn tất', color: '#22c55e' },
-  CANCELLED: { label: 'Đã huỷ', color: '#ef4444' },
-  EXPIRED: { label: 'Hết hạn', color: '#6b7280' },
-  REFUND_REQUESTED: { label: 'Đang chờ hoàn tiền', color: '#f97316' },
-  REFUNDED: { label: 'Đã hoàn tiền', color: '#8b5cf6' },
+const TABS = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'upcoming', label: 'Sắp chiếu', phases: ['upcoming'] },
+  { key: 'pending', label: 'Chờ thanh toán', phases: ['pending'] },
+  { key: 'watched', label: 'Đã chiếu', phases: ['watched'] },
+  {
+    key: 'closed',
+    label: 'Huỷ & hoàn tiền',
+    phases: ['refund_requested', 'refunded', 'cancelled', 'expired', 'other'],
+  },
+];
+
+const EMPTY_COPY = {
+  upcoming: 'Bạn chưa có suất chiếu nào sắp tới.',
+  pending: 'Không có đơn nào đang chờ thanh toán.',
+  watched: 'Bạn chưa xem suất chiếu nào cùng MoviePTIT.',
+  closed: 'Không có đơn huỷ hoặc hoàn tiền.',
 };
 
-const PAYMENT_MAP = {
-  PENDING: { label: 'Chờ thanh toán', color: '#f59e0b' },
-  PAID: { label: 'Đã thanh toán', color: '#22c55e' },
-  FAILED: { label: 'Thất bại', color: '#ef4444' },
-  CANCELLED: { label: 'Đã huỷ', color: '#6b7280' },
-  REFUNDED: { label: 'Đã hoàn tiền', color: '#8b5cf6' },
-};
+const createdTime = (b) => parseLocalDateTime(b.createdAt)?.getTime() || 0;
+const showTime = (b) => getShowStart(b)?.getTime() || 0;
+const byNewest = (a, b) => createdTime(b) - createdTime(a);
+const bySoonest = (a, b) => showTime(a) - showTime(b);
+
+const getErrorMessage = (err) => err?.response?.data?.message || err?.message || 'Đã có lỗi xảy ra';
+
+function SkeletonList() {
+  return (
+    <div className="mt-list" aria-busy="true" aria-label="Đang tải vé">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="mt-card mt-card--skeleton">
+          <div className="mt-poster-col"><div className="mt-sk mt-sk-poster" /></div>
+          <div className="mt-body">
+            <div className="mt-sk mt-sk-line" style={{ width: 96 }} />
+            <div className="mt-sk mt-sk-title" />
+            <div className="mt-sk mt-sk-line" style={{ width: '70%' }} />
+            <div className="mt-sk mt-sk-line" style={{ width: '45%' }} />
+          </div>
+          <div className="mt-stub">
+            <div className="mt-sk mt-sk-line" style={{ width: '60%' }} />
+            <div className="mt-sk mt-sk-btn" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function MyBookingsPage() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('ALL');
-  const [showQR, setShowQR] = useState(null);
-  const [refundModal, setRefundModal] = useState(null);
-  const [refundReason, setRefundReason] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [activeTab, setActiveTab] = useState('all');
+  const [now, setNow] = useState(() => Date.now());
+
+  const [ticketBooking, setTicketBooking] = useState(null);
+  const [refundBooking, setRefundBooking] = useState(null);
+  const [cancelBooking, setCancelBooking] = useState(null);
   const [submittingRefund, setSubmittingRefund] = useState(false);
-  const navigate = useNavigate();
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
+    let ignore = false;
     const fetchBookings = async () => {
       try {
         const res = await bookingApi.getMyBookings();
-        const data = res.data.result || [];
-        data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setBookings(data);
+        if (!ignore) {
+          setBookings(res.data.result || []);
+          setLoadError('');
+        }
       } catch (err) {
         console.error('Lỗi khi tải vé', err);
+        if (!ignore) setLoadError(getErrorMessage(err));
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchBookings();
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
+
+  const hasPending = bookings.some((b) => b.status === 'PENDING');
+
+  // Đồng hồ cho đếm ngược giữ ghế / thời hạn hoàn tiền.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), hasPending ? 1000 : 30000);
+    return () => clearInterval(id);
+  }, [hasPending]);
+
+  const withPhase = useMemo(
+    () => bookings.map((booking) => ({ booking, phase: getBookingPhase(booking, now) })),
+    [bookings, now]
+  );
+
+  const counts = useMemo(() => {
+    const result = { all: withPhase.length };
+    TABS.forEach((tab) => {
+      if (tab.phases) result[tab.key] = withPhase.filter((x) => tab.phases.includes(x.phase)).length;
+    });
+    return result;
+  }, [withPhase]);
+
+  const sections = useMemo(() => {
+    const pick = (phases) => withPhase.filter((x) => phases.includes(x.phase)).map((x) => x.booking);
+
+    if (activeTab === 'all') {
+      const pending = pick(['pending']).sort(byNewest);
+      const upcoming = pick(['upcoming']).sort(bySoonest);
+      const history = withPhase
+        .filter((x) => x.phase !== 'pending' && x.phase !== 'upcoming')
+        .map((x) => x.booking)
+        .sort(byNewest);
+      return [
+        { key: 'pending', title: 'Cần thanh toán', items: pending },
+        { key: 'upcoming', title: 'Suất chiếu sắp tới', items: upcoming },
+        { key: 'history', title: 'Lịch sử đặt vé', items: history },
+      ].filter((s) => s.items.length > 0);
+    }
+
+    const tab = TABS.find((t) => t.key === activeTab);
+    const items = pick(tab.phases).sort(activeTab === 'upcoming' ? bySoonest : byNewest);
+    return items.length ? [{ key: activeTab, title: null, items }] : [];
+  }, [withPhase, activeTab]);
+
+  const updateBooking = useCallback((bookingId, patch) => {
+    setBookings((prev) => prev.map((b) => (b.bookingId === bookingId ? { ...b, ...patch } : b)));
   }, []);
 
-  const handleCancel = async (bookingId) => {
-    if (!window.confirm('Bạn có chắc muốn huỷ đơn đặt vé này?')) return;
+  const handleConfirmCancel = async () => {
+    if (!cancelBooking) return;
+    setCancelling(true);
     try {
-      await bookingApi.cancel(bookingId);
-      setBookings(prev =>
-        prev.map(b => b.bookingId === bookingId
-          ? { ...b, status: 'CANCELLED', paymentStatus: 'CANCELLED' }
-          : b
-        )
-      );
+      await bookingApi.cancel(cancelBooking.bookingId);
+      updateBooking(cancelBooking.bookingId, { status: 'CANCELLED', paymentStatus: 'CANCELLED' });
+      toast.success('Đã huỷ đơn đặt vé.');
+      setCancelBooking(null);
     } catch (err) {
-      alert('Không thể huỷ vé: ' + (err.response?.data?.message || err.message));
+      toast.error(`Không thể huỷ đơn: ${getErrorMessage(err)}`);
+    } finally {
+      setCancelling(false);
     }
   };
 
-  const handleRequestRefund = async () => {
-    if (!refundModal) return;
+  const handleSubmitRefund = async (reason) => {
+    if (!refundBooking) return;
     setSubmittingRefund(true);
     try {
-      const res = await bookingApi.requestRefund(refundModal, refundReason);
+      const res = await bookingApi.requestRefund(refundBooking.bookingId, reason);
       const updated = res.data.result;
-      setBookings(prev =>
-        prev.map(b => b.bookingId === refundModal
-          ? { ...b, status: 'REFUND_REQUESTED', refundReason: refundReason, refundAmount: updated.refundAmount }
-          : b
-        )
+      updateBooking(
+        refundBooking.bookingId,
+        updated
+          ? { ...updated }
+          : { status: 'REFUND_REQUESTED', refundReason: reason, refundAmount: refundBooking.totalAmount }
       );
-      setRefundModal(null);
-      setRefundReason('');
+      toast.success('Đã gửi yêu cầu hoàn tiền.');
+      setRefundBooking(null);
     } catch (err) {
-      alert('Không thể yêu cầu hoàn tiền: ' + (err.response?.data?.message || err.message));
+      toast.error(`Không thể yêu cầu hoàn tiền: ${getErrorMessage(err)}`);
     } finally {
       setSubmittingRefund(false);
     }
   };
 
-  const canRequestRefund = (booking) => {
-    if (booking.status !== 'COMPLETED') return false;
-    if (!booking.paidAt) return false;
-    const paidAt = parseLocalDateTime(booking.paidAt);
-    if (!paidAt) return false;
-    const now = new Date();
-    const diffHours = (now - paidAt) / (1000 * 60 * 60);
-    return diffHours <= 24;
-  };
+  const closeTicket = useCallback(() => setTicketBooking(null), []);
+  const closeRefund = useCallback(() => setRefundBooking(null), []);
+  const closeCancel = useCallback(() => setCancelBooking(null), []);
 
-  const getRefundTimeLeft = (booking) => {
-    if (!booking.paidAt) return '';
-    const paidAt = parseLocalDateTime(booking.paidAt);
-    if (!paidAt) return '';
-    const deadline = new Date(paidAt.getTime() + 24 * 60 * 60 * 1000);
-    const now = new Date();
-    const diffMs = deadline - now;
-    if (diffMs <= 0) return '';
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `Còn ${hours}h ${mins}p để yêu cầu hoàn tiền`;
-  };
-
-  const parseLocalDateTime = (dateStr) => {
-    if (!dateStr) return null;
-    const [datePart, timePart] = dateStr.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hour, minute);
-  };
-
-  const FORMAT_DATE_TIME = (dateStr) => {
-    const d = parseLocalDateTime(dateStr);
-    if (!d) return '—';
-    const dd = d.getDate().toString().padStart(2, '0');
-    const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const hh = d.getHours().toString().padStart(2, '0');
-    const min = d.getMinutes().toString().padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-  };
-
-  const FORMAT_CURRENCY = (amount) => {
-    if (!amount) return '0 đ';
-    return Number(amount).toLocaleString('vi-VN') + ' đ';
-  };
-
-  const filteredBookings = filter === 'ALL'
-    ? bookings
-    : bookings.filter(b => b.status === filter);
-
-  if (loading) {
-    return (
-      <div className="loading">
-        <div className="spinner" />
-      </div>
-    );
-  }
+  const subtitle = loading
+    ? 'Đang tải danh sách vé...'
+    : counts.upcoming > 0
+      ? `Bạn có ${counts.upcoming} suất chiếu sắp tới${counts.pending ? ` và ${counts.pending} đơn chờ thanh toán` : ''}.`
+      : counts.pending > 0
+        ? `Bạn có ${counts.pending} đơn đang chờ thanh toán.`
+        : 'Lịch sử đặt vé và trạng thái thanh toán của bạn.';
 
   return (
-    <div className="page">
-      <div className="container">
-        <div className="page-header">
-          <h1 className="page-title page-title-with-icon">
-            <TicketIcon className="page-title-icon" />
-            Vé của tôi
-          </h1>
-          <p className="page-subtitle">Lịch sử đặt vé và trạng thái thanh toán</p>
-        </div>
+    <div className="page mt-page">
+      <div className="mt-wrap">
+        <header className="mt-header">
+          <div>
+            <h1 className="mt-heading">Vé của tôi</h1>
+            <p className="mt-subheading">{subtitle}</p>
+          </div>
+          <Link to="/movies" className="mt-btn mt-btn--outline mt-header-cta">
+            Đặt vé mới
+          </Link>
+        </header>
 
-        {/* Filter tabs */}
-        <div className="booking-filter-bar">
-          {[
-            { key: 'ALL', label: 'Tất cả' },
-            { key: 'PENDING', label: 'Chờ thanh toán', Icon: TimerIcon },
-            { key: 'COMPLETED', label: 'Đã hoàn tất', Icon: CheckCircleIcon },
-            { key: 'REFUND_REQUESTED', label: 'Chờ hoàn tiền', Icon: TimerIcon },
-            { key: 'CANCELLED', label: 'Đã huỷ', Icon: XCircleIcon },
-          ].map(tab => (
+        <nav className="mt-tabs" role="tablist" aria-label="Lọc đơn đặt vé">
+          {TABS.map((tab) => (
             <button
               key={tab.key}
-              className={`booking-filter-tab ${filter === tab.key ? 'booking-filter-tab--active' : ''}`}
-              onClick={() => setFilter(tab.key)}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              className={`mt-tab ${activeTab === tab.key ? 'is-active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
             >
-              {tab.Icon && <tab.Icon className="booking-filter-icon" />}
               {tab.label}
-              {tab.key !== 'ALL' && (
-                <span className="booking-filter-count">
-                  {bookings.filter(b => b.status === tab.key).length}
-                </span>
-              )}
+              {!loading && counts[tab.key] > 0 && <span className="mt-tab-count">{counts[tab.key]}</span>}
             </button>
           ))}
-        </div>
+        </nav>
 
-        {/* Booking list */}
-        {filteredBookings.length === 0 ? (
-          <EmptyState
-            title="Bạn chưa có vé nào"
-            message={filter === 'ALL'
-              ? "Có vẻ như bạn chưa đặt vé nào tại MoviePTIT. Hãy chọn một bộ phim và trải nghiệm ngay nhé!"
-              : `Bạn không có đơn hàng nào ở trạng thái "${STATUS_MAP[filter]?.label || filter}".`}
-            buttonText="Tìm phim đặt vé ngay"
-          />
-        ) : (
-          <div className="booking-list">
-            {filteredBookings.map(booking => {
-              const ticketData = {
-                ...booking,
-                startTime: booking.showtimeStart,
-                branchName: booking.branchName || 'Chi nhánh MoviePTIT'
-              };
-
-              return (
-                <div key={booking.bookingId} style={{ marginBottom: 40, width: '100%' }}>
-                  <DigitalTicket booking={ticketData} />
-
-                  {/* Trạng thái hoàn tiền */}
-                  {booking.status === 'REFUND_REQUESTED' && (
-                    <div style={{
-                      marginTop: 12, padding: '12px 16px', borderRadius: 8,
-                      background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)',
-                      display: 'flex', alignItems: 'center', gap: 10
-                    }}>
-                      <TimerIcon style={{ width: 20, height: 20, color: '#f97316', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#f97316' }}>Đang chờ duyệt hoàn tiền</div>
-                        {booking.refundReason && (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                            Lý do: {booking.refundReason}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {booking.status === 'REFUNDED' && (
-                    <div style={{
-                      marginTop: 12, padding: '12px 16px', borderRadius: 8,
-                      background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)',
-                      display: 'flex', alignItems: 'center', gap: 10
-                    }}>
-                      <CheckCircleIcon style={{ width: 20, height: 20, color: '#8b5cf6', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#8b5cf6' }}>Đã hoàn tiền: {FORMAT_CURRENCY(booking.refundAmount)}</div>
-                        {booking.refundedAt && (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                            Hoàn lúc: {FORMAT_DATE_TIME(booking.refundedAt)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  {booking.status === 'PENDING' && (
-                    <div style={{ marginTop: 12, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => navigate(`/booking/${booking.bookingId}/payment`)}
-                      >
-                        <CreditCardIcon className="btn-icon" />
-                        Thanh toán ngay
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => handleCancel(booking.bookingId)}
-                      >
-                        <XCircleIcon className="btn-icon" />
-                        Hủy vé
-                      </button>
-                    </div>
-                  )}
-
-                  {booking.status === 'COMPLETED' && canRequestRefund(booking) && (
-                    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <TimerIcon style={{ width: 15, height: 15 }} />
-                        {getRefundTimeLeft(booking)}
-                      </span>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => { setRefundModal(booking.bookingId); setRefundReason(''); }}
-                        style={{ fontSize: '0.9rem' }}
-                      >
-                        <BanknoteIcon className="btn-icon" />
-                        Yêu cầu hoàn tiền
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {loading ? (
+          <SkeletonList />
+        ) : loadError ? (
+          <div className="mt-error">
+            <p>Không tải được danh sách vé. {loadError}</p>
+            <button
+              type="button"
+              className="mt-btn mt-btn--outline"
+              onClick={() => {
+                setLoading(true);
+                setReloadKey((k) => k + 1);
+              }}
+            >
+              Thử lại
+            </button>
           </div>
+        ) : sections.length === 0 ? (
+          activeTab === 'all' ? (
+            <EmptyState
+              title="Bạn chưa có vé nào"
+              message="Có vẻ như bạn chưa đặt vé nào tại MoviePTIT. Chọn một bộ phim và trải nghiệm ngay nhé!"
+              buttonText="Tìm phim đặt vé ngay"
+            />
+          ) : (
+            <div className="mt-empty">
+              <p>{EMPTY_COPY[activeTab]}</p>
+              <button type="button" className="mt-link-btn" onClick={() => setActiveTab('all')}>
+                Xem tất cả đơn
+              </button>
+            </div>
+          )
+        ) : (
+          sections.map((section) => (
+            <section key={section.key} className="mt-section">
+              {section.title && (
+                <h2 className="mt-section-title">
+                  {section.title}
+                  <span className="mt-section-count">{section.items.length}</span>
+                </h2>
+              )}
+              <div className="mt-list">
+                {section.items.map((booking) => (
+                  <BookingCard
+                    key={booking.bookingId}
+                    booking={booking}
+                    now={now}
+                    onOpenTicket={setTicketBooking}
+                    onPay={(b) => navigate(`/booking/${b.bookingId}/payment`)}
+                    onCancel={setCancelBooking}
+                    onRequestRefund={setRefundBooking}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
         )}
       </div>
 
-      {/* QR Modal */}
-      {showQR && (
-        <div className="modal-overlay" onClick={() => setShowQR(null)}>
-          <div className="modal-content" style={{ maxWidth: 400, aspectRatio: 'auto', padding: 40, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowQR(null)}>×</button>
-            <h3 style={{ marginBottom: 20 }}>Mã vé của bạn</h3>
-            <div style={{ background: 'white', padding: 24, borderRadius: 16, display: 'inline-block', marginBottom: 20 }}>
-              <QRCodeSVG value={showQR} size={240} />
-            </div>
-            <p style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: 2, fontFamily: 'monospace', color: 'white' }}>{showQR}</p>
-            <p style={{ color: 'var(--text-secondary)', marginTop: 12, fontSize: '0.9rem' }}>
-              Vui lòng đưa mã này cho nhân viên tại quầy để nhận vé.
-            </p>
-          </div>
-        </div>
+      {ticketBooking && <TicketPassModal booking={ticketBooking} now={now} onClose={closeTicket} />}
+
+      {refundBooking && (
+        <RefundDialog
+          booking={refundBooking}
+          submitting={submittingRefund}
+          onSubmit={handleSubmitRefund}
+          onClose={closeRefund}
+        />
       )}
 
-      {/* Refund Modal */}
-      {refundModal && (
-        <div className="modal-overlay" onClick={() => setRefundModal(null)}>
-          <div className="modal-content" style={{ maxWidth: 480, aspectRatio: 'auto', padding: 32 }} onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setRefundModal(null)}>×</button>
-            <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <BanknoteIcon style={{ width: 20, height: 20, color: 'var(--accent-primary)' }} />
-              Yêu cầu hoàn tiền
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 20 }}>
-              Yêu cầu sẽ được Admin/Nhân viên xem xét và duyệt. Bạn sẽ được hoàn 100% số tiền đã thanh toán.
-            </p>
-            <label style={{ display: 'block', marginBottom: 8 }}>
-              <span className="form-label">Lý do hoàn tiền</span>
-              <textarea
-                className="input"
-                rows={3}
-                placeholder="Nhập lý do bạn muốn hoàn tiền..."
-                value={refundReason}
-                onChange={(e) => setRefundReason(e.target.value)}
-                style={{ resize: 'vertical', width: '100%' }}
-              />
-            </label>
-            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={handleRequestRefund}
-                disabled={submittingRefund || !refundReason.trim()}
-              >
-                {submittingRefund ? 'Đang gửi...' : 'Gửi yêu cầu'}
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{ flex: 1 }}
-                onClick={() => setRefundModal(null)}
-              >
-                Huỷ
-              </button>
-            </div>
-          </div>
-        </div>
+      {cancelBooking && (
+        <ConfirmDialog
+          title="Huỷ đơn đặt vé?"
+          message={`Ghế ${cancelBooking.seatCodes?.join(', ') || ''} của suất “${cancelBooking.movieName}” sẽ được mở lại cho người khác.`}
+          confirmLabel="Huỷ đơn"
+          cancelLabel="Giữ lại"
+          danger
+          busy={cancelling}
+          onConfirm={handleConfirmCancel}
+          onClose={closeCancel}
+        />
       )}
     </div>
   );

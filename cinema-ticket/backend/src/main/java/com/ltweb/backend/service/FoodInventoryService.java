@@ -99,27 +99,52 @@ public class FoodInventoryService {
     }
 
     @Transactional
-    public Food adjustStock(Long foodId, Integer quantityChange, boolean setAbsoluteQuantity, String note) {
-        Food food = foodRepository.findById(foodId).orElseThrow(() -> new AppException(ErrorCode.FOOD_NOT_FOUND));
-        requireFoodAccess(food);
-        if (food.getStockQuantity() == null) {
-            food.setStockQuantity(0);
+    public Food adjustStock(Long foodId, Integer quantity, FoodStockTransactionType type, String note,
+            Integer expectedQuantity) {
+        if (quantity == null || quantity < 0 || type == null || note == null
+                || note.isBlank() || note.trim().length() > 500) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
         }
-        int before = food.getStockQuantity();
-        int nextQuantity = setAbsoluteQuantity ? quantityChange : before + quantityChange;
-        if (nextQuantity < 0) {
+        if (type != FoodStockTransactionType.IMPORT && type != FoodStockTransactionType.EXPORT
+                && type != FoodStockTransactionType.STOCKTAKE) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+        if (type != FoodStockTransactionType.STOCKTAKE && quantity == 0) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+        Food food = lockFoods(Set.of(foodId)).get(foodId);
+        requireFoodAccess(food);
+        Integer before = food.getStockQuantity();
+        if (type == FoodStockTransactionType.STOCKTAKE && !Objects.equals(before, expectedQuantity)) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+        // Legacy untracked products must first be counted instead of assuming zero stock.
+        if (before == null && type != FoodStockTransactionType.STOCKTAKE) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+        long next = switch (type) {
+            case IMPORT -> (long) before + quantity;
+            case EXPORT -> (long) before - quantity;
+            case STOCKTAKE -> quantity;
+            default -> throw new AppException(ErrorCode.VALIDATION_ERROR);
+        };
+        if (next < 0) {
             throw new AppException(ErrorCode.FOOD_OUT_OF_STOCK);
         }
-        int change = nextQuantity - before;
+        if (next > Integer.MAX_VALUE) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+        int nextQuantity = (int) next;
+        int change = nextQuantity - Objects.requireNonNullElse(before, 0);
         food.setStockQuantity(nextQuantity);
         Food saved = foodRepository.save(food);
         recordTransaction(
                 saved,
-                change >= 0 ? FoodStockTransactionType.IMPORT : FoodStockTransactionType.ADJUSTMENT,
+                type,
                 before,
                 change,
                 nextQuantity,
-                note,
+                note.trim(),
                 null,
                 null);
         return saved;

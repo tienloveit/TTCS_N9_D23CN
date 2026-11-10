@@ -2,6 +2,8 @@ package com.ltweb.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Branch;
@@ -20,6 +22,7 @@ import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +57,22 @@ class BookingServiceRefundTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
+  }
+
+  @Test
+  void processRefund_doesNotAssumeFoodPhysicallyReturned() {
+    authenticate("manager");
+    User manager = User.builder().id(7L).username("manager").role(UserRole.MANAGER).branchId(1L).build();
+    Booking booking = refundRequestedBookingInBranch(1L);
+    booking.setTickets(List.of());
+    when(userRepository.findByUsername("manager")).thenReturn(Optional.of(manager));
+    when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking));
+
+    bookingService.processRefund(5L, true, "Approved financial refund");
+
+    org.assertj.core.api.Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
+    verify(foodInventoryService, never()).restoreForBooking(booking);
+    verify(bookingRepository).save(booking);
   }
 
   @Test

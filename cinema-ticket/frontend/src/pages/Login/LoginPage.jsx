@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { authApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
+import { ROLE_HOME_PATHS } from '../../context/roleHomePaths';
 import { toast } from 'react-toastify';
 import { EyeIcon, EyeOffIcon } from '../../components/Common/CinemaIcons';
 
@@ -11,13 +12,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const { login, user, isAuthenticated } = useAuth();
   const location = useLocation();
   const oauth2Error = new URLSearchParams(location.search).get('oauth2Error');
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={ROLE_HOME_PATHS[user?.role] || location.state?.from || '/'} replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -28,8 +28,6 @@ export default function LoginPage() {
     try {
       await login(username, password);
       toast.success('Đăng nhập thành công!');
-      const from = location.state?.from || '/';
-      navigate(from, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Đăng nhập thất bại';
       setError(msg);

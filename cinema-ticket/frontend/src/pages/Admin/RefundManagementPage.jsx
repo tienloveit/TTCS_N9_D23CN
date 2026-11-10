@@ -123,6 +123,9 @@ const RefundManagementPage = () => {
                 <div><strong>Đã xử lý:</strong> {formatDateTime(selected.refundProcessedAt)} bởi {selected.refundProcessedByUsername || '-'}</div>
               )}
             </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
+              Hoàn tiền không tự cộng lại tồn đồ ăn. Chỉ nhập lại tại mục Nhập xuất kho khi đã nhận và kiểm tra hàng thực tế còn sử dụng được; ghi kèm mã đơn hàng.
+            </p>
             <label className="form-label">Ghi chú xử lý</label>
             <textarea className="input" value={note} onChange={(e) => setNote(e.target.value)} style={{ minHeight: 100, marginBottom: 16 }} />
             {selected.status === 'REFUND_REQUESTED' && (
