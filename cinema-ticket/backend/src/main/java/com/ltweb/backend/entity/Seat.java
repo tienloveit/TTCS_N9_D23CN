@@ -19,7 +19,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "seats", uniqueConstraints = { @UniqueConstraint(columnNames = { "room_id", "seat_code" }) })
+@Table(name = "seats", uniqueConstraints = {
+    @UniqueConstraint(columnNames = { "room_id", "seat_code" }),
+    @UniqueConstraint(name = "uk_seats_room_row_number", columnNames = { "room_id", "row_label", "seat_number" })
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,14 +31,14 @@ import lombok.Setter;
 public class Seat {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "seat_id")
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
-    @Column(name = "seat_code")
+    @Column(name = "seat_code", nullable = false)
     private String seatCode;
 
     private String rowLabel;
@@ -43,7 +46,13 @@ public class Seat {
     private Integer seatNumber;
 
     @Enumerated(EnumType.STRING)
-    private SeatType seatType;
+    @Column(nullable = false)
+    @org.hibernate.annotations.ColumnDefault("'STANDARD'")
+    @Builder.Default
+    private SeatType seatType = SeatType.STANDARD;
 
-    private Boolean isActive;
+    @jakarta.persistence.PrePersist
+    private void initializeSeatType() {
+        if (seatType == null) seatType = SeatType.STANDARD;
+    }
 }

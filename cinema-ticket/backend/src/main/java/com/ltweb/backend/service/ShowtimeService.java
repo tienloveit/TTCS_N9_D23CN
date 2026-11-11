@@ -130,7 +130,7 @@ public class ShowtimeService {
                 .forEach(
                         b -> {
                             b.setStatus(BookingStatus.CANCELLED);
-                            b.setPaymentStatus(PaymentStatus.CANCELLED);
+                            b.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
                             b.getTickets()
                                     .forEach(
                                             t -> {
@@ -234,7 +234,8 @@ public class ShowtimeService {
                                 st.put("showtimeId", s.getId());
                                 st.put("roomId", s.getRoom().getId());
                                 st.put("roomName", s.getRoom().getName());
-                                st.put("roomType", s.getRoom().getRoomType());
+                                st.put("roomTechnology", s.getRoom().getRoomTechnology());
+                                st.put("screeningFormat", s.getScreeningFormat());
                                 st.put("startTime", s.getStartTime());
                                 st.put("endTime", s.getEndTime());
                                 st.put("status", s.getStatus());

@@ -315,7 +315,7 @@ public class StaffOperationsService {
 
     private boolean isPaidBooking(Booking booking) {
         return booking.getStatus() == BookingStatus.COMPLETED
-                || booking.getPaymentStatus() == PaymentStatus.PAID;
+                || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
     }
 
     private boolean isStaffBooking(Booking booking, User staff) {
@@ -348,8 +348,8 @@ public class StaffOperationsService {
     }
 
     private LocalDateTime getBusinessDate(Booking booking) {
-        if (booking.getPaidAt() != null) {
-            return booking.getPaidAt();
+        if (booking.getPayment().getPaidAt() != null) {
+            return booking.getPayment().getPaidAt();
         }
         if (booking.getCreatedAt() != null) {
             return booking.getCreatedAt();
@@ -366,7 +366,7 @@ public class StaffOperationsService {
 
     private BigDecimal sumRevenueByMethod(List<Booking> bookings, PaymentMethod method) {
         return bookings.stream()
-                .filter(booking -> booking.getPaymentMethod() == method)
+                .filter(booking -> booking.getPayment().getPaymentMethod() == method)
                 .map(Booking::getTotalAmount)
                 .map(this::safeAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

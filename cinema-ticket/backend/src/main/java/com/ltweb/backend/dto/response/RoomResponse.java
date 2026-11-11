@@ -1,7 +1,7 @@
 package com.ltweb.backend.dto.response;
 
 import com.ltweb.backend.enums.RoomStatus;
-import com.ltweb.backend.enums.RoomType;
+import com.ltweb.backend.enums.RoomTechnology;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +17,7 @@ public class RoomResponse {
     private Long id;
     private String code;
     private String name;
-    private RoomType roomType;
+    private RoomTechnology roomTechnology;
     private Integer seatCapacity;
     private RoomStatus status;
     private Long branchId;

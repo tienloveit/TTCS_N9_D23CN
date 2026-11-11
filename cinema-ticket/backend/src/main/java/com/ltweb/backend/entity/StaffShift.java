@@ -29,7 +29,7 @@ import lombok.Setter;
 public class StaffShift {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "shift_id")
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne

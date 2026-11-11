@@ -2,6 +2,7 @@ package com.ltweb.backend.dto.request;
 
 import com.ltweb.backend.enums.BranchStatus;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +16,7 @@ import lombok.Setter;
 @Builder
 public class UpdateBranchRequest {
     @Size(max = 50, message = "Branch code must be at most 50 characters")
+    @Pattern(regexp = "(?s).*\\S.*", message = "Branch code must not be blank")
     private String branchCode;
 
     @Size(max = 255, message = "Branch name must be at most 255 characters")

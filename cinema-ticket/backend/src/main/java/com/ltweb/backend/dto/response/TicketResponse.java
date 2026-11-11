@@ -42,4 +42,6 @@ public class TicketResponse {
     private String qrCode;
 
     private LocalDateTime checkedInAt;
+    private Long checkedInBy;
+    private String checkedInByName;
 }

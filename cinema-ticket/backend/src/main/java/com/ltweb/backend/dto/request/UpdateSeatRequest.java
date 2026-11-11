@@ -14,6 +14,8 @@ import lombok.Setter;
 @Builder
 public class UpdateSeatRequest {
 
+    @jakarta.validation.constraints.Pattern(regexp = "(?s).*\\S.*", message = "SeatCode must not be blank")
+    @jakarta.validation.constraints.Size(max = 255)
     private String seatCode;
 
     private String rowLabel;
@@ -22,7 +24,6 @@ public class UpdateSeatRequest {
 
     private SeatType seatType;
 
-    private Boolean isActive;
 
     private Long roomId;
 }

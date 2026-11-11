@@ -7,6 +7,7 @@ import com.ltweb.backend.dto.request.UpdateBookingRequest;
 import com.ltweb.backend.dto.response.BookingResponse;
 import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
+import com.ltweb.backend.entity.Payment;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Food;
 import com.ltweb.backend.entity.Showtime;
@@ -120,8 +121,7 @@ public class BookingService {
 
         boolean hasUnavailableTicket = selectedTickets.stream()
                 .anyMatch(
-                        ticket -> ticket.getTicketStatus() != TicketStatus.AVAILABLE
-                                || Boolean.FALSE.equals(ticket.getSeat().getIsActive()));
+                        ticket -> ticket.getTicketStatus() != TicketStatus.AVAILABLE);
 
         if (hasUnavailableTicket) {
             throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
@@ -179,8 +179,11 @@ public class BookingService {
                 .promotionCode(appliedPromoCode)
                 .discountAmount(discountAmount)
                 .status(BookingStatus.PENDING)
-                .paymentCreatedAt(LocalDateTime.now())
-                .paymentStatus(PaymentStatus.PENDING)
+                .payment(Payment.builder()
+                        .amount(totalAmount)
+                        .paymentCreatedAt(LocalDateTime.now())
+                        .paymentStatus(PaymentStatus.PENDING)
+                        .build())
                 .expiresAt(LocalDateTime.now().plusMinutes(holdMinutes))
                 .build();
         booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
@@ -230,7 +233,6 @@ public class BookingService {
         boolean hasUnavailableTicket = selectedTickets.stream()
                 .anyMatch(
                         ticket -> ticket.getTicketStatus() != TicketStatus.AVAILABLE
-                                || Boolean.FALSE.equals(ticket.getSeat().getIsActive())
                                 || hasActiveSeatHold(showtime.getId(), ticket));
         if (hasUnavailableTicket) {
             throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
@@ -279,11 +281,15 @@ public class BookingService {
                 .discountAmount(discountAmount)
                 .status(request.getPaymentMethod() == PaymentMethod.CARD ? BookingStatus.PENDING
                         : BookingStatus.COMPLETED)
-                .paymentCreatedAt(now)
-                .paymentStatus(
-                        request.getPaymentMethod() == PaymentMethod.CARD ? PaymentStatus.PENDING : PaymentStatus.PAID)
-                .paymentMethod(request.getPaymentMethod() == null ? PaymentMethod.CASH : request.getPaymentMethod())
-                .paidAt(request.getPaymentMethod() == PaymentMethod.CARD ? null : now)
+                .payment(Payment.builder()
+                        .amount(totalAmount)
+                        .paymentCreatedAt(now)
+                        .paymentStatus(request.getPaymentMethod() == PaymentMethod.CARD
+                                ? PaymentStatus.PENDING : PaymentStatus.PAID)
+                        .paymentMethod(request.getPaymentMethod() == null
+                                ? PaymentMethod.CASH : request.getPaymentMethod())
+                        .paidAt(request.getPaymentMethod() == PaymentMethod.CARD ? null : now)
+                        .build())
                 .expiresAt(now.plusMinutes(getBookingHoldMinutes()))
                 .build();
         booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
@@ -434,8 +440,8 @@ public class BookingService {
 
         unlockSeats(booking.getShowtime().getId(), booking.getTickets()); // chủ động huỷ
 
-        if (booking.getPaymentStatus() == PaymentStatus.PENDING) {
-            booking.setPaymentStatus(PaymentStatus.CANCELLED);
+        if (booking.getPayment().getPaymentStatus() == PaymentStatus.PENDING) {
+            booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
             bookingRepository.save(booking);
         }
 
@@ -484,6 +490,7 @@ public class BookingService {
             booking.setTotalAmount(newTotal);
         }
 
+        booking.getPayment().setAmount(booking.getTotalAmount());
         bookingRepository.save(booking);
         log.info("Promotion {} applied to booking {}", promotionCode, bookingId);
         return bookingMapper.toBookingResponse(booking);
@@ -802,7 +809,7 @@ public class BookingService {
         }
 
         // Kiểm tra cửa sổ hoàn tiền: trong vòng 24h sau khi thanh toán
-        LocalDateTime paidAt = booking.getPaidAt();
+        LocalDateTime paidAt = booking.getPayment().getPaidAt();
         if (paidAt == null) {
             throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
         }
@@ -811,8 +818,8 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.REFUND_REQUESTED);
-        booking.setRefundReason(reason);
-        booking.setRefundAmount(booking.getTotalAmount());
+        booking.getPayment().setRefundReason(reason);
+        booking.getPayment().setRefundAmount(booking.getTotalAmount());
         bookingRepository.save(booking);
         notificationService.notifyRefundRequest(
                 getBookingBranchId(booking), booking.getId(), booking.getBookingCode());
@@ -841,15 +848,15 @@ public class BookingService {
             throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
         }
 
-        booking.setRefundProcessNote(trimToNull(note));
-        booking.setRefundProcessedBy(processor);
-        booking.setRefundProcessedAt(LocalDateTime.now());
+        booking.getPayment().setRefundProcessNote(trimToNull(note));
+        booking.getPayment().setRefundProcessedBy(processor);
+        booking.getPayment().setRefundProcessedAt(LocalDateTime.now());
 
         if (approved) {
             booking.setStatus(BookingStatus.REFUNDED);
-            booking.setPaymentStatus(PaymentStatus.REFUNDED);
-            booking.setRefundedAt(LocalDateTime.now());
-            booking.setRefundAmount(booking.getTotalAmount());
+            booking.getPayment().setPaymentStatus(PaymentStatus.REFUNDED);
+            booking.getPayment().setRefundedAt(LocalDateTime.now());
+            booking.getPayment().setRefundAmount(booking.getTotalAmount());
 
             // Trả ghế về AVAILABLE
             booking
@@ -890,8 +897,8 @@ public class BookingService {
         } else {
             // Từ chối → quay lại COMPLETED
             booking.setStatus(BookingStatus.COMPLETED);
-            booking.setRefundReason(null);
-            booking.setRefundAmount(BigDecimal.ZERO);
+            booking.getPayment().setRefundReason(null);
+            booking.getPayment().setRefundAmount(BigDecimal.ZERO);
 
             log.info("Refund REJECTED for booking {}", bookingId);
             auditLogService.record(

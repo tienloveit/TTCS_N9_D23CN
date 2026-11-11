@@ -1,3 +1,4 @@
+import { formatScreening } from '../../utils/cinemaFormats';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -372,8 +373,8 @@ export default function StaffBookingPage() {
   const roomTypeOptions = useMemo(() => {
     const types = new Set();
     showtimes.forEach((showtime) => {
-      if (showtime.roomType) {
-        types.add(showtime.roomType.toUpperCase());
+      if (showtime.roomTechnology) {
+        types.add(formatScreening(showtime.screeningFormat, showtime.roomTechnology).toUpperCase());
       }
     });
     return [...types].sort();
@@ -448,8 +449,8 @@ export default function StaffBookingPage() {
 
     if (roomTypeFilter !== 'ALL') {
       result = result.filter((showtime) => {
-        const roomType = (showtime.roomType || '').toUpperCase();
-        return roomType.includes(roomTypeFilter);
+        const roomTechnology = formatScreening(showtime.screeningFormat, showtime.roomTechnology).toUpperCase();
+        return roomTechnology.includes(roomTypeFilter);
       });
     }
 
@@ -1259,8 +1260,8 @@ export default function StaffBookingPage() {
                                           <span className="pos-slot-time">
                                             {formatTime(st.startTime)}
                                           </span>
-                                          {st.roomType && (
-                                            <span className="pos-slot-type">{st.roomType}</span>
+                                          {st.roomTechnology && (
+                                            <span className="pos-slot-type">{formatScreening(st.screeningFormat, st.roomTechnology)}</span>
                                           )}
                                         </div>
                                         <div className="pos-slot-room">
@@ -1868,7 +1869,7 @@ export default function StaffBookingPage() {
                       Phòng:{' '}
                       <strong>
                         {selectedShowtime.roomName}
-                        {selectedShowtime.roomType ? ` (${selectedShowtime.roomType})` : ''}
+                        {selectedShowtime.roomTechnology ? ` (${formatScreening(selectedShowtime.screeningFormat, selectedShowtime.roomTechnology)})` : ''}
                       </strong>
                     </span>
                     <span>

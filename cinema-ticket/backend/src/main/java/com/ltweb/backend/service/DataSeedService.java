@@ -15,7 +15,7 @@ import com.ltweb.backend.enums.AgeRating;
 import com.ltweb.backend.enums.BranchStatus;
 import com.ltweb.backend.enums.MovieStatus;
 import com.ltweb.backend.enums.RoomStatus;
-import com.ltweb.backend.enums.RoomType;
+import com.ltweb.backend.enums.RoomTechnology;
 import com.ltweb.backend.enums.SeatType;
 import com.ltweb.backend.enums.ShowtimeStatus;
 import com.ltweb.backend.enums.TicketStatus;
@@ -571,9 +571,9 @@ public class DataSeedService {
 
     private List<Room> seedRooms(Branch branch) {
         List<RoomSeed> roomSeeds = List.of(
-                new RoomSeed("R01", "Phòng Standard 1", RoomType.TWO_D),
-                new RoomSeed("R02", "Phòng IMAX Atmos", RoomType.IMAX),
-                new RoomSeed("R03", "Phòng 4DX Motion", RoomType.FOUR_DX));
+                new RoomSeed("R01", "Phòng Standard 1", RoomTechnology.STANDARD),
+                new RoomSeed("R02", "Phòng IMAX Atmos", RoomTechnology.IMAX),
+                new RoomSeed("R03", "Phòng 4DX Motion", RoomTechnology.FOUR_DX));
 
         List<Room> rooms = new ArrayList<>();
         for (RoomSeed seed : roomSeeds) {
@@ -583,7 +583,7 @@ public class DataSeedService {
             room.setBranch(branch);
             room.setCode(seed.code());
             room.setName(seed.name());
-            room.setRoomType(seed.roomType());
+            room.setRoomTechnology(seed.roomTechnology());
             room.setSeatCapacity(50);
             room.setStatus(RoomStatus.ACTIVE);
             rooms.add(roomRepository.save(room));
@@ -613,7 +613,6 @@ public class DataSeedService {
                                 .rowLabel(rowLabel)
                                 .seatNumber(seatNumber)
                                 .seatType(seatType)
-                                .isActive(true)
                                 .build());
             }
         }
@@ -642,7 +641,6 @@ public class DataSeedService {
                         Collectors.toMap(
                                 Room::getId,
                                 room -> seatRepository.findByRoomId(room.getId()).stream()
-                                        .filter(seat -> Boolean.TRUE.equals(seat.getIsActive()))
                                         .toList()));
 
         for (int dayOffset = 0; dayOffset < 4; dayOffset++) {
@@ -724,7 +722,7 @@ public class DataSeedService {
             String branchCode, String name, String address, String city, String phone) {
     }
 
-    private record RoomSeed(String code, String name, RoomType roomType) {
+    private record RoomSeed(String code, String name, RoomTechnology roomTechnology) {
     }
 
     private record MovieSeed(

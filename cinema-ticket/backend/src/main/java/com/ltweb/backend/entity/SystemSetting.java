@@ -25,7 +25,7 @@ import lombok.Setter;
 public class SystemSetting {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "setting_id")
+    @Column(name = "id")
     private Long id;
 
     @Column(nullable = false, unique = true, length = 120)

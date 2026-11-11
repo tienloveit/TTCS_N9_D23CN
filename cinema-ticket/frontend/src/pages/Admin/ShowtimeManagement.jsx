@@ -1,3 +1,4 @@
+import { ROOM_TECHNOLOGY_LABELS, formatScreening } from '../../utils/cinemaFormats';
 import { useEffect, useMemo, useState } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
@@ -16,12 +17,7 @@ const EditIcon = () => <LucideEditIcon size={15} />;
 const TrashIcon = () => <LucideTrashIcon size={15} />;
 const CalendarIcon = () => <LucideCalendarIcon size={16} />;
 
-const ROOM_TYPE_LABELS = {
-  TWO_D: '2D',
-  THREE_D: '3D',
-  IMAX: 'IMAX',
-  FOUR_DX: '4DX',
-};
+const ROOM_TYPE_LABELS = ROOM_TECHNOLOGY_LABELS;
 
 const STATUS_MAP = {
   OPEN: { label: 'Đang mở', className: 'status--active' },
@@ -84,6 +80,7 @@ const ShowtimeManagement = () => {
     startTime: '',
     endTime: '',
     status: 'OPEN',
+    screeningFormat: 'TWO_D',
   });
 
   const fetchData = async () => {
@@ -168,6 +165,7 @@ const ShowtimeManagement = () => {
         startTime: showtime.startTime ? new Date(showtime.startTime).toISOString().slice(0, 16) : '',
         endTime: showtime.endTime ? new Date(showtime.endTime).toISOString().slice(0, 16) : '',
         status: showtime.status || 'OPEN',
+        screeningFormat: showtime.screeningFormat || 'TWO_D',
       });
     } else {
       setIsEditing(false);
@@ -179,6 +177,7 @@ const ShowtimeManagement = () => {
         startTime: `${selectedDate}T08:00`,
         endTime: `${selectedDate}T10:00`,
         status: 'OPEN',
+    screeningFormat: 'TWO_D',
       });
     }
     setShowModal(true);
@@ -381,7 +380,7 @@ const ShowtimeManagement = () => {
                       <div style={{ padding: 16, borderRight: '1px solid var(--border)' }}>
                         <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{room.name}</div>
                         <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span className="movie-badge">{ROOM_TYPE_LABELS[room.roomType] || room.roomType}</span>
+                          <span className="movie-badge">{ROOM_TYPE_LABELS[room.roomTechnology] || room.roomTechnology}</span>
                           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{room.seatCapacity || 0} ghế</span>
                         </div>
                       </div>
@@ -415,7 +414,7 @@ const ShowtimeManagement = () => {
                               <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {formatTime(showtime.startTime)} {showtime.movieName}
                               </div>
-                              <div style={{ fontSize: 10, opacity: 0.88 }}>{statusInfo.label}</div>
+                              <div style={{ fontSize: 10, opacity: 0.88 }}>{formatScreening(showtime.screeningFormat, showtime.roomTechnology)} · {statusInfo.label}</div>
                             </button>
                           );
                         })}
@@ -501,9 +500,9 @@ const ShowtimeManagement = () => {
                       <td>
                         <div>
                           <div style={{ color: 'var(--text-primary)' }}>{showtime.roomName || '-'}</div>
-                          {showtime.roomType && (
+                          {showtime.roomTechnology && (
                             <span className="movie-badge" style={{ marginTop: 3, display: 'inline-block' }}>
-                              {ROOM_TYPE_LABELS[showtime.roomType] || showtime.roomType}
+                              {formatScreening(showtime.screeningFormat, showtime.roomTechnology)}
                             </span>
                           )}
                         </div>
@@ -599,7 +598,7 @@ const ShowtimeManagement = () => {
                   <label className="form-label">Phòng chiếu</label>
                   <select className="input" value={formData.roomId} onChange={(e) => setFormData({ ...formData, roomId: e.target.value })} required disabled={!formData.branchId}>
                     <option value="">-- Chọn phòng --</option>
-                    {filteredRooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({ROOM_TYPE_LABELS[room.roomType] || room.roomType})</option>)}
+                    {filteredRooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({ROOM_TYPE_LABELS[room.roomTechnology] || room.roomTechnology})</option>)}
                   </select>
                 </div>
               </div>
@@ -629,6 +628,12 @@ const ShowtimeManagement = () => {
                 </div>
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Định dạng chiếu</label>
+                <select className="input" value={formData.screeningFormat} onChange={(e) => setFormData({ ...formData, screeningFormat: e.target.value })} required>
+                  <option value="TWO_D">2D</option><option value="THREE_D">3D</option>
+                </select>
+              </div>
               <div className="form-group">
                 <label className="form-label">Trạng thái</label>
                 <select className="input" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>

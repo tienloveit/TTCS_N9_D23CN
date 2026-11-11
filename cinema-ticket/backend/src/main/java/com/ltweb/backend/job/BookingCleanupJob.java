@@ -50,7 +50,7 @@ public class BookingCleanupJob {
             try {
                 // Cập nhật trạng thái booking
                 booking.setStatus(BookingStatus.CANCELLED);
-                booking.setPaymentStatus(PaymentStatus.CANCELLED);
+                booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
 
                 // Giải phóng từng vé và broadcast real-time qua WebSocket
                 booking

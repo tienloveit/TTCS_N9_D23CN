@@ -1,3 +1,4 @@
+import { formatScreening } from '../../utils/cinemaFormats';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { branchApi, showtimeApi } from '../../api';
@@ -529,7 +530,7 @@ export function MovieScheduleCard({ movieGroup, onSelectMovie, onSelectShowtime 
     });
 
     sorted.forEach((st) => {
-      const key = st.roomType || '2D';
+      const key = formatScreening(st.screeningFormat, st.roomTechnology);
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(st);
     });
@@ -587,9 +588,9 @@ export function MovieScheduleCard({ movieGroup, onSelectMovie, onSelectShowtime 
         </div>
 
         <div className="br-format-groups">
-          {groupedByFormat.map(([roomType, sts]) => (
-            <div key={roomType} className="br-format-row">
-              <div className="br-format-label">{formatRoomType(roomType)}</div>
+          {groupedByFormat.map(([roomTechnology, sts]) => (
+            <div key={roomTechnology} className="br-format-row">
+              <div className="br-format-label">{formatRoomType(roomTechnology)}</div>
               <div className="br-slot-grid">
                 {sts.map((st) => {
                   const total = Number(st.totalSeats || 0);

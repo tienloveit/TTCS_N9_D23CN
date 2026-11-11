@@ -1,7 +1,7 @@
 package com.ltweb.backend.dto.request;
 
 import com.ltweb.backend.enums.RoomStatus;
-import com.ltweb.backend.enums.RoomType;
+import com.ltweb.backend.enums.RoomTechnology;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,7 +26,7 @@ public class CreateRoomRequest {
     @Size(max = 255, message = "Room name must be at most 255 characters")
     private String name;
 
-    private RoomType roomType;
+    private RoomTechnology roomTechnology;
 
     @NotNull(message = "Seat capacity is required")
     @Min(value = 1, message = "Seat capacity must be at least 1")

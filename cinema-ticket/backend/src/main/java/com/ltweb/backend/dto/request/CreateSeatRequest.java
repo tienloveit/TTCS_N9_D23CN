@@ -14,7 +14,8 @@ public class CreateSeatRequest {
     @NotNull(message = "RoomId is required")
     private Long roomId;
 
-    @NotNull(message = "SeatCode is required")
+    @jakarta.validation.constraints.NotBlank(message = "SeatCode is required")
+    @jakarta.validation.constraints.Size(max = 255)
     private String seatCode;
 
     private String rowLabel;
@@ -23,5 +24,4 @@ public class CreateSeatRequest {
 
     private SeatType seatType;
 
-    private Boolean isActive;
 }

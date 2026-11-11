@@ -150,6 +150,8 @@ export default function CheckInPage() {
                 ticketId: t.id,
                 seatCode: t.seatCode,
                 checkedInAt: t.checkedInAt,
+                checkedInBy: t.checkedInBy,
+                checkedInByName: t.checkedInByName,
                 alreadyCheckedIn: false,
               })),
             },
@@ -1129,6 +1131,9 @@ export default function CheckInPage() {
                         </div>
                         <small style={{ fontSize: '0.74rem', color: '#64748b' }}>
                           Mã vé: #{ticket.ticketId} • Giờ vào: {formatTimeOnly(ticket.checkedInAt)}
+                        </small>
+                        <small style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          Nhân viên check-in: {ticket.checkedInByName || (ticket.checkedInBy ? `#${ticket.checkedInBy}` : 'Chưa ghi nhận')}
                         </small>
                       </div>
                     ))}

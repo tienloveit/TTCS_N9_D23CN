@@ -61,7 +61,7 @@ public class RevenueReportService {
                 .filter(booking -> scopedBranchId == null || Objects.equals(getBranchId(booking), scopedBranchId))
                 .filter(booking -> movieId == null || Objects.equals(getMovieId(booking), movieId))
                 .filter(booking -> staffId == null || Objects.equals(getStaffId(booking), staffId))
-                .filter(booking -> paymentMethod == null || booking.getPaymentMethod() == paymentMethod)
+                .filter(booking -> paymentMethod == null || booking.getPayment().getPaymentMethod() == paymentMethod)
                 .sorted(Comparator.comparing(this::getPaymentDate).reversed())
                 .toList();
 
@@ -110,8 +110,8 @@ public class RevenueReportService {
     private List<RevenueReportResponse.PaymentBreakdown> buildPaymentBreakdown(List<Booking> bookings) {
         Map<PaymentMethod, List<Booking>> grouped = bookings.stream()
                 .collect(Collectors.groupingBy(
-                        booking -> booking.getPaymentMethod() == null ? PaymentMethod.VNPAY
-                                : booking.getPaymentMethod()));
+                        booking -> booking.getPayment().getPaymentMethod() == null ? PaymentMethod.VNPAY
+                                : booking.getPayment().getPaymentMethod()));
         return grouped.entrySet().stream()
                 .map(entry -> RevenueReportResponse.PaymentBreakdown.builder()
                         .paymentMethod(entry.getKey())
@@ -129,7 +129,7 @@ public class RevenueReportService {
                 .branchName(getBranchName(booking))
                 .movieName(getMovieName(booking))
                 .staffUsername(getStaffName(booking))
-                .paymentMethod(booking.getPaymentMethod())
+                .paymentMethod(booking.getPayment().getPaymentMethod())
                 .totalAmount(safeAmount(booking.getTotalAmount()))
                 .ticketAmount(sumTicketRevenue(List.of(booking)))
                 .foodAmount(sumFoodRevenue(List.of(booking)))
@@ -156,7 +156,7 @@ public class RevenueReportService {
 
     private boolean isPaidBooking(Booking booking) {
         return booking.getStatus() == BookingStatus.COMPLETED
-                || booking.getPaymentStatus() == PaymentStatus.PAID;
+                || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
     }
 
     private boolean isInRange(LocalDateTime value, LocalDateTime start, LocalDateTime end) {
@@ -164,8 +164,8 @@ public class RevenueReportService {
     }
 
     private LocalDateTime getPaymentDate(Booking booking) {
-        if (booking.getPaidAt() != null)
-            return booking.getPaidAt();
+        if (booking.getPayment().getPaidAt() != null)
+            return booking.getPayment().getPaidAt();
         if (booking.getUpdatedAt() != null)
             return booking.getUpdatedAt();
         return Objects.requireNonNullElseGet(booking.getCreatedAt(), LocalDateTime::now);

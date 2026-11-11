@@ -16,6 +16,8 @@ public interface MovieMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "genres", ignore = true)
     @Mapping(target = "director", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Movie toMovie(CreateMovieRequest request);
 
     @Mapping(target = "movieId", source = "id")
@@ -29,5 +31,7 @@ public interface MovieMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "genres", ignore = true)
     @Mapping(target = "director", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateMovie(@MappingTarget Movie movie, UpdateMovieRequest request);
 }

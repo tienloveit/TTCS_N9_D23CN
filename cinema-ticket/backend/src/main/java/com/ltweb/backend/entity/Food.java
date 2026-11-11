@@ -26,7 +26,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class Food {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "food_id")
+    @Column(name = "id")
     private Long id;
 
     @Column(nullable = false)

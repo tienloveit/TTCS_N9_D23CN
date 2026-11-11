@@ -1,8 +1,6 @@
 package com.ltweb.backend.entity;
 
 import com.ltweb.backend.enums.BookingStatus;
-import com.ltweb.backend.enums.PaymentMethod;
-import com.ltweb.backend.enums.PaymentStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +12,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,10 +37,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "booking_id")
+    @Column(name = "id")
     private Long id;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String bookingCode;
 
     @ManyToOne
@@ -48,7 +48,7 @@ public class Booking {
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "staff_user_id")
+    @JoinColumn(name = "booked_staff")
     private User staffUser;
 
     @ManyToOne
@@ -76,33 +76,25 @@ public class Booking {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    @Enumerated(EnumType.STRING)
-    private PaymentMethod paymentMethod;
-
-    @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
-
-    private String providerTxnId;
-
-    private LocalDateTime paidAt;
-
-    private LocalDateTime paymentCreatedAt;
-
-    private String refundReason;
-
-    @Column(length = 1000)
-    private String refundProcessNote;
-
-    @ManyToOne
-    @JoinColumn(name = "refund_processed_by")
-    private User refundProcessedBy;
-
-    private LocalDateTime refundProcessedAt;
-
-    private LocalDateTime refundedAt;
-
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private BigDecimal refundAmount = BigDecimal.ZERO;
+    private Payment payment = new Payment();
+
+    public void setPayment(Payment payment) {
+        this.payment = payment;
+        if (payment != null) {
+            payment.setBooking(this);
+        }
+    }
+
+    @PrePersist
+    private void attachPayment() {
+        if (payment == null) {
+            payment = new Payment();
+        }
+        payment.setBooking(this);
+        payment.setAmount(totalAmount);
+    }
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

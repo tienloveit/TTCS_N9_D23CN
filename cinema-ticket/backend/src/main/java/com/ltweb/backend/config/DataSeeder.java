@@ -89,27 +89,27 @@ public class DataSeeder implements CommandLineRunner {
         // Thứ tự: tickets → booking_foods → bookings → showtimes
         int t1 = jdbcTemplate.update(
                 "DELETE t FROM tickets t "
-                        + "JOIN bookings b ON t.booking_id = b.booking_id "
-                        + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
+                        + "JOIN bookings b ON t.booking_id = b.id "
+                        + "JOIN showtimes s ON b.showtime_id = s.id "
                         + "WHERE s.end_time < ?",
                 cutoff);
 
         int t2 = jdbcTemplate.update(
                 "DELETE t FROM tickets t "
-                        + "JOIN showtimes s ON t.showtime_id = s.showtime_id "
+                        + "JOIN showtimes s ON t.showtime_id = s.id "
                         + "WHERE s.end_time < ? AND t.booking_id IS NULL",
                 cutoff);
 
         jdbcTemplate.update(
                 "DELETE bf FROM booking_foods bf "
-                        + "JOIN bookings b ON bf.booking_id = b.booking_id "
-                        + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
+                        + "JOIN bookings b ON bf.booking_id = b.id "
+                        + "JOIN showtimes s ON b.showtime_id = s.id "
                         + "WHERE s.end_time < ?",
                 cutoff);
 
         int b1 = jdbcTemplate.update(
                 "DELETE b FROM bookings b "
-                        + "JOIN showtimes s ON b.showtime_id = s.showtime_id "
+                        + "JOIN showtimes s ON b.showtime_id = s.id "
                         + "WHERE s.end_time < ?",
                 cutoff);
 
@@ -224,7 +224,7 @@ public class DataSeeder implements CommandLineRunner {
 
             Set<Long> usedIds = used.getOrDefault(st.getId(), Collections.emptySet());
             List<Seat> avail = seatRepository.findByRoomId(st.getRoom().getId()).stream()
-                    .filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !usedIds.contains(s.getId()))
+                    .filter(s -> !usedIds.contains(s.getId()))
                     .toList();
             if (avail.isEmpty())
                 continue;
@@ -245,9 +245,11 @@ public class DataSeeder implements CommandLineRunner {
                     .bookingCode(code).user(user).showtime(st)
                     .totalAmount(total).discountAmount(BigDecimal.ZERO)
                     .status(BookingStatus.COMPLETED)
-                    .paymentMethod(method).paymentStatus(PaymentStatus.PAID)
-                    .paidAt(paid).paymentCreatedAt(paid.minusMinutes(5))
-                    .providerTxnId(method == PaymentMethod.VNPAY ? "VNP" + System.nanoTime() : null)
+                    .payment(Payment.builder()
+                            .amount(total).paymentMethod(method).paymentStatus(PaymentStatus.PAID)
+                            .paidAt(paid).paymentCreatedAt(paid.minusMinutes(5))
+                            .providerTxnId(method == PaymentMethod.VNPAY ? "VNP" + System.nanoTime() : null)
+                            .build())
                     .build();
 
             if (!foods.isEmpty() && RANDOM.nextBoolean()) {
@@ -258,6 +260,7 @@ public class DataSeeder implements CommandLineRunner {
                         .booking(booking).food(f).quantity(q)
                         .unitPrice(f.getPrice()).subtotal(sub).build());
                 booking.setTotalAmount(total.add(sub));
+                booking.getPayment().setAmount(booking.getTotalAmount());
             }
 
             bookingRepository.save(booking);
@@ -353,7 +356,7 @@ public class DataSeeder implements CommandLineRunner {
 
         Set<Long> usedIds = used.getOrDefault(st.getId(), Collections.emptySet());
         List<Seat> avail = seatRepository.findByRoomId(st.getRoom().getId()).stream()
-                .filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !usedIds.contains(s.getId()))
+                .filter(s -> !usedIds.contains(s.getId()))
                 .toList();
         if (avail.isEmpty())
             return 0;
@@ -372,15 +375,18 @@ public class DataSeeder implements CommandLineRunner {
         Booking booking = Booking.builder()
                 .bookingCode(code).user(user).showtime(st)
                 .totalAmount(amt).discountAmount(BigDecimal.ZERO)
-                .status(status).paymentMethod(PaymentMethod.VNPAY).paymentStatus(payStatus)
-                .paidAt(paid).paymentCreatedAt(paid.minusMinutes(5))
-                .providerTxnId("VNP" + System.nanoTime() + idx)
-                .refundReason(pickRefundReason()).refundAmount(refAmt)
-                .refundedAt(refundedAt).refundProcessedAt(refundedAt)
-                .refundProcessNote(status == BookingStatus.REFUNDED
-                        ? "Đã hoàn " + refAmt.toPlainString() + " VNĐ (80%)."
-                        : null)
-                .refundProcessedBy(admin)
+                .status(status)
+                .payment(Payment.builder()
+                        .amount(amt).paymentMethod(PaymentMethod.VNPAY).paymentStatus(payStatus)
+                        .paidAt(paid).paymentCreatedAt(paid.minusMinutes(5))
+                        .providerTxnId("VNP" + System.nanoTime() + idx)
+                        .refundReason(pickRefundReason()).refundAmount(refAmt)
+                        .refundedAt(refundedAt).refundProcessedAt(refundedAt)
+                        .refundProcessNote(status == BookingStatus.REFUNDED
+                                ? "Đã hoàn " + refAmt.toPlainString() + " VNĐ (80%)."
+                                : null)
+                        .refundProcessedBy(admin)
+                        .build())
                 .build();
 
         bookingRepository.save(booking);

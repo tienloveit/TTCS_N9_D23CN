@@ -123,14 +123,14 @@ if ($branchIds.Count -eq 0) { Write-Host "No branches created! Exiting." -Foregr
 # ==========================================
 Write-Host "`n========== CREATE ROOMS ==========" -ForegroundColor Cyan
 $roomData = @(
-    @{ code = "R01"; name = "Phong 1 - 2D"; roomType = "TWO_D"; seatCapacity = 60; status = "ACTIVE"; branchId = $branchIds[0] },
-    @{ code = "R02"; name = "Phong 2 - 3D"; roomType = "THREE_D"; seatCapacity = 50; status = "ACTIVE"; branchId = $branchIds[0] },
-    @{ code = "R03"; name = "Phong IMAX"; roomType = "IMAX"; seatCapacity = 80; status = "ACTIVE"; branchId = $branchIds[0] }
+    @{ code = "R01"; name = "Phong 1 - 2D"; roomTechnology = "STANDARD"; seatCapacity = 60; status = "ACTIVE"; branchId = $branchIds[0] },
+    @{ code = "R02"; name = "Phong 2 - 3D"; roomTechnology = "STANDARD"; seatCapacity = 50; status = "ACTIVE"; branchId = $branchIds[0] },
+    @{ code = "R03"; name = "Phong IMAX"; roomTechnology = "IMAX"; seatCapacity = 80; status = "ACTIVE"; branchId = $branchIds[0] }
 )
 # Add rooms for branch 2 if it exists
 if ($branchIds.Count -ge 2) {
-    $roomData += @{ code = "R01"; name = "Phong 1 - 2D"; roomType = "TWO_D"; seatCapacity = 55; status = "ACTIVE"; branchId = $branchIds[1] }
-    $roomData += @{ code = "R02"; name = "Phong 4DX"; roomType = "FOUR_DX"; seatCapacity = 40; status = "ACTIVE"; branchId = $branchIds[1] }
+    $roomData += @{ code = "R01"; name = "Phong 1 - 2D"; roomTechnology = "STANDARD"; seatCapacity = 55; status = "ACTIVE"; branchId = $branchIds[1] }
+    $roomData += @{ code = "R02"; name = "Phong 4DX"; roomTechnology = "FOUR_DX"; seatCapacity = 40; status = "ACTIVE"; branchId = $branchIds[1] }
 }
 
 $roomIds = @()
@@ -138,7 +138,7 @@ foreach ($r in $roomData) {
     $res = Invoke-Api -Method POST -Uri "$BASE/room" -Body $r -Headers $headers
     if ($res) {
         $roomIds += $res.result.id
-        Write-Host "  + Room: $($r.name) - Type: $($r.roomType) (ID: $($res.result.id))" -ForegroundColor Gray
+        Write-Host "  + Room: $($r.name) - Type: $($r.roomTechnology) (ID: $($res.result.id))" -ForegroundColor Gray
     }
 }
 

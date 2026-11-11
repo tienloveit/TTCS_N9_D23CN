@@ -29,7 +29,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class MovieRating {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "movie_rating_id")
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -46,11 +46,11 @@ public class MovieRating {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME(6)")
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false, columnDefinition = "DATETIME(6)")
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

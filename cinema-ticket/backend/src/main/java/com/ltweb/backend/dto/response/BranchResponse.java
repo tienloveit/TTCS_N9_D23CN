@@ -1,6 +1,7 @@
 package com.ltweb.backend.dto.response;
 
 import com.ltweb.backend.enums.BranchStatus;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,4 +21,6 @@ public class BranchResponse {
     private String city;
     private String phone;
     private BranchStatus status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

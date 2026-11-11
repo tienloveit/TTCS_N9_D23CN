@@ -69,6 +69,13 @@ class BookingServiceRefundTest {
     bookingService.processRefund(5L, true, "Approved financial refund");
 
     org.assertj.core.api.Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
+    org.assertj.core.api.Assertions.assertThat(booking.getPayment().getPaymentStatus())
+        .isEqualTo(com.ltweb.backend.enums.PaymentStatus.REFUNDED);
+    org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundAmount())
+        .isEqualByComparingTo(booking.getTotalAmount());
+    org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundProcessedBy()).isSameAs(manager);
+    org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundProcessNote())
+        .isEqualTo("Approved financial refund");
     verify(bookingRepository).save(booking);
   }
 

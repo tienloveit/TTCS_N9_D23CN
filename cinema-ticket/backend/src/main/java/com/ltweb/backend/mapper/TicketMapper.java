@@ -19,6 +19,8 @@ public interface TicketMapper {
     @Mapping(target = "seatNumber", source = "seat.seatNumber")
     @Mapping(target = "showtimeId", source = "showtime.id")
     @Mapping(target = "bookingId", ignore = true)
+    @Mapping(target = "checkedInBy", source = "checkedInBy.id")
+    @Mapping(target = "checkedInByName", source = "checkedInBy.fullName")
     TicketResponse toTicketResponse(Ticket ticket);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -26,5 +28,7 @@ public interface TicketMapper {
     @Mapping(target = "showtime", ignore = true)
     @Mapping(target = "seat", ignore = true)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "checkedInBy", ignore = true)
+    @Mapping(target = "checkedInAt", ignore = true)
     void updateTicket(@MappingTarget Ticket ticket, UpdateTicketRequest request);
 }

@@ -23,8 +23,18 @@ public interface BookingMapper {
     @Mapping(target = "seatCodes", source = "tickets")
     @Mapping(target = "bookingId", source = "id")
     @Mapping(target = "foods", source = "bookingFoods")
-    @Mapping(target = "refundProcessedById", source = "refundProcessedBy.id")
-    @Mapping(target = "refundProcessedByUsername", source = "refundProcessedBy.username")
+    @Mapping(target = "paymentMethod", source = "payment.paymentMethod")
+    @Mapping(target = "paymentStatus", source = "payment.paymentStatus")
+    @Mapping(target = "providerTxnId", source = "payment.providerTxnId")
+    @Mapping(target = "paidAt", source = "payment.paidAt")
+    @Mapping(target = "paymentCreatedAt", source = "payment.paymentCreatedAt")
+    @Mapping(target = "refundReason", source = "payment.refundReason")
+    @Mapping(target = "refundProcessNote", source = "payment.refundProcessNote")
+    @Mapping(target = "refundProcessedById", source = "payment.refundProcessedBy.id")
+    @Mapping(target = "refundProcessedByUsername", source = "payment.refundProcessedBy.username")
+    @Mapping(target = "refundProcessedAt", source = "payment.refundProcessedAt")
+    @Mapping(target = "refundedAt", source = "payment.refundedAt")
+    @Mapping(target = "refundAmount", source = "payment.refundAmount")
     BookingResponse toBookingResponse(Booking booking);
 
     default String ticketToSeatCode(Ticket ticket) {

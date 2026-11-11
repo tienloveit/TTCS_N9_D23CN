@@ -30,7 +30,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class StaffSchedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "schedule_id")
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne

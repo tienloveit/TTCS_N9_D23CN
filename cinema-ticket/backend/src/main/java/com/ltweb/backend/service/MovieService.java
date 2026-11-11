@@ -45,7 +45,10 @@ public class MovieService {
     @Transactional
     public MovieResponse createMovie(CreateMovieRequest createMovieRequest) {
         Movie movie = movieMapper.toMovie(createMovieRequest);
-        setDirector(movie, createMovieRequest.getDirectorId());
+        setDirector(movie, createMovieRequest.getDirectorId(), createMovieRequest.getDirectorName());
+        if (createMovieRequest.getIsPublic() == null) movie.setIsPublic(false);
+        if (movie.getStatus() == null) movie.setStatus(MovieStatus.UPCOMING);
+        validateDates(movie);
 
         if (createMovieRequest.getGenreIds() != null && !createMovieRequest.getGenreIds().isEmpty()) {
             Set<Genre> genres = new HashSet<>(genreRepository.findAllById(createMovieRequest.getGenreIds()));
@@ -64,12 +67,13 @@ public class MovieService {
             movies = movieRepository.findAll();
         }
         movies = scopeMoviesForManager(movies);
-        return movies.stream().map(this::toMovieResponse).toList();
+        return movies.stream().filter(this::canViewMovie).map(this::toMovieResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<MovieResponse> getUpcomingMovies() {
         return movieRepository.findByStatus(MovieStatus.UPCOMING).stream()
+                .filter(this::canViewMovie)
                 .map(this::toMovieResponse)
                 .toList();
     }
@@ -77,6 +81,7 @@ public class MovieService {
     @Transactional(readOnly = true)
     public List<MovieResponse> getNowShowingMovies() {
         return movieRepository.findByStatus(MovieStatus.NOW_SHOWING).stream()
+                .filter(this::canViewMovie)
                 .map(this::toMovieResponse)
                 .toList();
     }
@@ -92,10 +97,11 @@ public class MovieService {
         Movie movie = getMovie(movieId);
 
         movieMapper.updateMovie(movie, request);
-        if (request.getDirectorId() != null) {
-            setDirector(movie, request.getDirectorId());
+        validateDates(movie);
+        if (request.getDirectorId() != null || request.getDirectorName() != null) {
+            setDirector(movie, request.getDirectorId(), request.getDirectorName());
         }
-        if (request.getGenreIds() != null && !request.getGenreIds().isEmpty()) {
+        if (request.getGenreIds() != null) {
             Set<Genre> genres = new HashSet<>(genreRepository.findAllById(request.getGenreIds()));
             movie.setGenres(genres);
         }
@@ -156,14 +162,39 @@ public class MovieService {
     private Movie getMovie(Long movieId) {
         return movieRepository
                 .findById(movieId)
+                .filter(this::canViewMovie)
                 .orElseThrow(() -> new AppException(ErrorCode.MOVIE_NOT_FOUND));
     }
 
-    private void setDirector(Movie movie, Long directorId) {
+    private void setDirector(Movie movie, Long directorId, String directorName) {
+        if (directorId == null) {
+            String name = directorName == null ? "" : directorName.trim();
+            if (movie.getDirector() != null && name.equalsIgnoreCase(movie.getDirector().getName())) {
+                return;
+            }
+            movie.setDirector(name.isEmpty() ? null : directorRepository.findFirstByNameIgnoreCase(name)
+                    .orElseGet(() -> directorRepository.save(Director.builder().name(name).build())));
+            return;
+        }
         Director director = directorRepository
                 .findById(directorId)
                 .orElseThrow(() -> new AppException(ErrorCode.DIRECTOR_NOT_FOUND));
         movie.setDirector(director);
+    }
+
+    private boolean canViewMovie(Movie movie) {
+        if (!Boolean.FALSE.equals(movie.getIsPublic())) return true;
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream()
+                        .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
+    private void validateDates(Movie movie) {
+        if (movie.getReleaseDate() != null && movie.getEndDate() != null
+                && movie.getEndDate().isBefore(movie.getReleaseDate())) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
     }
 
     private User getUserCurrent() {

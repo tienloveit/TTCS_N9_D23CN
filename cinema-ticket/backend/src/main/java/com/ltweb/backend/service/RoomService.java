@@ -140,7 +140,6 @@ public class RoomService {
                                 .seatNumber(c)
                                 .seatCode(rowLabel + c)
                                 .seatType(type)
-                                .isActive(true)
                                 .build());
             }
         }

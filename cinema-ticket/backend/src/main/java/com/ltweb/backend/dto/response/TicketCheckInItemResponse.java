@@ -13,4 +13,6 @@ public class TicketCheckInItemResponse {
     private boolean checkedIn;
     private boolean alreadyCheckedIn;
     private LocalDateTime checkedInAt;
+    private Long checkedInBy;
+    private String checkedInByName;
 }

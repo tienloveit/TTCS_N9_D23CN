@@ -110,11 +110,6 @@ public class TicketService {
         for (int i = 0; i < tickets.size(); i++) {
             TicketResponse ticket = tickets.get(i);
 
-            if (Boolean.FALSE.equals(dbTickets.get(i).getSeat().getIsActive())) {
-                ticket.setDisplayStatus(TicketStatus.BOOKED);
-                continue;
-            }
-
             // Ghế đã thanh toán thành công -> luôn BOOKED, không override
             if (ticket.getTicketStatus() == TicketStatus.BOOKED) {
                 ticket.setDisplayStatus(TicketStatus.BOOKED);
@@ -368,12 +363,13 @@ public class TicketService {
         Booking booking = ticket.getBooking();
         if (booking == null
                 || booking.getStatus() != BookingStatus.COMPLETED
-                || booking.getPaymentStatus() != PaymentStatus.PAID
+                || booking.getPayment().getPaymentStatus() != PaymentStatus.PAID
                 || ticket.getTicketStatus() != TicketStatus.BOOKED) {
             throw new AppException(ErrorCode.INVALID_TICKET_CHECKIN);
         }
 
         if (ticket.getCheckedInAt() == null) {
+            ticket.setCheckedInBy(getUserCurrent());
             ticket.setCheckedInAt(LocalDateTime.now());
             ticketRepository.save(ticket);
         }
@@ -417,6 +413,8 @@ public class TicketService {
                 .checkedIn(ticket.getCheckedInAt() != null)
                 .alreadyCheckedIn(alreadyCheckedIn)
                 .checkedInAt(ticket.getCheckedInAt())
+                .checkedInBy(ticket.getCheckedInBy() == null ? null : ticket.getCheckedInBy().getId())
+                .checkedInByName(ticket.getCheckedInBy() == null ? null : ticket.getCheckedInBy().getFullName())
                 .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.ltweb.backend.dto.request;
 
 import com.ltweb.backend.enums.ShowtimeStatus;
+import com.ltweb.backend.enums.ScreeningFormat;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -32,4 +33,5 @@ public class CreateShowtimeRequest {
 
     @NotNull(message = "Status is required")
     private ShowtimeStatus status;
+    private ScreeningFormat screeningFormat;
 }

@@ -13,8 +13,9 @@ import {
 } from '../../components/Common/CinemaIcons';
 
 const roomTypeMap = {
-  TWO_D: '2D',
-  THREE_D: '3D',
+  STANDARD: 'Standard',
+  SCREEN_X: 'ScreenX',
+  GOLD_CLASS: 'Gold Class',
   IMAX: 'IMAX',
   FOUR_DX: '4DX',
 };
@@ -97,7 +98,7 @@ const BranchManagement = () => {
   const [roomForm, setRoomForm] = useState({
     code: '',
     name: '',
-    roomType: 'TWO_D',
+    roomTechnology: 'STANDARD',
     seatCapacity: 100,
     branchId: '',
     status: 'ACTIVE',
@@ -161,7 +162,7 @@ const BranchManagement = () => {
       setRoomForm({ ...room });
     } else {
       setEditingRoom(null);
-      setRoomForm({ code: '', name: '', roomType: 'TWO_D', seatCapacity: 100, branchId: '', status: 'ACTIVE' });
+      setRoomForm({ code: '', name: '', roomTechnology: 'STANDARD', seatCapacity: 100, branchId: '', status: 'ACTIVE' });
     }
     setRoomModal(true);
   };
@@ -178,7 +179,6 @@ const BranchManagement = () => {
         ...seat,
         rowLabel: String(seat.rowLabel || '').toUpperCase(),
         seatNumber: Number(seat.seatNumber || 0),
-        isActive: seat.isActive !== false,
       }));
       setSeats(roomSeats);
       setSelectedSeatId(roomSeats[0]?.seatId || null);
@@ -259,7 +259,7 @@ const BranchManagement = () => {
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => {
       if (roomBranchFilter !== 'ALL' && String(room.branchId) !== String(roomBranchFilter)) return false;
-      if (roomTypeFilter !== 'ALL' && room.roomType !== roomTypeFilter) return false;
+      if (roomTypeFilter !== 'ALL' && room.roomTechnology !== roomTypeFilter) return false;
       if (!roomSearch.trim()) return true;
       const q = roomSearch.toLowerCase().trim();
       return (
@@ -336,7 +336,6 @@ const BranchManagement = () => {
           rowLabel: seat.rowLabel,
           seatNumber: Number(seat.seatNumber),
           seatType: seat.seatType,
-          isActive: seat.isActive !== false,
         })),
       };
       const res = await seatApi.updateLayout(seatMapRoom.id, payload);
@@ -480,9 +479,11 @@ const BranchManagement = () => {
               value={roomTypeFilter}
               onChange={(e) => setRoomTypeFilter(e.target.value)}
             >
-              <option value="ALL">Mọi loại phòng</option>
-              <option value="TWO_D">2D</option>
-              <option value="THREE_D">3D</option>
+              <option value="ALL">Mọi công nghệ phòng</option>
+              <option value="STANDARD">Standard</option>
+              <option value="SCREEN_X">ScreenX</option>
+              <option value="GOLD_CLASS">Gold Class</option>
+
               <option value="IMAX">IMAX</option>
               <option value="FOUR_DX">4DX</option>
             </select>
@@ -494,7 +495,7 @@ const BranchManagement = () => {
               <th>#</th>
               <th>Mã phòng</th>
               <th>Tên phòng</th>
-              <th>Loại phòng</th>
+              <th>Công nghệ phòng</th>
               <th>Sức chứa</th>
               <th>Chi nhánh</th>
               <th>Trạng thái</th>
@@ -518,7 +519,7 @@ const BranchManagement = () => {
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{room.name}</td>
                     <td>
                       <span className="status-badge status--active" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue)' }}>
-                        {roomTypeMap[room.roomType] || room.roomType}
+                        {roomTypeMap[room.roomTechnology] || room.roomTechnology}
                       </span>
                     </td>
                     <td>{room.seatCapacity || '-'}</td>
@@ -628,10 +629,12 @@ const BranchManagement = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
-                  <label className="form-label">Loại phòng</label>
-                  <select className="input" value={roomForm.roomType || 'TWO_D'} onChange={(e) => setRoomForm({ ...roomForm, roomType: e.target.value })}>
-                    <option value="TWO_D">2D</option>
-                    <option value="THREE_D">3D</option>
+                  <label className="form-label">Công nghệ phòng</label>
+                  <select className="input" value={roomForm.roomTechnology || 'STANDARD'} onChange={(e) => setRoomForm({ ...roomForm, roomTechnology: e.target.value })}>
+                    <option value="STANDARD">Standard</option>
+              <option value="SCREEN_X">ScreenX</option>
+              <option value="GOLD_CLASS">Gold Class</option>
+
                     <option value="IMAX">IMAX</option>
                     <option value="FOUR_DX">4DX</option>
                   </select>
@@ -724,18 +727,17 @@ const BranchManagement = () => {
                                       onDragStart={() => setDraggedSeatId(seat.seatId)}
                                       onDragEnd={() => setDraggedSeatId(null)}
                                       onClick={() => setSelectedSeatId(seat.seatId)}
-                                      title={`${seat.seatCode} - ${seatTypeMap[seat.seatType] || seat.seatType}${seat.isActive === false ? ' - khóa/hỏng' : ''}`}
+                                      title={`${seat.seatCode} - ${seatTypeMap[seat.seatType] || seat.seatType}`}
                                       style={{
                                         width: 44,
                                         height: 40,
                                         borderRadius: 6,
                                         border: `2px solid ${isSelected ? '#0f172a' : baseStyle.borderColor}`,
-                                        background: seat.isActive === false ? '#e5e7eb' : baseStyle.background,
-                                        color: seat.isActive === false ? '#64748b' : baseStyle.color,
+                                        background: baseStyle.background,
+                                        color: baseStyle.color,
                                         fontWeight: 800,
                                         fontSize: 12,
                                         cursor: 'grab',
-                                        opacity: seat.isActive === false ? 0.72 : 1,
                                         boxShadow: isSelected ? '0 0 0 3px rgba(15, 23, 42, 0.12)' : 'none',
                                       }}
                                     >
@@ -775,25 +777,6 @@ const BranchManagement = () => {
                           <option value="VIP">VIP</option>
                           <option value="COUPLE">Ghế đôi</option>
                         </select>
-                      </div>
-
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700 }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedSeat.isActive !== false}
-                          onChange={(event) => updateSeatLocal(selectedSeat.seatId, { isActive: event.target.checked })}
-                          style={{ width: 18, height: 18 }}
-                        />
-                        Có thể bán vé
-                      </label>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                        <button type="button" className="btn btn-secondary" onClick={() => updateSeatLocal(selectedSeat.seatId, { isActive: false })}>
-                          Khóa/hỏng
-                        </button>
-                        <button type="button" className="btn btn-secondary" onClick={() => updateSeatLocal(selectedSeat.seatId, { isActive: true })}>
-                          Mở bán
-                        </button>
                       </div>
 
                       <div style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid var(--border)' }}>

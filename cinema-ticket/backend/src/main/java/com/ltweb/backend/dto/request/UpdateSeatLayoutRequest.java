@@ -20,6 +20,5 @@ public class UpdateSeatLayoutRequest {
         private String rowLabel;
         private Integer seatNumber;
         private SeatType seatType;
-        private Boolean isActive;
     }
 }

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.ltweb.backend.dto.request.CheckInTicketRequest;
 import com.ltweb.backend.entity.Booking;
+import com.ltweb.backend.entity.Payment;
 import com.ltweb.backend.entity.Branch;
 import com.ltweb.backend.entity.Room;
 import com.ltweb.backend.entity.Seat;
@@ -72,6 +73,8 @@ class TicketServiceTest {
     var response = ticketService.checkIn(request);
 
     assertThat(ticket.getCheckedInAt()).isNotNull();
+    assertThat(ticket.getCheckedInBy()).isSameAs(staff);
+    assertThat(response.getTickets().getFirst().getCheckedInBy()).isEqualTo(7L);
     assertThat(response.getBookingCode()).isEqualTo("BK-TEST");
     verify(ticketRepository).save(ticket);
     verify(auditLogService).record(any(), any(), any(), any());
@@ -82,7 +85,7 @@ class TicketServiceTest {
     authenticate("staff");
     User staff = User.builder().id(7L).username("staff").role(UserRole.STAFF).branchId(1L).build();
     Ticket ticket = paidTicketInBranch(1L);
-    ticket.getBooking().setPaymentStatus(PaymentStatus.PENDING);
+    ticket.getBooking().getPayment().setPaymentStatus(PaymentStatus.PENDING);
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
 
@@ -93,6 +96,71 @@ class TicketServiceTest {
         .isInstanceOf(AppException.class)
         .extracting("errorCode")
         .isEqualTo(ErrorCode.INVALID_TICKET_CHECKIN);
+    assertThat(ticket.getCheckedInBy()).isNull();
+  }
+
+  @Test
+  void repeatCheckInKeepsOriginalStaffAndTime() {
+    authenticate("staff");
+    User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(1L).build();
+    User original = User.builder().id(8L).fullName("Original staff").build();
+    Ticket ticket = paidTicketInBranch(1L);
+    var originalTime = java.time.LocalDateTime.of(2026, 11, 11, 10, 0);
+    ticket.setCheckedInAt(originalTime);
+    ticket.setCheckedInBy(original);
+    when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
+    when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+    var request = new CheckInTicketRequest(); request.setCode("10");
+    var response = ticketService.checkIn(request);
+    assertThat(ticket.getCheckedInBy()).isSameAs(original);
+    assertThat(ticket.getCheckedInAt()).isEqualTo(originalTime);
+    assertThat(response.getTickets().getFirst().getCheckedInByName()).isEqualTo("Original staff");
+    org.mockito.Mockito.verify(ticketRepository, org.mockito.Mockito.never()).save(any());
+  }
+
+  @Test
+  void qrImageCheckInRecordsAuthenticatedStaff() {
+    authenticate("staff");
+    User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(1L).build();
+    Ticket ticket = paidTicketInBranch(1L);
+    var file = new org.springframework.mock.web.MockMultipartFile("file", new byte[]{1});
+    when(qrCodeReaderService.decodeQRCode(file)).thenReturn("10");
+    when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
+    when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+    var response = ticketService.checkInByQRImage(file);
+    assertThat(ticket.getCheckedInBy()).isSameAs(staff);
+    assertThat(response.getTickets().getFirst().getCheckedInBy()).isEqualTo(7L);
+  }
+
+  @Test
+  void bookingCodeCheckInRecordsStaffForEveryTicket() {
+    authenticate("staff");
+    User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(1L).build();
+    Ticket first = paidTicketInBranch(1L);
+    Ticket second = Ticket.builder().id(11L).booking(first.getBooking()).showtime(first.getShowtime())
+        .seat(Seat.builder().seatCode("A2").build()).ticketStatus(TicketStatus.BOOKED).build();
+    first.getBooking().setTickets(List.of(first, second));
+    when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
+    when(bookingRepository.findByBookingCode("BK-TEST")).thenReturn(Optional.of(first.getBooking()));
+    var request = new CheckInTicketRequest(); request.setCode("BK-TEST");
+    var response = ticketService.checkIn(request);
+    assertThat(first.getCheckedInBy()).isSameAs(staff);
+    assertThat(second.getCheckedInBy()).isSameAs(staff);
+    assertThat(response.getTickets()).extracting("checkedInBy").containsExactly(7L, 7L);
+  }
+
+  @Test
+  void wrongBranchDoesNotRecordAStaffCheckIn() {
+    authenticate("staff");
+    User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(2L).build();
+    Ticket ticket = paidTicketInBranch(1L);
+    when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
+    when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+    var request = new CheckInTicketRequest(); request.setCode("10");
+    assertThatThrownBy(() -> ticketService.checkIn(request)).isInstanceOf(AppException.class);
+    assertThat(ticket.getCheckedInBy()).isNull();
+    assertThat(ticket.getCheckedInAt()).isNull();
+    org.mockito.Mockito.verify(ticketRepository, org.mockito.Mockito.never()).save(any());
   }
 
   private void authenticate(String username) {
@@ -111,7 +179,7 @@ class TicketServiceTest {
             .bookingCode("BK-TEST")
             .showtime(showtime)
             .status(BookingStatus.COMPLETED)
-            .paymentStatus(PaymentStatus.PAID)
+            .payment(Payment.builder().paymentStatus(PaymentStatus.PAID).build())
             .build();
     Ticket ticket =
         Ticket.builder()

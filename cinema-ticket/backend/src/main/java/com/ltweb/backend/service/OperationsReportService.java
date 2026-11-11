@@ -68,7 +68,7 @@ public class OperationsReportService {
                 .toList();
         List<Booking> refundedToday = branchBookings.stream()
                 .filter(booking -> booking.getStatus() == BookingStatus.REFUNDED)
-                .filter(booking -> isInRange(booking.getRefundedAt(), start, end))
+                .filter(booking -> isInRange(booking.getPayment().getRefundedAt(), start, end))
                 .toList();
 
         List<Showtime> showtimesToday = showtimeRepository.findAll().stream()
@@ -121,8 +121,8 @@ public class OperationsReportService {
     private List<OperationsReportResponse.PaymentBreakdown> buildPaymentBreakdown(List<Booking> bookings) {
         Map<PaymentMethod, List<Booking>> grouped = bookings.stream()
                 .collect(Collectors.groupingBy(
-                        booking -> booking.getPaymentMethod() == null ? PaymentMethod.VNPAY
-                                : booking.getPaymentMethod()));
+                        booking -> booking.getPayment().getPaymentMethod() == null ? PaymentMethod.VNPAY
+                                : booking.getPayment().getPaymentMethod()));
         return grouped.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> OperationsReportResponse.PaymentBreakdown.builder()
@@ -155,10 +155,10 @@ public class OperationsReportService {
                 .bookingId(booking.getId())
                 .bookingCode(booking.getBookingCode())
                 .customerName(customer == null ? "-" : customer.getFullName())
-                .amount(booking.getRefundAmount())
-                .reason(booking.getRefundReason())
+                .amount(booking.getPayment().getRefundAmount())
+                .reason(booking.getPayment().getRefundReason())
                 .status(booking.getStatus())
-                .paidAt(booking.getPaidAt())
+                .paidAt(booking.getPayment().getPaidAt())
                 .build();
     }
 
@@ -207,7 +207,7 @@ public class OperationsReportService {
 
     private boolean isPaidBooking(Booking booking) {
         return booking.getStatus() == BookingStatus.COMPLETED
-                || booking.getPaymentStatus() == PaymentStatus.PAID;
+                || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
     }
 
     private boolean isBookingInBranch(Booking booking, Long branchId) {
@@ -225,8 +225,8 @@ public class OperationsReportService {
     }
 
     private LocalDateTime getPaymentDate(Booking booking) {
-        if (booking.getPaidAt() != null) {
-            return booking.getPaidAt();
+        if (booking.getPayment().getPaidAt() != null) {
+            return booking.getPayment().getPaidAt();
         }
         if (booking.getUpdatedAt() != null) {
             return booking.getUpdatedAt();
@@ -243,7 +243,7 @@ public class OperationsReportService {
 
     private BigDecimal sumRefundAmount(List<Booking> bookings) {
         return bookings.stream()
-                .map(Booking::getRefundAmount)
+                .map(booking -> booking.getPayment().getRefundAmount())
                 .map(this::safeAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

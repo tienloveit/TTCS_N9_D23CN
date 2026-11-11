@@ -264,7 +264,7 @@ public class AdminAnalyticsService {
 
     private boolean isPaidBooking(Booking booking) {
         return booking.getStatus() == BookingStatus.COMPLETED
-                || booking.getPaymentStatus() == PaymentStatus.PAID;
+                || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
     }
 
     private boolean isBookingInBranch(Booking booking, Long branchId) {
@@ -292,8 +292,8 @@ public class AdminAnalyticsService {
     }
 
     private LocalDateTime getPaymentDate(Booking booking) {
-        if (booking.getPaidAt() != null) {
-            return booking.getPaidAt();
+        if (booking.getPayment().getPaidAt() != null) {
+            return booking.getPayment().getPaidAt();
         }
         if (booking.getUpdatedAt() != null) {
             return booking.getUpdatedAt();

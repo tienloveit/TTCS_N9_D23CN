@@ -28,7 +28,7 @@ import org.hibernate.annotations.CreationTimestamp;
 public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "notification_id")
+    @Column(name = "id")
     private Long id;
 
     private Long recipientUserId;

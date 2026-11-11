@@ -1,3 +1,4 @@
+import { formatScreening } from '../../utils/cinemaFormats';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { branchApi, movieApi, roomApi, showtimeApi } from '../../api';
@@ -26,14 +27,14 @@ const toLocalDateKey = (date = new Date()) => {
 
 const getDateFromKey = (dateKey) => new Date(`${dateKey}T00:00:00`);
 
-const getRoomTypeLabel = (roomType) => {
+const getRoomTypeLabel = (roomTechnology) => {
   const map = {
     TWO_D: '2D',
     THREE_D: '3D',
     IMAX: 'IMAX',
     FOUR_DX: '4DX',
   };
-  return map[roomType] || roomType?.replace('_', ' ') || '2D';
+  return map[roomTechnology] || roomTechnology?.replace('_', ' ') || '2D';
 };
 
 const getSubtitleLabel = (subtitle) => {
@@ -170,7 +171,7 @@ export default function MovieDetailPage() {
           branchName,
           city: branch?.city || 'Khác',
           roomName,
-          roomTypeLabel: getRoomTypeLabel(showtime.roomType || room?.roomType),
+          roomTypeLabel: getRoomTypeLabel(formatScreening(showtime.screeningFormat, showtime.roomTechnology || room?.roomTechnology)),
           subtitleLabel,
         };
       })

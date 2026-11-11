@@ -31,12 +31,6 @@ public class BackendApplication {
                 log.warn("Could not alter bookings.status: " + e.getMessage());
             }
             try {
-                jdbcTemplate.execute("ALTER TABLE bookings MODIFY payment_status VARCHAR(50)");
-                log.info("Successfully altered bookings.payment_status to VARCHAR(50)");
-            } catch (Exception e) {
-                log.warn("Could not alter bookings.payment_status: " + e.getMessage());
-            }
-            try {
                 jdbcTemplate.execute("ALTER TABLE users MODIFY role VARCHAR(20)");
                 log.info("Successfully altered users.role to VARCHAR(20)");
             } catch (Exception e) {

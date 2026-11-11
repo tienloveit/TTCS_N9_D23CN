@@ -30,7 +30,7 @@ import lombok.Setter;
 public class Ticket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ticket_id")
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne
@@ -49,9 +49,14 @@ public class Ticket {
     private BigDecimal price;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TicketStatus ticketStatus;
 
     private String qrCode;
 
     private LocalDateTime checkedInAt;
+
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @JoinColumn(name = "checked_in_by", foreignKey = @jakarta.persistence.ForeignKey(name = "fk_tickets_checked_in_by"))
+    private User checkedInBy;
 }

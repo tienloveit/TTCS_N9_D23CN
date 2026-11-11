@@ -20,5 +20,4 @@ public class SeatResponse {
 
     private SeatType seatType;
 
-    private Boolean isActive;
 }

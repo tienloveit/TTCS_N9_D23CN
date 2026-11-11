@@ -89,10 +89,12 @@ public class SeatService {
         List<Seat> roomSeats = seatRepository.findByRoomId(roomId);
         Map<Long, Seat> seatsById = roomSeats.stream().collect(Collectors.toMap(Seat::getId, Function.identity()));
         Set<String> positions = new HashSet<>();
+        Set<Long> changedIds = new HashSet<>();
 
         for (UpdateSeatLayoutRequest.Item item : request.getSeats()) {
             Seat seat = seatsById.get(item.getSeatId());
             if (seat == null
+                    || !changedIds.add(item.getSeatId())
                     || item.getRowLabel() == null
                     || item.getRowLabel().isBlank()
                     || item.getSeatNumber() == null
@@ -107,9 +109,19 @@ public class SeatService {
         }
 
         for (Seat seat : roomSeats) {
-            seat.setSeatCode("__TMP_" + seat.getId());
+            if (!changedIds.contains(seat.getId()) && seat.getRowLabel() != null && seat.getSeatNumber() != null
+                    && !positions.add(seat.getRowLabel().trim().toUpperCase() + ":" + seat.getSeatNumber())) {
+                throw new AppException(ErrorCode.SEAT_DUPLICATE);
+            }
         }
-        seatRepository.saveAll(roomSeats);
+        List<Seat> changedSeats = request.getSeats().stream().map(item -> seatsById.get(item.getSeatId())).toList();
+        String temporaryPrefix = "__LAYOUT_" + java.util.UUID.randomUUID() + "_";
+        for (Seat seat : changedSeats) {
+            seat.setSeatCode(temporaryPrefix + seat.getId());
+            // Nullable staging row releases the composite unique position for swaps.
+            seat.setRowLabel(null);
+        }
+        seatRepository.saveAll(changedSeats);
         seatRepository.flush();
 
         for (UpdateSeatLayoutRequest.Item item : request.getSeats()) {
@@ -120,9 +132,6 @@ public class SeatService {
             seat.setSeatCode(rowLabel + item.getSeatNumber());
             if (item.getSeatType() != null) {
                 seat.setSeatType(item.getSeatType());
-            }
-            if (item.getIsActive() != null) {
-                seat.setIsActive(item.getIsActive());
             }
         }
 

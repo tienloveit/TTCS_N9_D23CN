@@ -28,7 +28,7 @@ import org.hibernate.annotations.CreationTimestamp;
 public class AuditLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "audit_id")
+    @Column(name = "id")
     private Long id;
 
     private Long actorId;

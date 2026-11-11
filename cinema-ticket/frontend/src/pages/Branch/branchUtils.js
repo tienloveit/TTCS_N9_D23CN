@@ -60,9 +60,9 @@ export const buildUpcomingDays = (count = 7) => {
   });
 };
 
-export const formatRoomType = (roomType) => {
-  if (!roomType) return '2D Phụ đề';
-  const normalized = String(roomType).toUpperCase().replace(/_/g, ' ').trim();
+export const formatRoomType = (roomTechnology) => {
+  if (!roomTechnology) return '2D Phụ đề';
+  const normalized = String(roomTechnology).toUpperCase().replace(/_/g, ' ').trim();
   if (normalized === '2D') return '2D Standard';
   if (normalized === '3D') return '3D Digital';
   return normalized;

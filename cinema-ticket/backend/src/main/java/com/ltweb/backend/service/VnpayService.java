@@ -278,13 +278,13 @@ public class VnpayService {
                         // Idempotency: chỉ xử lý nếu booking chưa được cập nhật
                         if (booking.getStatus() != BookingStatus.COMPLETED
                                 && booking.getStatus() != BookingStatus.CANCELLED) {
-                            booking.setPaymentMethod(PaymentMethod.VNPAY);
-                            booking.setProviderTxnId(params.get("vnp_TransactionNo"));
+                            booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
+                            booking.getPayment().setProviderTxnId(params.get("vnp_TransactionNo"));
 
                             if (success) {
                                 booking.setStatus(BookingStatus.COMPLETED);
-                                booking.setPaymentStatus(PaymentStatus.PAID);
-                                booking.setPaidAt(LocalDateTime.now());
+                                booking.getPayment().setPaymentStatus(PaymentStatus.PAID);
+                                booking.getPayment().setPaidAt(LocalDateTime.now());
 
                                 booking
                                         .getTickets()
@@ -303,7 +303,7 @@ public class VnpayService {
                                                 });
                             } else {
                                 booking.setStatus(BookingStatus.CANCELLED);
-                                booking.setPaymentStatus(PaymentStatus.CANCELLED);
+                                booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
 
                                 booking
                                         .getTickets()
@@ -381,26 +381,26 @@ public class VnpayService {
 
             Booking booking = bookingOpt.get();
             String vnpAmount = params.get("vnp_Amount");
-            long expectedAmount = booking.getTotalAmount().movePointRight(2).longValue();
+            long expectedAmount = booking.getPayment().getAmount().movePointRight(2).longValue();
             if (vnpAmount == null || !String.valueOf(expectedAmount).equals(vnpAmount)) {
                 return rsp("04", "Invalid Amount");
             }
 
             if (booking.getStatus() == BookingStatus.COMPLETED
-                    || booking.getPaymentStatus() == PaymentStatus.PAID) {
+                    || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID) {
                 return rsp("02", "Order already completed");
             }
 
             boolean paymentSuccess = "00".equals(params.get("vnp_ResponseCode"))
                     && "00".equals(params.get("vnp_TransactionStatus"));
 
-            booking.setProviderTxnId(params.get("vnp_TransactionNo"));
-            booking.setPaymentStatus(paymentSuccess ? PaymentStatus.PAID : PaymentStatus.CANCELLED);
+            booking.getPayment().setProviderTxnId(params.get("vnp_TransactionNo"));
+            booking.getPayment().setPaymentStatus(paymentSuccess ? PaymentStatus.PAID : PaymentStatus.CANCELLED);
             if (paymentSuccess) {
-                booking.setPaidAt(LocalDateTime.now());
+                booking.getPayment().setPaidAt(LocalDateTime.now());
             }
 
-            booking.setPaymentMethod(PaymentMethod.VNPAY);
+            booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
             if (paymentSuccess) {
                 booking.setStatus(BookingStatus.COMPLETED);
 
