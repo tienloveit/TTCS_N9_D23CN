@@ -57,7 +57,6 @@ public class VnpayService {
     private final RedisTemplate<String, String> redisTemplate;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
-    private final FoodInventoryService foodInventoryService;
 
     private static final Map<String, String> RESPONSE_CODE_DESC = createResponseCodeDesc();
     private static final Map<String, String> TRANSACTION_STATUS_DESC = createTransactionStatusDesc();
@@ -286,7 +285,6 @@ public class VnpayService {
                                 booking.setStatus(BookingStatus.COMPLETED);
                                 booking.setPaymentStatus(PaymentStatus.PAID);
                                 booking.setPaidAt(LocalDateTime.now());
-                                foodInventoryService.deductForBooking(booking);
 
                                 booking
                                         .getTickets()
@@ -405,7 +403,6 @@ public class VnpayService {
             booking.setPaymentMethod(PaymentMethod.VNPAY);
             if (paymentSuccess) {
                 booking.setStatus(BookingStatus.COMPLETED);
-                foodInventoryService.deductForBooking(booking);
 
                 // Xoá Redis keys khi thanh toán thành công
                 try {

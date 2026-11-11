@@ -219,9 +219,7 @@ const RefundManagementPage = () => {
                 </div>
               )}
             </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginBottom: 14 }}>
-              Hoàn tiền không tự cộng lại tồn đồ ăn. Chỉ nhập lại tại mục Nhập xuất kho khi đã nhận và kiểm tra hàng thực tế còn sử dụng được; ghi kèm mã đơn hàng.
-            </p>
+
             <label className="form-label">Ghi chú xử lý</label>
             <textarea
               className="input"

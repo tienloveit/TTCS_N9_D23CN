@@ -3,7 +3,6 @@ package com.ltweb.backend.service;
 import com.ltweb.backend.dto.response.OperationsReportResponse;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
-import com.ltweb.backend.entity.Food;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.StaffShift;
 import com.ltweb.backend.entity.Ticket;
@@ -16,7 +15,6 @@ import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.BranchRepository;
-import com.ltweb.backend.repository.FoodRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.StaffShiftRepository;
 import com.ltweb.backend.repository.TicketRepository;
@@ -41,7 +39,6 @@ public class OperationsReportService {
     private final BookingRepository bookingRepository;
     private final ShowtimeRepository showtimeRepository;
     private final StaffShiftRepository staffShiftRepository;
-    private final FoodRepository foodRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
@@ -83,12 +80,6 @@ public class OperationsReportService {
                 .filter(shift -> isInRange(shift.getOpenedAt(), start, end))
                 .sorted(Comparator.comparing(StaffShift::getOpenedAt).reversed())
                 .toList();
-        List<Food> lowStockFoods = foodRepository.findAll().stream()
-                .filter(food -> scopedBranchId == null || food.getBranchId() == null
-                        || Objects.equals(food.getBranchId(), scopedBranchId))
-                .filter(this::isLowStock)
-                .sorted(Comparator.comparing(Food::getName, String.CASE_INSENSITIVE_ORDER))
-                .toList();
 
         long capacity = showtimesToday.stream().mapToLong(this::getShowtimeCapacity).sum();
         long ticketsSoldByShowtimeDate = countTicketsForShowtimes(showtimesToday, branchBookings);
@@ -116,13 +107,11 @@ public class OperationsReportService {
                                 .showtimes(showtimesToday.size())
                                 .totalCapacity(capacity)
                                 .occupancyRate(toRate(ticketsSoldByShowtimeDate, capacity))
-                                .lowStockItems(lowStockFoods.size())
                                 .expectedCash(expectedCash)
                                 .cashDifference(cashDifference)
                                 .build())
                 .paymentBreakdown(buildPaymentBreakdown(paidToday))
                 .staffShifts(shiftsToday.stream().map(this::toShiftRow).toList())
-                .lowStockFoods(lowStockFoods.stream().limit(20).map(this::toLowStockFood).toList())
                 .refundQueue(refundRequests.stream().limit(20).map(this::toRefundQueueItem).toList())
                 .showtimeLoads(
                         showtimesToday.stream().map(showtime -> toShowtimeLoad(showtime, branchBookings)).toList())
@@ -157,17 +146,6 @@ public class OperationsReportService {
                 .closingCash(shift.getClosingCash())
                 .expectedCash(shift.getExpectedCash())
                 .cashDifference(shift.getCashDifference())
-                .build();
-    }
-
-    private OperationsReportResponse.LowStockFood toLowStockFood(Food food) {
-        return OperationsReportResponse.LowStockFood.builder()
-                .foodId(food.getId())
-                .foodName(food.getName())
-                .branchId(food.getBranchId())
-                .stockQuantity(food.getStockQuantity())
-                .lowStockThreshold(food.getLowStockThreshold())
-                .active(food.getActive())
                 .build();
     }
 
@@ -240,11 +218,6 @@ public class OperationsReportService {
         return showtime.getRoom() != null
                 && showtime.getRoom().getBranch() != null
                 && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
-    }
-
-    private boolean isLowStock(Food food) {
-        return food.getStockQuantity() != null
-                && food.getStockQuantity() <= Objects.requireNonNullElse(food.getLowStockThreshold(), 5);
     }
 
     private boolean isInRange(LocalDateTime value, LocalDateTime start, LocalDateTime end) {

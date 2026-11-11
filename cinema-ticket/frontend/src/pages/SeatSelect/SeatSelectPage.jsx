@@ -325,11 +325,10 @@ export default function SeatSelectPage() {
 
   // Steps definition
   const steps = [
-    { label: 'Chọn phim / Rạp / Suất', done: true },
+    { label: 'Suất chiếu', done: true },
     { label: 'Chọn ghế', active: bookingStep === 1, done: bookingStep > 1 },
-    { label: 'Chọn thức ăn', active: bookingStep === 2, done: bookingStep > 2 },
-    { label: 'Thanh toán' },
-    { label: 'Xác nhận' },
+    { label: 'Bắp nước', active: bookingStep === 2, done: bookingStep > 2 },
+    { label: 'Thu tiền & Xuất vé' },
   ];
 
   return (

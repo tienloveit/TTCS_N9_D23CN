@@ -28,7 +28,6 @@ const FoodManagement = () => {
     description: '',
     price: '',
     imageUrl: '',
-    lowStockThreshold: 5,
     active: true,
   });
 
@@ -56,7 +55,6 @@ const FoodManagement = () => {
         description: food.description || '',
         price: food.price || '',
         imageUrl: food.imageUrl || '',
-        lowStockThreshold: food.lowStockThreshold ?? 5,
         active: food.active !== false,
       });
     } else {
@@ -66,7 +64,6 @@ const FoodManagement = () => {
         description: '',
         price: '',
         imageUrl: '',
-        lowStockThreshold: 5,
         active: true,
       });
     }
@@ -92,7 +89,6 @@ const FoodManagement = () => {
       const payload = {
         ...formData,
         price: formData.price ? Number(formData.price) : 0,
-        lowStockThreshold: Number(formData.lowStockThreshold || 0),
       };
 
       if (editingFood) {
@@ -132,7 +128,6 @@ const FoodManagement = () => {
     return foods.filter((food) => {
       if (statusFilter === 'ACTIVE' && food.active === false) return false;
       if (statusFilter === 'INACTIVE' && food.active !== false) return false;
-      if (statusFilter === 'LOW_STOCK' && !(food.lowStock || (food.stockQuantity != null && food.stockQuantity <= 0))) return false;
       return food.name?.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }, [foods, statusFilter, searchTerm]);
@@ -169,11 +164,6 @@ const FoodManagement = () => {
             {[
               { key: 'ALL', label: 'Tất cả', count: foods.length },
               { key: 'ACTIVE', label: 'Đang bán', count: foods.filter((f) => f.active !== false).length },
-              {
-                key: 'LOW_STOCK',
-                label: 'Sắp hết / Hết hàng',
-                count: foods.filter((f) => f.lowStock || (f.stockQuantity != null && f.stockQuantity <= 0)).length,
-              },
               { key: 'INACTIVE', label: 'Ngừng bán', count: foods.filter((f) => f.active === false).length },
             ].map((tab) => (
               <button
@@ -217,7 +207,6 @@ const FoodManagement = () => {
               <th>Sản phẩm</th>
               <th>Mô tả</th>
               <th>Giá</th>
-              <th>Tồn kho</th>
               <th>Trạng thái</th>
               <th style={{ width: '120px' }}>Hành động</th>
             </tr>
@@ -226,7 +215,7 @@ const FoodManagement = () => {
             {filteredFoods.length === 0 ? (
               <tr>
                 <td
-                  colSpan="7"
+                  colSpan="6"
                   style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}
                 >
                   {searchTerm
@@ -273,27 +262,7 @@ const FoodManagement = () => {
                   <td style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     {formatCurrency(food.price)}
                   </td>
-                  <td>
-                    {food.stockQuantity == null ? (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Không theo dõi</span>
-                    ) : (
-                      <div style={{ display: 'grid', gap: 4 }}>
-                        <strong style={{ color: food.inStock ? 'var(--text-primary)' : '#ef4444' }}>
-                          {food.stockQuantity}
-                        </strong>
-                        {food.lowStock && food.inStock && (
-                          <span style={{ color: '#f59e0b', fontSize: '0.76rem', fontWeight: 700 }}>
-                            Sắp hết
-                          </span>
-                        )}
-                        {!food.inStock && (
-                          <span style={{ color: '#ef4444', fontSize: '0.76rem', fontWeight: 700 }}>
-                            Hết hàng
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </td>
+
                   <td>
                     <span
                       className={`status-badge ${food.active !== false ? 'status--active' : 'status--inactive'}`}
@@ -404,25 +373,6 @@ const FoodManagement = () => {
                   min="0"
                   placeholder="VD: 89000"
                 />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                <p style={{ color: 'var(--text-secondary)' }}>
-                  {editingFood ? 'Tồn kho được cập nhật tại mục Nhập xuất kho.' : 'Sản phẩm mới có tồn bằng 0. Hãy nhập hàng tại mục Nhập xuất kho trước khi bán.'}
-                </p>
-
-                <div className="form-group">
-                  <label className="form-label">Ngưỡng cảnh báo</label>
-                  <input
-                    type="number"
-                    name="lowStockThreshold"
-                    className="input"
-                    value={formData.lowStockThreshold}
-                    onChange={handleInputChange}
-                    min="0"
-                    placeholder="5"
-                  />
-                </div>
               </div>
 
               <div className="form-group">

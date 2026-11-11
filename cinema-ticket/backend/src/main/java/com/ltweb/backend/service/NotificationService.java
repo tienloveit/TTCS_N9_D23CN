@@ -55,21 +55,6 @@ public class NotificationService {
     }
 
     @Transactional
-    public void notifyLowStock(Long branchId, Long foodId, String foodName, Integer stockQuantity) {
-        String targetId = String.valueOf(foodId);
-        if (notificationRepository.existsByTypeAndTargetTypeAndTargetId(
-                NotificationType.LOW_STOCK, "Food", targetId)) {
-            return;
-        }
-        String message = foodName + " sap het hang, ton kho hien tai: " + stockQuantity + ".";
-        createForRole(UserRole.ADMIN, null, NotificationType.LOW_STOCK, "Can nhap kho", message, "Food", foodId);
-        if (branchId != null) {
-            createForRole(UserRole.MANAGER, branchId, NotificationType.LOW_STOCK, "Can nhap kho", message, "Food",
-                    foodId);
-        }
-    }
-
-    @Transactional
     public void notifyStaffSchedule(
             Long staffId, Long branchId, Long scheduleId, String title, String message) {
         notificationRepository.save(

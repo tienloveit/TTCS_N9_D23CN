@@ -32,7 +32,6 @@ import OperationsReportPage from './pages/Admin/OperationsReportPage';
 import AuditLogPage from './pages/Admin/AuditLogPage';
 import SystemSettingsPage from './pages/Admin/SystemSettingsPage';
 import RefundManagementPage from './pages/Admin/RefundManagementPage';
-import InventoryManagementPage from './pages/Admin/InventoryManagementPage';
 import RevenueReportPage from './pages/Admin/RevenueReportPage';
 import NotificationPage from './pages/Admin/NotificationPage';
 import StaffLayout from './pages/Staff/StaffLayout';
@@ -157,7 +156,6 @@ const AnimatedRoutes = () => {
           <Route path="promotions" element={<AdminOnlyRoute><PageWrapper><PromotionManagement /></PageWrapper></AdminOnlyRoute>} />
           <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
           <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
-          <Route path="inventory" element={<PageWrapper><InventoryManagementPage /></PageWrapper>} />
           <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
           <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
           <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
@@ -183,7 +181,6 @@ const AnimatedRoutes = () => {
           <Route path="promotions" element={<PageWrapper><PromotionManagement /></PageWrapper>} />
           <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
           <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
-          <Route path="inventory" element={<PageWrapper><InventoryManagementPage /></PageWrapper>} />
           <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
           <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
           <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />

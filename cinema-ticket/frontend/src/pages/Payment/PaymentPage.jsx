@@ -208,11 +208,10 @@ export default function PaymentPage() {
     '-';
 
   const steps = [
-    { label: 'Chọn phim / Rạp / Suất', done: true },
+    { label: 'Suất chiếu', done: true },
     { label: 'Chọn ghế', done: true },
-    { label: 'Chọn thức ăn', done: true },
-    { label: 'Thanh toán', active: true },
-    { label: 'Xác nhận' },
+    { label: 'Bắp nước', done: true },
+    { label: 'Thu tiền & Xuất vé', active: true },
   ];
 
   const isUrgent = timeLeft !== null && timeLeft < 60;

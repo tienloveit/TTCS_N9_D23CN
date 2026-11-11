@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { notificationApi } from '../../api';
 import {
   BellIcon,
-  BoxIcon,
   BuildingIcon,
   CalendarIcon,
   DashboardIcon,
@@ -41,7 +40,6 @@ const Icons = {
   Shield: ShieldIcon,
   Bell: BellIcon,
   Settings: SettingsIcon,
-  Box: BoxIcon,
   Refund: RotateCcwIcon,
   Menu: MenuIcon,
   ExternalLink: ExternalLinkIcon,
@@ -59,7 +57,6 @@ const TITLE_MAP = {
   '/admin/promotions': 'Quản lý Khuyến mãi',
   '/admin/operations': 'Báo cáo vận hành',
   '/admin/refunds': 'Xử lý hoàn tiền',
-  '/admin/inventory': 'Nhập xuất kho',
   '/admin/revenue': 'Doanh thu chi tiết',
   '/admin/notifications': 'Thông báo',
   '/admin/audit-logs': 'Nhật ký hệ thống',
@@ -73,7 +70,6 @@ const TITLE_MAP = {
   '/manager/promotions': 'Quản lý Khuyến mãi',
   '/manager/operations': 'Báo cáo vận hành',
   '/manager/refunds': 'Xử lý hoàn tiền',
-  '/manager/inventory': 'Nhập xuất kho',
   '/manager/revenue': 'Doanh thu chi tiết',
   '/manager/notifications': 'Thông báo',
   '/manager/audit-logs': 'Nhật ký hệ thống',
@@ -103,7 +99,6 @@ const NAV_SECTIONS = [
     label: 'Quầy F&B & Khuyến mãi',
     items: [
       { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
-      { path: '/admin/inventory', label: 'Nhập xuất kho', Icon: Icons.Box },
       { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
     ],
   },
@@ -159,7 +154,6 @@ const AdminLayout = () => {
     '/admin/bookings',
     '/admin/users',
     '/admin/foods',
-    '/admin/inventory',
     '/admin/promotions',
     '/admin/operations',
     '/admin/revenue',

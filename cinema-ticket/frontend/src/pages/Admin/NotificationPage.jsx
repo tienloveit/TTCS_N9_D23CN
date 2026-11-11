@@ -128,11 +128,6 @@ const NotificationPage = () => {
                 count: notifications.filter((n) => n.type === 'REFUND_REQUEST').length,
               },
               {
-                key: 'LOW_STOCK',
-                label: 'Tồn kho',
-                count: notifications.filter((n) => n.type === 'LOW_STOCK').length,
-              },
-              {
                 key: 'SHIFT',
                 label: 'Ca làm & Lịch trực',
                 count: notifications.filter((n) =>

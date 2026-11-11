@@ -72,7 +72,6 @@ public class BookingService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final PromotionService promotionService;
-    private final FoodInventoryService foodInventoryService;
     private final AuditLogService auditLogService;
     private final SystemSettingService systemSettingService;
     private final NotificationService notificationService;
@@ -131,7 +130,6 @@ public class BookingService {
         Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
         List<Food> selectedFoods = getSelectedFoods(foodQuantities);
         requireFoodsAvailableForShowtime(selectedFoods, showtime);
-        foodInventoryService.requireAvailable(selectedFoods, foodQuantities);
         BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
 
         // khoá ghế bằng Redis
@@ -241,7 +239,6 @@ public class BookingService {
         Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
         List<Food> selectedFoods = getSelectedFoods(foodQuantities);
         requireFoodsAvailableForShowtime(selectedFoods, showtime);
-        foodInventoryService.requireAvailable(selectedFoods, foodQuantities);
         BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
         BigDecimal ticketTotal = selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO,
                 BigDecimal::add);
@@ -292,9 +289,6 @@ public class BookingService {
         booking.setBookingFoods(buildBookingFoods(booking, selectedFoods, foodQuantities));
 
         bookingRepository.save(booking);
-        if (request.getPaymentMethod() != PaymentMethod.CARD) {
-            foodInventoryService.deductForBooking(booking);
-        }
 
         selectedTickets.forEach(
                 ticket -> {
@@ -856,8 +850,6 @@ public class BookingService {
             booking.setPaymentStatus(PaymentStatus.REFUNDED);
             booking.setRefundedAt(LocalDateTime.now());
             booking.setRefundAmount(booking.getTotalAmount());
-            // A financial refund does not prove that food has physically returned to stock.
-            // Managers record usable returned goods separately in the inventory screen.
 
             // Trả ghế về AVAILABLE
             booking

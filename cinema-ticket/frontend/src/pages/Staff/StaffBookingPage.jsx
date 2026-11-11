@@ -1512,9 +1512,6 @@ export default function StaffBookingPage() {
                 <div className="food-select-grid">
                   {foods.map((food) => {
                     const quantity = selectedFoods[food.id] || 0;
-                    const stockLimited = food.stockQuantity != null;
-                    const stockLeft = stockLimited ? Number(food.stockQuantity) - quantity : null;
-                    const cannotAdd = stockLimited && stockLeft <= 0;
 
                     return (
                       <div
@@ -1532,17 +1529,7 @@ export default function StaffBookingPage() {
                           <h3>{food.name}</h3>
                           {food.description && <p>{food.description}</p>}
                           <strong>{formatCurrency(food.price)}</strong>
-                          {stockLimited && (
-                            <p
-                              style={{
-                                color: stockLeft <= 0 ? '#ef4444' : 'var(--text-muted)',
-                                fontWeight: 700,
-                                marginTop: 2,
-                              }}
-                            >
-                              Kho còn: {Math.max(stockLeft, 0)}
-                            </p>
-                          )}
+
                         </div>
                         <div className="food-stepper">
                           <button
@@ -1556,7 +1543,7 @@ export default function StaffBookingPage() {
                           <button
                             type="button"
                             onClick={() => updateFoodQuantity(food.id, 1)}
-                            disabled={submitting || cannotAdd}
+                            disabled={submitting}
                           >
                             +
                           </button>

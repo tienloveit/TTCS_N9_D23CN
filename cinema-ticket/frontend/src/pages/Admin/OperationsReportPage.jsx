@@ -89,7 +89,7 @@ const OperationsReportPage = () => {
     {
       label: 'Cảnh báo cần xử lý',
       value: formatNumber(summary.refundRequests),
-      note: `${formatNumber(summary.lowStockItems)} món sắp hết hàng`,
+      note: 'Yêu cầu hoàn tiền chờ xử lý',
       icon: AlertTriangleIcon,
       color: '#d97706',
     },
@@ -204,20 +204,7 @@ const OperationsReportPage = () => {
             ];
           })}
         />
-        <ReportTable
-          title="Tồn kho cần nhập"
-          headers={['Sản phẩm', 'Tồn', 'Ngưỡng', 'Trạng thái']}
-          rows={(report?.lowStockFoods || []).map((item) => [
-            <strong key="fn">{item.foodName}</strong>,
-            <strong key="sq" style={{ color: Number(item.stockQuantity) <= 0 ? '#dc2626' : '#d97706' }}>
-              {formatNumber(item.stockQuantity)}
-            </strong>,
-            formatNumber(item.lowStockThreshold),
-            <span key="st" className={`status-badge ${item.active === false ? 'status--inactive' : 'status--pending'}`}>
-              {item.active === false ? 'Ngừng bán' : Number(item.stockQuantity) <= 0 ? 'Hết hàng' : 'Sắp hết'}
-            </span>,
-          ])}
-        />
+
       </div>
 
       <ReportTable

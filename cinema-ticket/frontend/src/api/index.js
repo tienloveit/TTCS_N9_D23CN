@@ -120,8 +120,6 @@ export const foodApi = {
   getById: (id) => axiosClient.get(`/food/${id}`),
   create: (data) => axiosClient.post('/food', data),
   update: (id, data) => axiosClient.put(`/food/${id}`, data),
-  adjustStock: (id, data) => axiosClient.post(`/food/${id}/stock-adjustments`, data),
-  getStockTransactions: (params) => axiosClient.get('/food/stock-transactions', { params }),
   delete: (id) => axiosClient.delete(`/food/${id}`),
 };
 

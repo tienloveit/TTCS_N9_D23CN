@@ -42,11 +42,6 @@ public class Food {
 
     private Long branchId;
 
-    private Integer stockQuantity;
-
-    @Builder.Default
-    private Integer lowStockThreshold = 5;
-
     @Builder.Default
     private Boolean active = true;
 

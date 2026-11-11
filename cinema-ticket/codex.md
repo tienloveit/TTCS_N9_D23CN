@@ -859,7 +859,7 @@ Frontend auth behavior:
 Known frontend routes:
 
 - Auth: `/login`, `/register`, `/forgot-password`, `/oauth2/callback`
-- Admin: `/admin/*` includes dashboards, movies, showtimes, branches, users, bookings, foods, promotions, audit-logs, analytics, operations, revenue, inventory, refunds, settings.
+- Admin: `/admin/*` includes dashboards, movies, showtimes, branches, users, bookings, foods, promotions, audit-logs, analytics, operations, revenue, refunds, settings.
 - Manager: `/manager/*` mirrors Admin but relies on `AdminOnlyRoute` to block access to certain settings.
 - Staff: `/staff/*` includes dashboard, schedules, booking, check-in, bookings, notifications.
   - Note: Staff Booking layout has been modified to mirror the customer's UI (5-step process, sidebar details) for consistency.
@@ -894,3 +894,7 @@ Known frontend routes:
 - When changing movie data, remember `CreateMovieRequest.directorId` is required.
 - When adding admin-only behavior, enforce it in backend with `@PreAuthorize`; frontend route checks are UX only.
 - Some source comments/text appear mojibake in terminal output due encoding. Avoid broad encoding rewrites unless specifically requested.
+
+## Food Sales (2026-11-11)
+
+Inventory management has been removed. Food availability is controlled by active/inactive status and branch access. Booking and VNPay no longer check or deduct stock. Stock adjustment/history endpoints, inventory pages, low-stock warnings and stock report sections are removed. Existing database stock columns, transaction tables and legacy LOW_STOCK notification values are retained for historical compatibility; no database cleanup is performed.

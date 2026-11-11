@@ -23,7 +23,6 @@ public class OperationsReportResponse {
     private Summary summary;
     private List<PaymentBreakdown> paymentBreakdown;
     private List<StaffShiftRow> staffShifts;
-    private List<LowStockFood> lowStockFoods;
     private List<RefundQueueItem> refundQueue;
     private List<ShowtimeLoad> showtimeLoads;
 
@@ -43,7 +42,6 @@ public class OperationsReportResponse {
         private long showtimes;
         private long totalCapacity;
         private double occupancyRate;
-        private long lowStockItems;
         private BigDecimal expectedCash;
         private BigDecimal cashDifference;
     }
@@ -73,19 +71,6 @@ public class OperationsReportResponse {
         private BigDecimal closingCash;
         private BigDecimal expectedCash;
         private BigDecimal cashDifference;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class LowStockFood {
-        private Long foodId;
-        private String foodName;
-        private Long branchId;
-        private Integer stockQuantity;
-        private Integer lowStockThreshold;
-        private Boolean active;
     }
 
     @Data

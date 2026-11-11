@@ -2,7 +2,6 @@ package com.ltweb.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.ltweb.backend.entity.Booking;
@@ -49,7 +48,6 @@ class BookingServiceRefundTest {
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private ApplicationEventPublisher eventPublisher;
   @Mock private PromotionService promotionService;
-  @Mock private FoodInventoryService foodInventoryService;
   @Mock private AuditLogService auditLogService;
 
   @InjectMocks private BookingService bookingService;
@@ -71,7 +69,6 @@ class BookingServiceRefundTest {
     bookingService.processRefund(5L, true, "Approved financial refund");
 
     org.assertj.core.api.Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
-    verify(foodInventoryService, never()).restoreForBooking(booking);
     verify(bookingRepository).save(booking);
   }
 

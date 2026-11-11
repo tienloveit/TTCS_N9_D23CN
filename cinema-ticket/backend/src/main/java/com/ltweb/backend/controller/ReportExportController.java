@@ -77,7 +77,6 @@ public class ReportExportController {
         rows.add(List.of("Chenh lech tien mat", text(summary.getCashDifference())));
         rows.add(List.of("Don hoan tat", text(summary.getCompletedBookings())));
         rows.add(List.of("Yeu cau hoan tien", text(summary.getRefundRequests())));
-        rows.add(List.of("Hang sap het", text(summary.getLowStockItems())));
         rows.add(List.of());
         rows.add(List.of("Ca lam", "Nhan vien", "Mo ca", "Dong ca", "Tien du kien", "Chenh lech"));
         report.getStaffShifts().forEach(shift -> rows.add(List.of(
@@ -88,11 +87,6 @@ public class ReportExportController {
                 text(shift.getExpectedCash()),
                 text(shift.getCashDifference()))));
         rows.add(List.of());
-        rows.add(List.of("Ton kho can nhap", "Ton", "Nguong"));
-        report.getLowStockFoods().forEach(food -> rows.add(List.of(
-                text(food.getFoodName()),
-                text(food.getStockQuantity()),
-                text(food.getLowStockThreshold()))));
         return xlsx("operations-report.xlsx", xlsxExportService.singleSheet("Operations", rows));
     }
 
