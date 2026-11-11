@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api';
+import './StaffDashboardPage.css';
 import {
   AlertTriangleIcon,
   ArmchairIcon,
@@ -194,10 +195,11 @@ export default function StaffDashboardPage() {
   }
 
   return (
-    <div className="shift-page">
+    <div className="shift-page staff-overview">
       {/* ===== 1. SHIFT COMMAND BAR ===== */}
       <div className="shift-top-bar">
-        <div className="pos-top-bar-left">
+        <div className="shift-heading">
+          <span className="shift-eyebrow">QUẢN LÝ QUẦY VÉ</span>
           <span
             className="pos-badge-live"
             style={
@@ -218,13 +220,13 @@ export default function StaffDashboardPage() {
           </span>
 
           <div className="pos-top-title">
-            <h1>Trung tâm điều hành ca trực (Shift Workstation)</h1>
+            <h1>Tổng quan ca làm</h1>
             <p>
               {activeShift
                 ? `Mở lúc ${formatDateTime(activeShift.openedAt)} • Thời lượng trực: ${formatDuration(
                     liveShiftMinutes
                   )}`
-                : 'Vui lòng nhập tiền mặt đầu ca để bắt đầu ghi nhận doanh số quầy POS'}
+                : 'Sẵn sàng cho ca mới. Kiểm đếm tiền đầu ca và nhận quầy để bắt đầu.'}
             </p>
           </div>
         </div>
@@ -247,7 +249,7 @@ export default function StaffDashboardPage() {
             style={{ padding: '9px 16px', fontSize: '0.84rem' }}
           >
             <ScanIcon size={16} />
-            <span>Cổng Check-in</span>
+            <span>Soát vé</span>
           </Link>
 
           <Link
@@ -256,7 +258,7 @@ export default function StaffDashboardPage() {
             style={{ padding: '9px 18px', fontSize: '0.86rem' }}
           >
             <TicketIcon size={16} />
-            <span>Bán vé tại quầy (POS)</span>
+            <span>Bán vé tại quầy</span>
           </Link>
         </div>
       </div>
@@ -284,7 +286,7 @@ export default function StaffDashboardPage() {
 
         <div className="shift-kpi-card">
           <div className="shift-kpi-head">
-            <span className="shift-kpi-label">Tiền mặt tại két</span>
+            <span className="shift-kpi-label">Doanh thu tiền mặt</span>
             <div
               className="shift-kpi-icon"
               style={{ background: 'rgba(7, 86, 166, 0.12)', color: '#0756a6' }}
@@ -303,7 +305,7 @@ export default function StaffDashboardPage() {
 
         <div className="shift-kpi-card">
           <div className="shift-kpi-head">
-            <span className="shift-kpi-label">Vé bán & Soát cổng</span>
+            <span className="shift-kpi-label">Vé đã bán</span>
             <div
               className="shift-kpi-icon"
               style={{ background: 'rgba(245, 158, 11, 0.14)', color: '#d97706' }}
@@ -325,7 +327,7 @@ export default function StaffDashboardPage() {
 
         <div className="shift-kpi-card">
           <div className="shift-kpi-head">
-            <span className="shift-kpi-label">Doanh thu Bắp nước (F&B)</span>
+            <span className="shift-kpi-label">Doanh thu bắp nước</span>
             <div
               className="shift-kpi-icon"
               style={{ background: 'rgba(124, 58, 237, 0.12)', color: '#7c3aed' }}
@@ -346,11 +348,11 @@ export default function StaffDashboardPage() {
       {/* ===== 3. 2-COLUMN WORKSPACE: CASH REGISTER & UPCOMING SHOWTIMES ===== */}
       <div className="shift-workspace">
         {/* LEFT: CASH DRAWER & SHIFT RECONCILIATION */}
-        <section className="shift-card">
+        <section className="shift-card shift-cash-panel">
           <div className="shift-card-header">
             <div className="shift-card-title">
               <CalculatorIcon size={20} style={{ color: '#0756a6' }} />
-              <h3>Két tiền mặt & Bàn giao ca quầy</h3>
+              <h3>{activeShift ? 'Đối soát & bàn giao' : 'Bắt đầu ca làm'}</h3>
             </div>
             <span
               className={`shift-status-pill ${
@@ -404,9 +406,9 @@ export default function StaffDashboardPage() {
                     marginBottom: 6,
                   }}
                 >
-                  <span className="form-label" style={{ margin: 0 }}>
+                  <label htmlFor="shift-closing-cash" className="form-label" style={{ margin: 0 }}>
                     Tiền mặt thực đếm cuối ca (VND)
-                  </span>
+                  </label>
                   <button
                     type="button"
                     className="shift-cash-chip"
@@ -416,6 +418,7 @@ export default function StaffDashboardPage() {
                   </button>
                 </div>
                 <input
+                  id="shift-closing-cash"
                   className="input"
                   type="number"
                   min="0"
@@ -437,7 +440,7 @@ export default function StaffDashboardPage() {
                   {cashDiff === 0 ? (
                     <>
                       <CheckCircleIcon size={18} />
-                      <span>Két tiền mặt cân bằng tuyệt đối (Chênh lệch: 0 ₫)</span>
+                      <span>Tiền thực đếm khớp với dự kiến</span>
                     </>
                   ) : (
                     <>
@@ -473,7 +476,7 @@ export default function StaffDashboardPage() {
                   disabled={submittingShift}
                 >
                   <LockIcon size={16} />
-                  <span>{submittingShift ? 'Đang chốt ca...' : 'Chốt sổ & Đóng ca làm việc'}</span>
+                  <span>{submittingShift ? 'Đang chốt ca...' : 'Chốt và đóng ca'}</span>
                 </button>
               </div>
             </form>
@@ -493,10 +496,11 @@ export default function StaffDashboardPage() {
               </div>
 
               <div>
-                <span className="form-label" style={{ display: 'block', marginBottom: 6 }}>
+                <label htmlFor="shift-opening-cash" className="form-label" style={{ display: 'block', marginBottom: 6 }}>
                   Tiền mặt đầu ca (VND)
-                </span>
+                </label>
                 <input
+                  id="shift-opening-cash"
                   className="input"
                   type="number"
                   min="0"
@@ -511,7 +515,8 @@ export default function StaffDashboardPage() {
                     <button
                       key={amount}
                       type="button"
-                      className="shift-cash-chip"
+                      className={`shift-cash-chip ${Number(openingCash) === amount ? 'shift-cash-chip--selected' : ''}`}
+                      aria-pressed={Number(openingCash) === amount}
                       onClick={() => setOpeningCash(String(amount))}
                     >
                       {formatCurrency(amount)}
@@ -537,21 +542,21 @@ export default function StaffDashboardPage() {
                 disabled={submittingShift}
               >
                 <UnlockIcon size={16} />
-                <span>{submittingShift ? 'Đang mở ca...' : 'Xác nhận Mở ca làm việc'}</span>
+                <span>{submittingShift ? 'Đang mở ca...' : 'Mở ca làm việc'}</span>
               </button>
             </form>
           )}
         </section>
 
         {/* RIGHT: UPCOMING SHOWTIMES RADAR */}
-        <section className="shift-card">
+        <section className="shift-card shift-showtimes-panel">
           <div className="shift-card-header">
             <div className="shift-card-title">
               <FilmIcon size={20} style={{ color: '#ea580c' }} />
-              <h3>Radar suất chiếu sắp mở cổng ({upcomingShowtimes.length})</h3>
+              <h3>Suất chiếu sắp tới <span className="shift-count">{upcomingShowtimes.length}</span></h3>
             </div>
             <Link to="/staff/booking" className="btn btn-ghost btn-sm">
-              <span>Mở POS bán vé</span>
+              <span>Xem lịch chiếu</span>
               <ArrowRightIcon size={14} />
             </Link>
           </div>
@@ -650,24 +655,26 @@ export default function StaffDashboardPage() {
       </div>
 
       {/* ===== 4. TABBED ACTIVITY & SHIFT HISTORY LOGS ===== */}
-      <section className="shift-card">
+      <section className="shift-card shift-activity-panel">
         <div className="shift-card-header">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="shift-activity-tabs" role="group" aria-label="Nội dung hoạt động">
             <button
               type="button"
               className={`pos-time-pill ${bottomTab === 'BOOKINGS' ? 'pos-time-pill--active' : ''}`}
               onClick={() => setBottomTab('BOOKINGS')}
+              aria-pressed={bottomTab === 'BOOKINGS'}
             >
               <TicketIcon size={15} />
-              <span>Đơn tại quầy gần đây ({recentBookings.length})</span>
+              <span>Đơn gần đây <span className="shift-count">{recentBookings.length}</span></span>
             </button>
             <button
               type="button"
               className={`pos-time-pill ${bottomTab === 'SHIFTS' ? 'pos-time-pill--active' : ''}`}
               onClick={() => setBottomTab('SHIFTS')}
+              aria-pressed={bottomTab === 'SHIFTS'}
             >
               <CalendarIcon size={15} />
-              <span>Lịch sử bàn giao ca ({shiftHistory.length})</span>
+              <span>Lịch sử ca <span className="shift-count">{shiftHistory.length}</span></span>
             </button>
           </div>
 

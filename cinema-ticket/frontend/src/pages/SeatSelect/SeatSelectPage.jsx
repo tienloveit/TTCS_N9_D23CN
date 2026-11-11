@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { bookingApi, foodApi, ticketApi, promotionApi, showtimeApi, movieApi } from '../../api';
+import { bookingApi, foodApi, ticketApi, showtimeApi, movieApi } from '../../api';
 import { API_BASE_URL } from '../../api/axiosClient';
 import { useAuth } from '../../context/useAuth';
-import SafeImage from '../../components/Common/SafeImage';
+import BookingReceipt from '../../components/Common/BookingReceipt';
 import { CheckIcon, ClockIcon, RotateCcwIcon } from '../../components/Common/CinemaIcons';
 
 export default function SeatSelectPage() {
@@ -572,138 +572,59 @@ export default function SeatSelectPage() {
         )}
       </div>
 
-          {/* ===== RIGHT: Sidebar ===== */}
-          <aside className="seat-sidebar">
-            <div className="seat-sidebar-card">
-              {/* Poster + Movie Info */}
-              <div className="seat-sidebar-header">
-                {movieInfo?.thumbnailUrl && (
-                  <SafeImage
-                    src={movieInfo.thumbnailUrl}
-                    alt={movieInfo.movieName}
-                    className="seat-sidebar-poster"
-                  />
-                )}
-                <div className="seat-sidebar-info">
-                  <h3 className="seat-sidebar-title">{showtimeInfo?.movieName || 'Đang tải...'}</h3>
-                  {subtitleParts.length > 0 && (
-                    <div className="seat-sidebar-subtitle">
-                      {subtitleParts.map((part, i) => (
-                        <span key={i}>
-                          {i > 0 && ' - '}
-                          {part === movieInfo?.ageRating ? (
-                            <span className="seat-sidebar-age-badge">{part}</span>
-                          ) : (
-                            part
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Cinema + Showtime line */}
-              <div className="seat-sidebar-cinema">
-                {showtimeInfo?.branchName && (
-                  <div className="seat-sidebar-cinema-name">
-                    {showtimeInfo.branchName}{showtimeInfo.roomName ? ` - ${showtimeInfo.roomName}` : ''}
-                  </div>
-                )}
-                {showtimeInfo?.startTime && (
-                  <div className="seat-sidebar-cinema-time">
-                    Suất <strong>{formatTime(showtimeInfo.startTime)}</strong> - {formatDate(showtimeInfo.startTime)}
-                  </div>
-                )}
-              </div>
-
-              {/* Ticket Items (separated by divider) */}
-              {seatGroups.length > 0 && (
-                <div className="seat-sidebar-items">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px 2px' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                      Ghế đã chọn ({selectedSeats.length})
-                    </span>
-                    {bookingStep === 1 && (
-                      <button
-                        type="button"
-                        className="seat-clear-btn"
-                        onClick={() => setSelectedSeats([])}
-                      >
-                        <RotateCcwIcon size={12} style={{ marginRight: 4, verticalAlign: '-1px' }} />
-                        Bỏ chọn
-                      </button>
-                    )}
-                  </div>
-                  {seatGroups.map(([type, data]) => (
-                    <div key={type} className="seat-sidebar-item">
-                      <div className="seat-sidebar-item-info">
-                        <span className="seat-sidebar-item-qty">{data.seats.length}x</span>
-                        <div>
-                          <div className="seat-sidebar-item-name">{type}</div>
-                          <div className="seat-sidebar-item-detail">Ghế: {data.seats.join(', ')}</div>
-                        </div>
-                      </div>
-                      <span className="seat-sidebar-item-price">{formatCurrency(data.price * data.seats.length)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Food Items (separated by divider) */}
-              {selectedFoodItems.length > 0 && (
-                <div className="seat-sidebar-items">
-                  {selectedFoodItems.map((food) => (
-                    <div key={food.id} className="seat-sidebar-item">
-                      <div className="seat-sidebar-item-info">
-                        <span className="seat-sidebar-item-qty">{food.quantity}x</span>
-                        <div>
-                          <div className="seat-sidebar-item-name">{food.name}</div>
-                        </div>
-                      </div>
-                      <span className="seat-sidebar-item-price">{formatCurrency(food.price * food.quantity)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Total */}
-              <div className="seat-sidebar-total">
-                <span>Tổng cộng</span>
-                <strong>{formatCurrency(finalPrice)}</strong>
-              </div>
-
-              {/* Actions */}
-              <div className="seat-sidebar-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary seat-sidebar-btn"
-                  onClick={() => bookingStep === 2 ? setBookingStep(1) : navigate(-1)}
-                >
-                  Quay lại
-                </button>
-                {bookingStep === 1 ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary seat-sidebar-btn"
-                    onClick={() => setBookingStep(2)}
-                    disabled={selectedSeats.length === 0}
-                  >
-                    Tiếp tục
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-primary seat-sidebar-btn"
-                    onClick={handleBooking}
-                    disabled={booking || selectedSeats.length === 0}
-                  >
-                    {booking ? 'Đang xử lý...' : 'Thanh toán'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </aside>
+          <BookingReceipt
+            className="seat-sidebar"
+            movieName={showtimeInfo?.movieName}
+            posterUrl={movieInfo?.thumbnailUrl}
+            subtitle={subtitleParts.join(' - ')}
+            branchName={showtimeInfo?.branchName}
+            roomName={showtimeInfo?.roomName}
+            showtime={showtimeInfo?.startTime ? `${formatTime(showtimeInfo.startTime)} • ${formatDate(showtimeInfo.startTime)}` : ''}
+            seats={selectedTicketObjects.map((ticket) => ticket.seatCode || `${ticket.rowLabel || '?'}${ticket.seatNumber || ''}`)}
+            seatLines={seatGroups.map(([type, data]) => ({
+              id: type,
+              label: `${data.seats.length}x ${type}`,
+              amount: data.price * data.seats.length,
+            }))}
+            seatTotal={seatTotal}
+            foods={selectedFoodItems.map((food) => ({
+              id: food.id, name: food.name, quantity: food.quantity,
+              subtotal: Number(food.price) * food.quantity,
+            }))}
+            subtotal={totalPrice}
+            seatAction={bookingStep === 1 && (
+              <button type="button" className="seat-clear-btn" onClick={() => setSelectedSeats([])}>
+                <RotateCcwIcon size={12} /> Bỏ chọn
+              </button>
+            )}
+          >
+            <button
+              type="button"
+              className="btn btn-secondary seat-sidebar-btn"
+              onClick={() => bookingStep === 2 ? setBookingStep(1) : navigate(-1)}
+            >
+              Quay lại
+            </button>
+            {bookingStep === 1 ? (
+              <button
+                type="button"
+                className="btn btn-primary seat-sidebar-btn"
+                onClick={() => setBookingStep(2)}
+                disabled={selectedSeats.length === 0}
+              >
+                Tiếp tục
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary seat-sidebar-btn"
+                onClick={handleBooking}
+                disabled={booking || selectedSeats.length === 0}
+              >
+                {booking ? 'Đang xử lý...' : 'Thanh toán'}
+              </button>
+            )}
+          </BookingReceipt>
         </div>
       </div>
 

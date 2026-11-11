@@ -1,0 +1,42 @@
+/* Reuse the staff POS receipt styles; keep user layout adjustments scoped here. */
+.pos-receipt.booking-receipt {
+  min-width: 0;
+  width: 100%;
+  position: sticky;
+  top: 84px;
+}
+
+.booking-receipt .pos-receipt-section-head,
+.booking-receipt .pos-receipt-total-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.booking-receipt .pos-receipt-line-name,
+.booking-receipt .pos-receipt-movie-info h3,
+.booking-receipt .pos-receipt-meta {
+  overflow-wrap: anywhere;
+}
+
+.booking-receipt .booking-receipt-showtime {
+  color: var(--blue);
+}
+
+.booking-receipt-discount {
+  color: var(--green);
+}
+
+.booking-receipt-payment .pos-receipt-actions {
+  flex-direction: column;
+}
+
+.booking-receipt-payment .pos-receipt-actions .btn {
+  width: 100%;
+  min-height: 46px;
+}
+
+@media (max-width: 860px) {
+  .pos-receipt.booking-receipt {
+    position: static;
+  }
+}

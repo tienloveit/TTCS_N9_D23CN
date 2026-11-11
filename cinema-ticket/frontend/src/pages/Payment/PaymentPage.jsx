@@ -2,14 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { bookingApi, vnpayApi, promotionApi } from '../../api';
+import BookingReceipt from '../../components/Common/BookingReceipt';
 import {
   AlertTriangleIcon,
   CheckIcon,
   CreditCardIcon,
   GiftIcon,
-  PopcornIcon,
   ShieldIcon,
-  TicketIcon,
   TimerIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
@@ -381,97 +380,52 @@ export default function PaymentPage() {
             </div>
           </div>
 
-          {/* ===== RIGHT COLUMN: Ticket Receipt Summary ===== */}
-          <aside className="pay-sidebar">
-            <div className="pay-card">
-              <h2 className="pay-section-title">
-                <TicketIcon size={18} style={{ color: 'var(--accent)' }} />
-                Chi tiết đơn đặt vé
-              </h2>
-
-              <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 10 }}>
-                  {booking.movieName}
-                </div>
-                <div className="pay-summary-row">
-                  <span style={{ color: 'var(--text-secondary)' }}>Suất chiếu:</span>
-                  <strong>{formatShowtime(booking.showtimeStart)}</strong>
-                </div>
-                {booking.branchName && (
-                  <div className="pay-summary-row">
-                    <span style={{ color: 'var(--text-secondary)' }}>Rạp:</span>
-                    <span>{booking.branchName}</span>
-                  </div>
-                )}
-                <div className="pay-summary-row">
-                  <span style={{ color: 'var(--text-secondary)' }}>Phòng chiếu:</span>
-                  <span>{booking.roomName}</span>
-                </div>
-                <div className="pay-summary-row">
-                  <span style={{ color: 'var(--text-secondary)' }}>Ghế đã chọn:</span>
-                  <strong style={{ color: 'var(--accent)' }}>{seatCodes}</strong>
-                </div>
-              </div>
-
-              {bookingFoods.length > 0 && (
-                <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.88rem', fontWeight: 700, marginBottom: 8 }}>
-                    <PopcornIcon size={15} style={{ color: 'var(--gold)' }} />
-                    <span>Bắp nước đi kèm</span>
-                  </div>
-                  {bookingFoods.map((food) => (
-                    <div key={food.foodId} className="pay-summary-row" style={{ padding: '4px 0' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        {food.foodName} x{food.quantity}
-                      </span>
-                      <strong>{formatCurrency(food.subtotal)}</strong>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div>
-                <div className="pay-summary-row">
-                  <span style={{ color: 'var(--text-secondary)' }}>Tạm tính:</span>
-                  <span>{formatCurrency(Number(booking.totalAmount) + Number(booking.discountAmount || 0))}</span>
-                </div>
-                {booking.discountAmount > 0 && (
-                  <div className="pay-summary-row" style={{ color: 'var(--seat-available)', fontWeight: 700 }}>
-                    <span>Giảm giá ({booking.promotionCode}):</span>
-                    <span>-{formatCurrency(booking.discountAmount)}</span>
-                  </div>
-                )}
-                <div className="pay-summary-total">
-                  <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>Tổng thanh toán:</span>
-                  <strong style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--accent)' }}>
-                    {formatCurrency(booking.totalAmount)}
-                  </strong>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 22 }}>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ width: '100%', height: 52, fontSize: '1.02rem' }}
-                  onClick={handleVNPayPayment}
-                  disabled={paying || cancelling}
-                >
-                  <CreditCardIcon size={18} />
-                  {paying ? 'Đang chuyển hướng VNPay...' : 'Thanh toán qua VNPay'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ width: '100%' }}
-                  onClick={() => setShowCancelConfirm(true)}
-                  disabled={paying || cancelling}
-                >
-                  Huỷ đặt vé
-                </button>
-              </div>
-            </div>
-          </aside>
+          <BookingReceipt
+            className="booking-receipt-payment"
+            movieName={booking.movieName}
+            posterUrl={booking.movieThumbnailUrl}
+            branchName={booking.branchName}
+            roomName={booking.roomName}
+            showtime={formatShowtime(booking.showtimeStart)}
+            seats={booking.tickets?.length
+              ? booking.tickets.map((ticket) => ticket.seatCode)
+              : booking.seatCodes || []}
+            seatLines={(booking.tickets || []).map((ticket) => ({
+              id: ticket.id,
+              label: `1x Ghế ${ticket.seatCode}`,
+              amount: ticket.price,
+            }))}
+            seatTotal={booking.tickets?.length
+              ? booking.tickets.reduce((sum, ticket) => sum + Number(ticket.price || 0), 0)
+              : undefined}
+            foods={bookingFoods.map((food) => ({
+              id: food.foodId, name: food.foodName,
+              quantity: food.quantity, subtotal: food.subtotal,
+            }))}
+            subtotal={Number(booking.totalAmount) + Number(booking.discountAmount || 0)}
+            discount={booking.discountAmount || 0}
+            promotionCode={booking.promotionCode}
+          >
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: '100%', height: 52, fontSize: '1.02rem' }}
+              onClick={handleVNPayPayment}
+              disabled={paying || cancelling}
+            >
+              <CreditCardIcon size={18} />
+              {paying ? 'Đang chuyển hướng VNPay...' : 'Thanh toán qua VNPay'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => setShowCancelConfirm(true)}
+              disabled={paying || cancelling}
+            >
+              Huỷ đặt vé
+            </button>
+          </BookingReceipt>
         </div>
       </div>
 
