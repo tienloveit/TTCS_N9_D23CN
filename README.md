@@ -1,6 +1,6 @@
 # MoviePTIT - Hệ thống đặt vé xem phim
 
-Đây là dự án full-stack đặt vé xem phim, tên thư mục chính là `cinema-ticket`, giao diện hiển thị thương hiệu **MoviePTIT**. Dự án gồm backend Spring Boot, frontend React/Vite, MySQL, Redis, WebSocket realtime trạng thái ghế, thanh toán VNPay sandbox, gửi email và chatbot AI dùng Spring AI.
+Đây là dự án full-stack đặt vé xem phim, tên thư mục chính là `cinema-ticket`, giao diện hiển thị thương hiệu **MoviePTIT**. Dự án gồm backend Spring Boot, frontend React/Vite, MySQL, Redis, WebSocket realtime trạng thái ghế, thanh toán VNPay sandbox và gửi email.
 
 ## 1. Dự án dùng để làm gì?
 
@@ -25,7 +25,7 @@
     |   |-- seed-data.ps1           # Script reset + seed dữ liệu demo qua API
     |   `-- src/main/
     |       |-- java/com/ltweb/backend/
-    |       |   |-- config/         # Security, JWT, Redis, WebSocket, VNPay, AI
+    |       |   |-- config/         # Security, JWT, Redis, WebSocket, VNPay
     |       |   |-- controller/     # REST API
     |       |   |-- dto/            # Request/response payload
     |       |   |-- entity/         # JPA entity
@@ -61,7 +61,6 @@ Backend:
 - Java Mail
 - ZXing QR
 - VNPay sandbox (Payment & Refund)
-- Spring AI OpenAI starter, cấu hình gọi Gemini qua OpenAI-compatible API
 
 Frontend:
 
@@ -119,7 +118,6 @@ SPRING_MAIL_PASSWORD=your_gmail_app_password
 VNPAY_TMN_CODE=your_vnpay_tmn_code
 VNPAY_SECRET_KEY=your_vnpay_secret_key
 
-GEMINI_API_KEY=your_gemini_api_key
 
 GOOGLE_CLIENT_ID=google-client-id
 GOOGLE_CLIENT_SECRET=google-client-secret
@@ -130,7 +128,7 @@ APP_OAUTH2_FAILURE_URL=http://localhost:5173/login
 Ghi chú:
 
 - Không commit file `.env` hoặc secret thật lên Git.
-- Nếu chưa dùng email, Google OAuth, VNPay hoặc AI, vẫn nên khai báo placeholder để ứng dụng không lỗi vì thiếu biến môi trường.
+- Nếu chưa dùng email, Google OAuth hoặc VNPay, vẫn nên khai báo placeholder để ứng dụng không lỗi vì thiếu biến môi trường.
 - Backend mặc định chạy ở `http://localhost:8081/api`.
 - Frontend mặc định gọi API `http://localhost:8081/api`.
 
@@ -152,7 +150,7 @@ Mở 2 terminal riêng: một terminal cho backend, một terminal cho frontend.
 
 ### Bước 1: Chạy MySQL và Redis
 
-Đảm bảo MySQL và Redis đang chạy trước. Nếu Redis không chạy, các chức năng token refresh/logout, OTP, giữ ghế realtime và chat memory có thể lỗi hoặc hoạt động không đầy đủ.
+Đảm bảo MySQL và Redis đang chạy trước. Nếu Redis không chạy, các chức năng token refresh/logout, OTP và giữ ghế realtime có thể lỗi hoặc hoạt động không đầy đủ.
 
 ### Bước 2: Chạy backend
 
@@ -315,10 +313,6 @@ Staff/admin:
 - `/reports/**`
 - `/staff/**`
 
-AI:
-
-- `POST /chat`
-
 ## 10. Luồng nghiệp vụ chính
 
 ### Đặt vé online
@@ -421,7 +415,7 @@ Một vài điểm cần nhớ:
 
 - Backend có context path `/api`, nên controller viết `/movie` sẽ có URL thật là `/api/movie`.
 - Quyền backend mới là nguồn kiểm soát chính; frontend route guard chỉ là trải nghiệm người dùng.
-- Redis rất quan trọng cho refresh token, logout, OTP, giữ ghế và chat memory.
+- Redis rất quan trọng cho refresh token, logout, OTP và giữ ghế.
 - Khi tạo showtime, backend tự tạo ticket cho toàn bộ ghế active của phòng.
 - Khi sửa DTO hoặc response, cần kiểm tra cả mapper backend và nơi frontend đang dùng dữ liệu đó.
 - Không sửa code sinh tự động của MapStruct trong thư mục build/target.
@@ -452,8 +446,3 @@ Không gửi được email OTP/vé
 
 - Cần dùng Gmail App Password, không dùng mật khẩu Gmail thường.
 - Kiểm tra `SPRING_MAIL_USERNAME` và `SPRING_MAIL_PASSWORD`.
-
-AI chat lỗi API key/quota
-
-- Kiểm tra `GEMINI_API_KEY`.
-- Cấu hình model hiện tại là `gemini-2.5-flash` qua OpenAI-compatible base URL của Google.

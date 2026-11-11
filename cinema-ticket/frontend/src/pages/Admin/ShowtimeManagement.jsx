@@ -81,6 +81,7 @@ const ShowtimeManagement = () => {
     endTime: '',
     status: 'OPEN',
     screeningFormat: 'TWO_D',
+    ticketPrice: '',
   });
 
   const fetchData = async () => {
@@ -162,10 +163,11 @@ const ShowtimeManagement = () => {
         movieId: showtime.movieId,
         branchId: showtime.branchId || '',
         roomId: showtime.roomId,
-        startTime: showtime.startTime ? new Date(showtime.startTime).toISOString().slice(0, 16) : '',
-        endTime: showtime.endTime ? new Date(showtime.endTime).toISOString().slice(0, 16) : '',
+        startTime: showtime.startTime ? showtime.startTime.slice(0, 16) : '',
+        endTime: showtime.endTime ? showtime.endTime.slice(0, 16) : '',
         status: showtime.status || 'OPEN',
         screeningFormat: showtime.screeningFormat || 'TWO_D',
+        ticketPrice: showtime.ticketPrice ?? '',
       });
     } else {
       setIsEditing(false);
@@ -177,7 +179,8 @@ const ShowtimeManagement = () => {
         startTime: `${selectedDate}T08:00`,
         endTime: `${selectedDate}T10:00`,
         status: 'OPEN',
-    screeningFormat: 'TWO_D',
+        screeningFormat: 'TWO_D',
+        ticketPrice: '',
       });
     }
     setShowModal(true);
@@ -187,7 +190,7 @@ const ShowtimeManagement = () => {
     e.preventDefault();
     if (!canEditShowtime) return;
     try {
-      const payload = { ...formData };
+      const payload = { ...formData, ticketPrice: Number(formData.ticketPrice) };
       if (isEditing) {
         await showtimeApi.update(formData.showtimeId, payload);
         toast.success('Cập nhật suất chiếu thành công!');
@@ -479,6 +482,7 @@ const ShowtimeManagement = () => {
                 <th>Chi nhánh</th>
                 <th>Bắt đầu</th>
                 <th>Kết thúc</th>
+                <th>Giá vé</th>
                 <th>Trạng thái</th>
                 {canEditShowtime && <th style={{ width: 100 }}>Hành động</th>}
               </tr>
@@ -486,7 +490,7 @@ const ShowtimeManagement = () => {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canEditShowtime ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                  <td colSpan={canEditShowtime ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
                     {searchTerm ? 'Không tìm thấy suất chiếu nào' : 'Chưa có suất chiếu nào'}
                   </td>
                 </tr>
@@ -510,6 +514,7 @@ const ShowtimeManagement = () => {
                       <td>{showtime.branchName || '-'}</td>
                       <td>{formatDT(showtime.startTime)}</td>
                       <td>{formatDT(showtime.endTime)}</td>
+                      <td>{Number(showtime.ticketPrice || 0).toLocaleString('vi-VN')}đ</td>
                       <td><span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span></td>
                       {canEditShowtime && (
                         <td>
@@ -628,6 +633,12 @@ const ShowtimeManagement = () => {
                 </div>
               </div>
 
+              <div className="form-group">
+                <label className="form-label" htmlFor="showtime-ticket-price">Giá vé (VNĐ/vé)</label>
+                <input id="showtime-ticket-price" type="number" className="input" min="1" max="999999999999" step="1" required
+                  value={formData.ticketPrice} onChange={(e) => setFormData({ ...formData, ticketPrice: e.target.value })} />
+                <small style={{ color: 'var(--text-muted)' }}>Áp dụng cho mọi loại ghế. Chỉ đổi giá khi chưa có ghế đang giữ hoặc vé đã bán.</small>
+              </div>
               <div className="form-group">
                 <label className="form-label">Định dạng chiếu</label>
                 <select className="input" value={formData.screeningFormat} onChange={(e) => setFormData({ ...formData, screeningFormat: e.target.value })} required>

@@ -42,6 +42,14 @@ public class Food {
 
     private Long branchId;
 
+    /** Số lượng tồn của món tại chi nhánh. null = không giới hạn. */
+    @Column(name = "stock_quantity")
+    private Integer stockQuantity;
+
+    /** Ngưỡng cảnh báo sắp hết hàng. null = dùng ngưỡng mặc định. */
+    @Column(name = "low_stock_threshold")
+    private Integer lowStockThreshold;
+
     @Builder.Default
     private Boolean active = true;
 

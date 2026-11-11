@@ -64,7 +64,7 @@ class BookingServiceRefundTest {
     Booking booking = refundRequestedBookingInBranch(1L);
     booking.setTickets(List.of());
     when(userRepository.findByUsername("manager")).thenReturn(Optional.of(manager));
-    when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking));
+    when(bookingRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(booking));
 
     bookingService.processRefund(5L, true, "Approved financial refund");
 
@@ -85,7 +85,7 @@ class BookingServiceRefundTest {
     User staff = User.builder().id(7L).username("staff").role(UserRole.STAFF).branchId(1L).build();
     Booking booking = refundRequestedBookingInBranch(1L);
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
-    when(bookingRepository.findById(5L)).thenReturn(Optional.of(booking));
+    when(bookingRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(booking));
 
     assertThatThrownBy(() -> bookingService.processRefund(5L, true))
         .isInstanceOf(AppException.class)

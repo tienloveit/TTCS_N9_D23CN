@@ -55,22 +55,6 @@ spring:
               - openid
               - profile
               - email
-  ai:
-    openai:
-      # --- CẤU HÌNH CŨ (Giữ lại để phòng khi lỗi có thể quay lại) ---
-      # api-key: ${GROQ_API_KEY}
-      # base-url: https://api.groq.com/openai
-      # chat:
-      #   options:
-      #     model: llama-3.3-70b-versatile
-      
-      # --- CẤU HÌNH MỚI: GEMINI 2.5 PRO ---
-      api-key: ${GEMINI_API_KEY} 
-      base-url: https://generativelanguage.googleapis.com/v1beta/openai/ # URL tương thích OpenAI của Google (Nếu dùng OpenRouter thì đổi thành https://openrouter.ai/api/v1)
-      chat:
-        options:
-          model: gemini-2.5-flash # Nếu dùng OpenRouter thì đổi thành google/gemini-2.5-pro gemini-2.0-flash
-              
 server:
   port: 8081
   servlet:

@@ -200,16 +200,14 @@ redis-cli ping
    | `SPRING_MAIL_PASSWORD` | **App password** của Gmail (không phải mật khẩu thường) | Có* |
    | `VNPAY_TMN_CODE` | Mã website VNPay sandbox | Có (để thanh toán) |
    | `VNPAY_SECRET_KEY` | Secret key VNPay sandbox | Có (để thanh toán) |
-   | `GEMINI_API_KEY` | API key Gemini cho chatbot AI | Có (để dùng AI) |
    | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Đăng nhập Google OAuth2 | Không |
    | `APP_OAUTH2_SUCCESS_URL` / `APP_OAUTH2_FAILURE_URL` | URL chuyển hướng sau OAuth2 | Không (có mặc định) |
 
-   \* Các biến không có giá trị mặc định trong `application.yaml` (như password, JWT, mail, VNPay, Gemini) **phải được khai báo**, nếu không backend sẽ lỗi khi khởi động. Nếu chưa dùng tính năng nào đó, có thể điền giá trị giả tạm để backend khởi động được, nhưng tính năng đó sẽ không hoạt động.
+   \* Các biến không có giá trị mặc định trong `application.yaml` (như password, JWT, mail, VNPay) **phải được khai báo**, nếu không backend sẽ lỗi khi khởi động. Nếu chưa dùng tính năng nào đó, có thể điền giá trị giả tạm để backend khởi động được, nhưng tính năng đó sẽ không hoạt động.
 
 3. Cách lấy các khóa:
    - **Gmail app password:** bật xác minh 2 bước → Tài khoản Google → Bảo mật → Mật khẩu ứng dụng.
    - **VNPay sandbox:** đăng ký tại https://sandbox.vnpayment.vn/devreg/
-   - **Gemini API key:** https://aistudio.google.com/apikey
    - **Google OAuth2:** tạo OAuth client tại Google Cloud Console, thêm redirect URI `http://localhost:8081/api/login/oauth2/code/google`.
 
 > Không commit file `.env` lên GitHub (chứa thông tin bí mật).

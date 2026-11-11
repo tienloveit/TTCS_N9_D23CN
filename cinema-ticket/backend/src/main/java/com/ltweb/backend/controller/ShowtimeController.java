@@ -56,7 +56,7 @@ public class ShowtimeController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ApiResponse<ShowtimeResponse> update(
-            @PathVariable Long id, @RequestBody UpdateShowtimeRequest request) {
+            @PathVariable Long id, @Valid @RequestBody UpdateShowtimeRequest request) {
         ApiResponse<ShowtimeResponse> apiResponse = new ApiResponse<>();
         apiResponse.setMessage("Showtime has been updated successfully!");
         apiResponse.setResult(showtimeService.update(id, request));

@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +33,10 @@ public class Showtime {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
+
+    @Column(name = "ticket_price", nullable = false, precision = 38, scale = 2)
+    @Builder.Default
+    private BigDecimal ticketPrice = new BigDecimal("75000");
 
     @ManyToOne
     @JoinColumn(name = "room_id", nullable = false)

@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 @Builder
 public class ShowtimeResponse {
+    private java.math.BigDecimal ticketPrice;
     private Long showtimeId;
     private Long roomId;
     private String roomName;

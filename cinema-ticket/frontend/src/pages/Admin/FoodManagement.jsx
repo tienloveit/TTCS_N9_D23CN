@@ -28,6 +28,9 @@ const FoodManagement = () => {
     description: '',
     price: '',
     imageUrl: '',
+    stockQuantity: '',
+    lowStockThreshold: '',
+    unlimitedStock: false,
     active: true,
   });
 
@@ -55,6 +58,9 @@ const FoodManagement = () => {
         description: food.description || '',
         price: food.price || '',
         imageUrl: food.imageUrl || '',
+        stockQuantity: food.stockQuantity ?? '',
+        lowStockThreshold: food.lowStockThreshold ?? '',
+        unlimitedStock: food.stockQuantity == null,
         active: food.active !== false,
       });
     } else {
@@ -64,6 +70,9 @@ const FoodManagement = () => {
         description: '',
         price: '',
         imageUrl: '',
+        stockQuantity: '',
+        lowStockThreshold: '',
+        unlimitedStock: false,
         active: true,
       });
     }
@@ -86,9 +95,13 @@ const FoodManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const { stockQuantity, lowStockThreshold, unlimitedStock, ...rest } = formData;
       const payload = {
-        ...formData,
+        ...rest,
         price: formData.price ? Number(formData.price) : 0,
+        stockQuantity: unlimitedStock || stockQuantity === '' ? null : Number(stockQuantity),
+        lowStockThreshold: lowStockThreshold === '' ? null : Number(lowStockThreshold),
+        unlimitedStock,
       };
 
       if (editingFood) {
@@ -207,6 +220,7 @@ const FoodManagement = () => {
               <th>Sản phẩm</th>
               <th>Mô tả</th>
               <th>Giá</th>
+              <th>Tồn kho</th>
               <th>Trạng thái</th>
               <th style={{ width: '120px' }}>Hành động</th>
             </tr>
@@ -215,7 +229,7 @@ const FoodManagement = () => {
             {filteredFoods.length === 0 ? (
               <tr>
                 <td
-                  colSpan="6"
+                  colSpan="7"
                   style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}
                 >
                   {searchTerm
@@ -261,6 +275,25 @@ const FoodManagement = () => {
                   </td>
                   <td style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     {formatCurrency(food.price)}
+                  </td>
+
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {food.stockQuantity == null ? (
+                      <span style={{ color: 'var(--text-muted)' }}>Không giới hạn</span>
+                    ) : (
+                      <>
+                        <strong style={{ color: 'var(--text-primary)' }}>{food.stockQuantity}</strong>
+                        {food.stockQuantity <= 0 ? (
+                          <span className="status-badge status--inactive" style={{ marginLeft: 8 }}>
+                            Hết hàng
+                          </span>
+                        ) : food.stockQuantity <= (food.lowStockThreshold ?? 10) ? (
+                          <span className="status-badge status--inactive" style={{ marginLeft: 8 }}>
+                            Sắp hết
+                          </span>
+                        ) : null}
+                      </>
+                    )}
                   </td>
 
                   <td>
@@ -400,6 +433,48 @@ const FoodManagement = () => {
                     />
                   </div>
                 )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Số lượng tồn kho</label>
+                <input
+                  type="number"
+                  name="stockQuantity"
+                  className="input"
+                  value={formData.unlimitedStock ? '' : formData.stockQuantity}
+                  onChange={handleInputChange}
+                  disabled={formData.unlimitedStock}
+                  required={!formData.unlimitedStock}
+                  min="0"
+                  step="1"
+                  placeholder={formData.unlimitedStock ? 'Không giới hạn' : 'VD: 100'}
+                />
+                <label
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    name="unlimitedStock"
+                    checked={formData.unlimitedStock}
+                    onChange={handleInputChange}
+                  />
+                  Không giới hạn số lượng
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Ngưỡng cảnh báo sắp hết (mặc định 10)</label>
+                <input
+                  type="number"
+                  name="lowStockThreshold"
+                  className="input"
+                  value={formData.lowStockThreshold}
+                  onChange={handleInputChange}
+                  disabled={formData.unlimitedStock}
+                  min="0"
+                  step="1"
+                  placeholder="10"
+                />
               </div>
 
               <div className="form-group">

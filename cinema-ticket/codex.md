@@ -11,13 +11,12 @@ This file is the working context for the `cinema-ticket` / MoviePTIT project. It
 - A Spring Boot backend under `backend/`.
 - A Vite + React frontend under `frontend/`.
 - MySQL persistence.
-- Redis for refresh-token state, access-token blacklist state, OTPs, realtime seat holds, and AI chat memory.
+- Redis for refresh-token state, access-token blacklist state, OTPs, and realtime seat holds.
 - WebSocket/STOMP for realtime seat status.
 - VNPay sandbox integration for online payment, including Refunds.
 - Google OAuth2 for social login.
-- Spring AI chat integration pointed at an OpenAI-compatible Gemini endpoint.
 
-The app supports public movie/branch browsing, showtime lookup, seat selection, concession combos, promotions/discounts, online booking/payment, user booking history, admin CRUD screens, staff operations (booking, check-in, shifts, schedules, analytics), ticket QR/check-in, movie ratings, password reset OTP email, seeded demo data, and a public AI chat helper backed by domain tools.
+The app supports public movie/branch browsing, showtime lookup, seat selection, concession combos, promotions/discounts, online booking/payment, user booking history, admin CRUD screens, staff operations (booking, check-in, shifts, schedules, analytics), ticket QR/check-in, movie ratings, password reset OTP email, and seeded demo data.
 
 ## Repository Layout
 
@@ -63,7 +62,6 @@ Backend:
 
 - Java 21.
 - Spring Boot parent version: `3.4.0`.
-- Spring AI BOM version: `1.0.0-M5`.
 - Default server: `http://localhost:8081/api`.
 - Data stores expected locally:
   - MySQL database `cinema` on `localhost:3306`.
@@ -96,7 +94,6 @@ Configuration:
   - `JWT_SECRET_KEY`
   - `VNPAY_TMN_CODE`
   - `VNPAY_SECRET_KEY`
-  - `GEMINI_API_KEY`
 - Do not copy local secret values into docs, commits, tickets, or chat. The current YAML stores secret references, not literal secret values.
 
 ## Backend Stack
@@ -111,7 +108,6 @@ Core dependencies:
 - Java Mail.
 - Lombok and MapStruct.
 - ZXing for QR code generation and QR image reading.
-- Spring AI OpenAI starter, configured to call Gemini through an OpenAI-compatible base URL.
 
 Backend package pattern:
 
@@ -122,7 +118,7 @@ Backend package pattern:
 - `dto/request` and `dto/response`: API payloads.
 - `mapper`: MapStruct mappers, usually `componentModel = "spring"`.
 - `exception`: `AppException`, `ErrorCode`, `GlobalExceptionHandler`.
-- `config`: security, CORS, WebSocket, Redis, JWT, VNPay, AI, application init.
+- `config`: security, CORS, WebSocket, Redis, JWT, VNPay, application init.
 - `event`: `BookingPaidEvent`.
 - `job`: scheduled cleanup for expired bookings.
 - `util`: VNPay helper functions.
@@ -149,12 +145,6 @@ WebSocket:
 - Broker destination prefix: `/topic`
 - Client application prefix: `/app`
 - Seat status topic: `/topic/showtime/{showtimeId}/seats`
-
-Spring AI:
-
-- `spring.ai.openai.api-key = ${GEMINI_API_KEY}`
-- `spring.ai.openai.base-url = https://generativelanguage.googleapis.com/v1beta/openai/`
-- `spring.ai.openai.chat.options.model = gemini-2.5-flash`
 
 ## Backend Domains
 
@@ -223,7 +213,7 @@ Entities:
 - `Branch`: branch code, name, address, city, phone, status.
 - `Room`: belongs to branch. Unique `(branch_id, code)`. Has code, name, room type, seat capacity, status.
 - `Seat`: belongs to room. Unique `(room_id, seat_code)`. Has row label, seat number, seat type, active flag.
-- `SeatTypePrice`: unique price row per `SeatType`.
+- `Showtime.ticketPrice`: one price per showtime; ticket rows store the sale price snapshot.
 
 Enums:
 
@@ -256,7 +246,7 @@ Flow notes:
 
 - `ShowtimeService.createShowtime()` rejects overlapping schedules in the same room.
 - Creating a showtime generates one ticket per room seat.
-- Ticket price comes from `SeatTypePrice`.
+- New ticket prices come from `Showtime.ticketPrice`. Price changes are blocked while tickets are reserved or sold.
 - `ShowtimeService.delete()` blocks deletion if completed bookings exist.
 - Deleting a showtime cancels pending bookings, releases their tickets, deletes all tickets for the showtime, then deletes the showtime.
 - `ShowtimeRepository` fetches `room`, `room.branch`, and `movie` for showtime reads.
@@ -369,28 +359,6 @@ Flow notes:
 - Only completed, paid bookings with booked tickets can check in.
 - Existing check-ins are reported via `alreadyCheckedIn` while preserving `checkedInAt`.
 
-### AI Chat
-
-Endpoint:
-
-- `POST /chat`
-- Body: `chatId`, `message`
-- Public in `SecurityConfig`.
-- Empty messages return an `ApiResponse` with code `400`.
-
-Implementation:
-
-- `ChatService` builds a Spring AI `ChatClient`.
-- System prompt identifies the assistant as a CinemaPTIT AI helper and injects `current_date`.
-- Registered functions include movie search, showtimes, genre search, available seats, booking link helper, branch info, snack menu, now-showing/upcoming movies, ticket prices, branch showtimes, upcoming by branch, and current user booking history.
-- `RedisChatMemory` uses Redis key prefix `chat:memory:` with 24 hour TTL and falls back to in-memory storage if Redis is unavailable.
-- Chat retries AI calls up to 3 times for rate limit/quota errors.
-
-Important caveats:
-
-- `getMyBookingHistory` calls `BookingService.getMyBookingsList()`, which expects an authenticated Spring Security user. Because `/chat` is public, this tool can fail or return the fallback message if no auth context exists.
-- The AI booking helper currently returns `http://localhost:5173/booking/{showtimeId}`. The known frontend seat route is `/showtime/:showtimeId/seats`, so verify the frontend route before relying on the generated link.
-
 ## Auth And Security
 
 Security rules:
@@ -401,7 +369,6 @@ Security rules:
   - `POST /auth/refresh`
   - `POST /auth/forgot-password`
   - `POST /auth/reset-password`
-  - `POST /chat`
   - VNPay return/IPN
   - `/v1/cleanup/**`
   - WebSocket `/ws/**`
@@ -419,7 +386,6 @@ Role and method security notes:
 - Ticket all/update/delete are admin-only; check-in is admin/staff.
 - Booking list/update/staff create are admin/staff; customer create requires auth; booking read/cancel checks owner or staff/admin in service.
 - Branch create/getById/update are admin-only in controller, but `DELETE /branch/{id}` currently lacks a role annotation in both controller and service. With current security it is authenticated-only.
-- Seat type price create/update currently has no role annotation. With current security it is authenticated-only.
 
 ## Domain Model Summary
 
@@ -431,7 +397,7 @@ Main persistent objects:
 - `Branch` has many rooms.
 - `Room` belongs to one branch and has many seats.
 - `Seat` belongs to one room and has a type.
-- `SeatTypePrice` defines base ticket price by seat type.
+- `Showtime.ticketPrice` defines the common ticket price for a showtime.
 - `Showtime` connects movie and room for a time interval.
 - `Ticket` connects showtime and seat; it optionally belongs to a booking.
 - `Booking` connects user and showtime; it owns booked tickets and food lines.
@@ -446,7 +412,6 @@ Important uniqueness constraints:
 - `branches.branch_code`
 - `rooms`: `(branch_id, code)`
 - `seats`: `(room_id, seat_code)`
-- `seat_type_prices.seat_type`
 - `tickets`: `(showtime_id, seat_id)`
 - `movie_ratings`: `(movie_id, user_id)`
 - `bookings.bookingCode`
@@ -511,9 +476,7 @@ Cinema structure:
 - `POST /seat`
 - `PUT /seat/{id}`
 - `DELETE /seat/{id}`
-- `GET /seat-type-price`
-- `POST /seat-type-price`
-- `PUT /seat-type-price/{seatType}`
+- Ticket price is entered through the showtime create/update APIs (`ticketPrice`).
 
 Showtimes/tickets:
 
@@ -556,9 +519,8 @@ Booking/payment/food:
 - `GET /v1/vnpay/return`
 - `GET /v1/vnpay/ipn`
 
-AI/dev:
+Development:
 
-- `POST /chat`
 - `DELETE /v1/cleanup/database`
 
 ## API Response Shape
@@ -626,7 +588,7 @@ Seed branches:
 - `Branch` has many rooms.
 - `Room` belongs to one branch and has many seats.
 - `Seat` belongs to one room and has a type.
-- `SeatTypePrice` defines base ticket price by seat type.
+- `Showtime.ticketPrice` defines the common ticket price for a showtime.
 - `Showtime` connects movie and room for a time interval.
 - `Ticket` connects showtime and seat; it optionally belongs to a booking.
 - `Booking` connects user and showtime; it owns booked tickets and food lines.
@@ -641,7 +603,6 @@ Important uniqueness constraints:
 - `branches.branch_code`
 - `rooms`: `(branch_id, code)`
 - `seats`: `(room_id, seat_code)`
-- `seat_type_prices.seat_type`
 - `tickets`: `(showtime_id, seat_id)`
 - `movie_ratings`: `(movie_id, user_id)`
 - `bookings.bookingCode`
@@ -706,9 +667,7 @@ Cinema structure:
 - `POST /seat`
 - `PUT /seat/{id}`
 - `DELETE /seat/{id}`
-- `GET /seat-type-price`
-- `POST /seat-type-price`
-- `PUT /seat-type-price/{seatType}`
+- Ticket price is entered through the showtime create/update APIs (`ticketPrice`).
 
 Showtimes/tickets:
 
@@ -751,9 +710,8 @@ Booking/payment/food:
 - `GET /v1/vnpay/return`
 - `GET /v1/vnpay/ipn`
 
-AI/dev:
+Development:
 
-- `POST /chat`
 - `DELETE /v1/cleanup/database`
 
 ## API Response Shape
@@ -876,7 +834,7 @@ Known frontend routes:
 - Promotion discounts are evaluated server-side.
 - The `User` entity now stores `membershipTier` and `totalSpending`, which can automatically affect promotions.
 - Context path matters: backend endpoints include `/api`, but controllers are written without `/api`.
-- Keep Redis running for auth refresh/logout, OTPs, AI chat memory, and realtime seat hold display.
+- Keep Redis running for auth refresh/logout, OTPs, and realtime seat hold display.
 - Seat hold duration and VNPay payment expiry are both 6 minutes.
 - `BookingCleanupJob` cancels expired DB bookings every 2 minutes and deletes Redis keys.
 - `TicketStatus.HOLDING` can remain in DB if a pending booking is not cancelled through the service/job/payment paths.
@@ -885,9 +843,7 @@ Known frontend routes:
 - Runtime room creation does not create `COUPLE` seats, while seed room creation does.
 - `OTPService.generateOTP()` currently uses `String.valueOf(Math.random() * 900000 + 100000)`, which can produce a decimal-looking string instead of a clean 6 digit integer.
 - The visible brand is MoviePTIT, but QR values still use the `CINEMAHUB|...` prefix.
-- The AI chat helper uses CinemaPTIT wording in prompts/tool text, while the rest of the app is MoviePTIT.
-- The AI booking helper link should be verified against the frontend route before use.
-- `BranchController.deleteBranch()` and seat type price writes currently require authentication but not an admin role.
+- `BranchController.deleteBranch()` currently requires authentication but not an admin role.
 - `SecurityConfig.PUBLIC_ENDPOINT` includes `/api/v1/cleanup/**`, but the effective matcher under the context path is `/v1/cleanup/**`; both are currently present around cleanup.
 - MapStruct generated classes are build outputs; do not edit generated code.
 - When changing DTOs, check both backend mappers and frontend API/page usage.

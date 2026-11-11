@@ -33,7 +33,6 @@ public class CleanupController {
                 "movies",
                 "genres",
                 "foods",
-                "seat_type_prices",
                 "users"
         };
 

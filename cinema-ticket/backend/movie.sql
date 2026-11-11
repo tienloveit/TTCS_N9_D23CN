@@ -87,14 +87,6 @@ CREATE TABLE IF NOT EXISTS `promotions` (
   UNIQUE KEY `uk_promotions_code` (`code`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `seat_type_prices` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `seat_type` ENUM('STANDARD', 'VIP', 'COUPLE') NOT NULL,
-  `price` DECIMAL(38, 2) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_seat_type_prices_seat_type` (`seat_type`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `movies` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `movie_name` VARCHAR(255) NOT NULL,
@@ -161,6 +153,7 @@ CREATE TABLE IF NOT EXISTS `seats` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `showtimes` (
+  `ticket_price` DECIMAL(38, 2) NOT NULL DEFAULT 75000,
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `room_id` BIGINT NOT NULL,
   `movie_id` BIGINT NOT NULL,

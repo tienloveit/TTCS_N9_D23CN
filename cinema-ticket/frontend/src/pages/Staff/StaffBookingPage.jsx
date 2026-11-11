@@ -762,8 +762,10 @@ export default function StaffBookingPage() {
   };
 
   const updateFoodQuantity = (foodId, delta) => {
+    const stock = foods.find((food) => food.id === foodId)?.stockQuantity;
     setSelectedFoods((prev) => {
-      const quantity = Math.max(0, (prev[foodId] || 0) + delta);
+      const maxQuantity = stock == null ? Infinity : Math.max(0, stock);
+      const quantity = Math.min(maxQuantity, Math.max(0, (prev[foodId] || 0) + delta));
       const next = { ...prev };
       if (quantity === 0) delete next[foodId];
       else next[foodId] = quantity;
@@ -1513,6 +1515,9 @@ export default function StaffBookingPage() {
                 <div className="food-select-grid">
                   {foods.map((food) => {
                     const quantity = selectedFoods[food.id] || 0;
+                    const limited = food.stockQuantity != null;
+                    const soldOut = limited && food.stockQuantity <= 0;
+                    const atLimit = limited && quantity >= food.stockQuantity;
 
                     return (
                       <div
@@ -1530,6 +1535,11 @@ export default function StaffBookingPage() {
                           <h3>{food.name}</h3>
                           {food.description && <p>{food.description}</p>}
                           <strong>{formatCurrency(food.price)}</strong>
+                          {limited && (
+                            <small style={{ display: 'block', color: soldOut ? '#ef4444' : 'var(--text-muted)' }}>
+                              {soldOut ? 'Hết hàng' : `Còn ${food.stockQuantity} phần`}
+                            </small>
+                          )}
 
                         </div>
                         <div className="food-stepper">
@@ -1544,7 +1554,7 @@ export default function StaffBookingPage() {
                           <button
                             type="button"
                             onClick={() => updateFoodQuantity(food.id, 1)}
-                            disabled={submitting}
+                            disabled={submitting || soldOut || atLimit}
                           >
                             +
                           </button>

@@ -55,6 +55,16 @@ public class NotificationService {
     }
 
     @Transactional
+    public void notifyLowStock(Long branchId, Long foodId, String foodName, int remaining) {
+        String title = remaining <= 0 ? "Bap nuoc da het hang" : "Bap nuoc sap het hang";
+        String message = "Mon " + foodName + " con " + remaining + " phan trong kho.";
+        createForRole(UserRole.ADMIN, null, NotificationType.LOW_STOCK, title, message, "Food", foodId);
+        if (branchId != null) {
+            createForRole(UserRole.MANAGER, branchId, NotificationType.LOW_STOCK, title, message, "Food", foodId);
+        }
+    }
+
+    @Transactional
     public void notifyStaffSchedule(
             Long staffId, Long branchId, Long scheduleId, String title, String message) {
         notificationRepository.save(

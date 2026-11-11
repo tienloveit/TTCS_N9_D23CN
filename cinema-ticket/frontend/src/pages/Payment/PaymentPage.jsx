@@ -59,6 +59,11 @@ export default function PaymentPage() {
         const data = res.data.result;
         setBooking(data);
 
+        if (data.status !== 'PENDING' || data.paymentStatus !== 'PENDING') {
+          navigate('/my-bookings', { replace: true });
+          return;
+        }
+
         const expiry = data.expiresAt
           ? new Date(data.expiresAt).getTime()
           : new Date(data.createdAt).getTime() + 6 * 60 * 1000;
@@ -73,7 +78,7 @@ export default function PaymentPage() {
       })
       .catch(() => setError('Không tìm thấy thông tin đặt vé'))
       .finally(() => setLoading(false));
-  }, [bookingId, handleCancel]);
+  }, [bookingId, handleCancel, navigate]);
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) {
@@ -282,7 +287,7 @@ export default function PaymentPage() {
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={handleRemovePromo}
-                    disabled={applyingPromo}
+                    disabled={applyingPromo || paying || booking.paymentMethod === 'VNPAY'}
                     aria-label="Gỡ mã giảm giá"
                     style={{ color: '#ef4444', padding: 6 }}
                   >
@@ -306,7 +311,7 @@ export default function PaymentPage() {
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => handleApplyPromo()}
-                      disabled={applyingPromo || !promoCode.trim()}
+                      disabled={applyingPromo || paying || booking.paymentMethod === 'VNPAY' || !promoCode.trim()}
                     >
                       {applyingPromo ? 'Đang áp dụng...' : 'Áp dụng'}
                     </button>
@@ -330,7 +335,7 @@ export default function PaymentPage() {
                             key={promo.id || promo.code}
                             type="button"
                             className="pay-promo-option"
-                            disabled={applyingPromo}
+                            disabled={applyingPromo || paying || booking.paymentMethod === 'VNPAY'}
                             onClick={() => handleApplyPromo(promo.code)}
                           >
                             <div>
@@ -410,7 +415,7 @@ export default function PaymentPage() {
               className="btn btn-primary"
               style={{ width: '100%', height: 52, fontSize: '1.02rem' }}
               onClick={handleVNPayPayment}
-              disabled={paying || cancelling}
+              disabled={paying || cancelling || applyingPromo || timeLeft === null || timeLeft <= 0}
             >
               <CreditCardIcon size={18} />
               {paying ? 'Đang chuyển hướng VNPay...' : 'Thanh toán qua VNPay'}

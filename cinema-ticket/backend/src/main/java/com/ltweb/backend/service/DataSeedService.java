@@ -7,7 +7,6 @@ import com.ltweb.backend.entity.Genre;
 import com.ltweb.backend.entity.Movie;
 import com.ltweb.backend.entity.Room;
 import com.ltweb.backend.entity.Seat;
-import com.ltweb.backend.entity.SeatTypePrice;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
@@ -28,7 +27,6 @@ import com.ltweb.backend.repository.GenreRepository;
 import com.ltweb.backend.repository.MovieRepository;
 import com.ltweb.backend.repository.RoomRepository;
 import com.ltweb.backend.repository.SeatRepository;
-import com.ltweb.backend.repository.SeatTypePriceRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
@@ -58,7 +56,6 @@ public class DataSeedService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-    private final SeatTypePriceRepository seatTypePriceRepository;
     private final FoodRepository foodRepository;
     private final DirectorRepository directorRepository;
     private final GenreRepository genreRepository;
@@ -74,7 +71,6 @@ public class DataSeedService {
     public void seedInitialData() {
         ensureUserRoleColumnSupportsAllRoles();
         seedUsers();
-        seedSeatTypePrices();
         seedFoods();
 
         Map<String, Genre> genres = seedGenres();
@@ -212,25 +208,6 @@ public class DataSeedService {
                 || !userRepository.existsByPhoneNumber(phoneNumber)) {
             user.setPhoneNumber(phoneNumber);
         }
-    }
-
-    private void seedSeatTypePrices() {
-        Map<SeatType, BigDecimal> prices = Map.of(
-                SeatType.STANDARD,
-                new BigDecimal("75000"),
-                SeatType.VIP,
-                new BigDecimal("105000"),
-                SeatType.COUPLE,
-                new BigDecimal("180000"));
-
-        prices.forEach(
-                (seatType, price) -> {
-                    SeatTypePrice seatTypePrice = seatTypePriceRepository
-                            .findBySeatType(seatType)
-                            .orElseGet(() -> SeatTypePrice.builder().seatType(seatType).build());
-                    seatTypePrice.setPrice(price);
-                    seatTypePriceRepository.save(seatTypePrice);
-                });
     }
 
     private void seedFoods() {
@@ -634,8 +611,6 @@ public class DataSeedService {
                 List.of(LocalTime.of(10, 15), LocalTime.of(15, 15), LocalTime.of(20, 45)),
                 List.of(LocalTime.of(11, 0), LocalTime.of(16, 0), LocalTime.of(21, 30)));
         LocalDate firstSeedDate = LocalDate.now();
-        Map<SeatType, BigDecimal> priceBySeatType = seatTypePriceRepository.findAll().stream()
-                .collect(Collectors.toMap(SeatTypePrice::getSeatType, SeatTypePrice::getPrice));
         Map<Long, List<Seat>> activeSeatsByRoom = rooms.stream()
                 .collect(
                         Collectors.toMap(
@@ -658,8 +633,7 @@ public class DataSeedService {
                     if (showtime != null) {
                         seedTickets(
                                 showtime,
-                                activeSeatsByRoom.getOrDefault(room.getId(), List.of()),
-                                priceBySeatType);
+                                activeSeatsByRoom.getOrDefault(room.getId(), List.of()));
                     }
                 }
             }
@@ -690,7 +664,7 @@ public class DataSeedService {
     }
 
     private void seedTickets(
-            Showtime showtime, List<Seat> activeSeats, Map<SeatType, BigDecimal> priceBySeatType) {
+            Showtime showtime, List<Seat> activeSeats) {
         Set<Long> ticketedSeatIds = ticketRepository.findByShowtimeId(showtime.getId()).stream()
                 .map(ticket -> ticket.getSeat().getId())
                 .collect(Collectors.toSet());
@@ -701,7 +675,7 @@ public class DataSeedService {
                         seat -> Ticket.builder()
                                 .showtime(showtime)
                                 .seat(seat)
-                                .price(priceBySeatType.getOrDefault(seat.getSeatType(), BigDecimal.ZERO))
+                                .price(showtime.getTicketPrice())
                                 .ticketStatus(TicketStatus.AVAILABLE)
                                 .build())
                 .toList();

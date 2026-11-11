@@ -37,7 +37,6 @@ public class DataSeeder implements CommandLineRunner {
     private final SeatRepository seatRepository;
     private final UserRepository userRepository;
     private final FoodRepository foodRepository;
-    private final SeatTypePriceRepository seatTypePriceRepository;
     private final JdbcTemplate jdbcTemplate;
 
     private static final Random RANDOM = new Random(42);
@@ -234,8 +233,7 @@ public class DataSeeder implements CommandLineRunner {
             Set<Long> stUsed = used.computeIfAbsent(st.getId(), k -> new HashSet<>());
             picked.forEach(s -> stUsed.add(s.getId()));
 
-            BigDecimal total = picked.stream().map(s -> price(s.getSeatType()))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal total = st.getTicketPrice().multiply(BigDecimal.valueOf(picked.size()));
 
             PaymentMethod method = pickPaymentMethod();
             LocalDateTime paid = st.getStartTime().minusHours(RANDOM.nextInt(24) + 1);
@@ -269,7 +267,7 @@ public class DataSeeder implements CommandLineRunner {
                 try {
                     ticketRepository.save(Ticket.builder()
                             .booking(booking).showtime(st).seat(seat)
-                            .price(price(seat.getSeatType()))
+                            .price(st.getTicketPrice())
                             .ticketStatus(TicketStatus.BOOKED)
                             .qrCode("QR-" + code + "-" + seat.getSeatCode())
                             .build());
@@ -365,7 +363,7 @@ public class DataSeeder implements CommandLineRunner {
         Set<Long> stUsed = used.computeIfAbsent(st.getId(), k -> new HashSet<>());
         picked.forEach(s -> stUsed.add(s.getId()));
 
-        BigDecimal amt = picked.stream().map(s -> price(s.getSeatType())).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal amt = st.getTicketPrice().multiply(BigDecimal.valueOf(picked.size()));
         BigDecimal refAmt = status == BookingStatus.REFUNDED ? amt.multiply(new BigDecimal("0.8")) : amt;
 
         LocalDateTime paid = st.getStartTime().minusHours(RANDOM.nextInt(12) + 2);
@@ -395,7 +393,7 @@ public class DataSeeder implements CommandLineRunner {
             try {
                 ticketRepository.save(Ticket.builder()
                         .booking(booking).showtime(st).seat(seat)
-                        .price(price(seat.getSeatType()))
+                        .price(st.getTicketPrice())
                         .ticketStatus(TicketStatus.BOOKED)
                         .qrCode("QR-" + code + "-" + seat.getSeatCode())
                         .build());
@@ -434,16 +432,6 @@ public class DataSeeder implements CommandLineRunner {
         return copy.subList(0, Math.min(count, copy.size()));
     }
 
-    private BigDecimal price(SeatType type) {
-        if (type == null)
-            return new BigDecimal("80000");
-        return switch (type) {
-            case VIP -> new BigDecimal("120000");
-            case COUPLE -> new BigDecimal("180000");
-            default -> new BigDecimal("80000");
-        };
-    }
-
     private PaymentMethod pickPaymentMethod() {
         int r = RANDOM.nextInt(10);
         if (r < 6)
@@ -464,8 +452,6 @@ public class DataSeeder implements CommandLineRunner {
     // ══════════════════════════════════════════════════════
     private void seedMissingTickets() {
         List<Showtime> showtimes = showtimeRepository.findAll();
-        Map<SeatType, BigDecimal> pricesMap = seatTypePriceRepository.findAll().stream()
-                .collect(Collectors.toMap(SeatTypePrice::getSeatType, SeatTypePrice::getPrice));
 
         int generated = 0;
         for (Showtime st : showtimes) {
@@ -481,7 +467,7 @@ public class DataSeeder implements CommandLineRunner {
                     newTickets.add(Ticket.builder()
                             .showtime(st)
                             .seat(seat)
-                            .price(pricesMap.get(seat.getSeatType()))
+                            .price(st.getTicketPrice())
                             .ticketStatus(TicketStatus.AVAILABLE)
                             .build());
                 }

@@ -24,7 +24,6 @@ import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.TicketMapper;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.SeatRepository;
-import com.ltweb.backend.repository.SeatTypePriceRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
@@ -46,7 +45,6 @@ class TicketServiceTest {
   @Mock private BookingRepository bookingRepository;
   @Mock private ShowtimeRepository showtimeRepository;
   @Mock private SeatRepository seatRepository;
-  @Mock private SeatTypePriceRepository seatTypePriceRepository;
   @Mock private UserRepository userRepository;
   @Mock private StringRedisTemplate redisTemplate;
   @Mock private TicketMapper ticketMapper;
@@ -58,6 +56,17 @@ class TicketServiceTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
+  }
+
+  @Test
+  void checkIn_rejectsQrFromPreviousBookingAfterSeatIsResold() {
+    Ticket ticket = paidTicketInBranch(1L);
+    ticket.setQrCode("CINEMAHUB|BOOKING=BK-NEW|TICKET=10|SEAT=A1");
+    when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+    CheckInTicketRequest request = new CheckInTicketRequest();
+    request.setCode("CINEMAHUB|BOOKING=BK-OLD|TICKET=10|SEAT=A1");
+    assertThatThrownBy(() -> ticketService.checkIn(request)).isInstanceOf(AppException.class);
+    assertThat(ticket.getCheckedInAt()).isNull();
   }
 
   @Test

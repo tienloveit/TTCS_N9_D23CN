@@ -39,6 +39,8 @@ public class FoodService {
                 .price(request.getPrice())
                 .imageUrl(request.getImageUrl())
                 .branchId(branchId)
+                .stockQuantity(request.getStockQuantity())
+                .lowStockThreshold(request.getLowStockThreshold())
                 .active(request.getActive() == null || request.getActive())
                 .build();
 
@@ -104,9 +106,23 @@ public class FoodService {
         if (request.getActive() != null) {
             food.setActive(request.getActive());
         }
+        Integer oldStock = food.getStockQuantity();
+        if (Boolean.TRUE.equals(request.getUnlimitedStock())) {
+            food.setStockQuantity(null);
+        } else if (request.getStockQuantity() != null) {
+            food.setStockQuantity(request.getStockQuantity());
+        }
+        if (request.getLowStockThreshold() != null) {
+            food.setLowStockThreshold(request.getLowStockThreshold());
+        }
 
         Food saved = foodRepository.save(food);
-        auditLogService.record(AuditAction.FOOD_UPDATED, "Food", saved.getId(), "Updated food " + saved.getName());
+        String stockNote = Objects.equals(oldStock, saved.getStockQuantity())
+                ? ""
+                : " (stock " + (oldStock == null ? "unlimited" : oldStock) + " -> "
+                        + (saved.getStockQuantity() == null ? "unlimited" : saved.getStockQuantity()) + ")";
+        auditLogService.record(
+                AuditAction.FOOD_UPDATED, "Food", saved.getId(), "Updated food " + saved.getName() + stockNote);
         return toFoodResponse(saved);
     }
 
@@ -135,6 +151,8 @@ public class FoodService {
                 .price(food.getPrice())
                 .imageUrl(food.getImageUrl())
                 .branchId(food.getBranchId())
+                .stockQuantity(food.getStockQuantity())
+                .lowStockThreshold(food.getLowStockThreshold())
                 .active(food.getActive())
                 .build();
     }

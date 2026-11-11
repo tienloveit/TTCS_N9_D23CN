@@ -64,6 +64,7 @@ public enum ErrorCode {
 
     // Showtime Management
     SHOWTIME_NOT_FOUND(400, "Showtime does not exist", HttpStatus.BAD_REQUEST),
+    SHOWTIME_PRICE_LOCKED(400, "Không thể đổi giá suất chiếu đã có ghế đang giữ hoặc vé đã bán", HttpStatus.BAD_REQUEST),
     SHOWTIME_TIME_OVERLAP(
             400, "Showtime time overlaps with an existing schedule", HttpStatus.BAD_REQUEST),
     SHOWTIME_HAS_BOOKINGS(

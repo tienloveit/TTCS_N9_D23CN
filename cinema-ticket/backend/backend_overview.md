@@ -1,6 +1,6 @@
 # 🎬 Tổng quan Backend — CinemaPTIT
 
-> **Stack:** Spring Boot 3.x · Spring Security (OAuth2 Resource Server / JWT) · Spring Data JPA · Redis · WebSocket (STOMP) · VNPay · Google Gemini AI · MySQL
+> **Stack:** Spring Boot 3.x · Spring Security (OAuth2 Resource Server / JWT) · Spring Data JPA · Redis · WebSocket (STOMP) · VNPay · MySQL
 
 ---
 
@@ -17,8 +17,7 @@ Client (React)
                           │                 │                  │
                         MySQL            Redis            External
                       (JPA/Hibernate)  (Token + Seat    (VNPay API,
-                                        Lock + Chat     Google AI,
-                                        Memory)          Gmail SMTP)
+                                        Lock)           Gmail SMTP)
 ```
 
 ### Cấu trúc package chính
@@ -30,7 +29,7 @@ Client (React)
 | `repository` | Spring Data JPA interfaces — truy vấn DB |
 | `service` | Business logic — toàn bộ logic nghiệp vụ ở đây |
 | `controller` | REST endpoints — nhận request, gọi service, trả response |
-| `config` | Cấu hình hệ thống (Security, Redis, WebSocket, AI...) |
+| `config` | Cấu hình hệ thống (Security, Redis, WebSocket...) |
 | `mapper` | Chuyển đổi Entity ↔ DTO (dùng MapStruct) |
 | `enums` | Các kiểu liệt kê cố định |
 | `exception` | Xử lý lỗi tập trung |
@@ -135,10 +134,10 @@ tickets (OneToMany) → List<Ticket>
 bookingFoods (OneToMany) → List<BookingFood>
 ```
 
-#### `SeatTypePrice`
+#### Giá vé theo suất chiếu
 ```
-Giá vé theo loại ghế (STANDARD/VIP/COUPLE...)
-Dùng bởi ChatService để báo giá vé cho AI chatbot
+Showtime.ticketPrice: giá chung cho mọi loại ghế trong một suất chiếu.
+Ticket.price lưu giá vé; không đổi giá khi đã có ghế giữ hoặc vé bán.
 ```
 
 ---
@@ -175,7 +174,6 @@ Dùng bởi ChatService để báo giá vé cho AI chatbot
 |----------|-------|
 | `GET /movie/**`, `/showtime/**`, `/genre/**`... | Public |
 | `POST /sign-up`, `POST /auth/login` | Public |
-| `POST /chat` | Public (AI chatbot) |
 | `POST /booking`, `GET /my-info` | Authenticated (bất kỳ role) |
 | `POST /booking/staff` | ADMIN hoặc STAFF |
 | `GET /users`, `DELETE /users/{id}` | ADMIN only |
@@ -274,7 +272,6 @@ Status values: "HOLDING" | "BOOKED" | "AVAILABLE"
 | `seat_hold:{showtimeId}:{seatId}` | userId | 6 phút | Lock ghế khi đang đặt |
 | `{jwtId}` (RedisToken) | — (chỉ key tồn tại) | = thời gian còn lại của token | Token blacklist (logout) |
 | `{jwtId}` (refresh token) | — | 30 ngày | Verify refresh token hợp lệ |
-| `chat:{sessionId}:messages` | List<Message> | — | Lưu lịch sử chat AI |
 | `otp:{email}` | OTP string | 5 phút | OTP quên mật khẩu |
 
 ---
@@ -308,16 +305,6 @@ Status values: "HOLDING" | "BOOKED" | "AVAILABLE"
 - Access token: 30 phút | Refresh token: 30 ngày
 - Claim quan trọng: `sub` (username), `role`, `jti` (jwtId — dùng cho blacklist)
 
-### `ChatService` (AI Chatbot)
-- Dùng Spring AI với Google Gemini (Flash model)
-- `RedisChatMemory` lưu lịch sử chat theo sessionId
-- `AiToolsConfig` đăng ký các "tools" (functions) mà AI có thể gọi:
-  - Tìm phim đang chiếu / sắp chiếu
-  - Xem suất chiếu theo phim / ngày / rạp
-  - Lấy giá vé theo loại ghế
-  - Xem menu đồ ăn
-  - Tạo link đặt vé cho khách
-
 ### `EmailService` (email)
 - Dùng Spring Mail + Gmail SMTP
 - Gửi email xác nhận booking (HTML template) khi nhận `BookingPaidEvent`
@@ -332,7 +319,7 @@ Status values: "HOLDING" | "BOOKED" | "AVAILABLE"
 
 ### `ShowtimeService` (suất chiếu)
 - Khi tạo Showtime mới → **tự động tạo toàn bộ Ticket** cho tất cả ghế active trong phòng
-- Ticket được khởi tạo với `ticketStatus = AVAILABLE` và `price` theo `SeatTypePrice`
+- Ticket được khởi tạo với `ticketStatus = AVAILABLE` và `price` theo `Showtime.ticketPrice`
 
 ---
 
@@ -348,11 +335,6 @@ Status values: "HOLDING" | "BOOKED" | "AVAILABLE"
 - Endpoint `/ws` (SockJS)
 - Application prefix: `/app` (client gửi lên)
 - Broker prefix: `/topic` (server push xuống)
-
-### `AiRedisConfig`
-- Cấu hình `ChatClient` của Spring AI
-- `RedisChatMemory` làm memory advisor lưu lịch sử hội thoại
-- System prompt định nghĩa vai trò chatbot là nhân viên hỗ trợ CinemaPTIT
 
 ### `RedisConfig`
 - `RedisTemplate<String, String>` cho seat lock

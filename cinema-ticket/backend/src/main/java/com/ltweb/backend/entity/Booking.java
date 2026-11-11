@@ -96,7 +96,8 @@ public class Booking {
         payment.setAmount(totalAmount);
     }
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    // Tickets belong to a showtime's seat inventory and must survive cancellation/refund.
+    @OneToMany(mappedBy = "booking")
     @Builder.Default
     private List<Ticket> tickets = new ArrayList<>();
 

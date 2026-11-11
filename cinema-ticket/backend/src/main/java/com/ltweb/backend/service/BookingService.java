@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +75,7 @@ public class BookingService {
     private final AuditLogService auditLogService;
     private final SystemSettingService systemSettingService;
     private final NotificationService notificationService;
+    private final FoodStockService foodStockService;
 
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request) {
@@ -92,14 +92,7 @@ public class BookingService {
                 .findById(request.getShowtimeId())
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
-        // Không cho đặt nếu showtime đã đóng hoặc bị hủy
-        if (showtime.getStatus() != com.ltweb.backend.enums.ShowtimeStatus.OPEN) {
-            throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
-        }
-        // Không cho đặt nếu showtime đã bắt đầu
-        if (showtime.getStartTime() != null && showtime.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
-        }
+        requireBookableShowtime(showtime);
         // Kiểm tra tổng số vé người dùng đã đặt cho bộ phim này không vượt quá 8
         Long movieId = showtime.getMovie().getId();
         int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(user.getId(), movieId);
@@ -112,12 +105,10 @@ public class BookingService {
             throw new AppException(ErrorCode.VALIDATION_ERROR);
         }
 
-        List<Ticket> selectedTickets = request.getSeatIds().stream()
-                .map(
-                        seatId -> ticketRepository
-                                .findByShowtimeIdAndSeatId(showtime.getId(), seatId)
-                                .orElseThrow(() -> new AppException(ErrorCode.TICKET_NOT_FOUND)))
-                .toList();
+        List<Ticket> selectedTickets = ticketRepository.findSeatsForUpdate(showtime.getId(), request.getSeatIds());
+        if (selectedTickets.size() != uniqueSeatIds.size()) {
+            throw new AppException(ErrorCode.TICKET_NOT_FOUND);
+        }
 
         boolean hasUnavailableTicket = selectedTickets.stream()
                 .anyMatch(
@@ -130,27 +121,10 @@ public class BookingService {
         Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
         List<Food> selectedFoods = getSelectedFoods(foodQuantities);
         requireFoodsAvailableForShowtime(selectedFoods, showtime);
+        foodStockService.reserve(selectedFoods, foodQuantities);
         BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
 
-        // khoá ghế bằng Redis
-        String bookingUserId = String.valueOf(user.getId());
         int holdMinutes = getBookingHoldMinutes();
-        for (Ticket ticket : selectedTickets) {
-            String seatKey = getSeatKey(showtime.getId(), ticket.getSeat().getId());
-            Boolean locked = redisTemplate.opsForValue().setIfAbsent(seatKey, bookingUserId, holdMinutes,
-                    TimeUnit.MINUTES);
-
-            if (Boolean.FALSE.equals(locked)) {
-                unlockSeats(showtime.getId(), selectedTickets);
-                throw new AppException(ErrorCode.TICKET_NOT_AVAILABLE);
-            }
-
-            // lock ghế xong broadcast qua WebSocket để cập nhật real time trạng thái hàng
-            // ghế
-            simpMessagingTemplate.convertAndSend(
-                    "/topic/showtime/" + showtime.getId() + "/seats",
-                    SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status("HOLDING").build());
-        }
 
         BigDecimal totalAmount = selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO,
                 BigDecimal::add);
@@ -171,6 +145,7 @@ public class BookingService {
         }
 
         String bookingCode = generateBookingCode();
+        BookingTransactionEffects.acquire(redisTemplate, showtime.getId(), selectedTickets, bookingCode, holdMinutes);
         Booking booking = Booking.builder()
                 .bookingCode(bookingCode)
                 .user(user)
@@ -196,7 +171,8 @@ public class BookingService {
                     ticket.setTicketStatus(TicketStatus.HOLDING);
                 });
         ticketRepository.saveAll(selectedTickets);
-        booking.setTickets(selectedTickets);
+        selectedTickets.forEach(ticket -> broadcastSeat(showtime.getId(), ticket, "HOLDING"));
+        booking.getTickets().addAll(selectedTickets);
 
         log.info("Booking created with code: {} for user: {}", bookingCode, user.getUsername());
 
@@ -216,6 +192,7 @@ public class BookingService {
                 .findById(request.getShowtimeId())
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
         requireStaffBookingAccess(showtime);
+        requireBookableShowtime(showtime);
         User staffUser = getUserCurrent();
 
         Set<Long> uniqueSeatIds = new HashSet<>(request.getSeatIds());
@@ -223,12 +200,10 @@ public class BookingService {
             throw new AppException(ErrorCode.VALIDATION_ERROR);
         }
 
-        List<Ticket> selectedTickets = request.getSeatIds().stream()
-                .map(
-                        seatId -> ticketRepository
-                                .findByShowtimeIdAndSeatId(showtime.getId(), seatId)
-                                .orElseThrow(() -> new AppException(ErrorCode.TICKET_NOT_FOUND)))
-                .toList();
+        List<Ticket> selectedTickets = ticketRepository.findSeatsForUpdate(showtime.getId(), request.getSeatIds());
+        if (selectedTickets.size() != uniqueSeatIds.size()) {
+            throw new AppException(ErrorCode.TICKET_NOT_FOUND);
+        }
 
         boolean hasUnavailableTicket = selectedTickets.stream()
                 .anyMatch(
@@ -241,6 +216,7 @@ public class BookingService {
         Map<Long, Integer> foodQuantities = getFoodQuantities(request.getFoods());
         List<Food> selectedFoods = getSelectedFoods(foodQuantities);
         requireFoodsAvailableForShowtime(selectedFoods, showtime);
+        foodStockService.reserve(selectedFoods, foodQuantities);
         BigDecimal foodTotal = calculateFoodTotal(selectedFoods, foodQuantities);
         BigDecimal ticketTotal = selectedTickets.stream().map(Ticket::getPrice).reduce(BigDecimal.ZERO,
                 BigDecimal::add);
@@ -279,16 +255,16 @@ public class BookingService {
                 .totalAmount(totalAmount)
                 .promotionCode(appliedPromoCode)
                 .discountAmount(discountAmount)
-                .status(request.getPaymentMethod() == PaymentMethod.CARD ? BookingStatus.PENDING
+                .status(request.getPaymentMethod() != null && request.getPaymentMethod() != PaymentMethod.CASH ? BookingStatus.PENDING
                         : BookingStatus.COMPLETED)
                 .payment(Payment.builder()
                         .amount(totalAmount)
                         .paymentCreatedAt(now)
-                        .paymentStatus(request.getPaymentMethod() == PaymentMethod.CARD
+                        .paymentStatus(request.getPaymentMethod() != null && request.getPaymentMethod() != PaymentMethod.CASH
                                 ? PaymentStatus.PENDING : PaymentStatus.PAID)
                         .paymentMethod(request.getPaymentMethod() == null
                                 ? PaymentMethod.CASH : request.getPaymentMethod())
-                        .paidAt(request.getPaymentMethod() == PaymentMethod.CARD ? null : now)
+                        .paidAt(request.getPaymentMethod() != null && request.getPaymentMethod() != PaymentMethod.CASH ? null : now)
                         .build())
                 .expiresAt(now.plusMinutes(getBookingHoldMinutes()))
                 .build();
@@ -300,20 +276,20 @@ public class BookingService {
                 ticket -> {
                     ticket.setBooking(booking);
                     ticket.setTicketStatus(
-                            request.getPaymentMethod() == PaymentMethod.CARD ? TicketStatus.HOLDING
+                            request.getPaymentMethod() != null && request.getPaymentMethod() != PaymentMethod.CASH ? TicketStatus.HOLDING
                                     : TicketStatus.BOOKED);
-                    if (request.getPaymentMethod() != PaymentMethod.CARD) {
+                    if (request.getPaymentMethod() == null || request.getPaymentMethod() == PaymentMethod.CASH) {
                         ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
                     }
                     ticketRepository.save(ticket);
-                    String wsStatus = request.getPaymentMethod() == PaymentMethod.CARD ? "HOLDING" : "BOOKED";
-                    simpMessagingTemplate.convertAndSend(
+                    String wsStatus = request.getPaymentMethod() != null && request.getPaymentMethod() != PaymentMethod.CASH ? "HOLDING" : "BOOKED";
+                    BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
                             "/topic/showtime/" + showtime.getId() + "/seats",
-                            SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status(wsStatus).build());
+                            SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status(wsStatus).build()));
                 });
-        booking.setTickets(selectedTickets);
-        if (request.getPaymentMethod() != PaymentMethod.CARD) {
-            unlockSeats(showtime.getId(), selectedTickets);
+        booking.getTickets().addAll(selectedTickets);
+        if (request.getPaymentMethod() == null || request.getPaymentMethod() == PaymentMethod.CASH) {
+            BookingTransactionEffects.releaseAfterCommit(redisTemplate, showtime.getId(), selectedTickets, booking.getBookingCode());
             eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
         }
 
@@ -354,7 +330,7 @@ public class BookingService {
     public BookingResponse getBookingById(Long bookingId) {
         Booking booking = getBooking(bookingId);
         User user = getUserCurrent();
-        boolean isOwner = booking.getUser().getId().equals(user.getId());
+        boolean isOwner = (booking.getUser() != null && Objects.equals(booking.getUser().getId(), user.getId()));
         boolean isAdmin = user.getRole() == UserRole.ADMIN;
         boolean isBranchManager = isBranchOperator(user)
                 && user.getBranchId() != null
@@ -371,7 +347,7 @@ public class BookingService {
 
         Booking booking = getBooking(bookingId);
 
-        if (!booking.getUser().getId().equals(user.getId())) {
+        if (!(booking.getUser() != null && Objects.equals(booking.getUser().getId(), user.getId()))) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -390,11 +366,13 @@ public class BookingService {
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     @Transactional
     public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
-        Booking booking = getBooking(bookingId);
+        Booking booking = getBookingForUpdate(bookingId);
         requireBookingManagementAccess(booking);
 
-        if (request.getStatus() != null) {
-            booking.setStatus(request.getStatus());
+        if (request.getStatus() == BookingStatus.CANCELLED) {
+            cancelBooking(bookingId);
+        } else if (request.getStatus() != null && request.getStatus() != booking.getStatus()) {
+            throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
 
         return bookingMapper.toBookingResponse(bookingRepository.save(booking));
@@ -402,9 +380,9 @@ public class BookingService {
 
     @Transactional
     public void cancelBooking(Long bookingId) {
-        Booking booking = getBooking(bookingId);
+        Booking booking = getBookingForUpdate(bookingId);
         User user = getUserCurrent();
-        boolean isOwner = booking.getUser().getId().equals(user.getId());
+        boolean isOwner = (booking.getUser() != null && Objects.equals(booking.getUser().getId(), user.getId()));
         boolean canManageBooking = user.getRole() == UserRole.ADMIN
                 || (user.getRole() == UserRole.STAFF
                         && user.getBranchId() != null
@@ -420,6 +398,7 @@ public class BookingService {
 
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+        foodStockService.release(booking);
 
         // Trả trạng thái của vé về AVAILABLE
         booking
@@ -428,17 +407,20 @@ public class BookingService {
                         ticket -> {
                             ticket.setBooking(null); // huỷ connect với booking
                             ticket.setTicketStatus(TicketStatus.AVAILABLE);
+                            ticket.setQrCode(null);
+                            ticket.setCheckedInAt(null);
+                            ticket.setCheckedInBy(null);
                             ticketRepository.save(ticket);
 
-                            simpMessagingTemplate.convertAndSend(
+                            BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
                                     "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
                                     SeatStatusEvent.builder()
                                             .seatId(ticket.getSeat().getId())
                                             .status("AVAILABLE")
-                                            .build());
+                                            .build()));
                         });
 
-        unlockSeats(booking.getShowtime().getId(), booking.getTickets()); // chủ động huỷ
+        BookingTransactionEffects.releaseAfterCommit(redisTemplate, booking.getShowtime().getId(), booking.getTickets(), booking.getBookingCode()); // chủ động huỷ
 
         if (booking.getPayment().getPaymentStatus() == PaymentStatus.PENDING) {
             booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
@@ -454,16 +436,20 @@ public class BookingService {
      */
     @Transactional
     public BookingResponse applyPromotion(Long bookingId, String promotionCode) {
-        Booking booking = getBooking(bookingId);
+        Booking booking = getBookingForUpdate(bookingId);
         User user = getUserCurrent();
 
         // Chỉ chủ booking mới được áp mã
-        if (!booking.getUser().getId().equals(user.getId())) {
+        if (!(booking.getUser() != null && Objects.equals(booking.getUser().getId(), user.getId()))) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
         // Chỉ áp dụng cho booking PENDING (chưa thanh toán)
-        if (booking.getStatus() != BookingStatus.PENDING) {
+        if (booking.getStatus() != BookingStatus.PENDING
+                || booking.getPayment() == null || booking.getPayment().getPaymentStatus() != PaymentStatus.PENDING
+                // An issued VNPay URL must retain the amount signed for that payment.
+                || booking.getPayment().getPaymentMethod() == PaymentMethod.VNPAY
+                || booking.getExpiresAt() == null || !booking.getExpiresAt().isAfter(LocalDateTime.now())) {
             throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
 
@@ -502,16 +488,6 @@ public class BookingService {
 
     private boolean hasActiveSeatHold(Long showtimeId, Ticket ticket) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(getSeatKey(showtimeId, ticket.getSeat().getId())));
-    }
-
-    private void unlockSeats(Long showTimeId, List<Ticket> tickets) {
-        try {
-            List<String> keys = tickets.stream().map(ticket -> getSeatKey(showTimeId, ticket.getSeat().getId()))
-                    .toList();
-            redisTemplate.delete(keys);
-        } catch (Exception e) {
-            log.error("Thất bại trong việc xoá vé: {}", e.getMessage());
-        }
     }
 
     // ===== PRIVATE HELPER =====
@@ -594,6 +570,28 @@ public class BookingService {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String randomPart = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         return "BK-" + timestamp + "-" + randomPart;
+    }
+
+    private Booking getBookingForUpdate(Long bookingId) {
+        return bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+    }
+
+    private void requireBookableShowtime(Showtime showtime) {
+        if (showtime.getStatus() != com.ltweb.backend.enums.ShowtimeStatus.OPEN
+                || showtime.getStartTime() == null || !showtime.getStartTime().isAfter(LocalDateTime.now())
+                || showtime.getMovie() == null || !Boolean.TRUE.equals(showtime.getMovie().getIsPublic())
+                || showtime.getRoom() == null || showtime.getRoom().getStatus() != com.ltweb.backend.enums.RoomStatus.ACTIVE
+                || showtime.getRoom().getBranch() == null
+                || showtime.getRoom().getBranch().getStatus() != com.ltweb.backend.enums.BranchStatus.ACTIVE) {
+            throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
+        }
+    }
+
+    private void broadcastSeat(Long showtimeId, Ticket ticket, String status) {
+        BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
+                "/topic/showtime/" + showtimeId + "/seats",
+                SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status(status).build()));
     }
 
     private Booking getBooking(Long bookingId) {
@@ -789,11 +787,11 @@ public class BookingService {
      */
     @Transactional
     public BookingResponse requestRefund(Long bookingId, String reason) {
-        Booking booking = getBooking(bookingId);
+        Booking booking = getBookingForUpdate(bookingId);
         User user = getUserCurrent();
 
         // Chỉ chủ booking mới được yêu cầu hoàn tiền
-        if (!booking.getUser().getId().equals(user.getId())) {
+        if (!(booking.getUser() != null && Objects.equals(booking.getUser().getId(), user.getId()))) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -804,7 +802,10 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.REFUNDED) {
             throw new AppException(ErrorCode.BOOKING_ALREADY_REFUNDED);
         }
-        if (booking.getStatus() != BookingStatus.COMPLETED) {
+        if (booking.getStatus() != BookingStatus.COMPLETED
+                || booking.getPayment() == null
+                || booking.getPayment().getPaymentStatus() != PaymentStatus.PAID
+                || booking.getTickets().stream().anyMatch(ticket -> ticket.getCheckedInAt() != null)) {
             throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
         }
 
@@ -840,11 +841,15 @@ public class BookingService {
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Transactional
     public BookingResponse processRefund(Long bookingId, boolean approved, String note) {
-        Booking booking = getBooking(bookingId);
+        Booking booking = getBookingForUpdate(bookingId);
         requireRefundManagementAccess(booking);
         User processor = getUserCurrent();
 
         if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
+            throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
+        }
+
+        if (approved && booking.getTickets().stream().anyMatch(ticket -> ticket.getCheckedInAt() != null)) {
             throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
         }
 
@@ -865,15 +870,18 @@ public class BookingService {
                             ticket -> {
                                 ticket.setBooking(null);
                                 ticket.setTicketStatus(TicketStatus.AVAILABLE);
+                            ticket.setQrCode(null);
+                            ticket.setCheckedInAt(null);
+                            ticket.setCheckedInBy(null);
                                 ticket.setQrCode(null);
                                 ticketRepository.save(ticket);
 
-                                simpMessagingTemplate.convertAndSend(
+                                BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
                                         "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
                                         SeatStatusEvent.builder()
                                                 .seatId(ticket.getSeat().getId())
                                                 .status("AVAILABLE")
-                                                .build());
+                                                .build()));
                             });
 
             // Trừ lại spending nếu cần

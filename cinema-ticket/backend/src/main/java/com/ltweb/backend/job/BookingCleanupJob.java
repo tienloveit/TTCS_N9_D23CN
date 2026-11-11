@@ -2,6 +2,8 @@ package com.ltweb.backend.job;
 
 import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
+import com.ltweb.backend.service.BookingTransactionEffects;
+import com.ltweb.backend.service.FoodStockService;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.TicketStatus;
@@ -26,6 +28,7 @@ public class BookingCleanupJob {
     private final TicketRepository ticketRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final RedisTemplate<String, String> redisTemplate;
+    private final FoodStockService foodStockService;
 
     /**
      * Chạy mỗi 2 phút để quét và giải phóng các booking PENDING đã hết hạn. Xử lý
@@ -35,8 +38,7 @@ public class BookingCleanupJob {
     @Scheduled(fixedRate = 120_000)
     @Transactional
     public void releaseExpiredBookings() {
-        List<Booking> expiredBookings = bookingRepository.findByStatusAndExpiresAtBefore(
-                BookingStatus.PENDING, LocalDateTime.now());
+        List<Long> expiredBookings = bookingRepository.findExpiredBookingIds(LocalDateTime.now());
 
         if (expiredBookings.isEmpty()) {
             return;
@@ -46,49 +48,31 @@ public class BookingCleanupJob {
                 "[BookingCleanupJob] Tìm thấy {} booking hết hạn, đang giải phóng...",
                 expiredBookings.size());
 
-        for (Booking booking : expiredBookings) {
-            try {
-                // Cập nhật trạng thái booking
-                booking.setStatus(BookingStatus.CANCELLED);
-                booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
-
-                // Giải phóng từng vé và broadcast real-time qua WebSocket
-                booking
-                        .getTickets()
-                        .forEach(
-                                ticket -> {
-                                    ticket.setBooking(null);
-                                    ticket.setTicketStatus(TicketStatus.AVAILABLE);
-                                    ticketRepository.save(ticket);
-
-                                    simpMessagingTemplate.convertAndSend(
-                                            "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
-                                            SeatStatusEvent.builder()
-                                                    .seatId(ticket.getSeat().getId())
-                                                    .status("AVAILABLE")
-                                                    .build());
-                                });
-
-                bookingRepository.save(booking);
-
-                // Xóa Redis seat locks
-                try {
-                    List<String> keys = booking.getTickets().stream()
-                            .map(t -> "seat_hold:" + booking.getShowtime().getId() + ":" + t.getSeat().getId())
-                            .toList();
-                    redisTemplate.delete(keys);
-                } catch (Exception ex) {
-                    log.warn("[BookingCleanupJob] Không thể xóa Redis seat lock: {}", ex.getMessage());
-                }
-
-                log.info("[BookingCleanupJob] Đã giải phóng booking: {}", booking.getBookingCode());
-
-            } catch (Exception e) {
-                log.error(
-                        "[BookingCleanupJob] Lỗi khi giải phóng booking {}: {}",
-                        booking.getBookingCode(),
-                        e.getMessage());
+        for (Long bookingId : expiredBookings) {
+            Booking booking = bookingRepository.findByIdForUpdate(bookingId).orElse(null);
+            if (booking == null || booking.getStatus() != BookingStatus.PENDING
+                    || booking.getPayment() == null || booking.getPayment().getPaymentStatus() != PaymentStatus.PENDING
+                    || booking.getExpiresAt() == null || booking.getExpiresAt().isAfter(LocalDateTime.now())) {
+                continue;
             }
+            booking.setStatus(BookingStatus.CANCELLED);
+            booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
+            for (var ticket : booking.getTickets()) {
+                ticket.setBooking(null);
+                ticket.setTicketStatus(TicketStatus.AVAILABLE);
+                ticket.setQrCode(null);
+                ticket.setCheckedInAt(null);
+                ticket.setCheckedInBy(null);
+                ticketRepository.save(ticket);
+                BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
+                        "/topic/showtime/" + ticket.getShowtime().getId() + "/seats",
+                        SeatStatusEvent.builder().seatId(ticket.getSeat().getId()).status("AVAILABLE").build()));
+            }
+            bookingRepository.save(booking);
+            foodStockService.release(booking);
+            BookingTransactionEffects.releaseAfterCommit(redisTemplate, booking.getShowtime().getId(),
+                    booking.getTickets(), booking.getBookingCode());
+            log.info("Expired booking released: {}", booking.getBookingCode());
         }
     }
 }

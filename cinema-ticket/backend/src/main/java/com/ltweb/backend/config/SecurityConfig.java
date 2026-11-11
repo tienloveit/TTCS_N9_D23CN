@@ -40,8 +40,7 @@ public class SecurityConfig {
             "/auth/reset-password",
             "/oauth2/**",
             "/login/oauth2/**",
-            "/api/v1/cleanup/**",
-            "/chat"
+            "/api/v1/cleanup/**"
     };
 
     private final CustomUserDetailService userDetailsService;

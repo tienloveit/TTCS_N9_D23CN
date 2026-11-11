@@ -17,6 +17,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class CreateShowtimeRequest {
+    @NotNull(message = "Ticket price is required")
+    @jakarta.validation.constraints.DecimalMin(value = "1", message = "Ticket price must be positive")
+    @jakarta.validation.constraints.Digits(integer = 12, fraction = 0, message = "Ticket price must be a whole VND amount")
+    private java.math.BigDecimal ticketPrice;
+
     @NotNull(message = "Room ID is required")
     private Long roomId;
 

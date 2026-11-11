@@ -198,11 +198,6 @@ export const promotionApi = {
   validate: (data) => axiosClient.post('/promotion/validate', data),
 };
 
-// ==================== AI CHAT ====================
-export const chatApi = {
-  send: (data) => axiosClient.post('/chat', data),
-};
-
 // ==================== VNPAY ====================
 export const vnpayApi = {
   createPaymentUrl: (data) => axiosClient.post('/v1/vnpay/payment-url', data),

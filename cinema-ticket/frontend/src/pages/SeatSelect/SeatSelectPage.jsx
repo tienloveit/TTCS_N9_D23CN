@@ -205,9 +205,11 @@ export default function SeatSelectPage() {
   };
 
   const updateFoodQuantity = (foodId, delta) => {
+    const stock = foods.find((food) => food.id === foodId)?.stockQuantity;
     setSelectedFoods((prev) => {
       const currentQuantity = prev[foodId] || 0;
-      const nextQuantity = Math.max(0, currentQuantity + delta);
+      const maxQuantity = stock == null ? Infinity : Math.max(0, stock);
+      const nextQuantity = Math.min(maxQuantity, Math.max(0, currentQuantity + delta));
       const nextSelectedFoods = { ...prev };
 
       if (nextQuantity === 0) {
@@ -522,6 +524,9 @@ export default function SeatSelectPage() {
                 <div className="food-select-grid">
                   {foods.map((food) => {
                     const quantity = selectedFoods[food.id] || 0;
+                    const limited = food.stockQuantity != null;
+                    const soldOut = limited && food.stockQuantity <= 0;
+                    const atLimit = limited && quantity >= food.stockQuantity;
 
                     return (
                       <div
@@ -540,6 +545,11 @@ export default function SeatSelectPage() {
                           <h3>{food.name}</h3>
                           {food.description && <p>{food.description}</p>}
                           <strong>{formatCurrency(food.price)}</strong>
+                          {limited && (
+                            <small style={{ display: 'block', color: soldOut ? '#ef4444' : 'var(--text-muted)' }}>
+                              {soldOut ? 'Hết hàng' : `Còn ${food.stockQuantity} phần`}
+                            </small>
+                          )}
                         </div>
 
                         <div className="food-stepper">
@@ -555,7 +565,7 @@ export default function SeatSelectPage() {
                           <button
                             type="button"
                             onClick={() => updateFoodQuantity(food.id, 1)}
-                            disabled={booking}
+                            disabled={booking || soldOut || atLimit}
                             aria-label={`Tăng ${food.name}`}
                           >
                             +

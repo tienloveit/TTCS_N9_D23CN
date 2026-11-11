@@ -8,6 +8,9 @@ import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Ticket;
+import com.ltweb.backend.exception.AppException;
+import com.ltweb.backend.exception.ErrorCode;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
@@ -57,27 +60,41 @@ public class VnpayService {
     private final RedisTemplate<String, String> redisTemplate;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final FoodStockService foodStockService;
 
     private static final Map<String, String> RESPONSE_CODE_DESC = createResponseCodeDesc();
     private static final Map<String, String> TRANSACTION_STATUS_DESC = createTransactionStatusDesc();
 
+    @Transactional
     public Map<String, Object> createPaymentUrl(CreateVnpayRequest req, HttpServletRequest request) {
         String vnpVersion = "2.1.0";
         String vnpCommand = "pay";
         String orderType = (req.getOrderType() == null || req.getOrderType().isBlank()) ? "other" : req.getOrderType();
-        String txnRef = req.getBookingId() == null ? null : String.valueOf(req.getBookingId());
-        if (txnRef == null || txnRef.isBlank()) {
-            txnRef = (req.getOrderId() == null || req.getOrderId().isBlank())
-                    ? VnpayUtil.randomNumeric(8)
-                    : req.getOrderId();
+        String requestedRef = req.getBookingId() == null ? req.getOrderId() : String.valueOf(req.getBookingId());
+        if (requestedRef == null || requestedRef.isBlank()) {
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
+        Booking booking = findBookingByTxnRef(requestedRef)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean owner = auth != null && booking.getUser() != null
+                && auth.getName().equals(booking.getUser().getUsername());
+        boolean seller = auth != null && booking.getStaffUser() != null
+                && auth.getName().equals(booking.getStaffUser().getUsername());
+        boolean admin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (!owner && !seller && !admin) throw new AppException(ErrorCode.UNAUTHORIZED);
+        if (!isPendingPayment(booking)) throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
+        String txnRef = String.valueOf(booking.getId());
+        booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
+        bookingRepository.save(booking);
         String ipAddr = VnpayUtil.getClientIp(request);
 
         Map<String, String> params = new HashMap<>();
         params.put("vnp_Version", vnpVersion);
         params.put("vnp_Command", vnpCommand);
         params.put("vnp_TmnCode", props.getTmnCode());
-        params.put("vnp_Amount", String.valueOf(req.getAmount() * 100));
+        params.put("vnp_Amount", booking.getPayment().getAmount().movePointRight(2).toBigIntegerExact().toString());
         params.put("vnp_CurrCode", "VND");
 
         if (req.getBankCode() != null && !req.getBankCode().isBlank()) {
@@ -99,7 +116,7 @@ public class VnpayService {
 
         ZonedDateTime now = ZonedDateTime.now(VN_ZONE);
         params.put("vnp_CreateDate", now.format(VNPAY_TIME_FORMATTER));
-        params.put("vnp_ExpireDate", now.plusMinutes(6).format(VNPAY_TIME_FORMATTER));
+        params.put("vnp_ExpireDate", booking.getExpiresAt().atZone(VN_ZONE).format(VNPAY_TIME_FORMATTER));
 
         List<String> fieldNames = new ArrayList<>(params.keySet());
         Collections.sort(fieldNames);
@@ -247,236 +264,89 @@ public class VnpayService {
 
     @Transactional
     public ApiResponse<Map<String, Object>> processReturnUrl(Map<String, String> params) {
-        Map<String, Object> verify = verifyCallback(params);
-        boolean validSignature = Boolean.TRUE.equals(verify.get("validSignature"));
-
-        if (!validSignature) {
-            return ApiResponse.<Map<String, Object>>builder()
-                    .code(97)
-                    .message("Chữ ký không hợp lệ")
-                    .result(verify)
-                    .build();
+        Map<String, Object> verified = new HashMap<>(verifyCallback(params));
+        if (!Boolean.TRUE.equals(verified.get("validSignature"))) {
+            return ApiResponse.<Map<String, Object>>builder().code(97)
+                    .message("Chữ ký không hợp lệ").result(verified).build();
         }
-
-        String responseCode = String.valueOf(verify.getOrDefault("vnp_ResponseCode", ""));
-        String transactionStatus = String.valueOf(verify.getOrDefault("vnp_TransactionStatus", ""));
-
-        verify.put("vnp_ResponseCodeDesc", RESPONSE_CODE_DESC.getOrDefault(responseCode, "Lỗi khác"));
-        verify.put(
-                "vnp_TransactionStatusDesc",
-                TRANSACTION_STATUS_DESC.getOrDefault(transactionStatus, "Không xác định"));
-
-        boolean success = "00".equals(responseCode) && "00".equals(transactionStatus);
-
-        // Cập nhật DB ngay tại đây (idempotent - an toàn khi IPN cũng gọi ở Production)
-        String txnRef = params.get("vnp_TxnRef");
-        if (txnRef != null && !txnRef.isBlank()) {
-            Optional<Booking> bookingOpt = findBookingByTxnRef(txnRef);
-
-            bookingOpt.ifPresent(
-                    booking -> {
-                        // Idempotency: chỉ xử lý nếu booking chưa được cập nhật
-                        if (booking.getStatus() != BookingStatus.COMPLETED
-                                && booking.getStatus() != BookingStatus.CANCELLED) {
-                            booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
-                            booking.getPayment().setProviderTxnId(params.get("vnp_TransactionNo"));
-
-                            if (success) {
-                                booking.setStatus(BookingStatus.COMPLETED);
-                                booking.getPayment().setPaymentStatus(PaymentStatus.PAID);
-                                booking.getPayment().setPaidAt(LocalDateTime.now());
-
-                                booking
-                                        .getTickets()
-                                        .forEach(
-                                                ticket -> {
-                                                    ticket.setTicketStatus(TicketStatus.BOOKED);
-                                                    ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
-                                                    ticketRepository.save(ticket);
-                                                    simpMessagingTemplate.convertAndSend(
-                                                            "/topic/showtime/" + ticket.getShowtime().getId()
-                                                                    + "/seats",
-                                                            SeatStatusEvent.builder()
-                                                                    .seatId(ticket.getSeat().getId())
-                                                                    .status("BOOKED")
-                                                                    .build());
-                                                });
-                            } else {
-                                booking.setStatus(BookingStatus.CANCELLED);
-                                booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
-
-                                booking
-                                        .getTickets()
-                                        .forEach(
-                                                ticket -> {
-                                                    ticket.setBooking(null);
-                                                    ticket.setTicketStatus(TicketStatus.AVAILABLE);
-                                                    ticketRepository.save(ticket);
-                                                    simpMessagingTemplate.convertAndSend(
-                                                            "/topic/showtime/" + ticket.getShowtime().getId()
-                                                                    + "/seats",
-                                                            SeatStatusEvent.builder()
-                                                                    .seatId(ticket.getSeat().getId())
-                                                                    .status("AVAILABLE")
-                                                                    .build());
-                                                });
-                            }
-
-                            bookingRepository.save(booking);
-                            if (success) {
-                                eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
-                            }
-
-                            // Xóa Redis seat lock
-                            try {
-                                List<String> keys = booking.getTickets().stream()
-                                        .map(
-                                                t -> "seat_hold:"
-                                                        + booking.getShowtime().getId()
-                                                        + ":"
-                                                        + t.getSeat().getId())
-                                        .toList();
-                                redisTemplate.delete(keys);
-                            } catch (Exception ex) {
-                                log.warn("Không thể xóa Redis seat lock: {}", ex.getMessage());
-                            }
-                        }
-                    });
-        }
-
-        if (success) {
-            return ApiResponse.<Map<String, Object>>builder()
-                    .code(200)
-                    .message("GD Thành công")
-                    .result(verify)
-                    .build();
-        }
-
-        return ApiResponse.<Map<String, Object>>builder()
-                .code(99)
-                .message("GD Không thành công")
-                .result(verify)
-                .build();
+        Map<String, String> outcome = applyVerifiedCallback(params);
+        boolean paid = "true".equals(outcome.get("paid"));
+        verified.put("paymentApplied", paid);
+        verified.put("vnp_ResponseCodeDesc", RESPONSE_CODE_DESC.getOrDefault(params.get("vnp_ResponseCode"), "Lỗi khác"));
+        verified.put("vnp_TransactionStatusDesc", TRANSACTION_STATUS_DESC.getOrDefault(params.get("vnp_TransactionStatus"), "Không xác định"));
+        return ApiResponse.<Map<String, Object>>builder().code(paid ? 200 : 99)
+                .message(paid ? "Thanh toán đã được ghi nhận" : outcome.get("Message"))
+                .result(verified).build();
     }
 
     @Transactional
     public Map<String, String> processIpn(Map<String, String> params) {
-        try {
-            Map<String, Object> verify = verifyCallback(params);
-            boolean validSignature = Boolean.TRUE.equals(verify.get("validSignature"));
-            if (!validSignature) {
-                return rsp("97", "Invalid Checksum");
-            }
-
-            String txnRef = params.get("vnp_TxnRef");
-            if (txnRef == null || txnRef.isBlank()) {
-                return rsp("01", "Order not Found");
-            }
-
-            Optional<Booking> bookingOpt = findBookingByTxnRef(txnRef);
-
-            if (bookingOpt.isEmpty()) {
-                return rsp("01", "Order not Found");
-            }
-
-            Booking booking = bookingOpt.get();
-            String vnpAmount = params.get("vnp_Amount");
-            long expectedAmount = booking.getPayment().getAmount().movePointRight(2).longValue();
-            if (vnpAmount == null || !String.valueOf(expectedAmount).equals(vnpAmount)) {
-                return rsp("04", "Invalid Amount");
-            }
-
-            if (booking.getStatus() == BookingStatus.COMPLETED
-                    || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID) {
-                return rsp("02", "Order already completed");
-            }
-
-            boolean paymentSuccess = "00".equals(params.get("vnp_ResponseCode"))
-                    && "00".equals(params.get("vnp_TransactionStatus"));
-
-            booking.getPayment().setProviderTxnId(params.get("vnp_TransactionNo"));
-            booking.getPayment().setPaymentStatus(paymentSuccess ? PaymentStatus.PAID : PaymentStatus.CANCELLED);
-            if (paymentSuccess) {
-                booking.getPayment().setPaidAt(LocalDateTime.now());
-            }
-
-            booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
-            if (paymentSuccess) {
-                booking.setStatus(BookingStatus.COMPLETED);
-
-                // Xoá Redis keys khi thanh toán thành công
-                try {
-                    List<String> keysToDelete = booking.getTickets().stream()
-                            .map(
-                                    ticket -> "seat_hold:"
-                                            + booking.getShowtime().getId()
-                                            + ":"
-                                            + ticket.getSeat().getId())
-                            .toList();
-                    redisTemplate.delete(keysToDelete);
-                    log.info("Xoá {} Redis keys khi thanh toán thành công", keysToDelete.size());
-                } catch (Exception ex) {
-                    log.error("Lỗi khi xoá Redis keys: {}", ex.getMessage());
-                }
-
-                booking
-                        .getTickets()
-                        .forEach(
-                                ticket -> {
-                                    ticket.setTicketStatus(TicketStatus.BOOKED);
-                                    ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
-                                    ticketRepository.save(ticket);
-                                    simpMessagingTemplate.convertAndSend(
-                                            "/topic/showtime/" + ticket.getShowtime().getId() + "/seats",
-                                            SeatStatusEvent.builder()
-                                                    .seatId(ticket.getSeat().getId())
-                                                    .status("BOOKED")
-                                                    .build());
-                                });
-            } else {
-                booking.setStatus(BookingStatus.CANCELLED);
-
-                // Xoá Redis keys hold vé khi thanh toán thất bại
-                try {
-                    List<String> keysToDelete = booking.getTickets().stream()
-                            .map(
-                                    ticket -> "seat_hold:"
-                                            + booking.getShowtime().getId()
-                                            + ":"
-                                            + ticket.getSeat().getId())
-                            .toList();
-                    redisTemplate.delete(keysToDelete);
-                    log.info("Xoá {} Redis keys khi thanh toán thất bại", keysToDelete.size());
-                } catch (Exception ex) {
-                    log.error("Lỗi khi xoá Redis keys: {}", ex.getMessage());
-                }
-
-                booking
-                        .getTickets()
-                        .forEach(
-                                ticket -> {
-                                    ticket.setBooking(null);
-                                    ticket.setTicketStatus(TicketStatus.AVAILABLE);
-                                    ticketRepository.save(ticket);
-                                    simpMessagingTemplate.convertAndSend(
-                                            "/topic/showtime/" + ticket.getShowtime().getId() + "/seats",
-                                            SeatStatusEvent.builder()
-                                                    .seatId(ticket.getSeat().getId())
-                                                    .status("AVAILABLE")
-                                                    .build());
-                                });
-            }
-
-            bookingRepository.save(booking);
-            if (paymentSuccess) {
-                eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
-            }
-            return rsp("00", "Confirm Success");
-
-        } catch (Exception e) {
-            log.error("Error processing IPN: {}", e.getMessage(), e);
+        if (!Boolean.TRUE.equals(verifyCallback(params).get("validSignature"))) {
+            return rsp("97", "Invalid Checksum");
         }
-        return params;
+        Map<String, String> outcome = applyVerifiedCallback(params);
+        return rsp(outcome.get("RspCode"), outcome.get("Message"));
+    }
+
+    private Map<String, String> applyVerifiedCallback(Map<String, String> params) {
+        String txnRef = params.get("vnp_TxnRef");
+        if (txnRef == null || txnRef.isBlank()) return rsp("01", "Order not Found");
+        Booking booking = findBookingByTxnRef(txnRef).orElse(null);
+        if (booking == null || booking.getPayment() == null) return rsp("01", "Order not Found");
+        String expected = booking.getPayment().getAmount().movePointRight(2).toBigIntegerExact().toString();
+        if (!expected.equals(params.get("vnp_Amount"))) return rsp("04", "Invalid Amount");
+
+        boolean success = "00".equals(params.get("vnp_ResponseCode"))
+                && "00".equals(params.get("vnp_TransactionStatus"));
+        if (booking.getStatus() == BookingStatus.COMPLETED
+                && booking.getPayment().getPaymentStatus() == PaymentStatus.PAID) {
+            Map<String, String> result = rsp("02", "Order already completed");
+            result.put("paid", String.valueOf(success));
+            return result;
+        }
+        if (!isPendingPayment(booking)) return rsp("02", "Order is no longer payable");
+        if (booking.getTickets().isEmpty() || booking.getTickets().stream().anyMatch(ticket ->
+                ticket.getTicketStatus() != TicketStatus.HOLDING || ticket.getBooking() == null
+                        || !booking.getId().equals(ticket.getBooking().getId()))) {
+            return rsp("02", "Seats are no longer reserved for this order");
+        }
+
+        booking.getPayment().setProviderTxnId(params.get("vnp_TransactionNo"));
+        booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
+        booking.getPayment().setPaymentStatus(success ? PaymentStatus.PAID : PaymentStatus.CANCELLED);
+        booking.setStatus(success ? BookingStatus.COMPLETED : BookingStatus.CANCELLED);
+        if (success) booking.getPayment().setPaidAt(LocalDateTime.now());
+        for (Ticket ticket : booking.getTickets()) {
+            if (success) {
+                ticket.setTicketStatus(TicketStatus.BOOKED);
+                ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
+            } else {
+                ticket.setBooking(null);
+                ticket.setTicketStatus(TicketStatus.AVAILABLE);
+                ticket.setQrCode(null);
+                ticket.setCheckedInAt(null);
+                ticket.setCheckedInBy(null);
+            }
+            ticketRepository.save(ticket);
+            BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
+                    "/topic/showtime/" + ticket.getShowtime().getId() + "/seats",
+                    SeatStatusEvent.builder().seatId(ticket.getSeat().getId())
+                            .status(success ? "BOOKED" : "AVAILABLE").build()));
+        }
+        BookingTransactionEffects.releaseAfterCommit(redisTemplate, booking.getShowtime().getId(),
+                booking.getTickets(), booking.getBookingCode());
+        bookingRepository.save(booking);
+        if (!success) foodStockService.release(booking);
+        if (success) eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
+        Map<String, String> result = rsp("00", "Confirm Success");
+        result.put("paid", String.valueOf(success));
+        return result;
+    }
+
+    private boolean isPendingPayment(Booking booking) {
+        return booking.getStatus() == BookingStatus.PENDING && booking.getPayment() != null
+                && booking.getPayment().getPaymentStatus() == PaymentStatus.PENDING
+                && booking.getExpiresAt() != null && booking.getExpiresAt().isAfter(LocalDateTime.now());
     }
 
     private Map<String, String> rsp(String code, String message) {
@@ -488,13 +358,13 @@ public class VnpayService {
 
     private Optional<Booking> findBookingByTxnRef(String txnRef) {
         try {
-            Optional<Booking> bookingOpt = bookingRepository.findById(Long.valueOf(txnRef));
+            Optional<Booking> bookingOpt = bookingRepository.findByIdForUpdate(Long.valueOf(txnRef));
             if (bookingOpt.isPresent()) {
                 return bookingOpt;
             }
         } catch (NumberFormatException e) {
         }
-        return bookingRepository.findByBookingCode(txnRef);
+        return bookingRepository.findByBookingCodeForUpdate(txnRef);
     }
 
     private String getOrCreateTicketQrCode(Booking booking, Ticket ticket) {

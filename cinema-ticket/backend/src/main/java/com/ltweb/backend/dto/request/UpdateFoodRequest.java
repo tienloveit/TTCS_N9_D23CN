@@ -1,6 +1,7 @@
 package com.ltweb.backend.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +26,15 @@ public class UpdateFoodRequest {
 
     private Long branchId;
 
+    /** null = giữ nguyên số lượng tồn hiện tại. */
+    @Min(value = 0, message = "Stock quantity must not be negative")
+    private Integer stockQuantity;
 
+    /** true = chuyển món về trạng thái không giới hạn tồn kho. */
+    private Boolean unlimitedStock;
+
+    @Min(value = 0, message = "Low stock threshold must not be negative")
+    private Integer lowStockThreshold;
 
     private Boolean active;
 }

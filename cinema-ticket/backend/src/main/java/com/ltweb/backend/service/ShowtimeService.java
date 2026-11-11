@@ -55,6 +55,10 @@ public class ShowtimeService {
     private final ShowtimeMapper showtimeMapper;
     private final TicketService ticketService;
 
+    /** Optional để không phá vỡ constructor hiện có; dùng để hoàn tồn bắp nước khi huỷ booking. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private FoodStockService foodStockService;
+
     @Transactional
     public ShowtimeResponse createShowtime(CreateShowtimeRequest request) {
 
@@ -91,6 +95,17 @@ public class ShowtimeService {
 
         Showtime showtime = getShowtime(showtimeId);
         requireShowtimeAccess(showtime);
+
+        if (request.getTicketPrice() != null
+                && request.getTicketPrice().compareTo(showtime.getTicketPrice()) != 0) {
+            List<com.ltweb.backend.entity.Ticket> tickets = ticketRepository.findByShowtimeIdForUpdate(showtimeId);
+            if (tickets.stream().anyMatch(ticket -> ticket.getBooking() != null
+                    || ticket.getTicketStatus() != TicketStatus.AVAILABLE)) {
+                throw new AppException(ErrorCode.SHOWTIME_PRICE_LOCKED);
+            }
+            tickets.forEach(ticket -> ticket.setPrice(request.getTicketPrice()));
+            ticketRepository.saveAll(tickets);
+        }
 
         showtimeMapper.updateShowtime(showtime, request);
         if (showtime.getStatus() == null || showtime.getStatus() == ShowtimeStatus.OPEN) {
@@ -131,6 +146,9 @@ public class ShowtimeService {
                         b -> {
                             b.setStatus(BookingStatus.CANCELLED);
                             b.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
+                            if (foodStockService != null) {
+                                foodStockService.release(b);
+                            }
                             b.getTickets()
                                     .forEach(
                                             t -> {
@@ -239,6 +257,7 @@ public class ShowtimeService {
                                 st.put("startTime", s.getStartTime());
                                 st.put("endTime", s.getEndTime());
                                 st.put("status", s.getStatus());
+                                st.put("ticketPrice", s.getTicketPrice());
                                 int total = ticketRepository.countByShowtimeId(s.getId());
                                 int available = ticketRepository.countByShowtimeIdAndTicketStatus(
                                         s.getId(), TicketStatus.AVAILABLE);

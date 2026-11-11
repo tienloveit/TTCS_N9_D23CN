@@ -7,14 +7,12 @@ import com.ltweb.backend.dto.response.TicketCheckInResponse;
 import com.ltweb.backend.dto.response.TicketResponse;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Seat;
-import com.ltweb.backend.entity.SeatTypePrice;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
-import com.ltweb.backend.enums.SeatType;
 import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
@@ -22,11 +20,9 @@ import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.TicketMapper;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.SeatRepository;
-import com.ltweb.backend.repository.SeatTypePriceRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +46,6 @@ public class TicketService {
     private final BookingRepository bookingRepository;
     private final ShowtimeRepository showtimeRepository;
     private final SeatRepository seatRepository;
-    private final SeatTypePriceRepository seatTypePriceRepository;
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
     private final TicketMapper ticketMapper;
@@ -62,15 +57,10 @@ public class TicketService {
     public void createTicket(Showtime showtime) {
         List<Seat> seats = seatRepository.findByRoomId(showtime.getRoom().getId());
 
-        // lấy sẵn seatTypePrice ra thay vì mỗi lần lại phải chọc vào db để lấy, tránh N
-        // + 1
-        Map<SeatType, BigDecimal> pricesMap = seatTypePriceRepository.findAll().stream()
-                .collect(Collectors.toMap(SeatTypePrice::getSeatType, SeatTypePrice::getPrice));
-
         List<Ticket> tickets = seats.stream()
                 .map(
                         seat -> Ticket.builder()
-                                .price(pricesMap.get(seat.getSeatType()))
+                                .price(showtime.getTicketPrice())
                                 .ticketStatus(TicketStatus.AVAILABLE)
                                 .showtime(showtime)
                                 .seat(seat)
@@ -337,7 +327,8 @@ public class TicketService {
     private Optional<Ticket> findTicketByCheckInCode(String code) {
         Long ticketId = extractTicketId(code);
         if (ticketId != null) {
-            return ticketRepository.findById(ticketId);
+            return ticketRepository.findById(ticketId)
+                    .filter(ticket -> code.matches("\\d+") || code.equals(ticket.getQrCode()));
         }
         return ticketRepository.findByQrCode(code);
     }
@@ -363,6 +354,7 @@ public class TicketService {
         Booking booking = ticket.getBooking();
         if (booking == null
                 || booking.getStatus() != BookingStatus.COMPLETED
+                || booking.getPayment() == null
                 || booking.getPayment().getPaymentStatus() != PaymentStatus.PAID
                 || ticket.getTicketStatus() != TicketStatus.BOOKED) {
             throw new AppException(ErrorCode.INVALID_TICKET_CHECKIN);

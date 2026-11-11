@@ -1,6 +1,7 @@
 package com.ltweb.backend.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -29,7 +30,11 @@ public class CreateFoodRequest {
 
     private Long branchId;
 
+    @Min(value = 0, message = "Stock quantity must not be negative")
+    private Integer stockQuantity;
 
+    @Min(value = 0, message = "Low stock threshold must not be negative")
+    private Integer lowStockThreshold;
 
     private Boolean active;
 }

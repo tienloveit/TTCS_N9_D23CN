@@ -1,6 +1,8 @@
 package com.ltweb.backend.repository;
 
 import com.ltweb.backend.entity.Ticket;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -9,6 +11,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Ticket t where t.showtime.id = :showtimeId order by t.id")
+    List<Ticket> findByShowtimeIdForUpdate(@Param("showtimeId") Long showtimeId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Ticket t where t.showtime.id = :showtimeId and t.seat.id in :seatIds order by t.id")
+    List<Ticket> findSeatsForUpdate(@Param("showtimeId") Long showtimeId, @Param("seatIds") List<Long> seatIds);
 
     @Query("SELECT COUNT(t) FROM Ticket t"
             + " WHERE t.booking.user.id = :userId"
