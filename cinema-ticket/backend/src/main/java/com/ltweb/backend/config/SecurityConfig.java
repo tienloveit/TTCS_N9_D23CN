@@ -39,8 +39,7 @@ public class SecurityConfig {
             "/auth/forgot-password",
             "/auth/reset-password",
             "/oauth2/**",
-            "/login/oauth2/**",
-            "/api/v1/cleanup/**"
+            "/login/oauth2/**"
     };
 
     private final CustomUserDetailService userDetailsService;
@@ -58,7 +57,9 @@ public class SecurityConfig {
                                 .requestMatchers(PUBLIC_ENDPOINT)
                                 .permitAll()
                                 .requestMatchers("/v1/cleanup/**")
-                                .permitAll()
+                                .hasRole("ADMIN")
+                                .requestMatchers("/v1/vnpay/querydr", "/v1/vnpay/refund")
+                                .hasAnyRole("ADMIN", "MANAGER")
                                 .requestMatchers("/ws/**")
                                 .permitAll()
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/movie/**")

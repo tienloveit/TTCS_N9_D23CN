@@ -66,7 +66,14 @@ const RefundManagementPage = () => {
     if (!selected || submitting) return;
     setSubmitting(true);
     try {
-      await bookingApi.processRefund(selected.bookingId, approved, note);
+      const response = await bookingApi.processRefund(selected.bookingId, approved, note);
+      const updated = response.data.result;
+      if (approved && updated.status !== 'REFUNDED') {
+        toast.info(updated.refundGatewayMessage || 'Yêu cầu chưa được xác nhận hoàn tiền. Vui lòng kiểm tra lại kết quả.');
+        setSelected(updated);
+        await fetchRefunds();
+        return;
+      }
       toast.success(approved ? 'Đã duyệt hoàn tiền' : 'Đã từ chối hoàn tiền');
       setSelected(null);
       setNote('');
@@ -215,11 +222,14 @@ const RefundManagementPage = () => {
               <div style={{ gridColumn: 'span 2' }}><strong>Lý do khách gửi:</strong> {selected.refundReason || '-'}</div>
               {selected.refundProcessedAt && (
                 <div style={{ gridColumn: 'span 2' }}>
-                  <strong>Đã xử lý:</strong> {formatDateTime(selected.refundProcessedAt)} bởi {selected.refundProcessedByUsername || '-'}
+                  <strong>Lần xử lý gần nhất:</strong> {formatDateTime(selected.refundProcessedAt)} bởi {selected.refundProcessedByUsername || '-'}
                 </div>
               )}
             </div>
 
+            {selected.refundGatewayMessage && selected.status === 'REFUND_REQUESTED' && (
+              <p role="status">{selected.refundGatewayMessage}</p>
+            )}
             <label className="form-label">Ghi chú xử lý</label>
             <textarea
               className="input"
@@ -233,7 +243,7 @@ const RefundManagementPage = () => {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  disabled={submitting}
+                  disabled={submitting || ['PROCESSING', 'UNKNOWN'].includes(selected.refundGatewayStatus)}
                   onClick={() => handleDecision(false)}
                 >
                   <XIcon size={16} />
@@ -246,7 +256,9 @@ const RefundManagementPage = () => {
                   onClick={() => handleDecision(true)}
                 >
                   <CheckIcon size={16} />
-                  <span>{submitting ? 'Đang xử lý...' : 'Duyệt hoàn tiền'}</span>
+                  <span>{submitting ? 'Đang xử lý...'
+                    : ['PROCESSING', 'UNKNOWN'].includes(selected.refundGatewayStatus) ? 'Kiểm tra kết quả'
+                      : selected.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt hoàn tiền'}</span>
                 </button>
               </div>
             )}

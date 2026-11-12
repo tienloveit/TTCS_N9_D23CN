@@ -92,10 +92,13 @@ Frontend có route guard để điều hướng theo role. Backend kiểm tra qu
 
 ## Trạng thái nghiệp vụ hiện tại
 
+- API cleanup mặc định tắt; chỉ đăng ký khi có profile `dev`, không có `prod`, và `app.maintenance.cleanup-enabled=true`, đồng thời yêu cầu ADMIN. Script reset demo đăng nhập trước cleanup. VNPay query/refund chỉ cho ADMIN hoặc MANAGER đúng chi nhánh; service kiểm tra tài khoản hiện tại trong DB và dùng thông tin giao dịch phía server. Xem backend context để bật chế độ reset và biết giới hạn với giao dịch cũ.
+- JWT phân biệt `token_use=access|refresh`; Redis tách `auth:access:revoked:{jti}` và `auth:refresh:active:{jti}`. Chữ ký/claim được kiểm tra trước Redis; refresh tiêu thụ nguyên tử, chặn BLOCKED/INACTIVE. Token cũ thiếu claim mới bị từ chối và cần đăng nhập lại. Frontend dùng chung một lần refresh cho các request 401 đồng thời.
 - Giới hạn số vé mỗi giao dịch vẫn tồn tại: `booking.maxTicketsPerTransaction`, mặc định 8, áp dụng cho khách và nhân viên. Giới hạn cộng dồn theo phim `booking.maxTicketsPerMovie` đã gỡ bỏ.
 - Thời gian giữ ghế lấy từ `booking.holdMinutes`, mặc định 6 phút. Redis key `seat_hold:{showtimeId}:{seatId}` chứa mã booking làm chủ sở hữu.
 - `BookingTransactionEffects` chỉ giải phóng khóa đúng chủ sở hữu, dọn khóa khi rollback và thực hiện các cập nhật bên ngoài DB sau commit.
 - Đơn tiền mặt tại quầy hoàn tất ngay; phương thức khác tiền mặt tạo đơn chờ thanh toán. VNPay tạo URL dựa trên booking và số tiền lưu phía server.
+- Duyệt hoàn VNPAY và API refund trực tiếp dùng chung `BookingRefundService`: commit lần thử trước gọi cổng, chỉ hoàn tất REFUNDED sau xác nhận có chữ ký/đúng giao dịch. PROCESSING/UNKNOWN không gửi lệnh refund mới và không được từ chối; bấm lại chỉ kiểm tra kết quả. CASH hoàn thủ công. Migration `20261112_refund_gateway_attempt.sql` thêm marker nullable; lịch sử REFUNDED cũ phải đối soát riêng. Xem backend context để biết giới hạn phục hồi và kiểm thử.
 - `BookingCleanupJob` chạy mỗi 120 giây, chuyển đơn chờ đã hết hạn sang `CANCELLED`, giải phóng ghế và hoàn tồn bắp nước.
 - Tồn kho bắp nước **vẫn hoạt động** trong `FoodStockService`: reserve khi đặt, release khi hủy/hết hạn; tồn `null` nghĩa là không giới hạn. Có cảnh báo `LOW_STOCK`. Bảng lịch sử `food_stock_transactions` là phần cũ có migration xóa riêng.
 - Đã gỡ mở/chốt ca, bàn giao tiền, chấm công và lịch trực; staff còn `/staff/dashboard`, bán vé, check-in, đơn hàng và thông báo.
@@ -109,4 +112,4 @@ Frontend có route guard để điều hướng theo role. Backend kiểm tra qu
 - Đổi DTO phải kiểm tra mapper, API client và các trang dùng dữ liệu. Không sửa mã sinh trong `target/` hoặc bundle `dist/` như mã nguồn.
 - Icon UI dùng Lucide qua `frontend/src/components/Common/CinemaIcons.jsx`; không thêm emoji icon hoặc SVG tự viết. Chỉ logo thương hiệu `MoviePTITLogoIcon` được dùng SVG tùy chỉnh.
 - Migration trong `backend/migrations/` cần đọc riêng theo schema hiện có; có script đổi tên/xóa cột, bảng và dữ liệu. `ddl-auto: update` không thay thế chuyển đổi dữ liệu. Việc cập nhật context này không chạy migration.
-- Backend có test nghiệp vụ trong `src/test`; frontend hiện có build/lint, chưa khai báo script hoặc framework test riêng.
+- Backend có test nghiệp vụ trong `src/test`, bao gồm `JwtSecurityTest`. Frontend có build/lint và test interceptor JWT bằng Node: `node --experimental-vm-modules --test tests/axiosClient.test.mjs` từ thư mục frontend; chưa khai báo script `test` trong package.json.

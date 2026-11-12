@@ -75,6 +75,7 @@ public class BookingService {
     private final SystemSettingService systemSettingService;
     private final NotificationService notificationService;
     private final FoodStockService foodStockService;
+    private final BookingRefundService bookingRefundService;
 
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request) {
@@ -820,91 +821,13 @@ public class BookingService {
      * Admin/Manager duyệt hoặc từ chối yêu cầu hoàn tiền.
      */
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    @Transactional
     public BookingResponse processRefund(Long bookingId, boolean approved) {
         return processRefund(bookingId, approved, null);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    @Transactional
     public BookingResponse processRefund(Long bookingId, boolean approved, String note) {
-        Booking booking = getBookingForUpdate(bookingId);
-        requireRefundManagementAccess(booking);
-        User processor = getUserCurrent();
-
-        if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
-            throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
-        }
-
-        if (approved && booking.getTickets().stream().anyMatch(ticket -> ticket.getCheckedInAt() != null)) {
-            throw new AppException(ErrorCode.BOOKING_CANNOT_REFUND);
-        }
-
-        booking.getPayment().setRefundProcessNote(trimToNull(note));
-        booking.getPayment().setRefundProcessedBy(processor);
-        booking.getPayment().setRefundProcessedAt(LocalDateTime.now());
-
-        if (approved) {
-            booking.setStatus(BookingStatus.REFUNDED);
-            booking.getPayment().setPaymentStatus(PaymentStatus.REFUNDED);
-            booking.getPayment().setRefundedAt(LocalDateTime.now());
-            booking.getPayment().setRefundAmount(booking.getTotalAmount());
-
-            // Trả ghế về AVAILABLE
-            booking
-                    .getTickets()
-                    .forEach(
-                            ticket -> {
-                                ticket.setBooking(null);
-                                ticket.setTicketStatus(TicketStatus.AVAILABLE);
-                            ticket.setQrCode(null);
-                            ticket.setCheckedInAt(null);
-                            ticket.setCheckedInBy(null);
-                                ticket.setQrCode(null);
-                                ticketRepository.save(ticket);
-
-                                BookingTransactionEffects.afterCommit(() -> simpMessagingTemplate.convertAndSend(
-                                        "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
-                                        SeatStatusEvent.builder()
-                                                .seatId(ticket.getSeat().getId())
-                                                .status("AVAILABLE")
-                                                .build()));
-                            });
-
-            // Trừ lại spending nếu cần
-            User user = booking.getUser();
-            if (user != null && user.getTotalSpending() != null) {
-                BigDecimal newSpending = user.getTotalSpending().subtract(booking.getTotalAmount());
-                if (newSpending.compareTo(BigDecimal.ZERO) < 0)
-                    newSpending = BigDecimal.ZERO;
-                user.setTotalSpending(newSpending);
-                user.setMembershipTier(
-                        com.ltweb.backend.enums.MembershipTier.fromSpending(user.getTotalSpending()));
-                userRepository.save(user);
-            }
-
-            log.info("Refund APPROVED for booking {}", bookingId);
-            auditLogService.record(
-                    AuditAction.REFUND_APPROVED,
-                    "Booking",
-                    bookingId,
-                    "Refund approved for booking " + booking.getBookingCode());
-        } else {
-            // Từ chối → quay lại COMPLETED
-            booking.setStatus(BookingStatus.COMPLETED);
-            booking.getPayment().setRefundReason(null);
-            booking.getPayment().setRefundAmount(BigDecimal.ZERO);
-
-            log.info("Refund REJECTED for booking {}", bookingId);
-            auditLogService.record(
-                    AuditAction.REFUND_REJECTED,
-                    "Booking",
-                    bookingId,
-                    "Refund rejected for booking " + booking.getBookingCode());
-        }
-
-        bookingRepository.save(booking);
-        return bookingMapper.toBookingResponse(booking);
+        return bookingRefundService.processRefund(bookingId, approved, note);
     }
 
     private int getBookingHoldMinutes() {

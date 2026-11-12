@@ -114,7 +114,7 @@ class BookingTicketLimitTest {
             service = new BookingService(bookings, showtimes, tickets, mock(FoodRepository.class), users,
                     redis, mock(SimpMessagingTemplate.class), mapper, mock(PasswordEncoder.class),
                     mock(ApplicationEventPublisher.class), mock(PromotionService.class), mock(AuditLogService.class),
-                    settings, mock(NotificationService.class), mock(FoodStockService.class));
+                    settings, mock(NotificationService.class), mock(FoodStockService.class), mock(BookingRefundService.class));
         }
 
         BookingResponse book(List<Long> seatIds) {

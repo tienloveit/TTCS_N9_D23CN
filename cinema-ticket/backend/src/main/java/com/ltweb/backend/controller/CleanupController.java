@@ -3,7 +3,10 @@ package com.ltweb.backend.controller;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.service.DataSeedService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,6 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/v1/cleanup")
 @RequiredArgsConstructor
+@Profile("dev & !prod")
+@ConditionalOnProperty(name = "app.maintenance.cleanup-enabled", havingValue = "true")
+@PreAuthorize("hasRole('ADMIN')")
 public class CleanupController {
 
     private final JdbcTemplate jdbcTemplate;

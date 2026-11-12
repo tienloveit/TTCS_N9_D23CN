@@ -278,7 +278,7 @@ Các lệnh khác:
 
 ## 8. Nạp dữ liệu demo (tùy chọn)
 
-Khi backend **đang chạy**, mở PowerShell tại `cinema-ticket/backend`:
+Để reset demo, backend phải được khởi động với profile `dev` (không có `prod`) và `app.maintenance.cleanup-enabled=true`; API cleanup mặc định tắt và yêu cầu ADMIN. Cách bật được ghi trong [backend context](cinema-ticket/backend/backend_overview.md). Khi backend **đang chạy** với cấu hình này, mở PowerShell tại `cinema-ticket/backend`:
 
 ```powershell
 .\seed-data.ps1

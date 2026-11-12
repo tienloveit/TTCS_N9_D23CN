@@ -35,6 +35,8 @@ public interface BookingMapper {
     @Mapping(target = "refundProcessedAt", source = "payment.refundProcessedAt")
     @Mapping(target = "refundedAt", source = "payment.refundedAt")
     @Mapping(target = "refundAmount", source = "payment.refundAmount")
+    @Mapping(target = "refundGatewayStatus", source = "payment.refundGatewayStatus")
+    @Mapping(target = "refundGatewayMessage", source = "payment.refundGatewayMessage")
     BookingResponse toBookingResponse(Booking booking);
 
     default String ticketToSeatCode(Ticket ticket) {

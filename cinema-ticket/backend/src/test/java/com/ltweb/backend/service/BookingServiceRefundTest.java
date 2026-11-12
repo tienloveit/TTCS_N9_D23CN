@@ -49,6 +49,17 @@ class BookingServiceRefundTest {
   @Mock private ApplicationEventPublisher eventPublisher;
   @Mock private PromotionService promotionService;
   @Mock private AuditLogService auditLogService;
+  @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+  @org.junit.jupiter.api.BeforeEach
+  void wireRefundProcessor() {
+    when(transactionManager.getTransaction(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
+    org.springframework.test.util.ReflectionTestUtils.setField(bookingService, "bookingRefundService",
+        new BookingRefundService(bookingRepository, ticketRepository, userRepository, bookingMapper,
+            auditLogService, simpMessagingTemplate, org.mockito.Mockito.mock(VnpayRefundGateway.class), transactionManager,
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)));
+  }
 
   @InjectMocks private BookingService bookingService;
 
@@ -83,31 +94,32 @@ class BookingServiceRefundTest {
   void processRefund_rejectsStaffEvenWhenBookingIsSameBranch() {
     authenticate("staff");
     User staff = User.builder().id(7L).username("staff").role(UserRole.STAFF).branchId(1L).build();
-    Booking booking = refundRequestedBookingInBranch(1L);
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
-    when(bookingRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(booking));
 
     assertThatThrownBy(() -> bookingService.processRefund(5L, true))
         .isInstanceOf(AppException.class)
         .extracting("errorCode")
-        .isEqualTo(ErrorCode.UNAUTHORIZED);
+        .isEqualTo(ErrorCode.ACCESS_DENIED);
   }
 
   private void authenticate(String username) {
     SecurityContextHolder.getContext()
-        .setAuthentication(new UsernamePasswordAuthenticationToken(username, "n/a"));
+        .setAuthentication(new UsernamePasswordAuthenticationToken(username, "n/a", List.of()));
   }
 
   private Booking refundRequestedBookingInBranch(Long branchId) {
     Branch branch = Branch.builder().branchId(branchId).name("Branch").build();
     Room room = Room.builder().id(2L).name("Room 1").branch(branch).build();
     Showtime showtime = Showtime.builder().id(3L).room(room).build();
-    return Booking.builder()
+    Booking booking = Booking.builder()
         .id(5L)
         .bookingCode("BK-REFUND")
         .showtime(showtime)
         .totalAmount(BigDecimal.valueOf(100000))
         .status(BookingStatus.REFUND_REQUESTED)
         .build();
+    booking.getPayment().setPaymentMethod(com.ltweb.backend.enums.PaymentMethod.CASH);
+    booking.getPayment().setPaymentStatus(com.ltweb.backend.enums.PaymentStatus.PAID);
+    return booking;
   }
 }

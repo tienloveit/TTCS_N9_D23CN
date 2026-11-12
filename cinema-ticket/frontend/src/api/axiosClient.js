@@ -7,6 +7,8 @@ const axiosClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let refreshRequest = null;
+
 // Request interceptor — tự gắn JWT vào header
 axiosClient.interceptors.request.use(
   (config) => {
@@ -25,20 +27,27 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest.skipAuth && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest.skipAuth && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('No refresh token');
-
-        const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
-
-        const { accessToken, refreshToken: newRefreshToken } = res.data.result;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        let accessToken = localStorage.getItem('accessToken');
+        // A late 401 may belong to a request sent before another request refreshed the token.
+        if (!accessToken || originalRequest.headers?.Authorization === `Bearer ${accessToken}`) {
+          if (!refreshRequest) {
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (!refreshToken) throw new Error('No refresh token');
+            refreshRequest = axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
+              .then((res) => {
+                const tokens = res.data.result;
+                localStorage.setItem('accessToken', tokens.accessToken);
+                localStorage.setItem('refreshToken', tokens.refreshToken);
+                return tokens.accessToken;
+              })
+              .finally(() => { refreshRequest = null; });
+          }
+          accessToken = await refreshRequest;
+        }
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return axiosClient(originalRequest);

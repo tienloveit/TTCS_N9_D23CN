@@ -30,6 +30,16 @@ mvn -q -DskipTests package
 
 MySQL/Redis phải sẵn sàng cho runtime. `ApplicationInitConfig`/`DataSeedService` khởi tạo dữ liệu demo; đọc seed trước khi dùng trên dữ liệu thật. `seed-data.ps1` có bước cleanup/reset dữ liệu, không phải lệnh chạy ứng dụng thông thường.
 
+API cleanup mặc định không được đăng ký. Chỉ bật khi profile `dev` đang hoạt động, không có profile `prod`, và `app.maintenance.cleanup-enabled=true`; vẫn bắt buộc quyền ADMIN. Để dùng script reset demo, khởi động backend trong môi trường phát triển với:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "dev"
+$env:APP_MAINTENANCE_CLEANUP_ENABLED = "true"
+mvn spring-boot:run
+```
+
+`seed-data.ps1` đăng nhập admin trước cleanup và đăng nhập lại sau khi reset. Khi dừng dùng chế độ reset, gỡ biến `APP_MAINTENANCE_CLEANUP_ENABLED` khỏi môi trường chạy.
+
 ## Kiến trúc và nơi đọc code
 
 `controller` nhận request → `service` kiểm tra quyền, nghiệp vụ và transaction → `repository` truy cập entity → `mapper` tạo DTO. `config` chứa Security/JWT/Redis/WebSocket/VNPay/OAuth2; `exception` chứa `AppException`, `ErrorCode`, handler; `event` chứa sự kiện thanh toán; `job` dọn đơn hết hạn.
@@ -66,11 +76,16 @@ Entity dùng PK `id`. Các ràng buộc đáng chú ý: room `(branch_id, code)`
 
 ## Auth và phân quyền
 
-JWT HS512; access token 30 phút, refresh token 30 ngày. Redis lưu refresh token còn hiệu lực và access token đã thu hồi. Refresh tiêu thụ token cũ rồi cấp cặp mới; logout blacklist access token đến khi hết hạn. Role claim được chuyển thành `ROLE_*`; quyền chi nhánh/chủ sở hữu còn được kiểm tra trong service.
+JWT HS512; access token 30 phút (`token_use=access`), refresh token 30 ngày (`token_use=refresh`). Hai loại token không dùng thay nhau. Xác minh thuật toán, chữ ký và claim bắt buộc (`sub`, `jti`, `iat`, `exp`, `role`, `token_use`) trước khi truy cập Redis; token lỗi trả lỗi xác thực có kiểm soát.
+
+- Refresh đang hoạt động lưu ở `auth:refresh:active:{jti}`, giá trị là username, TTL đến thời điểm token hết hạn. Refresh dùng Lua compare-and-delete nguyên tử, chỉ một request dùng được token cũ, rồi cấp/lưu cặp mới. Tài khoản BLOCKED/INACTIVE không được cấp token mới qua refresh.
+- Logout blacklist access token ở `auth:access:revoked:{jti}` đến khi hết hạn. Access token bị thu hồi không thể dùng để refresh. Logout hiện thu hồi access token được gửi lên, không thu hồi mọi refresh session của tài khoản.
+- `RedisToken`/`RedisTokenRepository` là mô hình cũ, không còn được luồng auth mới sử dụng. Không cần xóa dữ liệu Redis cũ để cập nhật; token thiếu `token_use` bị từ chối, người dùng cần đăng nhập lại sau triển khai.
+- Role claim được chuyển thành `ROLE_*`; quyền chi nhánh/chủ sở hữu còn được kiểm tra trong service. Frontend gộp các request 401 đồng thời vào một lần refresh và dùng lại access token mới cho phản hồi 401 đến muộn.
 
 OTP dùng SecureRandom tạo chuỗi 6 chữ số, TTL 5 phút, key `otp:code:{email}`. Bộ đếm `otp:limit:{email}` từ chối khi vượt 5 lần; TTL bộ đếm được đặt lại 1 phút sau mỗi lần increment.
 
-`SecurityConfig` cho public các endpoint đăng ký/đăng nhập/refresh/quên mật khẩu, OAuth2, callback VNPay, WebSocket, một số GET danh mục và cleanup. GET public ở filter vẫn có thể bị chặn bởi method security. Các route khác yêu cầu auth; đọc cả controller lẫn service để xác định quyền đầy đủ.
+`SecurityConfig` cho public các endpoint đăng ký/đăng nhập/refresh/quên mật khẩu, OAuth2, callback VNPay, WebSocket và một số GET danh mục. Cleanup yêu cầu ADMIN và điều kiện môi trường ở trên. GET public ở filter vẫn có thể bị chặn bởi method security. Các route khác yêu cầu auth; đọc cả controller lẫn service để xác định quyền đầy đủ.
 
 - ADMIN có phạm vi toàn hệ thống; MANAGER/STAFF chịu kiểm tra chi nhánh trong các nghiệp vụ tương ứng.
 - Bán vé tại quầy và staff dashboard: ADMIN/STAFF.
@@ -104,6 +119,12 @@ CASH hoặc phương thức null: Booking COMPLETED, Payment PAID, ticket BOOKED
 
 `POST /v1/vnpay/payment-url` yêu cầu booking tồn tại và còn chờ thanh toán; kiểm tra chủ đơn/người bán/ADMIN. Số tiền lấy từ Payment đã lưu, txnRef dùng booking ID. URL được ký HMAC-SHA512. Return/IPN xác minh callback và xử lý trạng thái qua `VnpayService`.
 
+`POST /v1/vnpay/querydr` và `/v1/vnpay/refund` yêu cầu ADMIN hoặc MANAGER ở filter và method security. Service kiểm tra lại tài khoản còn hoạt động, role và chi nhánh hiện tại trong DB; MANAGER chỉ được thao tác đơn thuộc chi nhánh được phân công. Callback return/IPN vẫn public để VNPay gọi.
+
+Hai API quản lý nhận `orderId` để tìm đơn, rồi dùng booking ID chuẩn và thời gian giao dịch lưu trong Payment. Hoàn tiền trực tiếp chỉ cho đơn VNPAY/PAID đang REFUND_REQUESTED, chưa check-in và có mã giao dịch nhà cung cấp; số tiền, người thực hiện và loại hoàn toàn phần lấy từ server. DTO cũ vẫn được nhận để tương thích: `amount` phải khớp số tiền đã lưu và `trantype` phải là `02`; yêu cầu hoàn một phần hoặc sai số tiền bị từ chối. `user`/`transDate` từ client không quyết định payload gửi cổng thanh toán.
+
+URL thanh toán mới dùng `Payment.paymentCreatedAt` làm `vnp_CreateDate`, để các lệnh quản lý tái sử dụng đúng thời gian này. Với URL/đơn phát sinh trước bản sửa, cần đối chiếu timestamp giao dịch gốc khi thực hiện truy vấn/hoàn tiền, vì trước đây URL có thể dùng thời gian khác giá trị đã lưu.
+
 Thanh toán thành công cập nhật Booking COMPLETED, Payment PAID/VNPAY, ticket BOOKED, QR, release hold và thông báo realtime; publish sự kiện gửi vé. Thanh toán thất bại/hủy giải phóng ghế và hoàn tồn theo đường xử lý tương ứng. Khi sửa callback, giữ tính idempotent và kiểm tra số tiền/trạng thái.
 
 `BookingTicketEmailListener.sendTicketEmail` nghe `BookingPaidEvent` bằng `@TransactionalEventListener(AFTER_COMMIT)`, đọc booking trong transaction mới rồi gọi `EmailService.sendBookingTickets`.
@@ -112,7 +133,15 @@ Thanh toán thành công cập nhật Booking COMPLETED, Payment PAID/VNPAY, tic
 
 Hủy booking chỉ cho đơn PENDING theo quyền truy cập. `BookingCleanupJob.releaseExpiredBookings` chạy mỗi 120 giây, khóa và kiểm tra lại trạng thái/expiry, chuyển Booking/Payment sang CANCELLED, trả ticket AVAILABLE, xóa QR/check-in, hoàn tồn và giải phóng Redis sau commit.
 
-Khách gửi yêu cầu hoàn tiền; ADMIN/MANAGER duyệt/từ chối theo chi nhánh. Chấp thuận cập nhật REFUNDED, ghi người xử lý/ghi chú/số tiền, trả ghế, điều chỉnh tổng chi tiêu và hạng thành viên. Không duyệt nếu vé đã check-in. Từ chối đưa booking về COMPLETED. Không đồng nhất thao tác duyệt nội bộ với API hoàn tiền trực tiếp của nhà cung cấp VNPay.
+Khách gửi yêu cầu hoàn tiền; ADMIN/MANAGER duyệt/từ chối theo chi nhánh. `BookingService.processRefund` và API VNPay refund cùng đi qua `BookingRefundService`. Với VNPAY, service khóa booking và commit mã lần thử/trạng thái PROCESSING vào Payment trước khi gọi mạng; không giữ transaction DB trong lúc chờ VNPay. Chỉ phản hồi có chữ ký hợp lệ, đúng merchant/đơn/số tiền, loại hoàn toàn phần `02`, response code `00`, transaction status `00` và mã giao dịch mới cho phép hoàn tất. `VnpayRefundGateway` kiểm tra chữ ký theo đặc tả [querydr/refund VNPay](https://sandbox.vnpayment.vn/apis/docs/truy-van-hoan-tien/querydr%26refund.html); HTTP thành công hoặc response code `00` riêng lẻ chưa đủ.
+
+Payment lưu `refundRequestId`, `refundGatewayStatus`, `refundRequestedAt`, `refundGatewayCode`, `refundGatewayMessage`. Timeout, phản hồi không xác thực, mã trùng/chưa rõ kết quả hoặc trạng thái đang xử lý giữ UNKNOWN; booking vẫn REFUND_REQUESTED và payment vẫn PAID. Bấm duyệt lại ở UNKNOWN chỉ query kết quả, không gửi thêm lệnh refund. PROCESSING trong 60 giây trả trạng thái đang chờ; quá thời gian đó cũng query để phục hồi sau crash. Kết quả query chỉ nói về thanh toán gốc (type `01`) không được xem là xác nhận hoàn tiền; nếu cổng không cung cấp xác nhận refund thì tiếp tục chờ và cần đối soát với VNPay, không tự sửa marker để gửi lại. Chỉ từ chối rõ ràng, có xác thực, mới đặt FAILED để cho phép thử mới. HTTP connect timeout 5 giây, read timeout 15 giây.
+
+Mỗi transaction của coordinator xóa cache JPA của request trước khi đọc lại dưới khóa, tránh dùng entity cũ khi Open EntityManager in View đang bật. Khi phản hồi tới muộn, service kiểm tra lại mã lần thử và trạng thái cuối cùng; kết quả của lần thử cũ không được ghi đè lần mới.
+
+Sau xác nhận thành công, transaction mới chuyển Booking/Payment sang REFUNDED, ghi số tiền/ngày hoàn, trả ghế, điều chỉnh tổng chi tiêu và hạng thành viên; thông báo ghế chạy sau commit. Duyệt lặp khi đã REFUNDED không hoàn lại lần nữa. Người xử lý/ghi chú được lưu từ lúc gửi yêu cầu; không đồng nghĩa đã hoàn tiền. Không duyệt nếu vé đã check-in. CASH vẫn được xác nhận hoàn thủ công tại quầy; các phương thức khác chưa được hỗ trợ tự động. Từ chối đưa booking về COMPLETED nhưng bị chặn khi lần thử còn PROCESSING/UNKNOWN. Hoàn tiền không tự coi bắp nước đã được trả vật lý.
+
+UI quản lý đọc trạng thái thực tế: chỉ báo thành công khi REFUNDED; nếu chưa xác nhận thì giữ đơn chờ và hiển thị “Kiểm tra kết quả”. API `/v1/vnpay/refund` trả tên trạng thái booking trong `result`, thay cho phản hồi thô từ cổng.
 
 ## Bắp nước, realtime và check-in
 
@@ -152,8 +181,12 @@ System settings mặc định: `booking.holdMinutes=6`, `booking.maxTicketsPerTr
 
 `migrations/` có SQL cho PK `id`, tách payments, đổi cột người bán, giá chung theo suất, công nghệ phòng/định dạng chiếu, hiển thị phim, ràng buộc dữ liệu, check-in actor và gỡ giới hạn theo phim/ca/lịch trực. Đây là script chuyển đổi thủ công; không coi Hibernate update là công cụ tự di chuyển mọi dữ liệu cũ.
 
+`migrations/20261112_refund_gateway_attempt.sql` bổ sung 5 cột nullable vào `payments` trên MySQL 8, chạy được lại; áp dụng trước khi deploy với `ddl-auto=validate`. Không có cơ chế tự chạy migration này. Script không sửa lịch sử: đơn REFUNDED từ phiên bản cũ có marker null không phải bằng chứng VNPay đã hoàn tiền, cần đối soát riêng, không gửi lại hàng loạt. Lần sửa này chưa chạy SQL trên DB thật.
+
 Khi cần dùng các script gỡ chức năng, đọc đúng thứ tự phụ thuộc: `remove_staff_handover` còn giữ STAFF_SCHEDULE, sau đó `remove_staff_scheduling` mới loại STAFF_SCHEDULE. `drop_unused_food_stock_transactions` chỉ xóa bảng lịch sử cũ; tồn hiện tại vẫn nằm ở Food. Việc cập nhật tài liệu không chạy bất kỳ migration nào.
 
-Test hiện có trong `src/test/java/com/ltweb/backend/service/` bao phủ thanh toán/persistence, refund, transaction effects, giới hạn vé, staff dashboard, tồn bắp nước, giá suất chiếu, layout ghế, mapping check-in và ràng buộc schema. Chọn test theo thay đổi, chạy `mvn test` khi cần kiểm tra toàn bộ. Không sửa mã MapStruct sinh ra trong `target/`.
+Test hiện có trong `src/test/java/com/ltweb/backend/service/` bao phủ thanh toán/persistence, refund, transaction effects, giới hạn vé, staff dashboard, tồn bắp nước, giá suất chiếu, layout ghế, mapping check-in và ràng buộc schema. `JwtSecurityTest` kiểm tra phân loại token, logout, refresh/replay/đồng thời, tài khoản bị khóa, chữ ký sai và claim thiếu/lỗi; Redis được giả lập trong test này. Chạy riêng bằng `mvn -Dtest=JwtSecurityTest test`, hoặc chạy toàn bộ bằng `mvn test`. Không sửa mã MapStruct sinh ra trong `target/`.
 
-Trước sửa symbol, chạy GitNexus impact với repo `TTCS_N9_D23CN`; trước commit chạy detect_changes. Index quan sát được tạo 2026-11-11; lần cập nhật này đối chiếu trực tiếp source working tree cho các chức năng đang thay đổi.
+`BookingRefundFlowTest` kiểm tra commit trước gọi cổng, timeout/query lại, chống gửi trùng khi đồng thời, lỗi commit và CASH. Transaction/concurrency được giả lập trong unit test; không thay thế kiểm thử MySQL. `VnpayRefundGatewayTest` kiểm tra chữ ký, đối chiếu giao dịch, pending/rejection và phản hồi không rõ kết quả bằng HTTP mock; `RefundDecisionResponseTest` kiểm tra cả hai route không báo thành công sớm. Chưa chạy giao dịch hoàn tiền thật/sandbox. Test persistence cần DB riêng qua `PAYMENT_TEST_DATABASE`; bị skip nếu chưa cấu hình.
+
+Trước sửa symbol, chạy GitNexus impact với repo `TTCS_N9_D23CN`; trước commit chạy detect_changes. Khi index cũ, phân tích lại working tree trước khi tin kết quả.

@@ -75,4 +75,7 @@ public class BookingResponse {
     private LocalDateTime refundedAt;
 
     private BigDecimal refundAmount;
+
+    private com.ltweb.backend.enums.RefundGatewayStatus refundGatewayStatus;
+    private String refundGatewayMessage;
 }

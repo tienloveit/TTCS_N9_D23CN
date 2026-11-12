@@ -203,14 +203,14 @@ Backend tự seed dữ liệu khi khởi động thông qua `DataSeedService`. C
 | User | `user` | `user@123` |
 | User | `user2` | `user2@123` |
 
-Nếu muốn reset database và tạo bộ dữ liệu demo qua API, chạy sau khi backend đã lên:
+Nếu muốn reset database và tạo bộ dữ liệu demo qua API, backend phải chạy với profile `dev` (không có `prod`) và `app.maintenance.cleanup-enabled=true`. API này mặc định tắt và yêu cầu ADMIN. Xem cách bật trong [backend context](cinema-ticket/backend/backend_overview.md). Sau khi backend đã lên:
 
 ```powershell
 cd cinema-ticket\backend
 powershell -ExecutionPolicy Bypass -File .\seed-data.ps1
 ```
 
-Script này sẽ gọi API cleanup, đăng nhập admin và tạo lại dữ liệu demo. Chỉ dùng khi chấp nhận xóa/reset dữ liệu hiện tại.
+Script này đăng nhập admin, gọi API cleanup, đăng nhập lại và tạo dữ liệu demo. Chỉ dùng khi chấp nhận xóa/reset dữ liệu hiện tại.
 
 ## 8. Các URL quan trọng trên frontend
 

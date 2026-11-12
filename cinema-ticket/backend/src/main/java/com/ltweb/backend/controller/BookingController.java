@@ -131,7 +131,9 @@ public class BookingController {
         String note = body.get("note") == null ? null : String.valueOf(body.get("note"));
         ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(bookingService.processRefund(id, approved, note));
-        apiResponse.setMessage(approved ? "Refund approved!" : "Refund rejected!");
+        apiResponse.setMessage(!approved ? "Refund rejected!"
+                : apiResponse.getResult().getStatus() == com.ltweb.backend.enums.BookingStatus.REFUNDED
+                    ? "Refund confirmed!" : "Refund is awaiting gateway confirmation.");
         return apiResponse;
     }
 
@@ -141,7 +143,9 @@ public class BookingController {
             @PathVariable("id") Long id, @RequestBody @Valid ProcessRefundRequest request) {
         ApiResponse<BookingResponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(bookingService.processRefund(id, request.getApproved(), request.getNote()));
-        apiResponse.setMessage(request.getApproved() ? "Refund approved!" : "Refund rejected!");
+        apiResponse.setMessage(!request.getApproved() ? "Refund rejected!"
+                : apiResponse.getResult().getStatus() == com.ltweb.backend.enums.BookingStatus.REFUNDED
+                    ? "Refund confirmed!" : "Refund is awaiting gateway confirmation.");
         return apiResponse;
     }
 }

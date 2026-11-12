@@ -2,6 +2,7 @@ package com.ltweb.backend.entity;
 
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
+import com.ltweb.backend.enums.RefundGatewayStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -69,6 +70,21 @@ public class Payment {
 
     private LocalDateTime refundProcessedAt;
     private LocalDateTime refundedAt;
+
+    @Column(length = 32)
+    private String refundRequestId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private RefundGatewayStatus refundGatewayStatus;
+
+    private LocalDateTime refundRequestedAt;
+
+    @Column(length = 10)
+    private String refundGatewayCode;
+
+    @Column(length = 500)
+    private String refundGatewayMessage;
 
     @Builder.Default
     private BigDecimal refundAmount = BigDecimal.ZERO;

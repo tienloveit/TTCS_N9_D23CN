@@ -51,14 +51,22 @@ Write-Host "Backend is ready!" -ForegroundColor Green
 # ==========================================
 # 1. CLEANUP DATABASE
 # ==========================================
+# Backend must be started with profile dev and app.maintenance.cleanup-enabled=true.
+# Authenticate before the destructive operation; cleanup is no longer public.
+$cleanupLogin = Invoke-Api -Method POST -Uri "$BASE/auth/login" -Body @{ username = "admin"; password = "admin@123" }
+if (!$cleanupLogin -or !$cleanupLogin.result.accessToken) {
+    Write-Host "Admin authentication failed. Cleanup was not attempted." -ForegroundColor Red
+    exit 1
+}
+$cleanupHeaders = @{ Authorization = "Bearer $($cleanupLogin.result.accessToken)" }
 Write-Host "`n========== CLEANING DATABASE ==========" -ForegroundColor Yellow
 try {
-    Invoke-RestMethod -Method DELETE -Uri "$BASE/v1/cleanup/database"
+    Invoke-RestMethod -Method DELETE -Uri "$BASE/v1/cleanup/database" -Headers $cleanupHeaders
     Write-Host "Database cleaned! Waiting 2s..." -ForegroundColor Green
     Start-Sleep -Seconds 2
 } catch {
-    Write-Host "CRITICAL ERROR: Cleanup failed. Is CleanupController compiled?" -ForegroundColor Red
-    exit
+    Write-Host "Cleanup failed. It requires ADMIN, profile dev (without prod), and app.maintenance.cleanup-enabled=true." -ForegroundColor Red
+    exit 1
 }
 
 # ==========================================

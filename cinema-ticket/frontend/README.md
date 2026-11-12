@@ -25,7 +25,11 @@ npm run lint
 npm run preview
 ```
 
-Build tạo `dist/`; sửa `src/` rồi build lại khi cần. `package.json` chưa có test runner hoặc script `test`.
+Build tạo `dist/`; sửa `src/` rồi build lại khi cần. `package.json` chưa khai báo script `test`; test hồi quy interceptor JWT dùng Node test runner có sẵn:
+
+```powershell
+node --experimental-vm-modules --test tests/axiosClient.test.mjs
+```
 
 ## Stack và điểm vào
 
@@ -53,7 +57,9 @@ Build tạo `dist/`; sửa `src/` rồi build lại khi cần. `package.json` ch
 
 `AuthProvider` đọc access token từ localStorage, giải mã `sub`, `role`, `branchId`, cung cấp `user`, `login`, `loginWithTokens`, `logout` và các cờ role. Token pair lưu ở `accessToken`, `refreshToken`.
 
-Axios gắn Bearer token trừ request có `skipAuth`. Khi gặp 401, interceptor thử refresh một lần cho request đó bằng `/auth/refresh`, lưu token pair mới và gửi lại request; refresh thất bại thì xóa token và chuyển `/login`.
+Axios gắn Bearer token trừ request có `skipAuth`. Khi gặp 401, interceptor thử lại tối đa một lần cho request đó. Các request lỗi đồng thời dùng chung một lần gọi `/auth/refresh`, lưu token pair mới và gửi lại với access token mới; phản hồi 401 đến muộn cho token cũ dùng lại token đã cập nhật. Refresh thất bại thì xóa token và chuyển `/login`.
+
+Backend phân biệt `token_use=access|refresh`, refresh token chỉ dùng một lần. Token cũ thiếu claim mới bị từ chối sau cập nhật backend, nên cần đăng nhập lại. API vẫn trả `accessToken`/`refreshToken` như trước.
 
 Response controller thường được đọc qua `response.data.result`. API xuất báo cáo trả blob XLSX. Dù backend tách `Payment` thành entity riêng, các trường `paymentMethod`, `paymentStatus`, `paidAt` và hoàn tiền vẫn phẳng trong `BookingResponse`.
 
@@ -98,6 +104,8 @@ Khách chọn suất chiếu/ghế/bắp nước → tạo booking → tới tra
 Backend là nơi xác nhận giá, quyền chi nhánh, trạng thái ghế và khuyến mãi. Giữ ghế mặc định 6 phút, giới hạn mặc định 8 vé/giao dịch; cả hai là cấu hình backend. Đã bỏ giới hạn cộng dồn theo phim. Không hardcode giới hạn cũ vào UI.
 
 Dashboard nhân viên thống kê doanh thu và đơn bán của nhân viên theo ngày; check-in và yêu cầu hoàn tiền có phạm vi chi nhánh. Tồn kho bắp nước vẫn được xử lý phía backend dù không có trang quản lý tồn kho riêng. `TicketStatus` chỉ có `AVAILABLE`, `HOLDING`, `BOOKED`; xác định check-in bằng `checkedInAt`.
+
+Trang hoàn tiền chỉ báo duyệt thành công khi `BookingResponse.status=REFUNDED`. Với `refundGatewayStatus=PROCESSING|UNKNOWN`, hiển thị `refundGatewayMessage`, giữ đơn chờ xử lý, khóa từ chối và dùng nút “Kiểm tra kết quả”; backend chỉ query, không gửi lại lệnh hoàn tiền. FAILED cho phép thử lại. `refundProcessedAt` là lần xử lý gần nhất, không phải ngày hoàn tiền; `refundedAt` mới thể hiện ngày hoàn tất. Các trường này vẫn phẳng trong BookingResponse.
 
 ## Quy tắc UI
 

@@ -8,6 +8,7 @@ import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Ticket;
+import com.ltweb.backend.entity.User;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,9 +16,11 @@ import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.TicketStatus;
+import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.event.BookingPaidEvent;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.TicketRepository;
+import com.ltweb.backend.repository.UserRepository;
 import com.ltweb.backend.util.VnpayUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
@@ -41,6 +44,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -61,6 +66,8 @@ public class VnpayService {
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final FoodStockService foodStockService;
+    private final UserRepository userRepository;
+    private final BookingRefundService bookingRefundService;
 
     private static final Map<String, String> RESPONSE_CODE_DESC = createResponseCodeDesc();
     private static final Map<String, String> TRANSACTION_STATUS_DESC = createTransactionStatusDesc();
@@ -87,6 +94,9 @@ public class VnpayService {
         if (!isPendingPayment(booking)) throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         String txnRef = String.valueOf(booking.getId());
         booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
+        if (booking.getPayment().getPaymentCreatedAt() == null) {
+            booking.getPayment().setPaymentCreatedAt(LocalDateTime.now(VN_ZONE));
+        }
         bookingRepository.save(booking);
         String ipAddr = VnpayUtil.getClientIp(request);
 
@@ -114,8 +124,8 @@ public class VnpayService {
         params.put("vnp_ReturnUrl", props.getReturnUrl());
         params.put("vnp_IpAddr", ipAddr);
 
-        ZonedDateTime now = ZonedDateTime.now(VN_ZONE);
-        params.put("vnp_CreateDate", now.format(VNPAY_TIME_FORMATTER));
+        // Query/refund must reuse the exact merchant timestamp sent with the payment URL.
+        params.put("vnp_CreateDate", booking.getPayment().getPaymentCreatedAt().format(VNPAY_TIME_FORMATTER));
         params.put("vnp_ExpireDate", booking.getExpiresAt().atZone(VN_ZONE).format(VNPAY_TIME_FORMATTER));
 
         List<String> fieldNames = new ArrayList<>(params.keySet());
@@ -147,12 +157,18 @@ public class VnpayService {
         return result;
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Transactional
     public String queryDr(QueryRequest req, HttpServletRequest servletRequest) {
+        User operator = requirePaymentOperator();
+        Booking booking = requireManagedVnpayBooking(req.getOrderId(), operator);
+        String txnRef = String.valueOf(booking.getId());
+        String transactionDate = booking.getPayment().getPaymentCreatedAt().format(VNPAY_TIME_FORMATTER);
         String requestId = VnpayUtil.randomNumeric(8);
         String version = "2.1.0";
         String command = "querydr";
         String tmnCode = props.getTmnCode();
-        String orderInfo = "Kiểm tra kết quả GD OrderId:" + req.getOrderId();
+        String orderInfo = "Kiểm tra kết quả GD OrderId:" + txnRef;
         String ipAddr = VnpayUtil.getClientIp(servletRequest);
 
         String createDate = ZonedDateTime.now(VN_ZONE).format(VNPAY_TIME_FORMATTER);
@@ -163,8 +179,8 @@ public class VnpayService {
                 version,
                 command,
                 tmnCode,
-                req.getOrderId(),
-                req.getTransDate(),
+                txnRef,
+                transactionDate,
                 createDate,
                 ipAddr,
                 orderInfo);
@@ -176,9 +192,9 @@ public class VnpayService {
         payload.put("vnp_Version", version);
         payload.put("vnp_Command", command);
         payload.put("vnp_TmnCode", tmnCode);
-        payload.put("vnp_TxnRef", req.getOrderId());
+        payload.put("vnp_TxnRef", txnRef);
         payload.put("vnp_OrderInfo", orderInfo);
-        payload.put("vnp_TransactionDate", req.getTransDate());
+        payload.put("vnp_TransactionDate", transactionDate);
         payload.put("vnp_CreateDate", createDate);
         payload.put("vnp_IpAddr", ipAddr);
         payload.put("vnp_SecureHash", secureHash);
@@ -186,52 +202,44 @@ public class VnpayService {
         return postJson(payload);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public String refund(RefundRequest req, HttpServletRequest servletRequest) {
-        String requestId = VnpayUtil.randomNumeric(8);
-        String version = "2.1.0";
-        String command = "refund";
-        String tmnCode = props.getTmnCode();
-        String transactionNo = "";
-        String amount = String.valueOf(req.getAmount() * 100);
-        String orderInfo = "Hoàn tiền GD OrderId:" + req.getOrderId();
-        String ipAddr = VnpayUtil.getClientIp(servletRequest);
+        return bookingRefundService.processDirectRefund(req, servletRequest.getRemoteAddr()).getStatus().name();
+    }
 
-        String createDate = ZonedDateTime.now(VN_ZONE).format(VNPAY_TIME_FORMATTER);
+    private User requirePaymentOperator() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new AppException(ErrorCode.ACCESS_DENIED));
+        if (!user.isEnabled() || !user.isAccountNonLocked()
+                || (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.MANAGER)
+                || (user.getRole() == UserRole.MANAGER && user.getBranchId() == null)) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        return user;
+    }
 
-        String hashData = String.join(
-                "|",
-                requestId,
-                version,
-                command,
-                tmnCode,
-                req.getTrantype(),
-                req.getOrderId(),
-                amount,
-                transactionNo,
-                req.getTransDate(),
-                req.getUser(),
-                createDate,
-                ipAddr,
-                orderInfo);
-
-        String secureHash = VnpayUtil.hmacSHA512(props.getSecretKey(), hashData);
-
-        Map<String, String> payload = new LinkedHashMap<>();
-        payload.put("vnp_RequestId", requestId);
-        payload.put("vnp_Version", version);
-        payload.put("vnp_Command", command);
-        payload.put("vnp_TmnCode", tmnCode);
-        payload.put("vnp_TransactionType", req.getTrantype());
-        payload.put("vnp_TxnRef", req.getOrderId());
-        payload.put("vnp_Amount", amount);
-        payload.put("vnp_OrderInfo", orderInfo);
-        payload.put("vnp_TransactionDate", req.getTransDate());
-        payload.put("vnp_CreateBy", req.getUser());
-        payload.put("vnp_CreateDate", createDate);
-        payload.put("vnp_IpAddr", ipAddr);
-        payload.put("vnp_SecureHash", secureHash);
-
-        return postJson(payload);
+    private Booking requireManagedVnpayBooking(String orderId, User operator) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
+        }
+        Booking booking = findBookingByTxnRef(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        if (operator.getRole() == UserRole.MANAGER
+                && (booking.getShowtime() == null || booking.getShowtime().getRoom() == null
+                    || booking.getShowtime().getRoom().getBranch() == null
+                    || !operator.getBranchId().equals(booking.getShowtime().getRoom().getBranch().getBranchId()))) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        if (booking.getPayment() == null || booking.getPayment().getPaymentMethod() != PaymentMethod.VNPAY
+                || booking.getPayment().getPaymentCreatedAt() == null) {
+            throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+        return booking;
     }
 
     public Map<String, Object> verifyCallback(Map<String, String> params) {
