@@ -75,8 +75,6 @@ public enum ErrorCode {
     BOOKING_CANNOT_CANCEL(400, "Only pending bookings can be cancelled", HttpStatus.BAD_REQUEST),
     MAX_TICKET_PER_TRANSACTION(
             400, "Cannot book more than 8 tickets in a single transaction", HttpStatus.BAD_REQUEST),
-    MAX_TICKET_PER_MOVIE(
-            400, "Cannot book more than 8 tickets for the same movie", HttpStatus.BAD_REQUEST),
 
     // Ticket Management
     TICKET_NOT_FOUND(400, "Ticket does not exist", HttpStatus.BAD_REQUEST),

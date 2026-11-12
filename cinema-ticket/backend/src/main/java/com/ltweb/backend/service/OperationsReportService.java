@@ -4,7 +4,6 @@ import com.ltweb.backend.dto.response.OperationsReportResponse;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Showtime;
-import com.ltweb.backend.entity.StaffShift;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
@@ -16,7 +15,6 @@ import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.BranchRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
-import com.ltweb.backend.repository.StaffShiftRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
@@ -38,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class OperationsReportService {
     private final BookingRepository bookingRepository;
     private final ShowtimeRepository showtimeRepository;
-    private final StaffShiftRepository staffShiftRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
@@ -75,21 +72,8 @@ public class OperationsReportService {
                 .filter(showtime -> scopedBranchId == null || isShowtimeInBranch(showtime, scopedBranchId))
                 .filter(showtime -> isInRange(showtime.getStartTime(), start, end))
                 .toList();
-        List<StaffShift> shiftsToday = staffShiftRepository.findAll().stream()
-                .filter(shift -> scopedBranchId == null || Objects.equals(shift.getBranchId(), scopedBranchId))
-                .filter(shift -> isInRange(shift.getOpenedAt(), start, end))
-                .sorted(Comparator.comparing(StaffShift::getOpenedAt).reversed())
-                .toList();
-
         long capacity = showtimesToday.stream().mapToLong(this::getShowtimeCapacity).sum();
         long ticketsSoldByShowtimeDate = countTicketsForShowtimes(showtimesToday, branchBookings);
-        BigDecimal expectedCash = shiftsToday.stream()
-                .map(shift -> safeAmount(shift.getExpectedCash()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal cashDifference = shiftsToday.stream()
-                .map(shift -> safeAmount(shift.getCashDifference()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         return OperationsReportResponse.builder()
                 .reportDate(date)
                 .branchId(scopedBranchId)
@@ -107,11 +91,11 @@ public class OperationsReportService {
                                 .showtimes(showtimesToday.size())
                                 .totalCapacity(capacity)
                                 .occupancyRate(toRate(ticketsSoldByShowtimeDate, capacity))
-                                .expectedCash(expectedCash)
-                                .cashDifference(cashDifference)
+
+
                                 .build())
                 .paymentBreakdown(buildPaymentBreakdown(paidToday))
-                .staffShifts(shiftsToday.stream().map(this::toShiftRow).toList())
+
                 .refundQueue(refundRequests.stream().limit(20).map(this::toRefundQueueItem).toList())
                 .showtimeLoads(
                         showtimesToday.stream().map(showtime -> toShowtimeLoad(showtime, branchBookings)).toList())
@@ -131,22 +115,6 @@ public class OperationsReportService {
                         .bookings(entry.getValue().size())
                         .build())
                 .toList();
-    }
-
-    private OperationsReportResponse.StaffShiftRow toShiftRow(StaffShift shift) {
-        User staff = shift.getStaff();
-        return OperationsReportResponse.StaffShiftRow.builder()
-                .shiftId(shift.getId())
-                .staffId(staff == null ? null : staff.getId())
-                .staffName(staff == null ? "-" : staff.getFullName())
-                .status(shift.getStatus())
-                .openedAt(shift.getOpenedAt())
-                .closedAt(shift.getClosedAt())
-                .openingCash(shift.getOpeningCash())
-                .closingCash(shift.getClosingCash())
-                .expectedCash(shift.getExpectedCash())
-                .cashDifference(shift.getCashDifference())
-                .build();
     }
 
     private OperationsReportResponse.RefundQueueItem toRefundQueueItem(Booking booking) {

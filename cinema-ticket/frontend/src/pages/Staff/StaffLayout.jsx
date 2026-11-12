@@ -4,7 +4,6 @@ import { useAuth } from '../../context/useAuth';
 import { notificationApi } from '../../api';
 import {
   BellIcon,
-  CalendarIcon,
   DashboardIcon,
   ExternalLinkIcon,
   ListIcon,
@@ -21,7 +20,6 @@ const Icons = {
   Dashboard: DashboardIcon,
   Scan: ScanIcon,
   List: ListIcon,
-  Calendar: CalendarIcon,
   Bell: BellIcon,
   Logout: LogoutIcon,
   Menu: MenuIcon,
@@ -29,9 +27,8 @@ const Icons = {
 };
 
 const TITLE_MAP = {
-  '/staff': 'Tổng quan ca làm',
-  '/staff/dashboard': 'Tổng quan ca làm',
-  '/staff/schedules': 'Lịch trực của tôi',
+  '/staff': 'Tổng quan nhân viên',
+  '/staff/dashboard': 'Tổng quan nhân viên',
   '/staff/booking': 'Đặt vé tại quầy',
   '/staff/check-in': 'Check-in vé',
   '/staff/bookings': 'Đơn đặt vé',
@@ -48,10 +45,9 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: 'Ca làm & Thông báo',
+    label: 'Tổng quan & Thông báo',
     items: [
-      { path: '/staff/dashboard', label: 'Tổng quan ca', Icon: Icons.Dashboard },
-      { path: '/staff/schedules', label: 'Lịch trực của tôi', Icon: Icons.Calendar },
+      { path: '/staff/dashboard', label: 'Tổng quan', Icon: Icons.Dashboard },
       { path: '/staff/notifications', label: 'Thông báo', Icon: Icons.Bell, isNotification: true },
     ],
   },

@@ -6,7 +6,6 @@ import { CheckIcon, RefreshIcon } from '../../components/Common/CinemaIcons';
 const settingMeta = {
   'booking.holdMinutes': { label: 'Thời gian giữ ghế', unit: 'phút', isNumeric: true },
   'booking.maxTicketsPerTransaction': { label: 'Số vé tối đa mỗi giao dịch', unit: 'vé', isNumeric: true },
-  'booking.maxTicketsPerMovie': { label: 'Số vé tối đa mỗi khách cho một phim', unit: 'vé', isNumeric: true },
   'refund.windowHours': { label: 'Thời hạn gửi yêu cầu hoàn tiền trước giờ chiếu', unit: 'giờ', isNumeric: true },
   'cinema.supportEmail': { label: 'Email hỗ trợ khách hàng', unit: '', isNumeric: false },
   'cinema.supportHotline': { label: 'Hotline hỗ trợ khách hàng', unit: '', isNumeric: false },

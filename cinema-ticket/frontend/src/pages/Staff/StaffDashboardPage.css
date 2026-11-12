@@ -1,12 +1,12 @@
 .staff-overview {
-  --shift-blue: #0756a6;
+  --staff-dashboard-blue: #0756a6;
   gap: 24px;
   max-width: 1600px;
   margin: 0 auto;
   color: #0f172a;
 }
 
-.staff-overview .shift-top-bar {
+.staff-overview .staff-dashboard-top-bar {
   position: relative;
   padding: 28px;
   border: 1px solid #d6e4f3;
@@ -15,7 +15,7 @@
   box-shadow: none;
 }
 
-.staff-overview .shift-heading {
+.staff-overview .staff-dashboard-heading {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -24,11 +24,11 @@
   min-width: 0;
 }
 
-.staff-overview .shift-eyebrow {
+.staff-overview .staff-dashboard-eyebrow {
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.16em;
-  color: var(--shift-blue);
+  color: var(--staff-dashboard-blue);
 }
 
 .staff-overview .pos-badge-live {
@@ -52,11 +52,11 @@
   line-height: 1.65;
 }
 
-.staff-overview .shift-top-actions { gap: 8px; }
+.staff-overview .staff-dashboard-top-actions { gap: 8px; }
 .staff-overview .btn { border-radius: 10px; min-height: 40px; }
-.staff-overview .shift-kpi-grid { gap: 16px; }
+.staff-overview .staff-dashboard-kpi-grid { gap: 16px; }
 
-.staff-overview .shift-kpi-card {
+.staff-overview .staff-dashboard-kpi-card {
   border-radius: 16px;
   padding: 20px;
   gap: 18px;
@@ -64,7 +64,7 @@
   border-color: #e0e7ef;
 }
 
-.staff-overview .shift-kpi-label {
+.staff-overview .staff-dashboard-kpi-label {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 600;
@@ -72,35 +72,20 @@
   font-size: 0.83rem;
 }
 
-.staff-overview .shift-kpi-icon { width: 36px; height: 36px; }
-.staff-overview .shift-kpi-value { font-size: clamp(1.35rem, 2vw, 1.8rem); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
-.staff-overview .shift-kpi-sub { border-top-style: solid; flex-wrap: wrap; font-size: 0.74rem; line-height: 1.6; }
-.staff-overview .shift-workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
-.staff-overview .shift-card { border-color: #e0e7ef; padding: 24px; box-shadow: 0 2px 6px #0f172a03; gap: 22px; min-width: 0; }
-.staff-overview .shift-card-header { padding-bottom: 18px; border-bottom: 1px solid #edf1f6; }
-.staff-overview .shift-card-title { min-width: 0; }
-.staff-overview .shift-card-title > svg { flex-shrink: 0; }
-.staff-overview .shift-card-title h3 { font-size: 0.98rem; font-weight: 750; letter-spacing: -0.02em; }
-.staff-overview .shift-status-pill { font-size: 0.69rem; padding: 5px 9px; font-weight: 600; }
-.staff-overview .shift-ledger-box { padding: 14px 12px; border-radius: 10px; gap: 8px; }
-.staff-overview .shift-ledger-box small { text-transform: none; font-weight: 500; }
-.staff-overview .shift-ledger-box strong { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
-.staff-overview .form-label { font-size: 0.8rem; font-weight: 600; color: #40556b; }
-.staff-overview .input { border-radius: 10px; min-height: 44px; background: #fff; color: #0f172a; border-color: #ced9e5; font-size: 0.87rem; }
-.staff-overview .input[type='number'] { font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-.staff-overview .shift-cash-presets { gap: 8px; }
-.staff-overview .shift-cash-chip { cursor: pointer; font-weight: 500; line-height: 1.5; }
-.staff-overview .shift-cash-chip--selected { background: #eaf3ff; color: #0756a6; border-color: #0756a6; box-shadow: inset 0 0 0 1px #0756a6; }
-.staff-overview .shift-diff-banner { font-size: 0.77rem; line-height: 1.6; flex-wrap: wrap; }
-.staff-overview .shift-count { display: inline-flex; justify-content: center; align-items: center; min-width: 23px; height: 23px; padding: 0 6px; border-radius: 6px; background: #eef3f9; color: #64748b; font-size: 0.7rem; font-weight: 600; margin-left: 5px; }
-.staff-overview .shift-showtime-list { max-height: 440px; gap: 12px; scrollbar-width: thin; }
-.staff-overview .shift-showtime-item { background: #fff; border-color: #e2e8f0; padding: 16px; gap: 16px; }
-.staff-overview .shift-showtime-item:hover { border-color: #a9c7e8; background: #fafdff; }
-.staff-overview .shift-occupancy-bar { height: 5px; background: #edf1f6; }
-.staff-overview .shift-activity-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
-.staff-overview .shift-activity-tabs .pos-time-pill { border: 0; background: transparent; color: #64748b; border-radius: 8px; padding: 10px 12px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.staff-overview .shift-activity-tabs .pos-time-pill--active { background: #edf5ff; color: #0756a6; }
-.staff-overview .shift-activity-tabs .pos-time-pill--active .shift-count { background: #d8eaff; color: #0756a6; }
+.staff-overview .staff-dashboard-kpi-icon { width: 36px; height: 36px; }
+.staff-overview .staff-dashboard-kpi-value { font-size: clamp(1.35rem, 2vw, 1.8rem); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.staff-overview .staff-dashboard-kpi-sub { border-top-style: solid; flex-wrap: wrap; font-size: 0.74rem; line-height: 1.6; }
+.staff-overview .staff-dashboard-workspace { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.staff-overview .staff-dashboard-card { border-color: #e0e7ef; padding: 24px; box-shadow: 0 2px 6px #0f172a03; gap: 22px; min-width: 0; }
+.staff-overview .staff-dashboard-card-header { padding-bottom: 18px; border-bottom: 1px solid #edf1f6; }
+.staff-overview .staff-dashboard-card-title { min-width: 0; }
+.staff-overview .staff-dashboard-card-title > svg { flex-shrink: 0; }
+.staff-overview .staff-dashboard-card-title h3 { font-size: 0.98rem; font-weight: 750; letter-spacing: -0.02em; }
+.staff-overview .staff-dashboard-count { display: inline-flex; justify-content: center; align-items: center; min-width: 23px; height: 23px; padding: 0 6px; border-radius: 6px; background: #eef3f9; color: #64748b; font-size: 0.7rem; font-weight: 600; margin-left: 5px; }
+.staff-overview .staff-dashboard-showtime-list { max-height: 440px; gap: 12px; scrollbar-width: thin; }
+.staff-overview .staff-dashboard-showtime-item { background: #fff; border-color: #e2e8f0; padding: 16px; gap: 16px; }
+.staff-overview .staff-dashboard-showtime-item:hover { border-color: #a9c7e8; background: #fafdff; }
+.staff-overview .staff-dashboard-occupancy-bar { height: 5px; background: #edf1f6; }
 .staff-overview .admin-table-card { overflow-x: auto; border: 1px solid #edf1f6; box-shadow: none; }
 .staff-overview .admin-table { min-width: 740px; }
 .staff-overview .admin-table th { background: #f8fafc; font-size: 0.7rem; text-transform: none; letter-spacing: 0; color: #64748b; padding: 14px 16px; white-space: nowrap; }
@@ -109,27 +94,23 @@
 .staff-overview :is(button, a, input):focus-visible { outline: 3px solid #75ade6; outline-offset: 3px; }
 
 @media (max-width: 1280px) {
-  .staff-overview .shift-top-actions { flex-basis: 100%; }
-  .staff-overview .shift-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .staff-overview .shift-workspace { grid-template-columns: 1fr; }
+  .staff-overview .staff-dashboard-top-actions { flex-basis: 100%; }
+  .staff-overview .staff-dashboard-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .staff-overview .staff-dashboard-workspace { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
   .staff-overview { gap: 16px; }
-  .staff-overview .shift-top-bar, .staff-overview .shift-card { padding: 18px; border-radius: 14px; }
-  .staff-overview .shift-heading { flex-basis: 100%; }
-  .staff-overview .shift-top-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
-  .staff-overview .shift-top-actions > :last-child { grid-column: 1 / -1; }
-  .staff-overview .shift-top-actions .btn { justify-content: center; }
-  .staff-overview .shift-kpi-grid { gap: 10px; }
-  .staff-overview .shift-kpi-card { padding: 14px; gap: 14px; }
-  .staff-overview .shift-kpi-head { align-items: flex-start; flex-direction: column-reverse; gap: 10px; }
-  .staff-overview .shift-kpi-value { font-size: 1.22rem; overflow-wrap: anywhere; }
-  .staff-overview .shift-kpi-label { font-size: 0.74rem; }
-  .staff-overview .shift-ledger-grid { grid-template-columns: 1fr; }
-  .staff-overview .shift-ledger-box { flex-direction: row; justify-content: space-between; align-items: center; }
-  .staff-overview .shift-showtime-top { flex-direction: column; }
-  .staff-overview .shift-card-header { align-items: flex-start; gap: 14px; }
-  .staff-overview .shift-activity-tabs { width: 100%; }
-  .staff-overview .shift-activity-tabs .pos-time-pill { flex: 1; justify-content: center; padding: 9px 6px; font-size: 0.75rem; }
+  .staff-overview .staff-dashboard-top-bar, .staff-overview .staff-dashboard-card { padding: 18px; border-radius: 14px; }
+  .staff-overview .staff-dashboard-heading { flex-basis: 100%; }
+  .staff-overview .staff-dashboard-top-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .staff-overview .staff-dashboard-top-actions > :last-child { grid-column: 1 / -1; }
+  .staff-overview .staff-dashboard-top-actions .btn { justify-content: center; }
+  .staff-overview .staff-dashboard-kpi-grid { gap: 10px; }
+  .staff-overview .staff-dashboard-kpi-card { padding: 14px; gap: 14px; }
+  .staff-overview .staff-dashboard-kpi-head { align-items: flex-start; flex-direction: column-reverse; gap: 10px; }
+  .staff-overview .staff-dashboard-kpi-value { font-size: 1.22rem; overflow-wrap: anywhere; }
+  .staff-overview .staff-dashboard-kpi-label { font-size: 0.74rem; }
+  .staff-overview .staff-dashboard-showtime-top { flex-direction: column; }
+  .staff-overview .staff-dashboard-card-header { align-items: flex-start; gap: 14px; }
 }

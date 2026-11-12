@@ -57,7 +57,6 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class BookingService {
 
-    private static final int MAX_TICKETS_PER_MOVIE = 8;
     private static final int DEFAULT_BOOKING_HOLD_MINUTES = 6;
     private static final int DEFAULT_REFUND_WINDOW_HOURS = 24;
 
@@ -93,12 +92,6 @@ public class BookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
         requireBookableShowtime(showtime);
-        // Kiểm tra tổng số vé người dùng đã đặt cho bộ phim này không vượt quá 8
-        Long movieId = showtime.getMovie().getId();
-        int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(user.getId(), movieId);
-        if (alreadyBooked + requestedCount > getMaxTicketsPerMovie()) {
-            throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
-        }
 
         Set<Long> uniqueSeatIds = new HashSet<>(request.getSeatIds());
         if (uniqueSeatIds.size() != request.getSeatIds().size()) {
@@ -223,12 +216,6 @@ public class BookingService {
 
         User customer = getOrCreateStaffCustomer(request);
 
-        // Kiểm tra tổng số vé khách hàng đã đặt cho bộ phim này không vượt quá 8
-        Long movieId = showtime.getMovie().getId();
-        int alreadyBooked = ticketRepository.countTicketsByUserAndMovie(customer.getId(), movieId);
-        if (alreadyBooked + requestedCount > getMaxTicketsPerMovie()) {
-            throw new AppException(ErrorCode.MAX_TICKET_PER_MOVIE);
-        }
 
         BigDecimal totalAmount = ticketTotal.add(foodTotal);
 
@@ -931,14 +918,7 @@ public class BookingService {
         return Math.max(
                 1,
                 systemSettingService.getInt(
-                        SystemSettingService.BOOKING_MAX_TICKETS_PER_TRANSACTION, MAX_TICKETS_PER_MOVIE));
-    }
-
-    private int getMaxTicketsPerMovie() {
-        return Math.max(
-                1,
-                systemSettingService.getInt(
-                        SystemSettingService.BOOKING_MAX_TICKETS_PER_MOVIE, MAX_TICKETS_PER_MOVIE));
+                        SystemSettingService.BOOKING_MAX_TICKETS_PER_TRANSACTION, 8));
     }
 
     private int getRefundWindowHours() {

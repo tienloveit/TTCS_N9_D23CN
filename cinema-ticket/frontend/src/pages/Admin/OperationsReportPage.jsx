@@ -4,7 +4,6 @@ import { branchApi, operationsApi, reportsApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 import {
   AlertTriangleIcon,
-  BanknoteIcon,
   DownloadIcon,
   RefreshIcon,
   SparkIcon,
@@ -63,7 +62,7 @@ const OperationsReportPage = () => {
     fetchReport();
   }, [fetchReport]);
 
-  const summary = report?.summary || {};
+  const summary = useMemo(() => report?.summary || {}, [report]);
   const statCards = useMemo(() => [
     {
       label: 'Doanh thu trong ngày',
@@ -71,13 +70,6 @@ const OperationsReportPage = () => {
       note: `${formatNumber(summary.completedBookings)} đơn hoàn tất`,
       icon: SparkIcon,
       color: '#16a34a',
-    },
-    {
-      label: 'Tiền mặt dự kiến',
-      value: formatCurrency(summary.expectedCash),
-      note: `Chênh lệch ${formatCurrency(summary.cashDifference)}`,
-      icon: BanknoteIcon,
-      color: Number(summary.cashDifference || 0) !== 0 ? '#dc2626' : '#0756a6',
     },
     {
       label: 'Vé đã bán',
@@ -118,7 +110,7 @@ const OperationsReportPage = () => {
       <div className="dashboard-header">
         <div>
           <h1 className="page-title">Báo cáo vận hành</h1>
-          <p className="page-subtitle">Đối soát doanh thu, ca làm, tồn kho và yêu cầu hoàn tiền theo ngày.</p>
+          <p className="page-subtitle">Đối soát doanh thu, tồn kho và yêu cầu hoàn tiền theo ngày.</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
@@ -185,26 +177,6 @@ const OperationsReportPage = () => {
             item.reason || '-',
           ])}
         />
-      </div>
-
-      <div className="analytics-grid">
-        <ReportTable
-          title="Ca làm trong ngày"
-          headers={['Nhân viên', 'Mở ca', 'Đóng ca', 'Tiền dự kiến', 'Chênh lệch']}
-          rows={(report?.staffShifts || []).map((item) => {
-            const diff = Number(item.cashDifference || 0);
-            return [
-              <strong key="st">{item.staffName || '-'}</strong>,
-              formatDateTime(item.openedAt),
-              item.closedAt ? formatDateTime(item.closedAt) : <span key="op" className="status-badge status--pending">Đang mở</span>,
-              formatCurrency(item.expectedCash),
-              <strong key="df" style={{ color: diff === 0 ? '#16a34a' : '#dc2626' }}>
-                {diff > 0 ? `+${formatCurrency(diff)}` : formatCurrency(diff)}
-              </strong>,
-            ];
-          })}
-        />
-
       </div>
 
       <ReportTable

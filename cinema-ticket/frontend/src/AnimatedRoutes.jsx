@@ -37,7 +37,6 @@ import NotificationPage from './pages/Admin/NotificationPage';
 import StaffLayout from './pages/Staff/StaffLayout';
 import StaffDashboardPage from './pages/Staff/StaffDashboardPage';
 import StaffBookingPage from './pages/Staff/StaffBookingPage';
-import StaffSchedulePage from './pages/Staff/StaffSchedulePage';
 import CheckInPage from './pages/Staff/CheckInPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 
@@ -130,7 +129,6 @@ const AnimatedRoutes = () => {
         >
           <Route index element={<Navigate to="/staff/dashboard" replace />} />
           <Route path="dashboard" element={<PageWrapper><StaffDashboardPage /></PageWrapper>} />
-          <Route path="schedules" element={<PageWrapper><StaffSchedulePage /></PageWrapper>} />
           <Route path="booking" element={<PageWrapper><StaffBookingPage /></PageWrapper>} />
           <Route path="check-in" element={<PageWrapper><CheckInPage /></PageWrapper>} />
           <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />

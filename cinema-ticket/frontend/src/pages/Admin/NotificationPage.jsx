@@ -6,12 +6,8 @@ import { CheckIcon, RefreshIcon, SearchIcon } from '../../components/Common/Cine
 const typeLabels = {
   BOOKING_STATUS: 'Đơn vé',
   PROMOTION: 'Khuyến mãi',
-  STAFF_SCHEDULE: 'Lịch trực',
-  SHIFT_START: 'Đến ca',
-  SHIFT_END: 'Kết thúc ca',
   REFUND_REQUEST: 'Hoàn tiền',
   LOW_STOCK: 'Tồn kho',
-  MISSED_SHIFT: 'Ca làm',
   SYSTEM: 'Hệ thống',
 };
 
@@ -75,12 +71,6 @@ const NotificationPage = () => {
       if (tab === 'UNREAD' && n.read) return false;
       if (tab === 'REFUND_REQUEST' && n.type !== 'REFUND_REQUEST') return false;
       if (tab === 'LOW_STOCK' && n.type !== 'LOW_STOCK') return false;
-      if (
-        tab === 'SHIFT' &&
-        !['STAFF_SCHEDULE', 'SHIFT_START', 'SHIFT_END', 'MISSED_SHIFT'].includes(n.type)
-      ) {
-        return false;
-      }
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       return (
@@ -95,7 +85,7 @@ const NotificationPage = () => {
       <div className="dashboard-header">
         <div>
           <h1 className="page-title">Thông báo vận hành</h1>
-          <p className="page-subtitle">Cảnh báo hoàn tiền, tồn kho sắp hết và lịch trực chưa mở ca.</p>
+          <p className="page-subtitle">Cảnh báo hoàn tiền, tồn kho sắp hết và thông báo hệ thống.</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {unreadItems.length > 0 && (
@@ -126,13 +116,6 @@ const NotificationPage = () => {
                 key: 'REFUND_REQUEST',
                 label: 'Hoàn tiền',
                 count: notifications.filter((n) => n.type === 'REFUND_REQUEST').length,
-              },
-              {
-                key: 'SHIFT',
-                label: 'Ca làm & Lịch trực',
-                count: notifications.filter((n) =>
-                  ['STAFF_SCHEDULE', 'SHIFT_START', 'SHIFT_END', 'MISSED_SHIFT'].includes(n.type)
-                ).length,
               },
             ].map((item) => (
               <button

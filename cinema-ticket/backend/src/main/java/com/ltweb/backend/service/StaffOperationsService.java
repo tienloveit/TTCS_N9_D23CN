@@ -1,21 +1,15 @@
 package com.ltweb.backend.service;
 
-import com.ltweb.backend.dto.request.CloseStaffShiftRequest;
-import com.ltweb.backend.dto.request.OpenStaffShiftRequest;
 import com.ltweb.backend.dto.response.BookingResponse;
 import com.ltweb.backend.dto.response.StaffDashboardResponse;
-import com.ltweb.backend.dto.response.StaffShiftResponse;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Showtime;
-import com.ltweb.backend.entity.StaffSchedule;
-import com.ltweb.backend.entity.StaffShift;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
-import com.ltweb.backend.enums.StaffShiftStatus;
 import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
@@ -23,12 +17,9 @@ import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
-import com.ltweb.backend.repository.StaffScheduleRepository;
-import com.ltweb.backend.repository.StaffShiftRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -49,8 +40,6 @@ public class StaffOperationsService {
     private final BookingRepository bookingRepository;
     private final ShowtimeRepository showtimeRepository;
     private final TicketRepository ticketRepository;
-    private final StaffScheduleRepository staffScheduleRepository;
-    private final StaffShiftRepository staffShiftRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
 
@@ -62,24 +51,20 @@ public class StaffOperationsService {
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
         LocalDateTime now = LocalDateTime.now();
-        StaffShift activeShift = staffShiftRepository
-                .findFirstByStaffIdAndStatusOrderByOpenedAtDesc(staff.getId(), StaffShiftStatus.OPEN)
-                .orElse(null);
-        LocalDateTime salesStart = activeShift == null ? startOfDay : activeShift.getOpenedAt();
-        LocalDateTime salesEnd = activeShift == null ? endOfDay : now;
 
         List<Booking> branchBookings = bookingRepository.findAll().stream()
                 .filter(booking -> branchId == null || isBookingInBranch(booking, branchId))
                 .toList();
         List<Booking> staffBookingsToday = branchBookings.stream()
                 .filter(booking -> isStaffBooking(booking, staff))
-                .filter(booking -> isInRange(getBusinessDate(booking), salesStart, salesEnd))
+                .filter(booking -> isInRange(getBusinessDate(booking), startOfDay, endOfDay))
                 .toList();
         List<Booking> paidStaffBookingsToday = staffBookingsToday.stream().filter(this::isPaidBooking).toList();
 
         BigDecimal revenue = sumBookingRevenue(paidStaffBookingsToday);
         BigDecimal cashRevenue = sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.CASH);
-        BigDecimal cardRevenue = sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.CARD);
+        BigDecimal cardRevenue = sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.CARD)
+                .add(sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.VNPAY));
         BigDecimal foodRevenue = sumFoodRevenue(paidStaffBookingsToday);
         long ticketsSold = paidStaffBookingsToday.stream().mapToLong(this::ticketCount).sum();
         long pendingBookings = staffBookingsToday.stream()
@@ -125,77 +110,9 @@ public class StaffOperationsService {
                                 .checkedInTickets(checkedInTickets)
                                 .refundRequests(refundRequests)
                                 .build())
-                .activeShift(
-                        activeShift == null ? null : toShiftResponse(activeShift, calculateExpectedCash(activeShift)))
                 .upcomingShowtimes(upcomingShowtimes)
                 .recentBookings(recentBookings)
                 .build();
-    }
-
-    @Transactional(readOnly = true)
-    public StaffShiftResponse getActiveShiftForCurrentUser() {
-        User staff = getCurrentUser();
-        return staffShiftRepository
-                .findFirstByStaffIdAndStatusOrderByOpenedAtDesc(staff.getId(), StaffShiftStatus.OPEN)
-                .map(shift -> toShiftResponse(shift, calculateExpectedCash(shift)))
-                .orElse(null);
-    }
-
-    @Transactional(readOnly = true)
-    public List<StaffShiftResponse> getShiftHistoryForCurrentUser() {
-        User staff = getCurrentUser();
-        return staffShiftRepository.findByStaffIdOrderByOpenedAtDesc(staff.getId()).stream()
-                .map(shift -> toShiftResponse(shift, calculateShiftMetrics(shift)))
-                .toList();
-    }
-
-    @Transactional
-    public StaffShiftResponse openShift(OpenStaffShiftRequest request) {
-        User staff = getCurrentUser();
-        Long branchId = requireBranchOperatorBranch(staff);
-        staffShiftRepository
-                .findFirstByStaffIdAndStatusOrderByOpenedAtDesc(staff.getId(), StaffShiftStatus.OPEN)
-                .ifPresent(
-                        shift -> {
-                            throw new AppException(ErrorCode.VALIDATION_ERROR);
-                        });
-
-        StaffShift shift = StaffShift.builder()
-                .staff(staff)
-                .schedule(findMatchingSchedule(staff, LocalDateTime.now()))
-                .branchId(branchId)
-                .openingCash(safeAmount(request.getOpeningCash()))
-                .expectedCash(safeAmount(request.getOpeningCash()))
-                .openedAt(LocalDateTime.now())
-                .note(request.getNote())
-                .status(StaffShiftStatus.OPEN)
-                .build();
-        StaffShift saved = staffShiftRepository.save(shift);
-        return toShiftResponse(saved, calculateShiftMetrics(saved));
-    }
-
-    @Transactional
-    public StaffShiftResponse closeShift(CloseStaffShiftRequest request) {
-        User staff = getCurrentUser();
-        StaffShift shift = staffShiftRepository
-                .findFirstByStaffIdAndStatusOrderByOpenedAtDesc(staff.getId(), StaffShiftStatus.OPEN)
-                .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_ERROR));
-        ShiftMetrics metrics = calculateShiftMetrics(shift);
-        BigDecimal expectedCash = metrics.expectedCash();
-        BigDecimal closingCash = safeAmount(request.getClosingCash());
-
-        shift.setExpectedCash(expectedCash);
-        shift.setClosingCash(closingCash);
-        shift.setCashDifference(closingCash.subtract(expectedCash));
-        shift.setClosedAt(LocalDateTime.now());
-        shift.setNote(request.getNote());
-        shift.setStatus(StaffShiftStatus.CLOSED);
-        if (shift.getSchedule() != null) {
-            shift.getSchedule().setStatus(com.ltweb.backend.enums.StaffScheduleStatus.COMPLETED);
-            staffScheduleRepository.save(shift.getSchedule());
-        }
-        StaffShift saved = staffShiftRepository.save(shift);
-        return toShiftResponse(saved, calculateShiftMetrics(saved));
     }
 
     private StaffDashboardResponse.UpcomingShowtime toUpcomingShowtime(Showtime showtime) {
@@ -215,85 +132,6 @@ public class StaffOperationsService {
                 .availableSeats(availableSeats)
                 .totalSeats(totalSeats)
                 .build();
-    }
-
-    private StaffShiftResponse toShiftResponse(StaffShift shift, BigDecimal expectedCash) {
-        return toShiftResponse(shift, calculateShiftMetrics(shift));
-    }
-
-    @Transactional(readOnly = true)
-    public StaffShiftResponse toShiftResponseForHistory(StaffShift shift) {
-        return toShiftResponse(shift, calculateShiftMetrics(shift));
-    }
-
-    private StaffShiftResponse toShiftResponse(StaffShift shift, ShiftMetrics metrics) {
-        User staff = shift.getStaff();
-        return StaffShiftResponse.builder()
-                .shiftId(shift.getId())
-                .scheduleId(shift.getSchedule() == null ? null : shift.getSchedule().getId())
-                .staffId(staff == null ? null : staff.getId())
-                .staffUsername(staff == null ? null : staff.getUsername())
-                .branchId(shift.getBranchId())
-                .openingCash(safeAmount(shift.getOpeningCash()))
-                .closingCash(shift.getClosingCash())
-                .cashSales(metrics.cashSales())
-                .cardSales(metrics.cardSales())
-                .totalSales(metrics.totalSales())
-                .expectedCash(metrics.expectedCash())
-                .cashDifference(shift.getCashDifference())
-                .paidBookings(metrics.paidBookings())
-                .ticketsSold(metrics.ticketsSold())
-                .openedAt(shift.getOpenedAt())
-                .closedAt(shift.getClosedAt())
-                .durationMinutes(getDurationMinutes(shift))
-                .note(shift.getNote())
-                .status(shift.getStatus())
-                .build();
-    }
-
-    private BigDecimal calculateExpectedCash(StaffShift shift) {
-        return calculateShiftMetrics(shift).expectedCash();
-    }
-
-    private ShiftMetrics calculateShiftMetrics(StaffShift shift) {
-        LocalDateTime from = shift.getOpenedAt();
-        LocalDateTime to = shift.getClosedAt() == null ? LocalDateTime.now() : shift.getClosedAt();
-        List<Booking> allPaidBookings = bookingRepository.findAll().stream()
-                .filter(booking -> isStaffBooking(booking, shift.getStaff()))
-                .filter(booking -> Objects.equals(getBookingBranchId(booking), shift.getBranchId()))
-                .filter(this::isPaidBooking)
-                .filter(booking -> isInRange(getBusinessDate(booking), from, to))
-                .toList();
-        BigDecimal cashSales = sumRevenueByMethod(allPaidBookings, PaymentMethod.CASH);
-        BigDecimal cardSales = sumRevenueByMethod(allPaidBookings, PaymentMethod.CARD)
-                .add(sumRevenueByMethod(allPaidBookings, PaymentMethod.VNPAY));
-        BigDecimal totalSales = sumBookingRevenue(allPaidBookings);
-        long ticketsSold = allPaidBookings.stream().mapToLong(this::ticketCount).sum();
-        return new ShiftMetrics(
-                cashSales,
-                cardSales,
-                totalSales,
-                safeAmount(shift.getOpeningCash()).add(cashSales),
-                allPaidBookings.size(),
-                ticketsSold);
-    }
-
-    private Long getDurationMinutes(StaffShift shift) {
-        if (shift.getOpenedAt() == null) {
-            return null;
-        }
-        LocalDateTime end = shift.getClosedAt() == null ? LocalDateTime.now() : shift.getClosedAt();
-        return Math.max(Duration.between(shift.getOpenedAt(), end).toMinutes(), 0);
-    }
-
-    private StaffSchedule findMatchingSchedule(User staff, LocalDateTime openedAt) {
-        return staffScheduleRepository
-                .findByStaffIdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualAndStatusOrderByStartTimeDesc(
-                        staff.getId(), openedAt.plusMinutes(30), openedAt.minusMinutes(30),
-                        com.ltweb.backend.enums.StaffScheduleStatus.SCHEDULED)
-                .stream()
-                .findFirst()
-                .orElse(null);
     }
 
     private Long requireBranchOperatorBranch(User user) {
@@ -396,12 +234,5 @@ public class StaffOperationsService {
         return amount == null ? BigDecimal.ZERO : amount;
     }
 
-    private record ShiftMetrics(
-            BigDecimal cashSales,
-            BigDecimal cardSales,
-            BigDecimal totalSales,
-            BigDecimal expectedCash,
-            long paidBookings,
-            long ticketsSold) {
-    }
+
 }

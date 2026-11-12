@@ -20,12 +20,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     @Query("select t from Ticket t where t.showtime.id = :showtimeId and t.seat.id in :seatIds order by t.id")
     List<Ticket> findSeatsForUpdate(@Param("showtimeId") Long showtimeId, @Param("seatIds") List<Long> seatIds);
 
-    @Query("SELECT COUNT(t) FROM Ticket t"
-            + " WHERE t.booking.user.id = :userId"
-            + " AND t.showtime.movie.id = :movieId"
-            + " AND t.booking.status <> com.ltweb.backend.enums.BookingStatus.CANCELLED")
-    int countTicketsByUserAndMovie(@Param("userId") Long userId, @Param("movieId") Long movieId);
-
     @EntityGraph(attributePaths = { "seat", "showtime" })
     List<Ticket> findAll();
 

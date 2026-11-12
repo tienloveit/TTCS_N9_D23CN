@@ -21,8 +21,6 @@ public class NotificationController {
 
     @GetMapping
     public ApiResponse<List<NotificationResponse>> getMyNotifications() {
-        notificationService.generateMissedShiftNotifications();
-        notificationService.generateStaffShiftTimeNotificationsForCurrentUser();
         ApiResponse<List<NotificationResponse>> apiResponse = new ApiResponse<>();
         apiResponse.setResult(notificationService.getMyNotifications());
         return apiResponse;
@@ -30,8 +28,6 @@ public class NotificationController {
 
     @GetMapping("/unread-count")
     public ApiResponse<Long> getUnreadCount() {
-        notificationService.generateMissedShiftNotifications();
-        notificationService.generateStaffShiftTimeNotificationsForCurrentUser();
         ApiResponse<Long> apiResponse = new ApiResponse<>();
         apiResponse.setResult(notificationService.countUnread());
         return apiResponse;

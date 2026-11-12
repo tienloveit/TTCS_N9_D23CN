@@ -10,7 +10,6 @@ import lombok.Data;
 @Builder
 public class StaffDashboardResponse {
     private Summary summary;
-    private StaffShiftResponse activeShift;
     private List<UpcomingShowtime> upcomingShowtimes;
     private List<BookingResponse> recentBookings;
 

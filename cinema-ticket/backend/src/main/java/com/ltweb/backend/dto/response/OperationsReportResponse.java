@@ -2,7 +2,6 @@ package com.ltweb.backend.dto.response;
 
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
-import com.ltweb.backend.enums.StaffShiftStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,7 +21,6 @@ public class OperationsReportResponse {
     private String branchName;
     private Summary summary;
     private List<PaymentBreakdown> paymentBreakdown;
-    private List<StaffShiftRow> staffShifts;
     private List<RefundQueueItem> refundQueue;
     private List<ShowtimeLoad> showtimeLoads;
 
@@ -42,8 +40,6 @@ public class OperationsReportResponse {
         private long showtimes;
         private long totalCapacity;
         private double occupancyRate;
-        private BigDecimal expectedCash;
-        private BigDecimal cashDifference;
     }
 
     @Data
@@ -54,23 +50,6 @@ public class OperationsReportResponse {
         private PaymentMethod paymentMethod;
         private BigDecimal amount;
         private long bookings;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class StaffShiftRow {
-        private Long shiftId;
-        private Long staffId;
-        private String staffName;
-        private StaffShiftStatus status;
-        private LocalDateTime openedAt;
-        private LocalDateTime closedAt;
-        private BigDecimal openingCash;
-        private BigDecimal closingCash;
-        private BigDecimal expectedCash;
-        private BigDecimal cashDifference;
     }
 
     @Data
