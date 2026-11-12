@@ -88,7 +88,7 @@ const ProfilePage = () => {
         fullName: profile.fullName,
         email: profile.email,
         phoneNumber: profile.phoneNumber,
-        birthday: profile.birthday,
+        dob: profile.dob || null,
         gender: profile.gender
       });
       setProfile(res.data.result);
@@ -341,8 +341,8 @@ const ProfilePage = () => {
                     id="pf-birthday"
                     className="input"
                     type="date"
-                    value={profile?.birthday ? String(profile.birthday).substring(0, 10) : ''}
-                    onChange={(e) => setProfile({ ...profile, birthday: e.target.value })}
+                    value={profile?.dob ? String(profile.dob).substring(0, 10) : ''}
+                    onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
                     disabled={!isEditing}
                   />
                 </div>

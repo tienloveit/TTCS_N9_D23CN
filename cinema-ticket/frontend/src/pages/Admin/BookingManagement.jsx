@@ -72,15 +72,17 @@ const BookingManagement = () => {
           b.bookingId === bookingId
             ? {
                 ...b,
-                status: updated.status,
-                paymentStatus: updated.paymentStatus,
-                refundedAt: updated.refundedAt,
-                refundAmount: updated.refundAmount,
+                ...updated,
               }
             : b
         )
       );
-      toast.success(approved ? 'Đã duyệt hoàn tiền thành công' : 'Đã từ chối yêu cầu hoàn tiền');
+      if (approved && updated.status !== 'REFUNDED') {
+        toast.info(updated.refundGatewayMessage || 'Chưa xác nhận hoàn tiền. Vui lòng kiểm tra lại kết quả.');
+      } else {
+        toast.success(approved ? 'Đã hoàn tiền thành công' : 'Đã từ chối yêu cầu hoàn tiền');
+      }
+      setDetailBooking((previous) => previous?.bookingId === bookingId ? { ...previous, ...updated } : previous);
       setConfirmState(null);
     } catch (err) {
       toast.error('Lỗi: ' + (err.response?.data?.message || err.message));
@@ -342,14 +344,14 @@ const BookingManagement = () => {
                               disabled={processingRefund === b.bookingId}
                             >
                               <CheckIcon size={14} />
-                              <span>Duyệt</span>
+                              <span>{['PROCESSING', 'UNKNOWN'].includes(b.refundGatewayStatus) ? 'Kiểm tra kết quả' : b.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt'}</span>
                             </button>
                             <button
                               type="button"
                               className="btn btn-secondary btn-sm"
                               style={{ fontSize: '0.75rem', padding: '4px 10px' }}
                               onClick={() => requestProcessRefund(b, false)}
-                              disabled={processingRefund === b.bookingId}
+                              disabled={processingRefund === b.bookingId || ['PROCESSING', 'UNKNOWN'].includes(b.refundGatewayStatus)}
                             >
                               <XIcon size={14} />
                               <span>Từ chối</span>

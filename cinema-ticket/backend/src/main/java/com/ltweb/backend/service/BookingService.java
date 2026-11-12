@@ -326,7 +326,7 @@ public class BookingService {
         if (!isOwner && !isAdmin && !isBranchManager) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-        return bookingMapper.toBookingResponse(booking);
+        return withRefundDeadline(booking, getRefundWindowHours());
     }
 
     @Transactional(readOnly = true)
@@ -339,16 +339,28 @@ public class BookingService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        return bookingMapper.toBookingResponse(booking);
+        return withRefundDeadline(booking, getRefundWindowHours());
     }
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookingsList() {
         User user = getUserCurrent();
+        int refundWindowHours = getRefundWindowHours();
 
         return bookingRepository.findByUserId(user.getId()).stream()
-                .map(bookingMapper::toBookingResponse)
+                .map(booking -> withRefundDeadline(booking, refundWindowHours))
                 .toList();
+    }
+
+    private BookingResponse withRefundDeadline(Booking booking, int refundWindowHours) {
+        BookingResponse response = bookingMapper.toBookingResponse(booking);
+        Payment payment = booking.getPayment();
+        if (booking.getStatus() == BookingStatus.COMPLETED && payment != null
+                && payment.getPaymentStatus() == PaymentStatus.PAID && payment.getPaidAt() != null
+                && booking.getTickets().stream().noneMatch(ticket -> ticket.getCheckedInAt() != null)) {
+            response.setRefundDeadline(payment.getPaidAt().plusHours(refundWindowHours));
+        }
+        return response;
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")

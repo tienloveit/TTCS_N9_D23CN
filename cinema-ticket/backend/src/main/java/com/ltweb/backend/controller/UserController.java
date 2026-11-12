@@ -2,6 +2,7 @@ package com.ltweb.backend.controller;
 
 import com.ltweb.backend.dto.request.CreateUserRequest;
 import com.ltweb.backend.dto.request.UpdateUserRequest;
+import com.ltweb.backend.dto.request.UpdateProfileRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.PageResponse;
 import com.ltweb.backend.dto.response.UserResponse;
@@ -106,10 +107,10 @@ public class UserController {
 
     @PutMapping("/my-info")
     public ApiResponse<UserResponse> updateMyInfo(
-            @RequestBody @Valid UpdateUserRequest updateUserRequest) {
+            @RequestBody @Valid UpdateProfileRequest request) {
         ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
         apiResponse.setMessage("Your information has been updated successfully!");
-        apiResponse.setResult(userService.updateMyInfo(updateUserRequest));
+        apiResponse.setResult(userService.updateMyInfo(request));
         return apiResponse;
     }
 }

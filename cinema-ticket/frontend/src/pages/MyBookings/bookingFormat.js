@@ -60,7 +60,6 @@ export const formatCountdown = (ms) => {
 };
 
 const FALLBACK_SHOW_LENGTH_MS = 3 * 60 * 60 * 1000;
-export const REFUND_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export const getShowStart = (booking) => parseLocalDateTime(booking.showtimeStart);
 
@@ -71,11 +70,10 @@ export const getShowEnd = (booking) => {
   return start ? new Date(start.getTime() + FALLBACK_SHOW_LENGTH_MS) : null;
 };
 
-/** Hạn chót yêu cầu hoàn tiền: 24h kể từ lúc thanh toán (chỉ với đơn COMPLETED). */
+/** The server computes this deadline using the current refund policy. */
 export const getRefundDeadline = (booking) => {
   if (booking.status !== 'COMPLETED') return null;
-  const paidAt = parseLocalDateTime(booking.paidAt);
-  return paidAt ? new Date(paidAt.getTime() + REFUND_WINDOW_MS) : null;
+  return parseLocalDateTime(booking.refundDeadline);
 };
 
 export const isFullyCheckedIn = (booking) => {

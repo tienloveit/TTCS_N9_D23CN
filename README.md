@@ -11,7 +11,7 @@
 - Nhân viên đặt vé tại quầy, check-in vé bằng mã hoặc ảnh QR.
 - Admin quản lý phim, suất chiếu, chi nhánh, phòng, người dùng, booking, đồ ăn, khuyến mãi và dashboard.
 - Hệ thống giữ ghế realtime bằng Redis + WebSocket để nhiều người dùng không đặt trùng ghế.
-- Dữ liệu demo được seed tự động khi backend khởi động.
+- Seed demo mặc định tắt; chỉ chạy khi có profile `dev`, không có `prod`, và `APP_DEMO_SEED_ENABLED=true`.
 
 ## 2. Cấu trúc thư mục
 
@@ -194,7 +194,15 @@ http://localhost:5173
 
 ## 7. Tài khoản demo
 
-Backend tự seed dữ liệu khi khởi động thông qua `DataSeedService`. Các tài khoản mặc định:
+Để tạo dữ liệu demo khi khởi động, chỉ dùng database demo riêng và chạy backend với cấu hình sau:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "dev"
+$env:APP_DEMO_SEED_ENABLED = "true"
+mvn spring-boot:run
+```
+
+Chạy từ thư mục `cinema-ticket/backend`. Seed mặc định tắt và luôn bị chặn khi profile `prod` hoạt động. Chế độ demo có thể cập nhật tài khoản mẫu và xóa lịch sử đặt vé/suất chiếu cũ hơn 30 ngày. Gỡ biến `APP_DEMO_SEED_ENABLED` sau khi dùng. Các tài khoản được tạo khi bật seed:
 
 | Vai trò | Username | Password |
 |---|---|---|

@@ -28,7 +28,7 @@ mvn test
 mvn -q -DskipTests package
 ```
 
-MySQL/Redis phải sẵn sàng cho runtime. `ApplicationInitConfig`/`DataSeedService` khởi tạo dữ liệu demo; đọc seed trước khi dùng trên dữ liệu thật. `seed-data.ps1` có bước cleanup/reset dữ liệu, không phải lệnh chạy ứng dụng thông thường.
+MySQL/Redis phải sẵn sàng cho runtime. Các runner `ApplicationInitConfig` và `DataSeeder` mặc định tắt: chỉ đăng ký khi có profile `dev`, không có `prod`, và `app.demo.seed-enabled=true` (biến môi trường `APP_DEMO_SEED_ENABLED=true`). Chỉ bật trên database demo riêng: seed cập nhật dữ liệu mẫu và có thể xóa lịch sử đặt vé/suất chiếu cũ hơn 30 ngày. Gỡ biến sau khi dùng. `seed-data.ps1` có bước cleanup/reset dữ liệu riêng, không phải lệnh chạy ứng dụng thông thường.
 
 API cleanup mặc định không được đăng ký. Chỉ bật khi profile `dev` đang hoạt động, không có profile `prod`, và `app.maintenance.cleanup-enabled=true`; vẫn bắt buộc quyền ADMIN. Để dùng script reset demo, khởi động backend trong môi trường phát triển với:
 
@@ -176,6 +176,8 @@ Staff dashboard hiện tính doanh thu/đơn/vé bán của chính nhân viên t
 Notification lấy 100 bản ghi mới nhất toàn hệ thống trước khi lọc quyền; unread count cũng dựa trên tập này. `readAt` nằm trên bản ghi notification, không phải bảng trạng thái đọc riêng theo người dùng.
 
 System settings mặc định: `booking.holdMinutes=6`, `booking.maxTicketsPerTransaction=8`, `refund.windowHours=24`, `cinema.supportEmail`, `cinema.supportHotline`.
+
+Các API đọc đơn của khách trả `refundDeadline` theo `refund.windowHours` hiện tại, tính từ `payment.paidAt`; chỉ có giá trị cho đơn COMPLETED đã thanh toán và chưa check-in. Frontend dùng thời hạn này thay vì tự cộng cố định 24 giờ. Cập nhật hồ sơ cá nhân dùng `UpdateProfileRequest` chỉ cho phép `fullName`, `dob`, `phoneNumber`, `gender`, `email`; không thay đổi quyền, chi nhánh hay trạng thái tài khoản.
 
 ## Migration và kiểm tra
 

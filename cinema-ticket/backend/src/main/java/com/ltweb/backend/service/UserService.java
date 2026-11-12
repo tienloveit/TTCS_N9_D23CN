@@ -2,6 +2,7 @@ package com.ltweb.backend.service;
 
 import com.ltweb.backend.dto.request.CreateUserRequest;
 import com.ltweb.backend.dto.request.UpdateUserRequest;
+import com.ltweb.backend.dto.request.UpdateProfileRequest;
 import com.ltweb.backend.dto.response.PageResponse;
 import com.ltweb.backend.dto.response.UserResponse;
 import com.ltweb.backend.entity.User;
@@ -168,14 +169,14 @@ public class UserService {
     }
 
     @PostAuthorize("returnObject.username == authentication.name")
-    public UserResponse updateMyInfo(UpdateUserRequest updateUserRequest) {
+    public UserResponse updateMyInfo(UpdateProfileRequest request) {
         var context = SecurityContextHolder.getContext();
         String name = Objects.requireNonNull(context.getAuthentication()).getName();
         User user = userRepository
                 .findByUsername(name)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        userMapper.updateUser(user, updateUserRequest);
+        userMapper.updateProfile(user, request);
         return userMapper.toUserResponse(userRepository.save(user));
     }
 

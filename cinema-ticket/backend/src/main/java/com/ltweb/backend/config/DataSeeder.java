@@ -15,6 +15,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * DataSeeder — Chạy khi khởi động ứng dụng.
@@ -24,6 +26,8 @@ import org.springframework.stereotype.Component;
  * 4. Sinh booking hoàn vé mẫu
  */
 @Component
+@Profile("dev & !prod")
+@ConditionalOnProperty(name = "app.demo.seed-enabled", havingValue = "true")
 @Order(2)
 @RequiredArgsConstructor
 @Slf4j

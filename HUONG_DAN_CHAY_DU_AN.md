@@ -290,7 +290,7 @@ Nếu bị chặn chạy script:
 powershell -ExecutionPolicy Bypass -File .\seed-data.ps1
 ```
 
-Ngoài ra backend còn có `DataSeeder` có thể tự nạp một số dữ liệu khi khởi động.
+Seed khi khởi động mặc định tắt. Chỉ bật trên database demo riêng bằng profile `dev` (không có `prod`) và biến môi trường `APP_DEMO_SEED_ENABLED=true`. Chế độ này cập nhật dữ liệu mẫu và có thể xóa lịch sử đặt vé/suất chiếu cũ hơn 30 ngày; gỡ biến sau khi dùng. Xem lệnh chạy trong phần tài khoản demo của [README](README.md).
 
 ---
 

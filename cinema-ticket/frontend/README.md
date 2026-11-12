@@ -28,7 +28,7 @@ npm run preview
 Build tạo `dist/`; sửa `src/` rồi build lại khi cần. `package.json` chưa khai báo script `test`; test hồi quy interceptor JWT dùng Node test runner có sẵn:
 
 ```powershell
-node --experimental-vm-modules --test tests/axiosClient.test.mjs
+node --experimental-vm-modules --test tests/*.test.mjs
 ```
 
 ## Stack và điểm vào

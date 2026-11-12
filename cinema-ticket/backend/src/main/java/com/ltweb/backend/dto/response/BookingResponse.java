@@ -48,6 +48,8 @@ public class BookingResponse {
 
     private LocalDateTime paidAt;
 
+    private LocalDateTime refundDeadline;
+
     private LocalDateTime paymentCreatedAt;
 
     // chi tiết xuất chiếu để hiển thị, lấy từ showtime (bên trong có movie)
