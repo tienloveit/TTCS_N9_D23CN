@@ -25,6 +25,8 @@ Từ thư mục `cinema-ticket/backend`:
 mvn spring-boot:run
 mvn -q -DskipTests compile
 mvn test
+mvn spotless:apply
+mvn spotless:check
 mvn -q -DskipTests package
 ```
 
@@ -43,6 +45,22 @@ mvn spring-boot:run
 ## Kiến trúc và nơi đọc code
 
 `controller` nhận request → `service` kiểm tra quyền, nghiệp vụ và transaction → `repository` truy cập entity → `mapper` tạo DTO. `config` chứa Security/JWT/Redis/WebSocket/VNPay/OAuth2; `exception` chứa `AppException`, `ErrorCode`, handler; `event` chứa sự kiện thanh toán; `job` dọn đơn hết hạn.
+
+`BookingService` giữ API service hiện tại và điều phối 5 dependency: `BookingCheckoutService` tạo đơn online/tại quầy; `BookingCommandService` cập nhật, hủy, áp mã và yêu cầu hoàn; `BookingQueryService` đọc đơn; `BookingMembershipService` cập nhật chi tiêu/hạng; `BookingRefundService` duyệt và đối soát hoàn tiền. `BookingPricingService` tính giá vé, đồ ăn, khuyến mãi dùng chung; `StaffCustomerService` tìm/tạo khách tại quầy. Khóa vé/booking và thao tác reserve stock vẫn nằm trong transaction của use case.
+
+`CurrentUserProvider` phân biệt người dùng bắt buộc với truy cập tùy chọn, không cache tài khoản giữa các request. `BookingAccessPolicy` giữ các quy tắc xem, quản lý, hủy, bán tại quầy và duyệt hoàn riêng biệt; quyền MANAGER không tự động bao gồm quyền hủy đơn. `RefundPolicy` dùng chung điều kiện thanh toán/chưa check-in và deadline; lúc duyệt không áp lại cửa sổ gửi yêu cầu của khách. `PasswordRecoveryService` xử lý đổi/quên/reset mật khẩu; `AuthService` tiếp tục điều phối đăng nhập, refresh và Google login.
+
+`TimeConfig` cung cấp một `Clock` theo `Asia/Ho_Chi_Minh` cho các nghiệp vụ runtime (booking/payment/refund/check-in, cleanup, JWT, promotion, showtime, notification và báo cáo). Khi test thời điểm hết hạn, inject `Clock.fixed` thay vì chờ thời gian thực.
+
+Spotless dùng Google Java Format và xóa import thừa; `check` chạy ở phase `validate`. Baseline `bf27d26c04b17780279ead08e392de319651e475` cho phép áp dụng dần cho file thay đổi từ đợt refactor, tránh định dạng lại toàn bộ lịch sử. Checkout cần có commit baseline này. Chạy `mvn spotless:apply` trước khi build nếu formatter báo lỗi.
+
+Mặc định build vẫn ghi vào `target`. Nếu IDE đang tự compile vào thư mục này, có thể tách output kiểm thử để tránh trộn class:
+
+```powershell
+mvn "-Dbackend.build.directory=D:/Projects/TTCS_N9_D23CN/.gitnexus/backend-verification" test
+```
+
+Test booking dùng `BackendServiceFixtures` để dựng service thật qua constructor, chỉ giả lập repository/gateway và các I/O liên quan. `BackendPoliciesTest`, `BookingPricingServiceTest`, `ClockedJwtServiceTest`, `PasswordRecoveryServiceTest` và `BookingServiceWiringTest` kiểm tra các ranh giới được tách ở trên.
 
 Response thành công thường bọc `ApiResponse<T>` với `code`, `message`, `result`; lỗi dùng `ErrorResponse` qua `GlobalExceptionHandler`. Xuất XLSX trả trực tiếp `ResponseEntity<byte[]>`. Đọc DTO/mapper để xác định hợp đồng JSON thay vì dùng tên field entity.
 

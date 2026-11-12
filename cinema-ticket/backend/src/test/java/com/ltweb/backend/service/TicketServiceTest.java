@@ -8,8 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.ltweb.backend.dto.request.CheckInTicketRequest;
 import com.ltweb.backend.entity.Booking;
-import com.ltweb.backend.entity.Payment;
 import com.ltweb.backend.entity.Branch;
+import com.ltweb.backend.entity.Payment;
 import com.ltweb.backend.entity.Room;
 import com.ltweb.backend.entity.Seat;
 import com.ltweb.backend.entity.Showtime;
@@ -32,7 +32,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -51,7 +50,22 @@ class TicketServiceTest {
   @Mock private QRCodeReaderService qrCodeReaderService;
   @Mock private AuditLogService auditLogService;
 
-  @InjectMocks private TicketService ticketService;
+  private TicketService ticketService;
+
+  @org.junit.jupiter.api.BeforeEach
+  void createService() {
+    ticketService =
+        BackendServiceFixtures.ticket(
+            ticketRepository,
+            bookingRepository,
+            showtimeRepository,
+            seatRepository,
+            userRepository,
+            redisTemplate,
+            ticketMapper,
+            qrCodeReaderService,
+            auditLogService);
+  }
 
   @AfterEach
   void tearDown() {
@@ -119,7 +133,8 @@ class TicketServiceTest {
     ticket.setCheckedInBy(original);
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
-    var request = new CheckInTicketRequest(); request.setCode("10");
+    var request = new CheckInTicketRequest();
+    request.setCode("10");
     var response = ticketService.checkIn(request);
     assertThat(ticket.getCheckedInBy()).isSameAs(original);
     assertThat(ticket.getCheckedInAt()).isEqualTo(originalTime);
@@ -132,7 +147,7 @@ class TicketServiceTest {
     authenticate("staff");
     User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(1L).build();
     Ticket ticket = paidTicketInBranch(1L);
-    var file = new org.springframework.mock.web.MockMultipartFile("file", new byte[]{1});
+    var file = new org.springframework.mock.web.MockMultipartFile("file", new byte[] {1});
     when(qrCodeReaderService.decodeQRCode(file)).thenReturn("10");
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
@@ -146,12 +161,20 @@ class TicketServiceTest {
     authenticate("staff");
     User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(1L).build();
     Ticket first = paidTicketInBranch(1L);
-    Ticket second = Ticket.builder().id(11L).booking(first.getBooking()).showtime(first.getShowtime())
-        .seat(Seat.builder().seatCode("A2").build()).ticketStatus(TicketStatus.BOOKED).build();
+    Ticket second =
+        Ticket.builder()
+            .id(11L)
+            .booking(first.getBooking())
+            .showtime(first.getShowtime())
+            .seat(Seat.builder().seatCode("A2").build())
+            .ticketStatus(TicketStatus.BOOKED)
+            .build();
     first.getBooking().setTickets(List.of(first, second));
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
-    when(bookingRepository.findByBookingCode("BK-TEST")).thenReturn(Optional.of(first.getBooking()));
-    var request = new CheckInTicketRequest(); request.setCode("BK-TEST");
+    when(bookingRepository.findByBookingCode("BK-TEST"))
+        .thenReturn(Optional.of(first.getBooking()));
+    var request = new CheckInTicketRequest();
+    request.setCode("BK-TEST");
     var response = ticketService.checkIn(request);
     assertThat(first.getCheckedInBy()).isSameAs(staff);
     assertThat(second.getCheckedInBy()).isSameAs(staff);
@@ -165,7 +188,8 @@ class TicketServiceTest {
     Ticket ticket = paidTicketInBranch(1L);
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
-    var request = new CheckInTicketRequest(); request.setCode("10");
+    var request = new CheckInTicketRequest();
+    request.setCode("10");
     assertThatThrownBy(() -> ticketService.checkIn(request)).isInstanceOf(AppException.class);
     assertThat(ticket.getCheckedInBy()).isNull();
     assertThat(ticket.getCheckedInAt()).isNull();
@@ -174,7 +198,8 @@ class TicketServiceTest {
 
   private void authenticate(String username) {
     SecurityContextHolder.getContext()
-        .setAuthentication(new UsernamePasswordAuthenticationToken(username, "n/a"));
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(username, "n/a", java.util.List.of()));
   }
 
   private Ticket paidTicketInBranch(Long branchId) {

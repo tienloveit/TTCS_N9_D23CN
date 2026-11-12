@@ -28,75 +28,83 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 class FoodAvailabilityTest {
-    @Mock private FoodRepository foodRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private AuditLogService auditLogService;
-    @InjectMocks private FoodService foodService;
+  @Mock private FoodRepository foodRepository;
+  @Mock private UserRepository userRepository;
+  @Mock private AuditLogService auditLogService;
+  @InjectMocks private FoodService foodService;
 
-    @AfterEach
-    void clearAuthentication() {
-        SecurityContextHolder.clearContext();
-    }
+  @AfterEach
+  void clearAuthentication() {
+    SecurityContextHolder.clearContext();
+  }
 
-    @Test
-    void newlyCreatedFoodCanBeSoldWithoutAnInventoryReceipt() {
-        authenticateManager();
-        AtomicReference<Food> savedFood = new AtomicReference<>();
-        when(foodRepository.save(any(Food.class))).thenAnswer(invocation -> {
-            Food food = invocation.getArgument(0);
-            food.setId(1L);
-            savedFood.set(food);
-            return food;
-        });
-        when(foodRepository.findByActiveTrueOrderByNameAsc())
-                .thenAnswer(invocation -> List.of(savedFood.get()));
+  @Test
+  void newlyCreatedFoodCanBeSoldWithoutAnInventoryReceipt() {
+    authenticateManager();
+    AtomicReference<Food> savedFood = new AtomicReference<>();
+    when(foodRepository.save(any(Food.class)))
+        .thenAnswer(
+            invocation -> {
+              Food food = invocation.getArgument(0);
+              food.setId(1L);
+              savedFood.set(food);
+              return food;
+            });
+    when(foodRepository.findByActiveTrueOrderByNameAsc())
+        .thenAnswer(invocation -> List.of(savedFood.get()));
 
-        var created = foodService.createFood(CreateFoodRequest.builder()
-                .name("Water").price(BigDecimal.TEN).build());
+    var created =
+        foodService.createFood(
+            CreateFoodRequest.builder().name("Water").price(BigDecimal.TEN).build());
 
-        assertThat(created.getActive()).isTrue();
-        assertThat(created.getBranchId()).isEqualTo(1L);
-        assertThat(foodService.getAvailableFoods()).extracting("id").containsExactly(created.getId());
-    }
+    assertThat(created.getActive()).isTrue();
+    assertThat(created.getBranchId()).isEqualTo(1L);
+    assertThat(foodService.getAvailableFoods()).extracting("id").containsExactly(created.getId());
+  }
 
-    @Test
-    void managerMenuStillIncludesOnlyTheirBranchAndSharedFoods() {
-        authenticateManager();
-        when(foodRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(
+  @Test
+  void managerMenuStillIncludesOnlyTheirBranchAndSharedFoods() {
+    authenticateManager();
+    when(foodRepository.findByActiveTrueOrderByNameAsc())
+        .thenReturn(
+            List.of(
                 Food.builder().id(1L).name("Local").branchId(1L).active(true).build(),
                 Food.builder().id(2L).name("Shared").active(true).build(),
                 Food.builder().id(3L).name("Other branch").branchId(2L).active(true).build()));
 
-        assertThat(foodService.getAvailableFoods()).extracting("id").containsExactly(1L, 2L);
-    }
+    assertThat(foodService.getAvailableFoods()).extracting("id").containsExactly(1L, 2L);
+  }
 
-    @Test
-    void managerCanStopSellingFood() {
-        authenticateManager();
-        Food food = Food.builder().id(1L).name("Water").branchId(1L).active(true).build();
-        when(foodRepository.findByIdIn(List.of(1L))).thenReturn(List.of(food));
-        when(foodRepository.save(food)).thenReturn(food);
+  @Test
+  void managerCanStopSellingFood() {
+    authenticateManager();
+    Food food = Food.builder().id(1L).name("Water").branchId(1L).active(true).build();
+    when(foodRepository.findByIdIn(List.of(1L))).thenReturn(List.of(food));
+    when(foodRepository.save(food)).thenReturn(food);
 
-        var updated = foodService.updateFood(1L, UpdateFoodRequest.builder().active(false).build());
+    var updated = foodService.updateFood(1L, UpdateFoodRequest.builder().active(false).build());
 
-        assertThat(updated.getActive()).isFalse();
-    }
+    assertThat(updated.getActive()).isFalse();
+  }
 
-    @Test
-    void managerCannotModifyFoodFromAnotherBranch() {
-        authenticateManager();
-        Food food = Food.builder().id(1L).name("Water").branchId(2L).active(true).build();
-        when(foodRepository.findByIdIn(List.of(1L))).thenReturn(List.of(food));
+  @Test
+  void managerCannotModifyFoodFromAnotherBranch() {
+    authenticateManager();
+    Food food = Food.builder().id(1L).name("Water").branchId(2L).active(true).build();
+    when(foodRepository.findByIdIn(List.of(1L))).thenReturn(List.of(food));
 
-        assertThatThrownBy(() -> foodService.updateFood(1L, UpdateFoodRequest.builder().active(false).build()))
-                .isInstanceOf(AccessDeniedException.class);
-        assertThat(food.getActive()).isTrue();
-    }
+    assertThatThrownBy(
+            () -> foodService.updateFood(1L, UpdateFoodRequest.builder().active(false).build()))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThat(food.getActive()).isTrue();
+  }
 
-    private void authenticateManager() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("manager", "n/a", List.of()));
-        when(userRepository.findByUsername("manager")).thenReturn(Optional.of(
+  private void authenticateManager() {
+    SecurityContextHolder.getContext()
+        .setAuthentication(new UsernamePasswordAuthenticationToken("manager", "n/a", List.of()));
+    when(userRepository.findByUsername("manager"))
+        .thenReturn(
+            Optional.of(
                 User.builder().username("manager").role(UserRole.MANAGER).branchId(1L).build()));
-    }
+  }
 }

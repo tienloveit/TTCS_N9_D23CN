@@ -1,8 +1,8 @@
 package com.ltweb.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Branch;
@@ -20,12 +20,11 @@ import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -52,16 +51,41 @@ class BookingServiceRefundTest {
   @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
   @org.junit.jupiter.api.BeforeEach
-  void wireRefundProcessor() {
+  public void wireRefundProcessor() {
     when(transactionManager.getTransaction(org.mockito.ArgumentMatchers.any()))
         .thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
-    org.springframework.test.util.ReflectionTestUtils.setField(bookingService, "bookingRefundService",
-        new BookingRefundService(bookingRepository, ticketRepository, userRepository, bookingMapper,
-            auditLogService, simpMessagingTemplate, org.mockito.Mockito.mock(VnpayRefundGateway.class), transactionManager,
-            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class)));
+    BookingRefundService refunds =
+        BackendServiceFixtures.refund(
+            bookingRepository,
+            ticketRepository,
+            userRepository,
+            bookingMapper,
+            auditLogService,
+            simpMessagingTemplate,
+            org.mockito.Mockito.mock(VnpayRefundGateway.class),
+            transactionManager,
+            org.mockito.Mockito.mock(jakarta.persistence.EntityManager.class));
+    bookingService =
+        BackendServiceFixtures.booking(
+            bookingRepository,
+            showtimeRepository,
+            ticketRepository,
+            foodRepository,
+            userRepository,
+            redisTemplate,
+            simpMessagingTemplate,
+            bookingMapper,
+            passwordEncoder,
+            eventPublisher,
+            promotionService,
+            auditLogService,
+            BackendServiceFixtures.settings(),
+            org.mockito.Mockito.mock(NotificationService.class),
+            org.mockito.Mockito.mock(FoodStockService.class),
+            refunds);
   }
 
-  @InjectMocks private BookingService bookingService;
+  private BookingService bookingService;
 
   @AfterEach
   void tearDown() {
@@ -70,8 +94,11 @@ class BookingServiceRefundTest {
 
   @Test
   void processRefund_doesNotAssumeFoodPhysicallyReturned() {
+    when(bookingMapper.toBookingResponse(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(com.ltweb.backend.dto.response.BookingResponse.builder().build());
     authenticate("manager");
-    User manager = User.builder().id(7L).username("manager").role(UserRole.MANAGER).branchId(1L).build();
+    User manager =
+        User.builder().id(7L).username("manager").role(UserRole.MANAGER).branchId(1L).build();
     Booking booking = refundRequestedBookingInBranch(1L);
     booking.setTickets(List.of());
     when(userRepository.findByUsername("manager")).thenReturn(Optional.of(manager));
@@ -79,12 +106,14 @@ class BookingServiceRefundTest {
 
     bookingService.processRefund(5L, true, "Approved financial refund");
 
-    org.assertj.core.api.Assertions.assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
+    org.assertj.core.api.Assertions.assertThat(booking.getStatus())
+        .isEqualTo(BookingStatus.REFUNDED);
     org.assertj.core.api.Assertions.assertThat(booking.getPayment().getPaymentStatus())
         .isEqualTo(com.ltweb.backend.enums.PaymentStatus.REFUNDED);
     org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundAmount())
         .isEqualByComparingTo(booking.getTotalAmount());
-    org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundProcessedBy()).isSameAs(manager);
+    org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundProcessedBy())
+        .isSameAs(manager);
     org.assertj.core.api.Assertions.assertThat(booking.getPayment().getRefundProcessNote())
         .isEqualTo("Approved financial refund");
     verify(bookingRepository).save(booking);
@@ -111,13 +140,14 @@ class BookingServiceRefundTest {
     Branch branch = Branch.builder().branchId(branchId).name("Branch").build();
     Room room = Room.builder().id(2L).name("Room 1").branch(branch).build();
     Showtime showtime = Showtime.builder().id(3L).room(room).build();
-    Booking booking = Booking.builder()
-        .id(5L)
-        .bookingCode("BK-REFUND")
-        .showtime(showtime)
-        .totalAmount(BigDecimal.valueOf(100000))
-        .status(BookingStatus.REFUND_REQUESTED)
-        .build();
+    Booking booking =
+        Booking.builder()
+            .id(5L)
+            .bookingCode("BK-REFUND")
+            .showtime(showtime)
+            .totalAmount(BigDecimal.valueOf(100000))
+            .status(BookingStatus.REFUND_REQUESTED)
+            .build();
     booking.getPayment().setPaymentMethod(com.ltweb.backend.enums.PaymentMethod.CASH);
     booking.getPayment().setPaymentStatus(com.ltweb.backend.enums.PaymentStatus.PAID);
     return booking;

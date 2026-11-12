@@ -19,53 +19,63 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class StaffOperationsServiceTest {
-    @AfterEach
-    void clearAuthentication() {
-        SecurityContextHolder.clearContext();
-    }
+  @AfterEach
+  void clearAuthentication() {
+    SecurityContextHolder.clearContext();
+  }
 
-    @Test
-    void dashboardCountsTodaysStaffSalesWithoutAShiftAndSeparatesBranchAndDate() {
-        var bookings = mock(BookingRepository.class);
-        var showtimes = mock(ShowtimeRepository.class);
-        var tickets = mock(TicketRepository.class);
-        var users = mock(UserRepository.class);
-        var mapper = mock(BookingMapper.class);
-        User staff = User.builder().id(1L).username("staff").role(UserRole.STAFF).branchId(1L).build();
-        when(users.findByUsername("staff")).thenReturn(Optional.of(staff));
-        when(showtimes.findAll()).thenReturn(List.of());
-        LocalDateTime today = LocalDate.now().atStartOfDay();
-        when(bookings.findAll()).thenReturn(List.of(
+  @Test
+  void dashboardCountsTodaysStaffSalesWithoutAShiftAndSeparatesBranchAndDate() {
+    var bookings = mock(BookingRepository.class);
+    var showtimes = mock(ShowtimeRepository.class);
+    var tickets = mock(TicketRepository.class);
+    var users = mock(UserRepository.class);
+    var mapper = mock(BookingMapper.class);
+    User staff = User.builder().id(1L).username("staff").role(UserRole.STAFF).branchId(1L).build();
+    when(users.findByUsername("staff")).thenReturn(Optional.of(staff));
+    when(showtimes.findAll()).thenReturn(List.of());
+    LocalDateTime today = LocalDate.now().atStartOfDay();
+    when(bookings.findAll())
+        .thenReturn(
+            List.of(
                 sale(staff, 1L, today, PaymentMethod.CASH),
                 sale(staff, 1L, today, PaymentMethod.CARD),
                 sale(staff, 1L, today, PaymentMethod.VNPAY),
                 sale(staff, 1L, today.minusDays(1), PaymentMethod.CASH),
                 sale(staff, 2L, today, PaymentMethod.CASH),
                 sale(User.builder().id(2L).build(), 1L, today, PaymentMethod.CASH)));
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("staff", "unused"));
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken("staff", "unused", java.util.List.of()));
 
-        var service = new StaffOperationsService(bookings, showtimes, tickets, users, mapper);
-        var result = service.getDashboard().getSummary();
+    var service =
+        new StaffOperationsService(
+            BackendServiceFixtures.CLOCK, bookings, showtimes, tickets, users, mapper);
+    var result = service.getDashboard().getSummary();
 
-        assertThat(result.getPaidBookings()).isEqualTo(3);
-        assertThat(result.getRevenue()).isEqualByComparingTo("300000");
-        assertThat(result.getCashRevenue()).isEqualByComparingTo("100000");
-        assertThat(result.getCardRevenue()).isEqualByComparingTo("200000");
-        assertThat(result.getTicketsSold()).isEqualTo(3);
-    }
+    assertThat(result.getPaidBookings()).isEqualTo(3);
+    assertThat(result.getRevenue()).isEqualByComparingTo("300000");
+    assertThat(result.getCashRevenue()).isEqualByComparingTo("100000");
+    assertThat(result.getCardRevenue()).isEqualByComparingTo("200000");
+    assertThat(result.getTicketsSold()).isEqualTo(3);
+  }
 
-    private Booking sale(User staff, Long branchId, LocalDateTime paidAt, PaymentMethod method) {
-        Branch branch = Branch.builder().branchId(branchId).build();
-        Room room = Room.builder().branch(branch).build();
-        return Booking.builder()
-                .staffUser(staff)
-                .showtime(Showtime.builder().room(room).build())
-                .createdAt(paidAt)
-                .totalAmount(new BigDecimal("100000"))
-                .status(BookingStatus.COMPLETED)
-                .payment(Payment.builder().paymentMethod(method).paymentStatus(PaymentStatus.PAID).paidAt(paidAt).build())
-                .tickets(List.of(Ticket.builder().build()))
-                .build();
-    }
+  private Booking sale(User staff, Long branchId, LocalDateTime paidAt, PaymentMethod method) {
+    Branch branch = Branch.builder().branchId(branchId).build();
+    Room room = Room.builder().branch(branch).build();
+    return Booking.builder()
+        .staffUser(staff)
+        .showtime(Showtime.builder().room(room).build())
+        .createdAt(paidAt)
+        .totalAmount(new BigDecimal("100000"))
+        .status(BookingStatus.COMPLETED)
+        .payment(
+            Payment.builder()
+                .paymentMethod(method)
+                .paymentStatus(PaymentStatus.PAID)
+                .paidAt(paidAt)
+                .build())
+        .tickets(List.of(Ticket.builder().build()))
+        .build();
+  }
 }
