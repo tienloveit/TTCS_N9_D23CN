@@ -18,8 +18,8 @@
 ```text
 .
 |-- README.md                       # Tài liệu tổng quan và hướng dẫn chạy dự án
+|-- codex.md                        # Ghi chú kỹ thuật chi tiết cho developer
 `-- cinema-ticket/
-    |-- codex.md                    # Ghi chú kỹ thuật chi tiết cho developer
     |-- backend/
     |   |-- pom.xml                 # Backend Spring Boot/Maven
     |   |-- seed-data.ps1           # Script reset + seed dữ liệu demo qua API
@@ -45,6 +45,8 @@
             |-- context/            # Auth context
             `-- pages/              # Trang public, user, staff, admin
 ```
+
+Mở thư mục gốc `TTCS_N9_D23CN` trong IDE để dùng cấu hình `.vscode/` hoặc `.idea/` tại gốc. `cinema-ticket/` chỉ chứa hai thư mục `frontend/` và `backend/`; tài liệu chung nằm ở gốc repository.
 
 ## 3. Công nghệ chính
 
