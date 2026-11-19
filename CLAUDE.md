@@ -43,8 +43,8 @@ This project is indexed by GitNexus as **TTCS_N9_D23CN** (6456 symbols, 14063 re
 
 <!-- gitnexus:end -->
 
-# Frontend UI & Icon System Rules (`cinema-ticket/frontend`)
+# Frontend UI & Icon System Rules (`frontend`)
 
-- **Standard Icon Library (`lucide-react`)**: Always use **Lucide Icons** (`lucide-react`) via centralized exports in `cinema-ticket/frontend/src/components/Common/CinemaIcons.jsx` (or import from `lucide-react` and register in `CinemaIcons.jsx`).
+- **Standard Icon Library (`lucide-react`)**: Always use **Lucide Icons** (`lucide-react`) via centralized exports in `frontend/src/components/Common/CinemaIcons.jsx` (or import from `lucide-react` and register in `CinemaIcons.jsx`).
 - **NO AI-Generated Inline SVGs**: Never write raw `<svg>` / `<path>` elements inside React pages or components. Only `MoviePTITLogoIcon` in `CinemaIcons.jsx` may use custom brand SVG geometry.
 - **NO Emoji Icons in UI**: Never use Unicode emojis (`🎬`, `🍿`, `🎟️`, `💳`, `🔔`, `⏳`, `✅`, `❌`, etc.) as icons for buttons, navigation items, status badges, headers, or action controls. Always use Lucide icon components.

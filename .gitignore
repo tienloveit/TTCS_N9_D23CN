@@ -3,5 +3,5 @@ node_modules/
 .env
 .idea/
 *.log
-cinema-ticket/backend/module/
+backend/module/
 uploads/

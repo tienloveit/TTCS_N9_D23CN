@@ -4,8 +4,8 @@ Cập nhật: **2026-11-12**, đối chiếu với mã nguồn trong working tre
 
 ## Tài liệu theo phần
 
-- [Frontend context và hướng dẫn chạy](cinema-ticket/frontend/README.md)
-- [Backend context và luồng nghiệp vụ](cinema-ticket/backend/backend_overview.md)
+- [Frontend context và hướng dẫn chạy](frontend/README.md)
+- [Backend context và luồng nghiệp vụ](backend/backend_overview.md)
 - [Hướng dẫn chạy toàn dự án](HUONG_DAN_CHAY_DU_AN.md)
 - Quy tắc làm việc: [AGENTS.md](AGENTS.md), đặc biệt GitNexus và hệ thống icon.
 
@@ -26,7 +26,7 @@ MoviePTIT là ứng dụng đặt vé rạp phim, gồm frontend React và backe
 ## Cấu trúc
 
 ```text
-cinema-ticket/
+./
   backend/
     pom.xml
     backend_overview.md
@@ -46,11 +46,11 @@ cinema-ticket/
       index.css
 ```
 
-`codex.md` và tài liệu chung nằm ở gốc repository. Cấu hình IDE dùng ở gốc repository; mở `TTCS_N9_D23CN` thay vì riêng `cinema-ticket` để tránh tạo lại cấu hình trong thư mục ứng dụng.
+`codex.md` và tài liệu chung nằm ở gốc repository. Cấu hình IDE dùng ở gốc repository; mở `TTCS_N9_D23CN` để nạp cả hai phần của dự án.
 
 ## Chạy và kiểm tra
 
-Backend, từ `cinema-ticket/backend`:
+Backend, từ `backend`:
 
 ```powershell
 mvn spring-boot:run
@@ -58,7 +58,7 @@ mvn -q -DskipTests compile
 mvn test
 ```
 
-Frontend, từ `cinema-ticket/frontend`:
+Frontend, từ `frontend`:
 
 ```powershell
 npm install
@@ -111,6 +111,6 @@ Frontend có route guard để điều hướng theo role. Backend kiểm tra qu
 - Chạy GitNexus impact trước khi sửa symbol; dùng đúng repo `TTCS_N9_D23CN`. `UNKNOWN` cần đối chiếu nguồn và tham chiếu. Chạy `detect_changes` trước commit.
 - Index GitNexus quan sát trong lần cập nhật này được tạo ngày 2026-11-11; mã nguồn working tree được đọc trực tiếp để xác nhận các phần đang thay đổi. Khi graph không khớp, cập nhật index bằng `node .gitnexus/run.cjs analyze --index-only` từ root.
 - Đổi DTO phải kiểm tra mapper, API client và các trang dùng dữ liệu. Không sửa mã sinh trong `target/` hoặc bundle `dist/` như mã nguồn.
-- Icon UI dùng Lucide qua `cinema-ticket/frontend/src/components/Common/CinemaIcons.jsx`; không thêm emoji icon hoặc SVG tự viết. Chỉ logo thương hiệu `MoviePTITLogoIcon` được dùng SVG tùy chỉnh.
+- Icon UI dùng Lucide qua `frontend/src/components/Common/CinemaIcons.jsx`; không thêm emoji icon hoặc SVG tự viết. Chỉ logo thương hiệu `MoviePTITLogoIcon` được dùng SVG tùy chỉnh.
 - Migration trong `backend/migrations/` cần đọc riêng theo schema hiện có; có script đổi tên/xóa cột, bảng và dữ liệu. `ddl-auto: update` không thay thế chuyển đổi dữ liệu. Việc cập nhật context này không chạy migration.
 - Backend có test nghiệp vụ trong `src/test`, bao gồm `JwtSecurityTest`. Frontend có build/lint và test interceptor JWT bằng Node: `node --experimental-vm-modules --test tests/axiosClient.test.mjs` từ thư mục frontend; chưa khai báo script `test` trong package.json.

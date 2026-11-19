@@ -6,8 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="c3543277-ea9b-4b29-b905-475510ba1feb" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinema-ticket/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/cinema-ticket/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinema-ticket/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinema-ticket/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ltweb/backend/service/DataSeedService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,7 +63,6 @@
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/TTCS_N9_D23CN/cinema-ticket/backend&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,

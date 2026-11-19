@@ -1,6 +1,6 @@
 # MoviePTIT - Hệ thống đặt vé xem phim
 
-Đây là dự án full-stack đặt vé xem phim, tên thư mục chính là `cinema-ticket`, giao diện hiển thị thương hiệu **MoviePTIT**. Dự án gồm backend Spring Boot, frontend React/Vite, MySQL, Redis, WebSocket realtime trạng thái ghế, thanh toán VNPay sandbox và gửi email.
+Đây là dự án full-stack đặt vé xem phim, giao diện hiển thị thương hiệu **MoviePTIT**. Dự án gồm backend Spring Boot, frontend React/Vite, MySQL, Redis, WebSocket realtime trạng thái ghế, thanh toán VNPay sandbox và gửi email.
 
 ## 1. Dự án dùng để làm gì?
 
@@ -19,34 +19,33 @@
 .
 |-- README.md                       # Tài liệu tổng quan và hướng dẫn chạy dự án
 |-- codex.md                        # Ghi chú kỹ thuật chi tiết cho developer
-`-- cinema-ticket/
-    |-- backend/
-    |   |-- pom.xml                 # Backend Spring Boot/Maven
-    |   |-- seed-data.ps1           # Script reset + seed dữ liệu demo qua API
-    |   `-- src/main/
-    |       |-- java/com/ltweb/backend/
-    |       |   |-- config/         # Security, JWT, Redis, WebSocket, VNPay
-    |       |   |-- controller/     # REST API
-    |       |   |-- dto/            # Request/response payload
-    |       |   |-- entity/         # JPA entity
-    |       |   |-- enums/          # Enum trạng thái/loại dữ liệu
-    |       |   |-- mapper/         # MapStruct mapper
-    |       |   |-- repository/     # Spring Data repository
-    |       |   |-- service/        # Business logic chính
-    |       |   `-- job/            # Job dọn booking hết hạn
-    |       `-- resources/
-    |           `-- application.yaml
-    `-- frontend/
-        |-- package.json            # Frontend React/Vite
-        |-- vite.config.js
-        `-- src/
-            |-- api/                # Axios client
-            |-- components/
-            |-- context/            # Auth context
-            `-- pages/              # Trang public, user, staff, admin
+|-- backend/
+|   |-- pom.xml                 # Backend Spring Boot/Maven
+|   |-- seed-data.ps1           # Script reset + seed dữ liệu demo qua API
+|   `-- src/main/
+|       |-- java/com/ltweb/backend/
+|       |   |-- config/         # Security, JWT, Redis, WebSocket, VNPay
+|       |   |-- controller/     # REST API
+|       |   |-- dto/            # Request/response payload
+|       |   |-- entity/         # JPA entity
+|       |   |-- enums/          # Enum trạng thái/loại dữ liệu
+|       |   |-- mapper/         # MapStruct mapper
+|       |   |-- repository/     # Spring Data repository
+|       |   |-- service/        # Business logic chính
+|       |   `-- job/            # Job dọn booking hết hạn
+|       `-- resources/
+|           `-- application.yaml
+`-- frontend/
+    |-- package.json            # Frontend React/Vite
+    |-- vite.config.js
+    `-- src/
+        |-- api/                # Axios client
+        |-- components/
+        |-- context/            # Auth context
+        `-- pages/              # Trang public, user, staff, admin
 ```
 
-Mở thư mục gốc `TTCS_N9_D23CN` trong IDE để dùng cấu hình `.vscode/` hoặc `.idea/` tại gốc. `cinema-ticket/` chỉ chứa hai thư mục `frontend/` và `backend/`; tài liệu chung nằm ở gốc repository.
+Mở thư mục gốc `TTCS_N9_D23CN` trong IDE để nạp cả `frontend/` và `backend/` cùng cấu hình của dự án.
 
 ## 3. Công nghệ chính
 
@@ -80,7 +79,7 @@ Frontend:
 Cần có sẵn trên máy:
 
 - JDK 21
-- Maven hoặc dùng Maven Wrapper trong `cinema-ticket/backend`
+- Maven hoặc dùng Maven Wrapper trong `backend`
 - Node.js và npm
 - MySQL đang chạy ở `localhost:3306`
 - Redis đang chạy ở `localhost:6379`
@@ -104,7 +103,7 @@ CREATE DATABASE cinema CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 Backend đọc biến môi trường từ file `.env` nếu đặt ở một trong các vị trí được cấu hình trong `application.yaml`, cách đơn giản nhất là tạo file:
 
 ```text
-cinema-ticket/backend/.env
+backend/.env
 ```
 
 Nội dung mẫu:
@@ -137,7 +136,7 @@ Ghi chú:
 Frontend có thể tạo file:
 
 ```text
-cinema-ticket/frontend/.env
+frontend/.env
 ```
 
 Nội dung:
@@ -157,14 +156,14 @@ Mở 2 terminal riêng: một terminal cho backend, một terminal cho frontend.
 ### Bước 2: Chạy backend
 
 ```powershell
-cd cinema-ticket\backend
+cd backend
 .\mvnw.cmd spring-boot:run
 ```
 
 Nếu dùng Maven cài global:
 
 ```powershell
-cd cinema-ticket\backend
+cd backend
 mvn spring-boot:run
 ```
 
@@ -183,7 +182,7 @@ Invoke-RestMethod http://localhost:8081/api/movie/now-showing
 ### Bước 3: Chạy frontend
 
 ```powershell
-cd cinema-ticket\frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -204,7 +203,7 @@ $env:APP_DEMO_SEED_ENABLED = "true"
 mvn spring-boot:run
 ```
 
-Chạy từ thư mục `cinema-ticket/backend`. Seed mặc định tắt và luôn bị chặn khi profile `prod` hoạt động. Chế độ demo có thể cập nhật tài khoản mẫu và xóa lịch sử đặt vé/suất chiếu cũ hơn 30 ngày. Gỡ biến `APP_DEMO_SEED_ENABLED` sau khi dùng. Các tài khoản được tạo khi bật seed:
+Chạy từ thư mục `backend`. Seed mặc định tắt và luôn bị chặn khi profile `prod` hoạt động. Chế độ demo có thể cập nhật tài khoản mẫu và xóa lịch sử đặt vé/suất chiếu cũ hơn 30 ngày. Gỡ biến `APP_DEMO_SEED_ENABLED` sau khi dùng. Các tài khoản được tạo khi bật seed:
 
 | Vai trò | Username | Password |
 |---|---|---|
@@ -213,10 +212,10 @@ Chạy từ thư mục `cinema-ticket/backend`. Seed mặc định tắt và lu�
 | User | `user` | `user@123` |
 | User | `user2` | `user2@123` |
 
-Nếu muốn reset database và tạo bộ dữ liệu demo qua API, backend phải chạy với profile `dev` (không có `prod`) và `app.maintenance.cleanup-enabled=true`. API này mặc định tắt và yêu cầu ADMIN. Xem cách bật trong [backend context](cinema-ticket/backend/backend_overview.md). Sau khi backend đã lên:
+Nếu muốn reset database và tạo bộ dữ liệu demo qua API, backend phải chạy với profile `dev` (không có `prod`) và `app.maintenance.cleanup-enabled=true`. API này mặc định tắt và yêu cầu ADMIN. Xem cách bật trong [backend context](backend/backend_overview.md). Sau khi backend đã lên:
 
 ```powershell
-cd cinema-ticket\backend
+cd backend
 powershell -ExecutionPolicy Bypass -File .\seed-data.ps1
 ```
 
@@ -392,7 +391,7 @@ TTL mặc định là 6 phút.
 Backend:
 
 ```powershell
-cd cinema-ticket\backend
+cd backend
 .\mvnw.cmd -q -DskipTests compile
 .\mvnw.cmd -q -DskipTests package
 ```
@@ -400,12 +399,12 @@ cd cinema-ticket\backend
 Frontend:
 
 ```powershell
-cd cinema-ticket\frontend
+cd frontend
 npm run lint
 npm run build
 ```
 
-Hiện dự án chưa có test backend trong `backend/src/test` và frontend chưa cấu hình test framework riêng; kiểm tra chính hiện tại là compile/package/lint/build.
+Chạy test backend từ `backend/` bằng `.\mvnw.cmd test` và test frontend từ `frontend/` bằng `node --experimental-vm-modules --test tests/*.test.mjs`.
 
 ## 13. Lưu ý khi đọc code
 
@@ -434,7 +433,7 @@ Một vài điểm cần nhớ:
 
 `Access denied for user 'root'@'localhost'`
 
-- Kiểm tra `SPRING_DATASOURCE_PASSWORD` trong `cinema-ticket/backend/.env`.
+- Kiểm tra `SPRING_DATASOURCE_PASSWORD` trong `backend/.env`.
 - Đảm bảo database `cinema` đã được tạo.
 
 `Connection refused Redis`

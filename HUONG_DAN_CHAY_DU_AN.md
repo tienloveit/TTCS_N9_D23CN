@@ -1,11 +1,11 @@
 # Hướng dẫn chạy dự án Cinema Ticket
 
-Dự án gồm 2 phần nằm trong thư mục `cinema-ticket/`:
+Dự án gồm 2 phần nằm ở gốc repository:
 
 | Phần | Công nghệ | Cổng | Thư mục |
 |------|-----------|------|---------|
-| Backend | Spring Boot 3.4.0, Java 21, Maven | `8081` (context path `/api`) | `cinema-ticket/backend` |
-| Frontend | React 19 + Vite | `5173` | `cinema-ticket/frontend` |
+| Backend | Spring Boot 3.4.0, Java 21, Maven | `8081` (context path `/api`) | `backend` |
+| Frontend | React 19 + Vite | `5173` | `frontend` |
 
 Hạ tầng cần có: **MySQL** (cổng 3306) và **Redis** (cổng 6379).
 
@@ -45,14 +45,14 @@ cd TTCS_N9_D23CN
    ```
 
 3. Backend dùng `ddl-auto: update` nên **bảng sẽ tự được tạo** khi chạy lần đầu.
-4. (Tùy chọn) Có sẵn file `cinema-ticket/backend/movie.sql`. Có thể import nếu muốn có dữ liệu phim mẫu:
+4. (Tùy chọn) Có sẵn file `backend/movie.sql`. Có thể import nếu muốn có dữ liệu phim mẫu:
 
    ```powershell
-   mysql -u root -p cinema < cinema-ticket/backend/movie.sql
+   mysql -u root -p cinema < backend/movie.sql
    ```
 
 > Kết nối mặc định: `jdbc:mysql://localhost:3306/cinema`, user `root`.
-> Nếu cần đổi, sửa trong `cinema-ticket/backend/src/main/resources/application.yaml`.
+> Nếu cần đổi, sửa trong `backend/src/main/resources/application.yaml`.
 
 ### Database đã có từ phiên bản cũ
 
@@ -61,7 +61,7 @@ các tên như `branch_id`, `movie_id`, `booking_id`, hãy dừng backend, sao l
 database rồi chạy migration **trước khi khởi động backend mới**:
 
 ```sql
-SOURCE D:/Projects/TTCS_N9_D23CN/cinema-ticket/backend/migrations/20261111_primary_keys_to_id.sql;
+SOURCE D:/Projects/TTCS_N9_D23CN/backend/migrations/20261111_primary_keys_to_id.sql;
 ```
 
 Chạy lệnh trên trong MySQL client hoặc mở file SQL trong MySQL Workbench.
@@ -72,12 +72,12 @@ nhật đích tham chiếu của khóa ngoại. Có thể chạy lại khi các 
 cột cũ; không dùng nó để thay cho migration này.
 
 Để cập nhật ràng buộc chi nhánh/phòng và thêm thời gian tạo, cập nhật cho chi
-nhánh, chạy tiếp `cinema-ticket/backend/migrations/20261111_branch_room_constraints.sql`
+nhánh, chạy tiếp `backend/migrations/20261111_branch_room_constraints.sql`
 khi backend đã dừng. Mã phòng giới hạn 50 ký tự. Với chi nhánh cũ chưa có dữ
 liệu thời gian, `created_at` và `updated_at` được khởi tạo tại lúc migration.
 
 Thay đổi công nghệ phòng và định dạng suất chiếu dùng migration
-`cinema-ticket/backend/migrations/20261111_screening_format_room_technology.sql`.
+`backend/migrations/20261111_screening_format_room_technology.sql`.
 Chạy khi backend đã dừng và sau khi sao lưu. `rooms.room_technology` gồm
 `STANDARD`, `IMAX`, `FOUR_DX`, `SCREEN_X`, `GOLD_CLASS`;
 `showtimes.screening_format` gồm `TWO_D` (2D), `THREE_D` (3D).
@@ -86,7 +86,7 @@ dạng 3D. IMAX/4DX không cho biết định dạng cũ là 2D hay 3D, nên su�
 của các phòng này khởi tạo là 2D và có thể chỉnh tại form suất chiếu.
 
 Ràng buộc ghế dùng migration
-`cinema-ticket/backend/migrations/20261111_seat_constraints.sql` (dừng backend
+`backend/migrations/20261111_seat_constraints.sql` (dừng backend
 và sao lưu trước khi chạy). `seat_code` không nhận NULL; `seat_type` không
 nhận NULL và mặc định `STANDARD`. Cột `is_active` được bỏ. Ngoài mã ghế duy
 nhất trong phòng, vị trí `(room_id, row_label, seat_number)` cũng phải duy
@@ -94,42 +94,42 @@ nhất. Migration dừng nếu dữ liệu có mã ghế thiếu hoặc vị tr�
 xử lý thủ công thay vì xóa dữ liệu.
 
 Trạng thái phim chỉ còn `UPCOMING`, `NOW_SHOWING`, `ENDED`. Database cũ dùng
-migration `cinema-ticket/backend/migrations/20261111_remove_movie_inactive.sql`.
+migration `backend/migrations/20261111_remove_movie_inactive.sql`.
 Nếu còn phim `INACTIVE`, phải chọn trạng thái mới cho các phim đó trước khi
 chạy; migration không tự gán trạng thái khác.
 
 Đổi cột công khai phim từ `published` sang `is_public` dùng migration
-`cinema-ticket/backend/migrations/20261111_movie_is_public.sql` khi backend
+`backend/migrations/20261111_movie_is_public.sql` khi backend
 đã dừng và database đã được sao lưu. API và frontend dùng trường `isPublic`.
 Giá trị công khai/bản nháp hiện có được giữ nguyên.
 
-Migration `cinema-ticket/backend/migrations/20261111_movie_timestamps_director_names.sql`
+Migration `backend/migrations/20261111_movie_timestamps_director_names.sql`
 thêm `movies.created_at`, `movies.updated_at` tự động và cho phép đạo diễn
 trùng tên (bỏ UNIQUE trên `directors.name`, giữ index thường để tìm kiếm).
 Dừng backend và sao lưu trước khi chạy. Thời gian của phim cũ chưa được lưu
 trước đây sẽ được khởi tạo tại lúc migration.
 
-Migration `cinema-ticket/backend/migrations/20261111_movie_rating_timestamps_not_null.sql`
+Migration `backend/migrations/20261111_movie_rating_timestamps_not_null.sql`
 đặt `movie_ratings.created_at` và `updated_at` thành `DATETIME(6) NOT NULL`.
 Giá trị thời gian đã có được giữ nguyên; giá trị NULL lấy từ cột thời gian
 còn lại hoặc thời điểm migration nếu cả hai đều chưa có.
 
-Migration `cinema-ticket/backend/migrations/20261111_showtime_time_constraints.sql`
+Migration `backend/migrations/20261111_showtime_time_constraints.sql`
 bắt buộc thời gian bắt đầu/kết thúc suất chiếu và thêm CHECK
 `end_time > start_time`. Nếu lịch cũ có NULL hoặc kết thúc không sau bắt đầu,
 cần sửa dữ liệu trước khi chạy migration; các lịch hợp lệ được giữ nguyên.
 
-Migration `cinema-ticket/backend/migrations/20261111_showtime_status_not_null.sql`
+Migration `backend/migrations/20261111_showtime_status_not_null.sql`
 bắt buộc `showtimes.status` (`OPEN`, `CLOSED`, `CANCELLED`). Nếu dữ liệu cũ
 có trạng thái NULL, cần gán trạng thái phù hợp trước khi chạy migration.
 
-Migration `cinema-ticket/backend/migrations/20261111_ticket_checked_in_by.sql`
+Migration `backend/migrations/20261111_ticket_checked_in_by.sql`
 thêm `tickets.checked_in_by` tham chiếu `users.id`. Backend tự ghi tài khoản
 thực hiện check-in; API trả `checkedInBy` và `checkedInByName`. Quét lại vé
 giữ nguyên người/thời điểm check-in đầu tiên. Vé cũ không rõ người check-in
 và vé chưa check-in để NULL.
 
-Migration `cinema-ticket/backend/migrations/20261111_extract_booking_payments.sql`
+Migration `backend/migrations/20261111_extract_booking_payments.sql`
 tách thông tin thanh toán và hoàn tiền từ `bookings` sang bảng `payments`.
 Mỗi booking có một payment, liên kết bằng `payments.booking_id` (NOT NULL,
 UNIQUE, khóa ngoại tới `bookings.id`). Bảng mới lưu số tiền thanh toán,
@@ -152,11 +152,11 @@ Kiểm thử `PaymentPersistenceIntegrationTest` chỉ chạy khi biến môi tr
 xác thực schema và lưu/cập nhật/xóa booking kèm payment trong transaction
 rollback. Không dùng database chính để chạy kiểm thử này.
 
-Migration `cinema-ticket/backend/migrations/20261111_booking_booked_staff.sql`
+Migration `backend/migrations/20261111_booking_booked_staff.sql`
 đổi cột `bookings.staff_user_id` thành `booked_staff`, giữ nguyên dữ liệu,
 chỉ mục và khóa ngoại tới `users.id`. Dừng backend và sao lưu trước khi chạy.
 
-Migration `cinema-ticket/backend/migrations/20261111_ticket_status_booking_code_not_null.sql`
+Migration `backend/migrations/20261111_ticket_status_booking_code_not_null.sql`
 bắt buộc `tickets.ticket_status` và `bookings.booking_code`. Giữ UNIQUE của
 mã đặt vé; dữ liệu NULL cần được sửa trước khi chạy migration.
 
@@ -186,7 +186,7 @@ redis-cli ping
 1. Vào thư mục backend và tạo file `.env` từ file mẫu:
 
    ```powershell
-   cd cinema-ticket/backend
+   cd backend
    copy .env.example .env
    ```
 
@@ -216,7 +216,7 @@ redis-cli ping
 
 ## 6. Chạy Backend
 
-Từ thư mục `cinema-ticket/backend`:
+Từ thư mục `backend`:
 
 **Windows (PowerShell/CMD):**
 ```powershell
@@ -252,7 +252,7 @@ curl http://localhost:8081/api/movie/now-showing
 Mở **terminal mới**:
 
 ```powershell
-cd cinema-ticket/frontend
+cd frontend
 copy .env.example .env
 npm install
 npm run dev
@@ -278,7 +278,7 @@ Các lệnh khác:
 
 ## 8. Nạp dữ liệu demo (tùy chọn)
 
-Để reset demo, backend phải được khởi động với profile `dev` (không có `prod`) và `app.maintenance.cleanup-enabled=true`; API cleanup mặc định tắt và yêu cầu ADMIN. Cách bật được ghi trong [backend context](cinema-ticket/backend/backend_overview.md). Khi backend **đang chạy** với cấu hình này, mở PowerShell tại `cinema-ticket/backend`:
+Để reset demo, backend phải được khởi động với profile `dev` (không có `prod`) và `app.maintenance.cleanup-enabled=true`; API cleanup mặc định tắt và yêu cầu ADMIN. Cách bật được ghi trong [backend context](backend/backend_overview.md). Khi backend **đang chạy** với cấu hình này, mở PowerShell tại `backend`:
 
 ```powershell
 .\seed-data.ps1
@@ -327,20 +327,20 @@ Seed khi khởi động mặc định tắt. Chỉ bật trên database demo ri�
 
 ```
 TTCS_N9_D23CN/
+├── README.md
 ├── HUONG_DAN_CHAY_DU_AN.md      # File này
-└── cinema-ticket/
-    ├── backend/                 # Spring Boot API
-    │   ├── src/main/java/com/ltweb/backend/
-    │   ├── src/main/resources/application.yaml
-    │   ├── .env.example
-    │   ├── movie.sql
-    │   ├── seed-data.ps1
-    │   ├── mvnw / mvnw.cmd
-    │   └── pom.xml
-    └── frontend/                # React + Vite
-        ├── src/
-        ├── .env.example
-        ├── package.json
-        └── vite.config.js
+├── backend/                 # Spring Boot API
+│   ├── src/main/java/com/ltweb/backend/
+│   ├── src/main/resources/application.yaml
+│   ├── .env.example
+│   ├── movie.sql
+│   ├── seed-data.ps1
+│   ├── mvnw / mvnw.cmd
+│   └── pom.xml
+└── frontend/                # React + Vite
+    ├── src/
+    ├── .env.example
+    ├── package.json
+    └── vite.config.js
 ```
 
