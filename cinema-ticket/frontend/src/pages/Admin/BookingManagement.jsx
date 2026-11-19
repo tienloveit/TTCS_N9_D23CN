@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
@@ -8,13 +8,124 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CreditCardIcon,
+  DownloadIcon,
   EyeIcon,
+  ListIcon,
   RefreshIcon,
   SearchIcon,
+  TicketIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import './BookingManagement.css';
 
 const PAGE_SIZE = 15;
+const EMPTY_FILTERS = { branch: '', from: '', to: '', payment: '' };
+const DASH = '—';
+const BOOKING_STATUS = {
+  PENDING: { label: 'Chờ xử lý', tone: 'warning' },
+  COMPLETED: { label: 'Hoàn tất', tone: 'success' },
+  REFUND_REQUESTED: { label: 'Yêu cầu hoàn tiền', tone: 'warning' },
+  REFUNDED: { label: 'Đã hoàn tiền', tone: 'info' },
+  CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
+  EXPIRED: { label: 'Hết hạn', tone: 'neutral' },
+};
+const PAYMENT_STATUS = {
+  PENDING: { label: 'Chờ thanh toán', tone: 'warning' },
+  PAID: { label: 'Đã thanh toán', tone: 'success' },
+  REFUNDED: { label: 'Đã hoàn tiền', tone: 'info' },
+  CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
+  FAILED: { label: 'Thất bại', tone: 'danger' },
+  NO_TRANSACTION: { label: 'Chưa có giao dịch', tone: 'neutral' },
+};
+const PAYMENT_METHOD = { CASH: 'Tiền mặt', CARD: 'Thẻ', VNPAY: 'VNPay' };
+
+const timeZone = 'Asia/Ho_Chi_Minh';
+const dateKeyFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone, dateStyle: 'short' });
+const dateFormatter = new Intl.DateTimeFormat('vi-VN', { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' });
+const timeFormatter = new Intl.DateTimeFormat('vi-VN', { timeZone, timeStyle: 'short' });
+const exportTimeFormatter = new Intl.DateTimeFormat('vi-VN', { timeZone, timeStyle: 'medium' });
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency', currency: 'VND', maximumFractionDigits: 0,
+});
+const numberFormatter = new Intl.NumberFormat('vi-VN');
+
+function parseBookingDate(value) {
+  if (!value) return null;
+  // The API returns LocalDateTime values in cinema time, without an offset.
+  const timestamp = value.length > 10 && !/[Zz]$|[+-]\d{2}:\d{2}$/.test(value) ? value + '+07:00' : value;
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+const formatCurrency = (amount) => currencyFormatter.format(amount ?? 0);
+const formatDate = (value) => {
+  const date = parseBookingDate(value);
+  return date ? dateFormatter.format(date) : DASH;
+};
+const formatDateTime = (value) => {
+  const date = parseBookingDate(value);
+  return date ? dateFormatter.format(date) + ' · ' + timeFormatter.format(date) : DASH;
+};
+const bookingCode = (booking) => booking.bookingCode || '#' + booking.bookingId;
+const customerName = (booking) => booking.username || 'Khách tại quầy';
+const seats = (booking) => (booking.seatCodes || []).filter(Boolean).join(', ');
+const branchKey = (booking) => booking.branchId != null ? 'id:' + booking.branchId : 'name:' + (booking.branchName || '');
+
+function StatusBadge({ statuses, value }) {
+  const status = statuses[value] || { label: value || 'Chưa có dữ liệu', tone: 'neutral' };
+  return <span className={'booking-badge booking-tone--' + status.tone}>{status.label}</span>;
+}
+
+function StatusSelect({ label, statuses, value, onChange, all = '' }) {
+  return (
+    <label>{label}
+      <select className="input" value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value={all}>Tất cả</option>
+        {Object.entries(statuses).map(([key, status]) => <option key={key} value={key}>{status.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
+async function downloadBookings(bookings) {
+  const { default: writeXlsxFile } = await import('write-excel-file/browser');
+  const textCell = (value) => ({ value: value || '' });
+  const dateCell = (value) => {
+    const date = parseBookingDate(value);
+    if (!date) return null;
+    const local = dateKeyFormatter.format(date) + 'T' + exportTimeFormatter.format(date) + 'Z';
+    return { value: new Date(local), format: 'dd/mm/yyyy hh:mm:ss' };
+  };
+  const headings = [
+    'Mã đơn', 'Khách hàng', 'Phim', 'Chi nhánh', 'Mã chi nhánh (ID)', 'Phòng', 'Ghế', 'Ngày đặt',
+    'Suất chiếu', 'Tổng tiền (VND)', 'Trạng thái đơn', 'Thanh toán', 'Phương thức', 'Thời điểm thanh toán',
+  ];
+  const data = [
+    headings.map((value) => ({ ...textCell(value), fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: '#0756A6' })),
+    ...bookings.map((booking) => [
+      textCell(bookingCode(booking)),
+      textCell(customerName(booking)),
+      textCell(booking.movieName),
+      textCell(booking.branchName),
+      textCell(booking.branchId?.toString()),
+      textCell(booking.roomName),
+      textCell(seats(booking)),
+      dateCell(booking.createdAt),
+      dateCell(booking.showtimeStart),
+      booking.totalAmount == null ? null : { value: Number(booking.totalAmount), format: '#,##0' },
+      textCell(BOOKING_STATUS[booking.status]?.label || booking.status),
+      textCell(PAYMENT_STATUS[booking.paymentStatus || 'NO_TRANSACTION']?.label || booking.paymentStatus),
+      textCell(PAYMENT_METHOD[booking.paymentMethod] || booking.paymentMethod),
+      dateCell(booking.paidAt),
+    ]),
+  ];
+  await writeXlsxFile(data, {
+    sheet: 'Đơn đặt vé',
+    stickyRowsCount: 1,
+    columns: [23, 24, 35, 28, 21, 18, 20, 23, 23, 20, 23, 22, 18, 25].map((width) => ({ width })),
+  }).toFile('don-dat-ve-' + dateKeyFormatter.format(new Date()) + '.xlsx');
+}
 
 const BookingManagement = () => {
   const { isAdmin, isManager } = useAuth();
@@ -25,11 +136,15 @@ const BookingManagement = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [processingRefund, setProcessingRefund] = useState(null);
   const [page, setPage] = useState(1);
-
-  // Confirm Dialog state for Refund Decision
-  const [confirmState, setConfirmState] = useState(null); // { bookingId, bookingCode, approved }
-  // Booking Detail Modal state
+  const [confirmState, setConfirmState] = useState(null);
   const [detailBooking, setDetailBooking] = useState(null);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [exporting, setExporting] = useState(false);
+  const [refundError, setRefundError] = useState('');
+  const drawer = useRef(null);
+  const closeButton = useRef(null);
+  const pageCheckbox = useRef(null);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -53,6 +168,7 @@ const BookingManagement = () => {
 
   const requestProcessRefund = (booking, approved) => {
     if (!canProcessRefund) return;
+    setRefundError('');
     setConfirmState({
       bookingId: booking.bookingId,
       bookingCode: booking.bookingCode || `#${booking.bookingId}`,
@@ -63,6 +179,7 @@ const BookingManagement = () => {
   const executeProcessRefund = async () => {
     if (!confirmState) return;
     const { bookingId, approved } = confirmState;
+    setRefundError('');
     setProcessingRefund(bookingId);
     try {
       const res = await bookingApi.processRefund(bookingId, approved);
@@ -85,418 +202,392 @@ const BookingManagement = () => {
       setDetailBooking((previous) => previous?.bookingId === bookingId ? { ...previous, ...updated } : previous);
       setConfirmState(null);
     } catch (err) {
-      toast.error('Lỗi: ' + (err.response?.data?.message || err.message));
+      const message = err.response?.data?.message || err.message;
+      setRefundError(message);
+      toast.error('Lỗi: ' + message);
     } finally {
       setProcessingRefund(null);
     }
   };
 
+  const branchOptions = useMemo(() => {
+    const options = new Map();
+    for (const booking of bookings) {
+      if (booking.branchId != null || booking.branchName) {
+        options.set(branchKey(booking), {
+          label: booking.branchName || 'Chi nhánh #' + booking.branchId,
+          id: booking.branchId,
+        });
+      }
+    }
+    const nameCounts = new Map();
+    for (const { label } of options.values()) {
+      nameCounts.set(label, (nameCounts.get(label) || 0) + 1);
+    }
+    return [...options].map(([key, { label, id }]) => ({
+      key,
+      label: nameCounts.get(label) > 1 ? label + (id == null ? ' (chưa có mã)' : ' (#' + id + ')') : label,
+    })).sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+  }, [bookings]);
+
+  const invalidRange = Boolean(filters.from && filters.to && filters.from > filters.to);
   const filtered = useMemo(() => {
-    return bookings.filter((b) => {
-      const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
-      const q = searchTerm.toLowerCase().trim();
-      const matchSearch =
-        !q ||
-        b.bookingCode?.toLowerCase().includes(q) ||
-        b.movieName?.toLowerCase().includes(q) ||
-        b.username?.toLowerCase().includes(q) ||
-        b.branchName?.toLowerCase().includes(q);
-      return matchStatus && matchSearch;
+    if (invalidRange) return [];
+    const query = searchTerm.trim().toLocaleLowerCase('vi');
+    return bookings.filter((booking) => {
+      if (filters.branch && branchKey(booking) !== filters.branch) return false;
+      if (statusFilter !== 'ALL' && booking.status !== statusFilter) return false;
+      if (filters.payment && (booking.paymentStatus || 'NO_TRANSACTION') !== filters.payment) return false;
+      if (filters.from || filters.to) {
+        const date = parseBookingDate(booking.createdAt);
+        if (!date) return false;
+        const day = dateKeyFormatter.format(date);
+        if ((filters.from && day < filters.from) || (filters.to && day > filters.to)) return false;
+      }
+      return !query || [bookingCode(booking), customerName(booking), booking.movieName, booking.branchName]
+        .some((value) => value?.toLocaleLowerCase('vi').includes(query));
     });
-  }, [bookings, statusFilter, searchTerm]);
+  }, [bookings, filters, invalidRange, searchTerm, statusFilter]);
+
+  const stats = useMemo(() => filtered.reduce((totals, booking) => {
+    if (booking.status === 'COMPLETED') totals.completed++;
+    if (booking.status === 'REFUND_REQUESTED') totals.refundRequested++;
+    if (booking.paymentStatus === 'PAID') totals.paidAmount += Number(booking.totalAmount) || 0;
+    return totals;
+  }, { completed: 0, refundRequested: 0, paidAmount: 0 }), [filtered]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginated = useMemo(
-    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filtered, currentPage]
-  );
+  const firstRow = (currentPage - 1) * PAGE_SIZE;
+  const paginated = filtered.slice(firstRow, firstRow + PAGE_SIZE);
+  const selectedBookings = filtered.filter((booking) => selectedIds.has(booking.bookingId));
+  const selectedOnPage = paginated.filter((booking) => selectedIds.has(booking.bookingId)).length;
+  const pageSelected = paginated.length > 0 && selectedOnPage === paginated.length;
+  const hasFilters = Boolean(searchTerm || statusFilter !== 'ALL' || Object.values(filters).some(Boolean));
+  const drawerOpen = Boolean(detailBooking);
+  const confirming = Boolean(confirmState);
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount || 0);
+  useEffect(() => {
+    if (pageCheckbox.current) pageCheckbox.current.indeterminate = selectedOnPage > 0 && !pageSelected;
+  }, [selectedOnPage, pageSelected, loading]);
 
-  const formatDate = (d) =>
-    d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+  useEffect(() => {
+    const dialog = drawer.current;
+    if (!dialog) return;
+    if (drawerOpen && !dialog.open) dialog.showModal();
+    if (!drawerOpen && dialog.open) dialog.close();
+  }, [drawerOpen]);
 
-  const formatDateTime = (d) =>
-    d
-      ? new Date(d).toLocaleString('vi-VN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        })
-      : '—';
+  useEffect(() => {
+    if (!drawerOpen) return;
+    if (confirming) drawer.current?.querySelector('.modal-overlay button')?.focus();
+    else closeButton.current?.focus();
+  }, [drawerOpen, confirming]);
 
-  const STATUS_OPTIONS = ['ALL', 'COMPLETED', 'PENDING', 'REFUND_REQUESTED', 'REFUNDED', 'CANCELLED'];
-  const STATUS_MAP = {
-    PENDING: { label: 'Chờ TT', className: 'status--pending' },
-    COMPLETED: { label: 'Thành công', className: 'status--active' },
-    CANCELLED: { label: 'Đã huỷ', className: 'status--inactive' },
-    REFUND_REQUESTED: { label: 'Chờ hoàn tiền', className: 'status--pending' },
-    REFUNDED: { label: 'Đã hoàn tiền', className: 'status--inactive' },
-  };
-  const PAYMENT_MAP = {
-    PENDING: { label: 'Chờ TT', className: 'status--pending' },
-    PAID: { label: 'Đã TT', className: 'status--active' },
-    CANCELLED: { label: 'Đã huỷ', className: 'status--inactive' },
-    FAILED: { label: 'Thất bại', className: 'status--inactive' },
-    REFUNDED: { label: 'Đã hoàn', className: 'status--inactive' },
+  const resetSelection = () => {
+    setPage(1);
+    setSelectedIds(new Set());
   };
 
-  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  const updateFilter = (key, value) => {
+    setFilters((previous) => ({ ...previous, [key]: value }));
+    resetSelection();
+  };
 
-  const totalRevenue = bookings
-    .filter((b) => b.paymentStatus === 'PAID')
-    .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const toggleSelection = (rows, checked) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      for (const booking of rows) {
+        if (checked) next.add(booking.bookingId);
+        else next.delete(booking.bookingId);
+      }
+      return next;
+    });
+  };
 
-  const refundRequestCount = bookings.filter((b) => b.status === 'REFUND_REQUESTED').length;
+  const exportSelection = async () => {
+    setExporting(true);
+    try {
+      await downloadBookings(selectedBookings);
+    } catch (err) {
+      console.error('Lỗi khi xuất đơn đặt vé:', err);
+      toast.error('Không thể xuất Excel. Vui lòng thử lại.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const summary = [
+    { label: 'Tổng đơn', value: numberFormatter.format(filtered.length), icon: <TicketIcon size={21} />, tone: 'info' },
+    { label: 'Đơn hoàn tất', value: numberFormatter.format(stats.completed), icon: <CheckIcon size={21} />, tone: 'success' },
+    { label: 'Yêu cầu hoàn tiền', value: numberFormatter.format(stats.refundRequested), icon: <BellIcon size={21} />, tone: 'warning' },
+    { label: 'Tổng tiền đã thanh toán', value: formatCurrency(stats.paidAmount), icon: <CreditCardIcon size={21} />, tone: 'success' },
+  ];
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
+    <div className="dashboard-container booking-management">
+      <header className="dashboard-header booking-header">
         <div>
           <h1 className="page-title">Quản lý Đơn đặt vé</h1>
-          <p className="page-subtitle">
-            <strong>{bookings.length}</strong> đơn · Doanh thu thanh toán:{' '}
-            <strong style={{ color: 'var(--green)' }}>{formatCurrency(totalRevenue)}</strong>
-            {refundRequestCount > 0 && (
-              <span
-                style={{
-                  marginLeft: 12,
-                  color: '#f97316',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
-              >
-                · <BellIcon size={15} /> {refundRequestCount} yêu cầu hoàn tiền
-              </span>
-            )}
-          </p>
+          <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={fetchBookings}>
-          <RefreshIcon size={16} />
-          <span>Làm mới</span>
+        <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => {
+          setSelectedIds(new Set());
+          fetchBookings();
+        }}>
+          <RefreshIcon size={17} /> Làm mới
         </button>
-      </div>
+      </header>
 
-      <div className="admin-table-card">
-        <div className="console-toolbar">
-          <div className="console-status-tabs">
-            {STATUS_OPTIONS.map((s) => {
-              const count =
-                s === 'ALL' ? bookings.length : bookings.filter((b) => b.status === s).length;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  className={`console-status-tab ${statusFilter === s ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setStatusFilter(s);
-                    setPage(1);
-                  }}
-                >
-                  <span>{s === 'ALL' ? 'Tất cả' : STATUS_MAP[s]?.label || s}</span>
-                  <span className="console-status-count">{count}</span>
-                </button>
-              );
-            })}
-          </div>
+      <section className="booking-kpis" aria-label="Thống kê theo bộ lọc" aria-busy={loading}>
+        {summary.map(({ label, value, icon, tone }) => (
+          <article className="booking-kpi" key={label}>
+            <span className={'booking-kpi-icon booking-tone--' + tone}>{icon}</span>
+            <div><span>{label}</span><strong>{loading ? DASH : value}</strong></div>
+          </article>
+        ))}
+      </section>
 
-          <div style={{ position: 'relative', minWidth: 260, flex: '0 1 320px' }}>
-            <SearchIcon
-              size={16}
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                pointerEvents: 'none',
-              }}
-            />
-            <input
-              type="text"
-              className="input"
-              placeholder="Tìm mã đơn, khách, phim, rạp..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-              style={{ paddingLeft: 38, height: 38, fontSize: '0.85rem' }}
-            />
+      <section className="admin-table-card booking-list" aria-labelledby="booking-list-title" aria-busy={loading}>
+        <div className="booking-list-heading">
+          <div>
+            <h2 id="booking-list-title">Danh sách đơn</h2>
+            <p role="status">{numberFormatter.format(filtered.length)} đơn phù hợp</p>
           </div>
+          {isAdmin && (
+            <button type="button" className="btn btn-primary" disabled={loading || exporting || !selectedBookings.length} onClick={exportSelection}>
+              <DownloadIcon size={17} />
+              {exporting ? 'Đang xuất…' : 'Xuất Excel' + (selectedBookings.length ? ' (' + selectedBookings.length + ')' : '')}
+            </button>
+          )}
         </div>
 
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Mã đơn</th>
-              <th>Khách hàng</th>
-              <th>Phim & Phòng</th>
-              <th>Chi nhánh</th>
-              <th>Ghế</th>
-              <th>Ngày đặt</th>
-              <th>Tổng tiền</th>
-              <th>Đơn hàng</th>
-              <th>Thanh toán</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.length === 0 ? (
-              <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  {searchTerm || statusFilter !== 'ALL' ? 'Không tìm thấy đơn hàng nào' : 'Chưa có đơn hàng'}
-                </td>
-              </tr>
-            ) : (
-              paginated.map((b, idx) => {
-                const statusInfo = STATUS_MAP[b.status] || { label: b.status, className: '' };
-                const payInfo = PAYMENT_MAP[b.paymentStatus] || { label: b.paymentStatus, className: '' };
-                return (
-                  <tr key={b.bookingId || idx}>
-                    <td>
-                      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                        {b.bookingCode || `#${b.bookingId}`}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div
-                          style={{
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, var(--purple), var(--blue))',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            color: '#fff',
-                          }}
-                        >
-                          {(b.username || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{b.username || '—'}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{b.movieName || '—'}</div>
-                        {b.roomName && (
-                          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{b.roomName}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ fontSize: '0.85rem' }}>{b.branchName || '—'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {b.seatCodes?.map((s, i) => (
-                          <span key={i} className="movie-badge">{s}</span>
-                        )) || '—'}
-                      </div>
-                    </td>
-                    <td style={{ fontSize: '0.85rem' }}>{formatDate(b.createdAt)}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(b.totalAmount)}</td>
-                    <td>
-                      <span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span>
-                      {b.status === 'REFUND_REQUESTED' && b.refundReason && (
-                        <div
-                          style={{
-                            fontSize: '0.72rem',
-                            color: 'var(--text-muted)',
-                            marginTop: 2,
-                            maxWidth: 120,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                          title={b.refundReason}
-                        >
-                          Lý do: {b.refundReason}
-                        </div>
-                      )}
-                    </td>
-                    <td><span className={`status-badge ${payInfo.className}`}>{payInfo.label}</span></td>
-                    <td>
-                      <div className="action-btns" style={{ alignItems: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          title="Xem chi tiết đơn"
-                          onClick={() => setDetailBooking(b)}
-                        >
-                          <EyeIcon size={15} />
-                        </button>
-                        {canProcessRefund && b.status === 'REFUND_REQUESTED' && (
-                          <>
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
-                              onClick={() => requestProcessRefund(b, true)}
-                              disabled={processingRefund === b.bookingId}
-                            >
-                              <CheckIcon size={14} />
-                              <span>{['PROCESSING', 'UNKNOWN'].includes(b.refundGatewayStatus) ? 'Kiểm tra kết quả' : b.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '4px 10px' }}
-                              onClick={() => requestProcessRefund(b, false)}
-                              disabled={processingRefund === b.bookingId || ['PROCESSING', 'UNKNOWN'].includes(b.refundGatewayStatus)}
-                            >
-                              <XIcon size={14} />
-                              <span>Từ chối</span>
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-
-        {filtered.length > PAGE_SIZE && (
-          <div className="console-pagination">
-            <span>
-              Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} / {filtered.length} đơn
+        <div className="booking-filters">
+          <label>Tìm kiếm
+            <span className="booking-search"><SearchIcon size={17} />
+              <input type="search" className="input" placeholder="Mã đơn, khách, phim" value={searchTerm}
+                onChange={(event) => { setSearchTerm(event.target.value); resetSelection(); }} />
             </span>
-            <div className="console-page-btns">
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={currentPage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeftIcon size={15} />
-                <span>Trước</span>
-              </button>
-              <span style={{ padding: '0 10px', fontWeight: 700 }}>
-                Trang {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                <span>Sau</span>
-                <ChevronRightIcon size={15} />
-              </button>
-            </div>
+          </label>
+          <label>Chi nhánh
+            <select className="input" value={filters.branch} onChange={(event) => updateFilter('branch', event.target.value)}>
+              <option value="">Tất cả chi nhánh</option>
+              {branchOptions.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
+            </select>
+          </label>
+          <label>Đặt từ ngày
+            <input type="date" className="input" value={filters.from} max={filters.to || undefined}
+              aria-invalid={invalidRange} onChange={(event) => updateFilter('from', event.target.value)} />
+          </label>
+          <label>Đặt đến ngày
+            <input type="date" className="input" value={filters.to} min={filters.from || undefined}
+              aria-invalid={invalidRange} onChange={(event) => updateFilter('to', event.target.value)} />
+          </label>
+          <StatusSelect label="Trạng thái đơn" statuses={BOOKING_STATUS} value={statusFilter} all="ALL"
+            onChange={(value) => { setStatusFilter(value); resetSelection(); }} />
+          <StatusSelect label="Thanh toán" statuses={PAYMENT_STATUS} value={filters.payment}
+            onChange={(value) => updateFilter('payment', value)} />
+          {hasFilters && (
+            <button type="button" className="btn btn-ghost booking-clear-filters" onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('ALL');
+              setFilters(EMPTY_FILTERS);
+              resetSelection();
+            }}>Xóa bộ lọc</button>
+          )}
+          {invalidRange && <p className="booking-filter-error" role="alert">Ngày kết thúc phải từ ngày bắt đầu trở đi.</p>}
+        </div>
+
+        {isAdmin && selectedBookings.length > 0 && (
+          <div className="booking-selection">
+            <strong role="status">Đã chọn {numberFormatter.format(selectedBookings.length)} đơn</strong>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
           </div>
         )}
-      </div>
 
-      {/* Booking Detail Modal */}
-      {detailBooking && (
-        <div className="modal-overlay" onClick={() => setDetailBooking(null)}>
-          <div
-            className="modal-content admin-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 620, height: 'auto', aspectRatio: 'unset', padding: 28, background: 'var(--bg-card)' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
-                  Chi tiết đơn {detailBooking.bookingCode || `#${detailBooking.bookingId}`}
-                </h2>
-                <small style={{ color: 'var(--text-muted)' }}>
-                  Đặt lúc: {formatDateTime(detailBooking.createdAt)}
-                </small>
-              </div>
-              <button
-                type="button"
-                className="modal-close"
-                style={{ position: 'static', width: 32, height: 32 }}
-                onClick={() => setDetailBooking(null)}
-                aria-label="Đóng"
-              >
-                <XIcon size={16} />
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 18 }}>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Khách hàng</div>
-                <strong style={{ fontSize: '0.95rem' }}>{detailBooking.username || 'Khách tại quầy'}</strong>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Chi nhánh & Phòng</div>
-                <strong style={{ fontSize: '0.95rem' }}>{detailBooking.branchName || '—'} · {detailBooking.roomName || '—'}</strong>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Phim</div>
-                <strong style={{ fontSize: '0.95rem' }}>{detailBooking.movieName || '—'}</strong>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Suất chiếu</div>
-                <strong style={{ fontSize: '0.95rem' }}>{formatDateTime(detailBooking.showtimeStart)}</strong>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Ghế đã chọn</div>
-                <strong style={{ fontSize: '0.95rem' }}>{(detailBooking.seatCodes || []).join(', ') || '—'}</strong>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Tổng thanh toán</div>
-                <strong style={{ fontSize: '1.05rem', color: 'var(--blue)' }}>{formatCurrency(detailBooking.totalAmount)}</strong>
-              </div>
-            </div>
-
-            {detailBooking.foods?.length > 0 && (
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: 8 }}>Combo Bắp & Nước đi kèm</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {detailBooking.foods.map((f, idx) => (
-                    <span key={idx} className="movie-badge" style={{ padding: '5px 10px', fontSize: '0.82rem' }}>
-                      {f.quantity}x {f.foodName} ({formatCurrency(f.subtotal || f.unitPrice * f.quantity)})
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {detailBooking.refundReason && (
-              <div style={{ padding: 12, borderRadius: 10, background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', marginBottom: 18, fontSize: '0.86rem' }}>
-                <strong>Lý do yêu cầu hoàn tiền:</strong> {detailBooking.refundReason}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setDetailBooking(null)}>
-                Đóng
-              </button>
-            </div>
+        {loading ? <div className="booking-empty" role="status">Đang tải đơn đặt vé…</div> : (
+          <div className="booking-table-scroll" tabIndex={0} role="region" aria-label="Bảng đơn đặt vé">
+            <table className="admin-table booking-table">
+              <thead>
+                <tr>
+                  {isAdmin && (
+                    <th scope="col" className="booking-checkbox-cell">
+                      <input ref={pageCheckbox} type="checkbox" aria-label="Chọn tất cả đơn trên trang này"
+                        checked={pageSelected} disabled={!paginated.length}
+                        onChange={(event) => toggleSelection(paginated, event.target.checked)} />
+                    </th>
+                  )}
+                  <th scope="col" className="booking-order-column">Mã đơn / Khách</th>
+                  <th scope="col">Phim / Rạp</th>
+                  <th scope="col" className="booking-date">Ngày đặt</th>
+                  <th scope="col" className="booking-money">Tổng tiền</th>
+                  <th scope="col" className="booking-status-column">Trạng thái đơn</th>
+                  <th scope="col" className="booking-status-column">Thanh toán</th>
+                  <th scope="col" className="booking-action-cell"><span className="booking-sr-only">Thao tác</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {!paginated.length && (
+                  <tr><td colSpan={isAdmin ? 8 : 7}><div className="booking-empty"><ListIcon size={25} />
+                    {hasFilters ? 'Không có đơn phù hợp với bộ lọc' : 'Chưa có đơn đặt vé'}
+                  </div></td></tr>
+                )}
+                {paginated.map((booking) => {
+                  const code = bookingCode(booking);
+                  const selected = selectedIds.has(booking.bookingId);
+                  const location = [booking.branchName, booking.roomName].filter(Boolean).join(' · ');
+                  return (
+                    <tr key={booking.bookingId} className={selected ? 'is-selected' : undefined}>
+                      {isAdmin && (
+                        <td className="booking-checkbox-cell"><input type="checkbox" checked={selected}
+                          aria-label={'Chọn đơn ' + code} onChange={(event) => toggleSelection([booking], event.target.checked)} /></td>
+                      )}
+                      <td>
+                        <button type="button" className="booking-order-link" title={code} onClick={() => setDetailBooking(booking)}>{code}</button>
+                        <span className="booking-cell-secondary" title={customerName(booking)}>{customerName(booking)}</span>
+                      </td>
+                      <td>
+                        <strong className="booking-cell-main" title={booking.movieName}>{booking.movieName || DASH}</strong>
+                        <span className="booking-cell-secondary" title={location}>{location || DASH}</span>
+                      </td>
+                      <td className="booking-date" title={formatDateTime(booking.createdAt)}>{formatDate(booking.createdAt)}</td>
+                      <td className="booking-money">{formatCurrency(booking.totalAmount)}</td>
+                      <td><StatusBadge statuses={BOOKING_STATUS} value={booking.status} /></td>
+                      <td><StatusBadge statuses={PAYMENT_STATUS} value={booking.paymentStatus || 'NO_TRANSACTION'} /></td>
+                      <td className="booking-action-cell">
+                        <button type="button" className="btn btn-ghost btn-sm booking-icon-button" title="Xem chi tiết"
+                          aria-label={'Xem chi tiết đơn ' + code} onClick={() => setDetailBooking(booking)}>
+                          <EyeIcon size={17} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Refund Confirm Dialog */}
-      <ConfirmDialog
-        open={Boolean(confirmState)}
-        title={confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
-        message={
-          confirmState?.approved
-            ? `Xác nhận duyệt hoàn tiền cho đơn ${confirmState?.bookingCode}?`
-            : `Xác nhận từ chối yêu cầu hoàn tiền của đơn ${confirmState?.bookingCode}?`
-        }
-        confirmText={confirmState?.approved ? 'Duyệt hoàn tiền' : 'Từ chối'}
-        variant={confirmState?.approved ? 'primary' : 'danger'}
-        loading={Boolean(processingRefund)}
-        onConfirm={executeProcessRefund}
-        onCancel={() => setConfirmState(null)}
-      />
+        {!loading && filtered.length > 0 && (
+          <footer className="booking-pagination">
+            <span>Hiển thị {firstRow + 1}–{firstRow + paginated.length} / {filtered.length} đơn</span>
+            {totalPages > 1 && (
+              <nav aria-label="Phân trang đơn đặt vé">
+                <button type="button" className="btn btn-secondary btn-sm booking-icon-button" aria-label="Trang trước"
+                  disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}><ChevronLeftIcon size={17} /></button>
+                <span>Trang {currentPage} / {totalPages}</span>
+                <button type="button" className="btn btn-secondary btn-sm booking-icon-button" aria-label="Trang sau"
+                  disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRightIcon size={17} /></button>
+              </nav>
+            )}
+          </footer>
+        )}
+      </section>
+
+      <dialog ref={drawer} className="booking-drawer" aria-labelledby="booking-drawer-title"
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !confirming) setDetailBooking(null);
+        }}
+        onCancel={(event) => {
+          event.preventDefault();
+          if (processingRefund) return;
+          if (confirming) setConfirmState(null);
+          else setDetailBooking(null);
+        }}>
+        {detailBooking && (
+          <div className="booking-drawer-panel" inert={confirming || undefined}>
+            <header className="booking-drawer-header">
+              <div>
+                <h2 id="booking-drawer-title">Đơn {bookingCode(detailBooking)}</h2>
+                <p>Ngày đặt {formatDateTime(detailBooking.createdAt)}</p>
+              </div>
+              <button ref={closeButton} type="button" className="btn btn-ghost booking-icon-button"
+                aria-label="Đóng chi tiết đơn" onClick={() => setDetailBooking(null)}><XIcon size={21} /></button>
+            </header>
+            <div className="booking-drawer-body">
+              <div className="booking-drawer-status">
+                <div><span>Trạng thái đơn</span><StatusBadge statuses={BOOKING_STATUS} value={detailBooking.status} /></div>
+                <div><span>Thanh toán</span><StatusBadge statuses={PAYMENT_STATUS} value={detailBooking.paymentStatus || 'NO_TRANSACTION'} /></div>
+              </div>
+              <section className="booking-detail-section">
+                <h3>Thông tin vé</h3>
+                <dl>
+                  <div><dt>Khách hàng</dt><dd>{customerName(detailBooking)}</dd></div>
+                  <div><dt>Phim</dt><dd>{detailBooking.movieName || DASH}</dd></div>
+                  <div><dt>Chi nhánh</dt><dd>{detailBooking.branchName || DASH}</dd></div>
+                  <div><dt>Phòng chiếu</dt><dd>{detailBooking.roomName || DASH}</dd></div>
+                  <div><dt>Suất chiếu</dt><dd>{formatDateTime(detailBooking.showtimeStart)}</dd></div>
+                  <div><dt>Ghế</dt><dd>{seats(detailBooking) || DASH}</dd></div>
+                </dl>
+              </section>
+              {detailBooking.foods?.length > 0 && (
+                <section className="booking-detail-section">
+                  <h3>Bắp, nước và combo</h3>
+                  <ul className="booking-food-list">
+                    {detailBooking.foods.map((food, index) => (
+                      <li key={food.foodId ?? index}>
+                        <span>{food.quantity} × {food.foodName || 'Sản phẩm'}</span>
+                        <strong>{formatCurrency(food.subtotal ?? food.unitPrice * food.quantity)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <section className="booking-detail-section">
+                <h3>Thông tin giao dịch</h3>
+                <dl>
+                  <div><dt>Phương thức</dt><dd>{PAYMENT_METHOD[detailBooking.paymentMethod] || detailBooking.paymentMethod || DASH}</dd></div>
+                  <div><dt>Thời điểm thanh toán</dt><dd>{formatDateTime(detailBooking.paidAt)}</dd></div>
+                  {detailBooking.providerTxnId && <div><dt>Mã giao dịch</dt><dd>{detailBooking.providerTxnId}</dd></div>}
+                  {Number(detailBooking.discountAmount) > 0 && <div><dt>Giảm giá</dt><dd>{formatCurrency(detailBooking.discountAmount)}</dd></div>}
+                </dl>
+                <div className="booking-detail-total"><span>Tổng tiền đơn</span><strong>{formatCurrency(detailBooking.totalAmount)}</strong></div>
+              </section>
+              {(detailBooking.refundReason || detailBooking.refundProcessNote || detailBooking.refundGatewayMessage ||
+                detailBooking.status === 'REFUND_REQUESTED' || detailBooking.status === 'REFUNDED') && (
+                <section className="booking-detail-section">
+                  <h3>Hoàn tiền</h3>
+                  <dl className="booking-refund-fields">
+                    {detailBooking.refundReason && <div><dt>Lý do yêu cầu</dt><dd>{detailBooking.refundReason}</dd></div>}
+                    {detailBooking.refundProcessNote && <div><dt>Ghi chú xử lý</dt><dd>{detailBooking.refundProcessNote}</dd></div>}
+                    {detailBooking.refundGatewayMessage && <div><dt>Thông tin giao dịch hoàn tiền</dt><dd>{detailBooking.refundGatewayMessage}</dd></div>}
+                    {detailBooking.refundAmount != null && <div><dt>Số tiền hoàn</dt><dd>{formatCurrency(detailBooking.refundAmount)}</dd></div>}
+                    {detailBooking.refundedAt && <div><dt>Thời điểm hoàn tiền</dt><dd>{formatDateTime(detailBooking.refundedAt)}</dd></div>}
+                  </dl>
+                </section>
+              )}
+            </div>
+            {canProcessRefund && detailBooking.status === 'REFUND_REQUESTED' && (
+              <footer className="booking-drawer-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => requestProcessRefund(detailBooking, false)}
+                  disabled={Boolean(processingRefund) || ['PROCESSING', 'UNKNOWN'].includes(detailBooking.refundGatewayStatus)}>
+                  <XIcon size={16} /><span>Từ chối</span>
+                </button>
+                <button type="button" className="btn btn-primary" disabled={Boolean(processingRefund)}
+                  onClick={() => requestProcessRefund(detailBooking, true)}>
+                  <CheckIcon size={16} />
+                  {['PROCESSING', 'UNKNOWN'].includes(detailBooking.refundGatewayStatus) ? 'Kiểm tra kết quả'
+                    : detailBooking.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt hoàn tiền'}
+                </button>
+              </footer>
+            )}
+          </div>
+        )}
+
+        <ConfirmDialog
+          open={confirming}
+          title={confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
+          message={(confirmState?.approved
+            ? 'Xác nhận xử lý hoàn tiền cho đơn ' + confirmState.bookingCode + '?'
+            : 'Xác nhận từ chối yêu cầu hoàn tiền của đơn ' + confirmState?.bookingCode + '?') +
+            (refundError ? '\n\nLỗi: ' + refundError : '')}
+          confirmText={confirmState?.approved ? 'Xác nhận' : 'Từ chối'}
+          variant={confirmState?.approved ? 'primary' : 'danger'}
+          loading={Boolean(processingRefund)}
+          onConfirm={executeProcessRefund}
+          onCancel={() => setConfirmState(null)}
+        />
+      </dialog>
     </div>
   );
 };
