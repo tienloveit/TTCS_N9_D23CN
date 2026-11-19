@@ -27,6 +27,15 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // The password endpoint also uses 401 for a rejected current password.
+    if (
+      originalRequest?.url === '/auth/change-password' &&
+      error.response?.status === 401 &&
+      error.response.data?.message === 'Password incorrect'
+    ) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest.skipAuth && !originalRequest._retry) {
       originalRequest._retry = true;
 

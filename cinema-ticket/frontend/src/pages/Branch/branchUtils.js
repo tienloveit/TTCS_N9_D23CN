@@ -29,23 +29,35 @@ export const formatTime = (value) => {
 export const toLocalDateISO = (date = new Date()) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
+const cinemaClock = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
+export const getCinemaLocalNow = () => cinemaClock.format(new Date()).replace(' ', 'T');
+
 /**
- * Tạo danh sách `count` ngày liên tiếp bắt đầu từ hôm nay (theo giờ local, không bị lệch UTC).
+ * Tạo dải ngày theo múi giờ của rạp. offset tính từ hôm nay.
  */
-export const buildUpcomingDays = (count = 7) => {
+export const buildUpcomingDays = (count = 7, offset = 0, today = getCinemaLocalNow().slice(0, 10)) => {
   const dayShort = ['CN', 'Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7'];
   const dayLong = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-  const base = new Date();
-  base.setHours(0, 0, 0, 0);
+  const base = parseLocalDateTime(`${today}T12:00`);
 
   return Array.from({ length: count }, (_, idx) => {
+    const dayOffset = offset + idx;
     const d = new Date(base);
-    d.setDate(base.getDate() + idx);
+    d.setDate(base.getDate() + dayOffset);
     const iso = toLocalDateISO(d);
     const dd = pad(d.getDate());
     const mm = pad(d.getMonth() + 1);
     const relativeLabel =
-      idx === 0 ? 'Hôm nay' : idx === 1 ? 'Ngày mai' : dayShort[d.getDay()];
+      dayOffset === 0 ? 'Hôm nay' : dayOffset === 1 ? 'Ngày mai' : dayShort[d.getDay()];
 
     return {
       iso,
@@ -54,8 +66,8 @@ export const buildUpcomingDays = (count = 7) => {
       shortDay: dayShort[d.getDay()],
       longDay: dayLong[d.getDay()],
       relativeLabel,
-      fullLabel: `${idx === 0 ? 'Hôm nay, ' : idx === 1 ? 'Ngày mai, ' : `${dayLong[d.getDay()]}, `}${dd}/${mm}/${d.getFullYear()}`,
-      isToday: idx === 0,
+      fullLabel: `${dayOffset < 2 ? relativeLabel : dayLong[d.getDay()]}, ${dd}/${mm}/${d.getFullYear()}`,
+      isToday: dayOffset === 0,
     };
   });
 };

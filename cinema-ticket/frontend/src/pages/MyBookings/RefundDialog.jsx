@@ -15,7 +15,7 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
   const trimmed = reason.trim();
 
   return (
-    <DialogShell onClose={submitting ? () => {} : onClose} labelledBy="mt-refund-title">
+    <DialogShell onClose={submitting ? () => {} : onClose} showClose={!submitting} labelledBy="mt-refund-title">
       <h3 id="mt-refund-title" className="mt-dialog-title">Yêu cầu hoàn tiền</h3>
       <p className="mt-dialog-text">
         Rạp sẽ xem xét yêu cầu của bạn. Khi được duyệt, bạn được hoàn toàn bộ số tiền đã thanh toán
@@ -35,14 +35,16 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
         </div>
       </div>
 
-      <label className="mt-field">
-        <span className="mt-field-label">Lý do hoàn tiền</span>
-        <div className="mt-chips">
+      <div className="mt-field">
+        <label className="mt-field-label" htmlFor="mt-refund-reason">Lý do hoàn tiền</label>
+        <div className="mt-chips" role="group" aria-label="Lý do gợi ý">
           {QUICK_REASONS.map((item) => (
             <button
               key={item}
               type="button"
               className={`mt-chip ${trimmed === item ? 'is-active' : ''}`}
+              aria-pressed={trimmed === item}
+              disabled={submitting}
               onClick={() => setReason(item)}
             >
               {item}
@@ -51,13 +53,15 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
         </div>
         <textarea
           className="mt-textarea"
+          id="mt-refund-reason"
           rows={3}
           maxLength={500}
           placeholder="Hoặc nhập lý do của bạn..."
           value={reason}
+          disabled={submitting}
           onChange={(event) => setReason(event.target.value)}
         />
-      </label>
+      </div>
 
       <div className="mt-dialog-actions">
         <button type="button" className="mt-btn mt-btn--outline" onClick={onClose} disabled={submitting}>

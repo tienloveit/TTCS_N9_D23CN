@@ -38,6 +38,29 @@ async function loadClient() {
   return { client, storage, window, rejectExpired, retried };
 }
 
+test('an incorrect current password reaches the form without refreshing the session', async () => {
+  const fixture = await loadClient();
+  const previousAdapter = axios.defaults.adapter;
+  let refreshCalls = 0;
+  axios.defaults.adapter = async () => {
+    refreshCalls++;
+    return { status: 200, data: { result: { accessToken: 'fresh', refreshToken: 'fresh' } } };
+  };
+  try {
+    const reject = fixture.client.interceptors.response.handlers[0].rejected;
+    const config = { url: '/auth/change-password', headers: { Authorization: 'Bearer old-access' } };
+    const incorrect = { response: { status: 401, data: { message: 'Password incorrect' } }, config };
+    await assert.rejects(reject(incorrect), (error) => error === incorrect);
+    assert.equal(refreshCalls, 0);
+    assert.equal(fixture.storage.get('accessToken'), 'old-access');
+    await reject({ response: { status: 401, data: { message: 'Unauthorized' } }, config });
+    assert.equal(refreshCalls, 1);
+    assert.deepEqual(fixture.retried, ['Bearer fresh']);
+  } finally {
+    axios.defaults.adapter = previousAdapter;
+  }
+});
+
 test('concurrent 401 responses share one refresh and both retry with the new access token', async () => {
   const fixture = await loadClient();
   const previousAdapter = axios.defaults.adapter;

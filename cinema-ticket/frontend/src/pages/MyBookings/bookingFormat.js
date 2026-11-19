@@ -1,43 +1,42 @@
-/**
- * Helpers dùng chung cho trang "Vé của tôi".
- * Backend trả LocalDateTime không có timezone (vd: "2026-04-14T16:30:00"),
- * nên parse thủ công để tránh lệch múi giờ.
- */
+// LocalDateTime của booking theo giờ Việt Nam (UTC+07:00).
+const CINEMA_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 export const parseLocalDateTime = (value) => {
   if (!value) return null;
   if (Array.isArray(value)) {
-    const [y, m, d, h = 0, mi = 0, s = 0] = value;
-    return new Date(y, m - 1, d, h, mi, s);
+    const [y, m, d, h = 0, mi = 0, s = 0, nanos = 0] = value;
+    const ms = Date.UTC(y, m - 1, d, h, mi, s, Math.floor(nanos / 1e6)) - CINEMA_OFFSET_MS;
+    return Number.isFinite(ms) ? new Date(ms) : null;
   }
-  const [datePart, timePart] = String(value).split('T');
-  if (!datePart) return null;
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hour = 0, minute = 0, second = 0] = (timePart || '00:00')
-    .split(':')
-    .map((part) => Math.floor(Number(part)) || 0);
-  const date = new Date(year, month - 1, day, hour, minute, second);
+  const [day, time = '00:00'] = String(value).split('T');
+  const date = new Date(`${day}T${time}+07:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
 const pad = (n) => String(n).padStart(2, '0');
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
+const cinemaDate = (value) => {
+  const date = parseLocalDateTime(value);
+  return date && new Date(date.getTime() + CINEMA_OFFSET_MS);
+};
+
 export const formatShowDate = (value) => {
-  const d = parseLocalDateTime(value);
+  const d = cinemaDate(value);
   if (!d) return '—';
-  return `${WEEKDAYS[d.getDay()]}, ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  return `${WEEKDAYS[d.getUTCDay()]}, ${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
 };
 
 export const formatTime = (value) => {
-  const d = parseLocalDateTime(value);
+  const d = cinemaDate(value);
   if (!d) return '—';
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 };
 
 export const formatDateTime = (value) => {
-  const d = parseLocalDateTime(value);
+  const d = cinemaDate(value);
   if (!d) return '—';
-  return `${pad(d.getHours())}:${pad(d.getMinutes())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} ${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
 };
 
 export const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')} đ`;
@@ -81,16 +80,23 @@ export const isFullyCheckedIn = (booking) => {
   return tickets.length > 0 && tickets.every((t) => t.checkedInAt);
 };
 
-/**
- * Trạng thái hiển thị của đơn, tách COMPLETED thành "sắp chiếu" / "đã chiếu".
- */
+export const canPayBooking = (booking, now) =>
+  booking.status === 'PENDING' &&
+  booking.paymentStatus === 'PENDING' &&
+  (parseLocalDateTime(booking.expiresAt)?.getTime() ?? 0) > now;
+
 export const getBookingPhase = (booking, now) => {
   switch (booking.status) {
     case 'PENDING':
       return 'pending';
     case 'COMPLETED': {
+      if (booking.paymentStatus && booking.paymentStatus !== 'PAID') return 'other';
+      if (isFullyCheckedIn(booking)) return 'checked_in';
+      const start = getShowStart(booking);
       const end = getShowEnd(booking);
-      return end && end.getTime() < now ? 'watched' : 'upcoming';
+      if (end && end.getTime() <= now) return 'watched';
+      if (start) return start.getTime() > now ? 'upcoming' : 'in_progress';
+      return 'paid';
     }
     case 'CANCELLED':
       return 'cancelled';
@@ -107,12 +113,15 @@ export const getBookingPhase = (booking, now) => {
 
 export const PHASE_META = {
   upcoming: { label: 'Sắp chiếu', tone: 'green' },
+  in_progress: { label: 'Đang chiếu', tone: 'blue' },
+  paid: { label: 'Đã thanh toán', tone: 'blue' },
+  checked_in: { label: 'Đã check-in', tone: 'neutral' },
   pending: { label: 'Chờ thanh toán', tone: 'amber' },
   watched: { label: 'Đã chiếu', tone: 'neutral' },
-  refund_requested: { label: 'Chờ hoàn tiền', tone: 'orange' },
+  refund_requested: { label: 'Chờ duyệt hoàn tiền', tone: 'orange' },
   refunded: { label: 'Đã hoàn tiền', tone: 'violet' },
-  cancelled: { label: 'Đã huỷ', tone: 'red' },
-  expired: { label: 'Hết hạn', tone: 'neutral' },
+  cancelled: { label: 'Đã hủy', tone: 'red' },
+  expired: { label: 'Hết hạn thanh toán', tone: 'neutral' },
   other: { label: 'Không xác định', tone: 'neutral' },
 };
 

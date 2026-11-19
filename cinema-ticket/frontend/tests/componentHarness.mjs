@@ -23,17 +23,18 @@ export async function loadPage(path, initialState, services = {}) {
     useRef: value => ({ current: value }),
   };
   const icons = ['Award', 'Check', 'Copy', 'Edit', 'Gift', 'Key', 'Spark', 'User',
-    'Bell', 'ChevronLeft', 'ChevronRight', 'CreditCard', 'Download', 'Eye', 'List', 'Refresh', 'Search', 'Ticket', 'X'];
+    'AlertCircle', 'ArrowRight', 'Bell', 'ChevronLeft', 'ChevronRight', 'CreditCard', 'Download', 'Eye', 'EyeOff', 'List', 'Refresh', 'Search', 'Ticket', 'X'];
   const dependencies = {
     react: hooks,
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
-    'react-router-dom': { useLocation: () => ({ hash: '#info' }), useNavigate: () => () => {} },
+    'react-router-dom': { Link: 'Link', useLocation: () => ({ hash: '#info' }), useNavigate: () => () => {} },
     'react-toastify': { toast },
     '../../api': { bookingApi: {}, userApi: {}, authApi: {}, promotionApi: {}, ...services },
     '../../context/useAuth': { useAuth: () => ({ isAdmin: true, isManager: false }) },
     '../../components/Common/ConfirmDialog': { default: 'ConfirmDialog' },
     '../../components/Common/Skeleton': { SkeletonBox: 'SkeletonBox' },
     './BookingManagement.css': {},
+    './ProfilePage.css': {},
     '../../components/Common/CinemaIcons': Object.fromEntries(icons.map(name => [`${name}Icon`, `${name}Icon`])),
   };
   const source = await readFile(new URL(path, import.meta.url), 'utf8');

@@ -1,59 +1,59 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
-import EmptyState from '../../components/Common/EmptyState';
+import {
+  AlertCircleIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FilmIcon,
+  RefreshIcon,
+  SearchIcon,
+  TicketIcon,
+  XIcon,
+} from '../../components/Common/CinemaIcons';
 import BookingCard from './BookingCard';
 import TicketPassModal from './TicketPassModal';
 import RefundDialog from './RefundDialog';
 import { ConfirmDialog } from './Dialogs';
+import { dismissBookingChange, recordBookingChanges } from './bookingChanges';
 import { getBookingPhase, getShowStart, parseLocalDateTime } from './bookingFormat';
 import './MyBookingsPage.css';
 
-const TABS = [
-  { key: 'all', label: 'Tất cả' },
+const FILTERS = [
+  { key: 'all', label: 'Tất cả trạng thái' },
   { key: 'upcoming', label: 'Sắp chiếu', phases: ['upcoming'] },
   { key: 'pending', label: 'Chờ thanh toán', phases: ['pending'] },
-  { key: 'watched', label: 'Đã chiếu', phases: ['watched'] },
-  {
-    key: 'closed',
-    label: 'Huỷ & hoàn tiền',
-    phases: ['refund_requested', 'refunded', 'cancelled', 'expired', 'other'],
-  },
+  { key: 'in_progress', label: 'Đang chiếu', phases: ['in_progress'] },
+  { key: 'watched', label: 'Đã chiếu / Đã check-in', phases: ['watched', 'checked_in'] },
+  { key: 'closed', label: 'Hủy, hết hạn và hoàn tiền', phases: ['refund_requested', 'refunded', 'cancelled', 'expired'] },
 ];
 
-const EMPTY_COPY = {
-  upcoming: 'Bạn chưa có suất chiếu nào sắp tới.',
-  pending: 'Không có đơn nào đang chờ thanh toán.',
-  watched: 'Bạn chưa xem suất chiếu nào cùng MoviePTIT.',
-  closed: 'Không có đơn huỷ hoặc hoàn tiền.',
-};
+const PAGE_SIZE = 6;
+const FEATURED_LIMIT = 2;
 
 const createdTime = (b) => parseLocalDateTime(b.createdAt)?.getTime() || 0;
 const showTime = (b) => getShowStart(b)?.getTime() || 0;
-const byNewest = (a, b) => createdTime(b) - createdTime(a);
-const bySoonest = (a, b) => showTime(a) - showTime(b);
+const byNewest = (a, b) => createdTime(b.booking) - createdTime(a.booking);
+const bySoonest = (a, b) => showTime(a.booking) - showTime(b.booking);
 
 const getErrorMessage = (err) => err?.response?.data?.message || err?.message || 'Đã có lỗi xảy ra';
 
+function normalizeSearch(value) {
+  return value.toLowerCase().normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/đ/g, 'd')
+    .replace(/#/g, '')
+    .trim();
+}
+
 function SkeletonList() {
   return (
-    <div className="mt-list" aria-busy="true" aria-label="Đang tải vé">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="mt-card mt-card--skeleton">
-          <div className="mt-poster-col"><div className="mt-sk mt-sk-poster" /></div>
-          <div className="mt-body">
-            <div className="mt-sk mt-sk-line" style={{ width: 96 }} />
-            <div className="mt-sk mt-sk-title" />
-            <div className="mt-sk mt-sk-line" style={{ width: '70%' }} />
-            <div className="mt-sk mt-sk-line" style={{ width: '45%' }} />
-          </div>
-          <div className="mt-stub">
-            <div className="mt-sk mt-sk-line" style={{ width: '60%' }} />
-            <div className="mt-sk mt-sk-btn" />
-          </div>
-        </div>
-      ))}
+    <div className="mt-list" role="status">
+      <p className="mt-results">Đang tải danh sách vé…</p>
+      {[0, 1].map((i) => <div key={i} className="mt-sk mt-sk-card" aria-hidden="true" />)}
     </div>
   );
 }
@@ -61,11 +61,15 @@ function SkeletonList() {
 export default function MyBookingsPage() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
+  const [changeNotices, setChangeNotices] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
-  const [activeTab, setActiveTab] = useState('all');
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [now, setNow] = useState(() => Date.now());
+  const resultsHeading = useRef(null);
 
   const [ticketBooking, setTicketBooking] = useState(null);
   const [refundBooking, setRefundBooking] = useState(null);
@@ -79,11 +83,14 @@ export default function MyBookingsPage() {
       try {
         const res = await bookingApi.getMyBookings();
         if (!ignore) {
-          setBookings(res.data.result || []);
+          const list = res.data.result ?? [];
+          if (!Array.isArray(list)) throw new Error('Phản hồi danh sách vé không hợp lệ.');
+          setBookings(list);
+          setChangeNotices(recordBookingChanges(list));
+          setNow(Date.now());
           setLoadError('');
         }
       } catch (err) {
-        console.error('Lỗi khi tải vé', err);
         if (!ignore) setLoadError(getErrorMessage(err));
       } finally {
         if (!ignore) setLoading(false);
@@ -95,48 +102,40 @@ export default function MyBookingsPage() {
     };
   }, [reloadKey]);
 
-  const hasPending = bookings.some((b) => b.status === 'PENDING');
+  const hasPending = bookings.some((booking) => booking.status === 'PENDING');
 
-  // Đồng hồ cho đếm ngược giữ ghế / thời hạn hoàn tiền.
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), hasPending ? 1000 : 30000);
     return () => clearInterval(id);
   }, [hasPending]);
 
-  const withPhase = useMemo(
-    () => bookings.map((booking) => ({ booking, phase: getBookingPhase(booking, now) })),
-    [bookings, now]
-  );
+  const searchableBookings = useMemo(() => bookings.map((booking) => ({
+    booking,
+    searchText: normalizeSearch([booking.movieName, booking.bookingCode, booking.branchName, booking.roomName].filter(Boolean).join(' ')),
+  })), [bookings]);
 
-  const counts = useMemo(() => {
-    const result = { all: withPhase.length };
-    TABS.forEach((tab) => {
-      if (tab.phases) result[tab.key] = withPhase.filter((x) => tab.phases.includes(x.phase)).length;
-    });
-    return result;
-  }, [withPhase]);
+  const query = normalizeSearch(search);
+  const { upcoming, featured, results } = useMemo(() => {
+    const withPhase = searchableBookings.map((item) => ({ ...item, phase: getBookingPhase(item.booking, now) }));
+    const upcoming = withPhase.filter((item) => item.phase === 'upcoming').sort(bySoonest);
+    const featured = filter === 'all' && !query ? upcoming.slice(0, FEATURED_LIMIT) : [];
+    const featuredIds = new Set(featured.map(({ booking }) => booking.bookingId));
+    const phases = FILTERS.find((item) => item.key === filter)?.phases;
+    const terms = query.split(/\s+/);
+    const results = withPhase.filter((item) => (
+      !featuredIds.has(item.booking.bookingId) &&
+      (!phases || phases.includes(item.phase)) &&
+      terms.every((term) => item.searchText.includes(term))
+    ));
+    const pendingFirst = (a, b) => Number(b.phase === 'pending') - Number(a.phase === 'pending');
+    results.sort(filter === 'upcoming' ? bySoonest : (a, b) => pendingFirst(a, b) || byNewest(a, b));
+    return { upcoming, featured, results };
+  }, [searchableBookings, now, filter, query]);
 
-  const sections = useMemo(() => {
-    const pick = (phases) => withPhase.filter((x) => phases.includes(x.phase)).map((x) => x.booking);
-
-    if (activeTab === 'all') {
-      const pending = pick(['pending']).sort(byNewest);
-      const upcoming = pick(['upcoming']).sort(bySoonest);
-      const history = withPhase
-        .filter((x) => x.phase !== 'pending' && x.phase !== 'upcoming')
-        .map((x) => x.booking)
-        .sort(byNewest);
-      return [
-        { key: 'pending', title: 'Cần thanh toán', items: pending },
-        { key: 'upcoming', title: 'Suất chiếu sắp tới', items: upcoming },
-        { key: 'history', title: 'Lịch sử đặt vé', items: history },
-      ].filter((s) => s.items.length > 0);
-    }
-
-    const tab = TABS.find((t) => t.key === activeTab);
-    const items = pick(tab.phases).sort(activeTab === 'upcoming' ? bySoonest : byNewest);
-    return items.length ? [{ key: activeTab, title: null, items }] : [];
-  }, [withPhase, activeTab]);
+  const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+  const visibleResults = results.slice(offset, offset + PAGE_SIZE);
 
   const updateBooking = useCallback((bookingId, patch) => {
     setBookings((prev) => prev.map((b) => (b.bookingId === bookingId ? { ...b, ...patch } : b)));
@@ -148,10 +147,10 @@ export default function MyBookingsPage() {
     try {
       await bookingApi.cancel(cancelBooking.bookingId);
       updateBooking(cancelBooking.bookingId, { status: 'CANCELLED', paymentStatus: 'CANCELLED' });
-      toast.success('Đã huỷ đơn đặt vé.');
+      toast.success('Đã hủy đơn đặt vé.');
       setCancelBooking(null);
     } catch (err) {
-      toast.error(`Không thể huỷ đơn: ${getErrorMessage(err)}`);
+      toast.error(`Không thể hủy đơn: ${getErrorMessage(err)}`);
     } finally {
       setCancelling(false);
     }
@@ -182,98 +181,167 @@ export default function MyBookingsPage() {
   const closeRefund = useCallback(() => setRefundBooking(null), []);
   const closeCancel = useCallback(() => setCancelBooking(null), []);
 
-  const subtitle = loading
-    ? 'Đang tải danh sách vé...'
-    : counts.upcoming > 0
-      ? `Bạn có ${counts.upcoming} suất chiếu sắp tới${counts.pending ? ` và ${counts.pending} đơn chờ thanh toán` : ''}.`
-      : counts.pending > 0
-        ? `Bạn có ${counts.pending} đơn đang chờ thanh toán.`
-        : 'Lịch sử đặt vé và trạng thái thanh toán của bạn.';
+  function reload() {
+    if (loading) return;
+    setLoadError('');
+    setLoading(true);
+    setReloadKey((key) => key + 1);
+  }
+
+  function updateFilter(value) {
+    setFilter(value);
+    setPage(1);
+  }
+
+  function updateSearch(value) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function changePage(nextPage) {
+    setPage(nextPage);
+    resultsHeading.current?.focus();
+  }
+
+  function dismissChange(booking) {
+    dismissBookingChange(booking);
+    setChangeNotices((current) => {
+      const next = { ...current };
+      delete next[booking.bookingId];
+      return next;
+    });
+  }
+
+  function renderBooking({ booking, phase }) {
+    return (
+      <BookingCard
+        key={booking.bookingId}
+        booking={booking}
+        phase={phase}
+        now={now}
+        changeNotice={changeNotices[booking.bookingId]}
+        onDismissChange={dismissChange}
+        onOpenTicket={setTicketBooking}
+        onPay={(selected) => navigate(`/booking/${selected.bookingId}/payment`)}
+        onCancel={setCancelBooking}
+        onRequestRefund={setRefundBooking}
+      />
+    );
+  }
 
   return (
     <div className="page mt-page">
       <div className="mt-wrap">
         <header className="mt-header">
           <div>
-            <h1 className="mt-heading">Vé của tôi</h1>
-            <p className="mt-subheading">{subtitle}</p>
+            <h1 id="mt-page-title" className="mt-heading" tabIndex={-1}>Vé của tôi</h1>
+            <p className="mt-subheading">Xem vé QR, kiểm tra suất chiếu và quản lý đơn đặt vé.</p>
           </div>
-          <Link to="/movies" className="mt-btn mt-btn--outline mt-header-cta">
-            Đặt vé mới
-          </Link>
+          <Link to="/movies" className="mt-btn mt-btn--primary"><FilmIcon size={17} />Đặt vé mới</Link>
         </header>
 
-        <nav className="mt-tabs" role="tablist" aria-label="Lọc đơn đặt vé">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              className={`mt-tab ${activeTab === tab.key ? 'is-active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-              {!loading && counts[tab.key] > 0 && <span className="mt-tab-count">{counts[tab.key]}</span>}
+        {bookings.length > 0 && !loadError && (
+          <div className="mt-tools" role="group" aria-label="Tìm và lọc đơn đặt vé">
+            <div className="mt-field-control">
+              <label htmlFor="mt-search">Tìm đơn đặt vé</label>
+              <div className="mt-search">
+                <SearchIcon size={18} />
+                <input id="mt-search" type="text" value={search} placeholder="Tên phim, mã đơn hoặc rạp…" onChange={(event) => updateSearch(event.target.value)} />
+                {search && (
+                  <button type="button" aria-label="Xóa tìm kiếm" onClick={() => {
+                    updateSearch('');
+                    document.getElementById('mt-search')?.focus();
+                  }}><XIcon size={18} /></button>
+                )}
+              </div>
+            </div>
+            <div className="mt-field-control">
+              <label htmlFor="mt-filter">Trạng thái</label>
+              <select id="mt-filter" value={filter} onChange={(event) => updateFilter(event.target.value)}>
+                {FILTERS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+              </select>
+            </div>
+            <button type="button" className="mt-btn mt-btn--outline mt-refresh" aria-disabled={loading} onClick={reload}>
+              <RefreshIcon size={17} />Cập nhật vé
             </button>
-          ))}
-        </nav>
+          </div>
+        )}
 
         {loading ? (
           <SkeletonList />
         ) : loadError ? (
-          <div className="mt-error">
-            <p>Không tải được danh sách vé. {loadError}</p>
-            <button
-              type="button"
-              className="mt-btn mt-btn--outline"
-              onClick={() => {
-                setLoading(true);
-                setReloadKey((k) => k + 1);
-              }}
-            >
-              Thử lại
-            </button>
-          </div>
-        ) : sections.length === 0 ? (
-          activeTab === 'all' ? (
-            <EmptyState
-              title="Bạn chưa có vé nào"
-              message="Có vẻ như bạn chưa đặt vé nào tại MoviePTIT. Chọn một bộ phim và trải nghiệm ngay nhé!"
-              buttonText="Tìm phim đặt vé ngay"
-            />
-          ) : (
-            <div className="mt-empty">
-              <p>{EMPTY_COPY[activeTab]}</p>
-              <button type="button" className="mt-link-btn" onClick={() => setActiveTab('all')}>
-                Xem tất cả đơn
-              </button>
+          <div className="mt-state">
+            <span className="mt-state-icon"><AlertCircleIcon size={25} /></span>
+            <div role="alert">
+              <h2>Không tải được danh sách vé</h2>
+              <p>Hãy thử tải lại để xem các đơn đặt vé của bạn.</p>
             </div>
-          )
+            <button type="button" className="mt-btn mt-btn--outline" onClick={reload}><RefreshIcon size={17} />Thử lại</button>
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="mt-state">
+            <span className="mt-state-icon"><TicketIcon size={25} /></span>
+            <div role="status">
+              <h2>Bạn chưa có vé nào</h2>
+              <p>Vé và trạng thái đơn sẽ xuất hiện ở đây sau khi bạn đặt vé.</p>
+            </div>
+            <Link to="/movies?status=NOW_SHOWING" className="mt-btn mt-btn--outline">Xem phim đang chiếu <ArrowRightIcon size={17} /></Link>
+          </div>
         ) : (
-          sections.map((section) => (
-            <section key={section.key} className="mt-section">
-              {section.title && (
-                <h2 className="mt-section-title">
-                  {section.title}
-                  <span className="mt-section-count">{section.items.length}</span>
-                </h2>
-              )}
-              <div className="mt-list">
-                {section.items.map((booking) => (
-                  <BookingCard
-                    key={booking.bookingId}
-                    booking={booking}
-                    now={now}
-                    onOpenTicket={setTicketBooking}
-                    onPay={(b) => navigate(`/booking/${b.bookingId}/payment`)}
-                    onCancel={setCancelBooking}
-                    onRequestRefund={setRefundBooking}
-                  />
-                ))}
-              </div>
-            </section>
-          ))
+          <>
+            {featured.length > 0 && (
+              <section className="mt-featured" aria-labelledby="mt-featured-title">
+                <div className="mt-section-header">
+                  <h2 id="mt-featured-title"><CalendarIcon size={20} />Vé sắp sử dụng</h2>
+                  {upcoming.length > featured.length && (
+                    <button type="button" className="mt-btn mt-btn--outline" onClick={() => {
+                      updateFilter('upcoming');
+                      document.getElementById('mt-filter')?.focus();
+                    }}>
+                      Xem cả {upcoming.length} đơn sắp chiếu <ArrowRightIcon size={16} />
+                    </button>
+                  )}
+                </div>
+                <div className="mt-featured-list">{featured.map(renderBooking)}</div>
+              </section>
+            )}
+
+            {(results.length > 0 || featured.length === 0) && (
+              <section className="mt-section" aria-labelledby="mt-results-title">
+                <div className="mt-section-header">
+                  <h2 id="mt-results-title" ref={resultsHeading} tabIndex={-1}>{featured.length ? 'Các đơn đặt vé khác' : 'Đơn đặt vé'}</h2>
+                  <span className="mt-results" role="status">
+                    {results.length > 0 ? `${offset + 1}–${offset + visibleResults.length} / ${results.length} đơn` : '0 đơn'}
+                  </span>
+                </div>
+                {results.length === 0 ? (
+                  <div className="mt-state">
+                    <span className="mt-state-icon"><SearchIcon size={25} /></span>
+                    <h3>Không tìm thấy đơn phù hợp</h3>
+                    <p>Thử từ khóa khác hoặc chọn trạng thái khác.</p>
+                    <button type="button" className="mt-btn mt-btn--outline" onClick={() => {
+                      updateFilter('all');
+                      updateSearch('');
+                      document.getElementById('mt-search')?.focus();
+                    }}>Xóa bộ lọc</button>
+                  </div>
+                ) : (
+                  <div className="mt-list">{visibleResults.map(renderBooking)}</div>
+                )}
+                {pageCount > 1 && (
+                  <nav className="mt-pagination" aria-label="Phân trang đơn đặt vé">
+                    <button type="button" className="mt-btn mt-btn--outline" onClick={() => changePage(currentPage - 1)} disabled={currentPage === 1}>
+                      <ChevronLeftIcon size={18} />Trước
+                    </button>
+                    <span>Trang {currentPage} / {pageCount}</span>
+                    <button type="button" className="mt-btn mt-btn--outline" onClick={() => changePage(currentPage + 1)} disabled={currentPage === pageCount}>
+                      Sau<ChevronRightIcon size={18} />
+                    </button>
+                  </nav>
+                )}
+              </section>
+            )}
+          </>
         )}
       </div>
 
@@ -290,9 +358,9 @@ export default function MyBookingsPage() {
 
       {cancelBooking && (
         <ConfirmDialog
-          title="Huỷ đơn đặt vé?"
-          message={`Ghế ${cancelBooking.seatCodes?.join(', ') || ''} của suất “${cancelBooking.movieName}” sẽ được mở lại cho người khác.`}
-          confirmLabel="Huỷ đơn"
+          title="Hủy đơn đặt vé?"
+          message={`Đơn “${cancelBooking.movieName}” sẽ được hủy và ghế đã giữ sẽ được mở bán lại.`}
+          confirmLabel="Hủy đơn"
           cancelLabel="Giữ lại"
           danger
           busy={cancelling}

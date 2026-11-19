@@ -1,24 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { movieApi, genreApi } from '../../api';
-import SafeImage from '../../components/Common/SafeImage';
+import MovieCard, { CatalogEmpty } from '../../components/MovieCard/MovieCard';
 import { SkeletonBox } from '../../components/Common/Skeleton';
-import EmptyState from '../../components/Common/EmptyState';
 import {
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ClockIcon,
   FilmIcon,
   SearchIcon,
   SparkIcon,
-  StarIcon,
-  TicketIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
-
-const MotionDiv = motion.div;
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'Tất cả phim', icon: FilmIcon },
@@ -53,8 +46,6 @@ export default function MovieListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -87,6 +78,8 @@ export default function MovieListPage() {
     } else {
       nextParams.set('status', nextStatus);
     }
+    if (searchTerm.trim()) nextParams.set('movieName', searchTerm.trim());
+    else nextParams.delete('movieName');
     setSearchParams(nextParams, { replace: true });
   };
 
@@ -105,13 +98,18 @@ export default function MovieListPage() {
     setSelectedGenre('ALL');
     setAgeFilter('ALL');
     setSortBy('DEFAULT');
-    handleStatusChange('ALL');
+    setStatusFilter('ALL');
+    setCurrentPage(1);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('status');
+    nextParams.delete('movieName');
+    setSearchParams(nextParams, { replace: true });
   };
 
   // Filter + Sort Logic
   const filteredMovies = useMemo(() => {
     const list = movies.filter((movie) => {
-      const matchSearch = movie.movieName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchSearch = movie.movieName?.toLocaleLowerCase('vi').includes(searchTerm.trim().toLocaleLowerCase('vi'));
       const matchGenre =
         selectedGenre === 'ALL'
           ? true
@@ -148,21 +146,15 @@ export default function MovieListPage() {
     currentPage * itemsPerPage
   );
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
   if (loading) {
     return (
-      <div className="page" style={{ paddingTop: '80px' }}>
-        <div className="container">
-          <SkeletonBox height="40px" width="300px" className="mb-4" />
-          <SkeletonBox height="20px" width="450px" className="mb-8" />
+      <div className="page catalog-page">
+        <div className="container catalog-container">
+          <SkeletonBox height="40px" width="min(300px, 100%)" className="mb-4" />
+          <SkeletonBox height="20px" width="min(450px, 100%)" className="mb-8" />
           <SkeletonBox height="100px" borderRadius="12px" className="mb-8" />
-          <div className="movie-grid">
-            <SkeletonBox count={8} height="400px" borderRadius="12px" />
+          <div className="catalog-grid">
+            <SkeletonBox count={8} height="clamp(270px, 36vw, 410px)" borderRadius="12px" />
           </div>
         </div>
       </div>
@@ -170,9 +162,9 @@ export default function MovieListPage() {
   }
 
   return (
-    <div className="page">
-      <div className="container">
-        <div className="page-header" style={{ marginBottom: 24 }}>
+    <div className="page catalog-page">
+      <div className="container catalog-container">
+        <div className="catalog-list-header">
           <h1 className="page-title page-title-with-icon">
             {statusFilter === 'NOW_SHOWING' ? (
               <SparkIcon className="page-title-icon" />
@@ -188,14 +180,14 @@ export default function MovieListPage() {
                 : 'Danh sách phim'}
           </h1>
           <p className="page-subtitle">
-            Khám phá toàn bộ phim điện ảnh tại MoviePTIT ({filteredMovies.length} phim)
+            {filteredMovies.length} phim
           </p>
         </div>
 
         {/* ================= FILTER & SORT TOOLBAR ================= */}
         <div className="ml-toolbar">
           <div className="ml-toolbar-top">
-            <div className="ml-status-tabs" role="tablist" aria-label="Trạng thái chiếu">
+            <div className="ml-status-tabs" role="group" aria-label="Trạng thái chiếu">
               {STATUS_TABS.map((tab) => {
                 const IconComponent = tab.icon;
                 const isActive = statusFilter === tab.key;
@@ -203,8 +195,7 @@ export default function MovieListPage() {
                   <button
                     key={tab.key}
                     type="button"
-                    role="tab"
-                    aria-selected={isActive}
+                    aria-pressed={isActive}
                     className={`ml-status-tab ${isActive ? 'is-active' : ''}`}
                     onClick={() => handleStatusChange(tab.key)}
                   >
@@ -219,7 +210,7 @@ export default function MovieListPage() {
               <div className="ml-search-box">
                 <SearchIcon size={16} className="ml-search-icon" />
                 <input
-                  type="text"
+                  type="search"
                   aria-label="Tìm kiếm phim theo tên"
                   placeholder="Tìm tên phim..."
                   value={searchTerm}
@@ -233,6 +224,9 @@ export default function MovieListPage() {
                     onClick={() => {
                       setSearchTerm('');
                       setCurrentPage(1);
+                      const nextParams = new URLSearchParams(searchParams);
+                      nextParams.delete('movieName');
+                      setSearchParams(nextParams, { replace: true });
                     }}
                   >
                     <XIcon size={12} />
@@ -277,6 +271,7 @@ export default function MovieListPage() {
             <div className="ml-genre-pills" role="group" aria-label="Lọc theo thể loại">
               <button
                 type="button"
+                aria-pressed={selectedGenre === 'ALL'}
                 className={`ml-genre-pill ${selectedGenre === 'ALL' ? 'is-active' : ''}`}
                 onClick={() => handleGenreSelect('ALL')}
               >
@@ -289,6 +284,7 @@ export default function MovieListPage() {
                   <button
                     key={g.genreId || g.id || g.name}
                     type="button"
+                    aria-pressed={isActive}
                     className={`ml-genre-pill ${isActive ? 'is-active' : ''}`}
                     onClick={() => handleGenreSelect(val)}
                   >
@@ -302,69 +298,16 @@ export default function MovieListPage() {
 
         {/* ================= GRID ================= */}
         {filteredMovies.length === 0 ? (
-          <EmptyState
+          <CatalogEmpty
             title="Không tìm thấy phim phù hợp"
             message="Không có bộ phim nào khớp với bộ lọc hiện tại. Hãy thử đặt lại bộ lọc hoặc đổi từ khoá khác."
-            buttonText="Đặt lại bộ lọc"
+            action="Đặt lại bộ lọc"
             onAction={resetAllFilters}
           />
         ) : (
           <>
-            <div className="movie-grid">
-              {paginatedMovies.map((movie) => (
-                <MotionDiv
-                  key={movie.movieId}
-                  className="card movie-card"
-                  onClick={() => navigate(`/movie/${movie.movieId}`)}
-                  whileHover={{ y: -3, scale: 1.01 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="movie-poster-wrap">
-                    <SafeImage
-                      className="movie-poster"
-                      src={movie.thumbnailUrl}
-                      alt={movie.movieName}
-                    />
-                    {movie.status === 'UPCOMING' && (
-                      <div className="movie-upcoming-badge">Sắp chiếu</div>
-                    )}
-                    <div className="movie-overlay">
-                      <button type="button" className="btn btn-primary btn-sm">
-                        <TicketIcon size={15} /> Chi tiết & Đặt vé
-                      </button>
-                    </div>
-                  </div>
-                  <div className="movie-info">
-                    <h3 className="movie-title" title={movie.movieName}>{movie.movieName}</h3>
-                    {movie.directorName && (
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 8 }}>
-                        Đạo diễn: {movie.directorName}
-                      </div>
-                    )}
-                    <div className="movie-meta">
-                      {movie.durationMinutes && (
-                        <span>
-                          <ClockIcon className="inline-icon" />
-                          {movie.durationMinutes}p
-                        </span>
-                      )}
-                      {movie.ageRating && <span className="movie-badge">{movie.ageRating}</span>}
-                    </div>
-                    <div className="movie-card-rating">
-                      <StarIcon size={14} style={{ color: 'var(--gold)', fill: 'var(--gold)' }} />
-                      {movie.ratingCount > 0
-                        ? `${Number(movie.averageRating || 0).toFixed(1)} (${movie.ratingCount})`
-                        : 'Chưa có đánh giá'}
-                    </div>
-                    {movie.releaseDate && (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 8 }}>
-                        <CalendarIcon className="inline-icon" />
-                        {formatDate(movie.releaseDate)}
-                      </div>
-                    )}
-                  </div>
-                </MotionDiv>
-              ))}
+            <div className="catalog-grid">
+              {paginatedMovies.map((movie) => <MovieCard key={movie.movieId} movie={movie} />)}
             </div>
 
             {/* ================= PAGINATION ================= */}

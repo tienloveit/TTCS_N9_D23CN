@@ -1,6 +1,6 @@
 import { formatScreening } from '../../utils/cinemaFormats';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { branchApi, movieApi, roomApi, showtimeApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { useAuth } from '../../context/useAuth';
@@ -44,6 +44,7 @@ const getSubtitleLabel = (subtitle) => {
 
 export default function MovieDetailPage() {
   const { id } = useParams();
+  const { hash } = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [movie, setMovie] = useState(null);
@@ -91,6 +92,14 @@ export default function MovieDetailPage() {
 
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    if (loading || !movie || hash !== '#movie-schedule') return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('movie-schedule')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [hash, loading, movie]);
 
   useEffect(() => {
     if (!isAuthenticated) {

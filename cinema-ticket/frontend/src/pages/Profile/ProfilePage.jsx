@@ -1,445 +1,515 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { userApi, authApi, promotionApi } from '../../api';
-import { toast } from 'react-toastify';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import {
+  AlertCircleIcon,
+  ArrowRightIcon,
   AwardIcon,
   CheckIcon,
   CopyIcon,
   EditIcon,
+  EyeIcon,
+  EyeOffIcon,
   GiftIcon,
   KeyIcon,
-  SparkIcon,
+  RefreshIcon,
+  SearchIcon,
+  TicketIcon,
   UserIcon,
 } from '../../components/Common/CinemaIcons';
+import './ProfilePage.css';
 
-const TIER_CONFIG = {
-  BRONZE: { name: 'Đồng', color: '#cd7f32', gradient: 'linear-gradient(135deg, #cd7f32, #a0522d)', next: 'SILVER', nextAmount: 500000 },
-  SILVER: { name: 'Bạc', color: '#94a3b8', gradient: 'linear-gradient(135deg, #64748b, #475569)', next: 'GOLD', nextAmount: 2000000 },
-  GOLD: { name: 'Vàng', color: '#f59e0b', gradient: 'linear-gradient(135deg, #d97706, #b45309)', next: 'PLATINUM', nextAmount: 5000000 },
-  PLATINUM: { name: 'Bạch Kim', color: '#4f46e5', gradient: 'linear-gradient(135deg, #312e81, #4338ca)', next: null, nextAmount: null },
+const TIERS = {
+  BRONZE: { name: 'Đồng', next: 'SILVER', nextAmount: 500000 },
+  SILVER: { name: 'Bạc', next: 'GOLD', nextAmount: 2000000 },
+  GOLD: { name: 'Vàng', next: 'PLATINUM', nextAmount: 5000000 },
+  PLATINUM: { name: 'Bạch Kim' },
 };
+const GENDERS = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' };
+const SECTIONS = [
+  ['info', 'Hồ sơ & hạng thẻ', <UserIcon size={19} />],
+  ['promos', 'Ưu đãi', <GiftIcon size={19} />],
+  ['password', 'Đổi mật khẩu', <KeyIcon size={19} />],
+];
+const EMPTY_PASSWORDS = { currentPassword: '', newPassword: '', confirmPassword: '' };
+const PASSWORD_FIELDS = [
+  ['currentPassword', 'Mật khẩu hiện tại', 'current-password'],
+  ['newPassword', 'Mật khẩu mới', 'new-password'],
+  ['confirmPassword', 'Xác nhận mật khẩu mới', 'new-password'],
+];
+const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
+const money = (amount) => currency.format(Number(amount));
+const tierName = (tier) => TIERS[tier]?.name || tier;
 
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(amount || 0));
+function dateValue(value) {
+  return Array.isArray(value)
+    ? value.slice(0, 3).map((part, index) => String(part).padStart(index === 0 ? 4 : 2, '0')).join('-')
+    : value?.slice(0, 10) || '';
+}
 
-const ProfilePage = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [promotions, setPromotions] = useState([]);
-  const [copiedCode, setCopiedCode] = useState('');
+function formatDate(value) {
+  return dateValue(value).split('-').reverse().join('/');
+}
 
-  // States for password change
-  const [passwords, setPasswords] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+function formatExpiry(value) {
+  const time = Array.isArray(value)
+    ? value.slice(3, 5).map((part) => String(part).padStart(2, '0')).join(':')
+    : value?.slice(11, 16);
+  return [time, formatDate(value)].filter(Boolean).join(' · ');
+}
 
-  const activeSection =
-    location.hash === '#password'
-      ? 'password'
-      : location.hash === '#promos'
-        ? 'promos'
-        : 'info';
+function PanelState({ loading, error, onRetry, title, detail, children }) {
+  if (loading) return (
+    <div className="pf-state pf-state--loading" role="status">
+      <p>{title}</p>
+      <div aria-hidden="true"><SkeletonBox height="84px" count={2} /></div>
+    </div>
+  );
 
-  const switchSection = (hash) => {
-    navigate(`/profile${hash}`, { replace: true });
-  };
+  return (
+    <div className="pf-state">
+      <span className="pf-state-icon" aria-hidden="true">{error ? <AlertCircleIcon size={24} /> : <GiftIcon size={24} />}</span>
+      <div role={error ? 'alert' : 'status'}>
+        <h3>{title}</h3>
+        {detail && <p>{detail}</p>}
+      </div>
+      {onRetry && <button type="button" className="btn btn-secondary" onClick={onRetry}><RefreshIcon size={16} />Thử lại</button>}
+      {children}
+    </div>
+  );
+}
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await userApi.getMyInfo();
-      setProfile(res.data.result);
-    } catch {
-      toast.error('Không thể tải thông tin cá nhân');
-    } finally {
-      setLoading(false);
-    }
-  };
+function MembershipCard({ profile, promotions }) {
+  const tier = profile.membershipTier || 'BRONZE';
+  const details = TIERS[tier];
+  const spending = profile.totalSpending == null ? null : Number(profile.totalSpending);
+  const remaining = details?.nextAmount != null && spending != null
+    ? Math.max(0, details.nextAmount - spending)
+    : null;
+  const tierOffers = promotions?.filter((promotion) => promotion.minMembershipTier === tier).length;
 
-  useEffect(() => {
-    fetchProfile();
-    promotionApi.getAvailable()
-      .then((res) => setPromotions(res.data.result || []))
-      .catch(() => setPromotions([]));
-  }, []);
+  return (
+    <section className={`pf-membership pf-membership--${tier.toLowerCase()}`} aria-labelledby="pf-tier-heading">
+      <div className="pf-tier-main">
+        <div className="pf-tier-title">
+          <span className="pf-tier-icon"><AwardIcon size={29} /></span>
+          <div>
+            <p>Hạng thành viên MoviePTIT</p>
+            <h2 id="pf-tier-heading">{tierName(tier)}</h2>
+          </div>
+        </div>
+        {spending != null && (
+          <div className="pf-spending"><span>Chi tiêu tích lũy</span><strong>{money(spending)}</strong></div>
+        )}
+        {remaining != null && (
+          <div className="pf-tier-progress">
+            <progress aria-label={`Tiến độ lên hạng ${tierName(details.next)}`} max={details.nextAmount} value={Math.min(details.nextAmount, Math.max(0, spending))} />
+            <p>Còn <strong>{money(remaining)}</strong> để lên hạng {tierName(details.next)}.</p>
+          </div>
+        )}
+        {tier === 'PLATINUM' && <p className="pf-tier-top"><CheckIcon size={17} />Hạng cao nhất của MoviePTIT</p>}
+      </div>
+      <div className="pf-tier-benefits">
+        <h3><GiftIcon size={19} />Ưu đãi theo hạng</h3>
+        <p>Dùng mã phù hợp với hạng thành viên khi mã còn hiệu lực và đơn đáp ứng điều kiện áp dụng.</p>
+        {tierOffers != null && (
+          <p className="pf-tier-offer-count">
+            {tierOffers > 0 ? `${tierOffers} mã hiện có yêu cầu tối thiểu hạng ${tierName(tier)}.` : `Chưa có mã yêu cầu tối thiểu hạng ${tierName(tier)}.`}
+          </p>
+        )}
+        <Link to="/profile#promos" replace className="pf-tier-link">Xem ưu đãi khả dụng <ArrowRightIcon size={17} /></Link>
+      </div>
+    </section>
+  );
+}
 
-  const handleCopyPromo = async (code) => {
+function PromotionsPanel({ promotions, state, onRetry }) {
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [clipboard, setClipboard] = useState(null);
+  const query = search.trim().toLocaleLowerCase('vi');
+  const filtered = promotions.filter((promotion) => (
+    (filter !== 'tier' || promotion.minMembershipTier) &&
+    (filter !== 'branch' || promotion.branchId != null) &&
+    (!query || [promotion.code, promotion.description, promotion.branchName]
+      .some((value) => value?.toLocaleLowerCase('vi').includes(query)))
+  ));
+
+  function clearFilters() {
+    setSearch('');
+    setFilter('all');
+  }
+
+  async function copyCode(code) {
     try {
       await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
-      toast.success(`Đã sao chép mã ${code}!`);
-      window.setTimeout(() => setCopiedCode(''), 2000);
+      setClipboard({ code, text: `Đã sao chép mã ${code}.` });
     } catch {
-      toast.info(`Mã khuyến mãi: ${code}`);
+      setClipboard({ text: `Không sao chép được. Hãy chọn và sao chép mã ${code}.` });
     }
-  };
+  }
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await userApi.updateMyInfo({
-        fullName: profile.fullName,
-        email: profile.email,
-        phoneNumber: profile.phoneNumber,
-        dob: profile.dob || null,
-        gender: profile.gender
-      });
-      setProfile(res.data.result);
-      setIsEditing(false);
-      toast.success('Cập nhật thông tin thành công!');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Cập nhật thất bại');
-    }
-  };
+  return (
+    <section className="card pf-panel" aria-labelledby="pf-promos-title">
+      <header className="pf-panel-header">
+        <div>
+          <h2 id="pf-promos-title" tabIndex={-1}>Ưu đãi khả dụng</h2>
+          <p>Điều kiện áp dụng và mức giảm được kiểm tra khi bạn nhập mã lúc thanh toán.</p>
+        </div>
+      </header>
+      {state === 'loading' ? <PanelState loading title="Đang tải ưu đãi…" /> : state === 'error' ? (
+        <PanelState error title="Không tải được ưu đãi" onRetry={onRetry} />
+      ) : promotions.length === 0 ? (
+        <PanelState title="Hiện chưa có mã ưu đãi" detail="Mã khả dụng cho tài khoản của bạn sẽ xuất hiện tại đây." />
+      ) : (
+        <>
+          <div className="pf-promo-filters">
+            <div>
+              <label htmlFor="pf-promo-search" className="form-label">Tìm ưu đãi</label>
+              <div className="pf-search">
+                <SearchIcon size={17} />
+                <input className="input" id="pf-promo-search" value={search} placeholder="Mã, mô tả hoặc rạp…" onChange={(event) => setSearch(event.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="pf-promo-scope" className="form-label">Phạm vi áp dụng</label>
+              <select className="input" id="pf-promo-scope" value={filter} onChange={(event) => setFilter(event.target.value)}>
+                <option value="all">Tất cả ưu đãi</option>
+                <option value="tier">Yêu cầu hạng thành viên</option>
+                <option value="branch">Áp dụng tại rạp cụ thể</option>
+              </select>
+            </div>
+          </div>
+          {filtered.length === 0 ? (
+            <PanelState title="Không tìm thấy ưu đãi phù hợp" detail="Thử từ khóa khác hoặc xóa bộ lọc.">
+              <button type="button" className="btn btn-secondary" onClick={clearFilters}>Xóa bộ lọc</button>
+            </PanelState>
+          ) : (
+            <>
+              <p className="pf-results" role="status">{filtered.length} mã ưu đãi</p>
+              <div className="pf-promos">
+                {filtered.map((promotion) => (
+                  <article className="pf-offer" key={promotion.id ?? promotion.code}>
+                    <div className="pf-offer-header">
+                      <h3>{promotion.code}</h3>
+                      <strong>Giảm {promotion.discountPercent}%</strong>
+                    </div>
+                    {promotion.description && <p>{promotion.description}</p>}
+                    <dl>
+                      {promotion.maxDiscount > 0 && <div><dt>Giảm tối đa</dt><dd>{money(promotion.maxDiscount)}</dd></div>}
+                      {promotion.minOrderAmount > 0 && <div><dt>Đơn tối thiểu</dt><dd>{money(promotion.minOrderAmount)}</dd></div>}
+                      {promotion.minMembershipTier && <div><dt>Hạng tối thiểu</dt><dd>{tierName(promotion.minMembershipTier)}</dd></div>}
+                      {promotion.branchId != null && <div><dt>Rạp áp dụng</dt><dd>{promotion.branchName || `Rạp #${promotion.branchId}`}</dd></div>}
+                      {promotion.endDate && <div><dt>Hạn sử dụng</dt><dd>{formatExpiry(promotion.endDate)}</dd></div>}
+                    </dl>
+                    <button className="btn btn-secondary" type="button" onClick={() => copyCode(promotion.code)}
+                      aria-label={`${clipboard?.code === promotion.code ? 'Đã sao chép mã' : 'Sao chép mã'} ${promotion.code}`}>
+                      {clipboard?.code === promotion.code ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+                      {clipboard?.code === promotion.code ? 'Đã sao chép' : 'Sao chép mã'}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+          <p className="pf-feedback" role="status">{clipboard?.text}</p>
+        </>
+      )}
+    </section>
+  );
+}
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      toast.warn('Mật khẩu mới không khớp');
+function PasswordPanel() {
+  const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
+  const [visible, setVisible] = useState({});
+  const [errors, setErrors] = useState({});
+  const [feedback, setFeedback] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  async function changePassword(event) {
+    event.preventDefault();
+    if (saving) return;
+    const form = event.currentTarget;
+    const nextErrors = {};
+    if (!passwords.currentPassword) nextErrors.currentPassword = 'Nhập mật khẩu hiện tại.';
+    if (passwords.newPassword.length < 6) nextErrors.newPassword = 'Mật khẩu mới cần ít nhất 6 ký tự.';
+    if (!passwords.confirmPassword) nextErrors.confirmPassword = 'Nhập lại mật khẩu mới.';
+    else if (passwords.confirmPassword !== passwords.newPassword) nextErrors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+    setErrors(nextErrors);
+    setFeedback(null);
+    const invalidField = Object.keys(nextErrors)[0];
+    if (invalidField) {
+      form.elements.namedItem(invalidField)?.focus();
       return;
     }
+
+    setSaving(true);
     try {
       await authApi.changePassword({
         currentPassword: passwords.currentPassword,
-        newPassword: passwords.newPassword
+        newPassword: passwords.newPassword,
       });
-      toast.success('Đổi mật khẩu thành công!');
-      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Đổi mật khẩu thất bại');
+      setPasswords(EMPTY_PASSWORDS);
+      setVisible({});
+      setFeedback({ text: 'Đã cập nhật mật khẩu.' });
+    } catch (error) {
+      const response = error.response;
+      if (response?.status === 401 && response.data?.message === 'Password incorrect') {
+        setErrors({ currentPassword: 'Mật khẩu hiện tại không chính xác.' });
+        form.elements.namedItem('currentPassword')?.focus();
+      } else {
+        setFeedback({ error: true, text: response?.data?.message || 'Không thể đổi mật khẩu. Vui lòng thử lại.' });
+      }
+    } finally {
+      setSaving(false);
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="page container">
-        <SkeletonBox height="40px" width="200px" className="mb-8" />
-        <div className="pf-wrap">
-          <SkeletonBox height="400px" borderRadius="16px" />
-        </div>
-      </div>
-    );
   }
 
-  const tier = profile?.membershipTier || 'BRONZE';
-  const tierInfo = TIER_CONFIG[tier] || TIER_CONFIG.BRONZE;
-  const totalSpending = Number(profile?.totalSpending || 0);
-  const progressPercent = tierInfo.nextAmount
-    ? Math.min(100, Math.round((totalSpending / tierInfo.nextAmount) * 100))
-    : 100;
+  return (
+    <section className="card pf-panel" aria-labelledby="pf-password-title">
+      <header className="pf-panel-header">
+        <div>
+          <h2 id="pf-password-title" tabIndex={-1}>Đổi mật khẩu</h2>
+          <p>Nhập mật khẩu hiện tại để xác nhận thay đổi.</p>
+        </div>
+      </header>
+      <form className="pf-password-form" onSubmit={changePassword} noValidate aria-busy={saving}>
+        {PASSWORD_FIELDS.map(([name, label, autoComplete]) => {
+          const errorId = errors[name] ? `pf-error-${name}` : '';
+          return (
+            <div className="pf-field" key={name}>
+              <label className="form-label" htmlFor={`pf-${name}`}>{label}</label>
+              <div className="pf-password-control">
+                <input
+                  id={`pf-${name}`} name={name} className="input" type={visible[name] ? 'text' : 'password'}
+                  autoComplete={autoComplete} value={passwords[name]} required readOnly={saving}
+                  aria-invalid={Boolean(errorId)}
+                  aria-describedby={[name === 'newPassword' && 'pf-password-hint', errorId].filter(Boolean).join(' ') || undefined}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setPasswords((current) => ({ ...current, [name]: value }));
+                    setErrors((current) => ({
+                      ...current, [name]: '', ...(name === 'newPassword' && { confirmPassword: '' }),
+                    }));
+                    setFeedback(null);
+                  }}
+                />
+                <button type="button" aria-label={`${visible[name] ? 'Ẩn' : 'Hiện'} ${label.toLowerCase()}`}
+                  onClick={() => setVisible((current) => ({ ...current, [name]: !current[name] }))}>
+                  {visible[name] ? <EyeOffIcon size={19} /> : <EyeIcon size={19} />}
+                </button>
+              </div>
+              {name === 'newPassword' && <p id="pf-password-hint" className="pf-field-help">Ít nhất 6 ký tự.</p>}
+              {errorId && <p id={errorId} className="pf-field-error" role="alert">{errors[name]}</p>}
+            </div>
+          );
+        })}
+        {feedback && <p className={`pf-feedback ${feedback.error ? 'pf-field-error' : ''}`} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</p>}
+        <div className="pf-actions">
+          <button type="submit" className="btn btn-primary" disabled={saving}><CheckIcon size={17} />{saving ? 'Đang cập nhật…' : 'Cập nhật mật khẩu'}</button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+export default function ProfilePage() {
+  const location = useLocation();
+  const [profile, setProfile] = useState(null);
+  const [profileState, setProfileState] = useState('loading');
+  const [profileAttempt, setProfileAttempt] = useState(0);
+  const [draft, setDraft] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [promotions, setPromotions] = useState([]);
+  const [promoState, setPromoState] = useState('loading');
+  const [promoAttempt, setPromoAttempt] = useState(0);
+  const editButton = useRef(null);
+  const nameInput = useRef(null);
+  const restoreEditFocus = useRef(false);
+  const hash = location.hash.slice(1);
+  const active = hash === 'promos' || hash === 'password' ? hash : 'info';
+  const editing = draft !== null;
+  const previousSection = useRef(active);
+
+  useEffect(() => {
+    let ignore = false;
+    userApi.getMyInfo()
+      .then(({ data }) => {
+        if (ignore) return;
+        if (!data.result) throw new Error('Missing profile data');
+        setProfile(data.result);
+        setProfileState('ready');
+      })
+      .catch(() => { if (!ignore) setProfileState('error'); });
+    return () => { ignore = true; };
+  }, [profileAttempt]);
+
+  useEffect(() => {
+    let ignore = false;
+    promotionApi.getAvailable()
+      .then(({ data }) => {
+        if (ignore) return;
+        const list = data.result ?? [];
+        if (!Array.isArray(list)) throw new Error('Invalid promotion data');
+        setPromotions(list);
+        setPromoState('ready');
+      })
+      .catch(() => { if (!ignore) setPromoState('error'); });
+    return () => { ignore = true; };
+  }, [promoAttempt]);
+
+  useEffect(() => {
+    const sectionChanged = previousSection.current !== active;
+    previousSection.current = active;
+    if (active === 'info' && editing) nameInput.current?.focus();
+    else if (active === 'info' && restoreEditFocus.current) {
+      restoreEditFocus.current = false;
+      editButton.current?.focus();
+    } else if (sectionChanged) document.getElementById(`pf-${active}-title`)?.focus();
+  }, [editing, active]);
+
+  function cancelEdit() {
+    restoreEditFocus.current = true;
+    setDraft(null);
+    setFeedback(null);
+  }
+
+  async function handleUpdateProfile(event) {
+    event.preventDefault();
+    if (!draft || saving) return;
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const { data } = await userApi.updateMyInfo({
+        fullName: draft.fullName,
+        email: draft.email,
+        phoneNumber: draft.phoneNumber,
+        dob: draft.dob || null,
+        gender: draft.gender || null,
+      });
+      if (!data.result) throw new Error('Missing profile data');
+      setProfile(data.result);
+      restoreEditFocus.current = true;
+      setDraft(null);
+      setFeedback({ text: 'Đã lưu thông tin cá nhân.' });
+    } catch (error) {
+      setFeedback({ error: true, text: error.response?.data?.message || 'Không thể lưu hồ sơ. Vui lòng thử lại.' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function startEdit() {
+    setFeedback(null);
+    setDraft({
+      fullName: profile.fullName ?? null,
+      email: profile.email ?? null,
+      phoneNumber: profile.phoneNumber ?? null,
+      dob: dateValue(profile.dob),
+      gender: profile.gender || '',
+    });
+  }
+
+  function updateDraft(key, value) {
+    setDraft((current) => ({ ...current, [key]: value }));
+    setFeedback(null);
+  }
+
+  const accountFields = profile ? [
+    ['Tên đăng nhập', profile.username],
+    ['Họ và tên', profile.fullName],
+    ['Email', profile.email],
+    ['Số điện thoại', profile.phoneNumber],
+    ['Ngày sinh', formatDate(profile.dob)],
+    ['Giới tính', GENDERS[profile.gender]],
+  ] : [];
 
   return (
-    <div className="page container">
-      <div className="pf-wrap">
-        <div className="page-header" style={{ marginBottom: 20 }}>
-          <h1 className="page-title page-title-with-icon">
-            <UserIcon className="page-title-icon" />
-            Tài khoản của tôi
-          </h1>
-          <p className="page-subtitle">
-            Quản lý hồ sơ cá nhân, hạng thẻ thành viên và ưu đãi dành riêng cho bạn
-          </p>
-        </div>
-
-        {/* Segmented Navigation Tabs */}
-        <div className="pf-tabs" role="tablist" aria-label="Quản lý tài khoản">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeSection === 'info'}
-            className={`pf-tab ${activeSection === 'info' ? 'is-active' : ''}`}
-            onClick={() => switchSection('#info')}
-          >
-            <UserIcon size={16} />
-            Hồ sơ & Hạng thẻ
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeSection === 'promos'}
-            className={`pf-tab ${activeSection === 'promos' ? 'is-active' : ''}`}
-            onClick={() => switchSection('#promos')}
-          >
-            <GiftIcon size={16} />
-            Ưu đãi khả dụng ({promotions.length})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeSection === 'password'}
-            className={`pf-tab ${activeSection === 'password' ? 'is-active' : ''}`}
-            onClick={() => switchSection('#password')}
-          >
-            <KeyIcon size={16} />
-            Đổi mật khẩu
-          </button>
-        </div>
-
-        {/* Membership Card (shown on Info & Promos tabs) */}
-        {(activeSection === 'info' || activeSection === 'promos') && (
-          <div className="pf-tier-card" style={{ background: tierInfo.gradient }}>
-            <div className="pf-tier-watermark">
-              <AwardIcon size={76} />
-            </div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: 4 }}>Hạng thành viên MoviePTIT</div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AwardIcon size={24} />
-              <span>Hạng {tierInfo.name}</span>
-            </div>
-            <div style={{ fontSize: '0.88rem', opacity: 0.95, marginBottom: 8 }}>
-              Tổng chi tiêu tích luỹ: <strong>{formatCurrency(totalSpending)}</strong>
-            </div>
-            {tierInfo.next ? (
+    <div className="page pf-page">
+      <div className="pf-layout">
+        <header className="pf-page-header">
+          <h1>Tài khoản của tôi</h1>
+          <p>Quản lý hồ sơ, hạng thành viên và bảo mật tài khoản MoviePTIT.</p>
+        </header>
+        <div className="pf-dashboard">
+          <aside className="pf-sidebar">
+            <nav aria-label="Quản lý tài khoản">
+              {SECTIONS.map(([id, label, icon]) => (
+                <Link key={id} to={`/profile#${id}`} replace aria-current={active === id ? 'page' : undefined}>
+                  {icon}<span>{label}</span>
+                </Link>
+              ))}
+              <Link to="/my-bookings"><TicketIcon size={19} /><span>Vé của tôi</span></Link>
+            </nav>
+          </aside>
+          <div className="pf-content">
+            {active === 'info' && (profileState === 'loading' ? (
+              <PanelState loading title="Đang tải hồ sơ…" />
+            ) : profileState === 'error' ? (
+              <PanelState error title="Không tải được hồ sơ" onRetry={() => {
+                setProfileState('loading');
+                setProfileAttempt((attempt) => attempt + 1);
+              }} />
+            ) : (
               <>
-                <div style={{
-                  width: '100%', height: 8, borderRadius: 4,
-                  background: 'rgba(255,255,255,0.28)', marginBottom: 8,
-                }}>
-                  <div style={{
-                    width: `${progressPercent}%`, height: '100%', borderRadius: 4,
-                    background: '#fff', transition: 'width 0.5s ease',
-                  }} />
-                </div>
-                <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                  Còn <strong>{formatCurrency(Math.max(0, tierInfo.nextAmount - totalSpending))}</strong> nữa để thăng hạng {TIER_CONFIG[tierInfo.next]?.name}
-                </div>
+                <MembershipCard profile={profile} promotions={promoState === 'ready' ? promotions : null} />
+                <section className="card pf-panel" aria-labelledby="pf-info-title">
+                  <header className="pf-panel-header">
+                    <div><h2 id="pf-info-title" tabIndex={-1}>Thông tin cá nhân</h2><p>{editing ? 'Tên đăng nhập được giữ cố định.' : 'Thông tin bạn đã lưu trên MoviePTIT.'}</p></div>
+                    <button type="button" ref={editButton} className="btn btn-secondary" onClick={startEdit} hidden={editing}><EditIcon size={17} />Sửa hồ sơ</button>
+                  </header>
+                  {feedback && <p className={`pf-feedback ${feedback.error ? 'pf-field-error' : ''}`} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</p>}
+                  {editing ? (
+                    <form onSubmit={handleUpdateProfile} aria-busy={saving}>
+                      <div className="pf-fields">
+                        <div className="pf-field pf-field--static"><div className="form-label">Tên đăng nhập</div><p>{profile.username || 'Chưa cập nhật'}</p></div>
+                        <div className="pf-field">
+                          <label className="form-label" htmlFor="pf-fullname">Họ và tên</label>
+                          <input id="pf-fullname" className="input" ref={nameInput} autoComplete="name" maxLength={255} value={draft.fullName ?? ''} onChange={(event) => updateDraft('fullName', event.target.value)} readOnly={saving} />
+                        </div>
+                        <div className="pf-field">
+                          <label className="form-label" htmlFor="pf-email">Email</label>
+                          <input id="pf-email" className="input" type="email" autoComplete="email" maxLength={255} value={draft.email ?? ''} onChange={(event) => updateDraft('email', event.target.value)} readOnly={saving} />
+                        </div>
+                        <div className="pf-field">
+                          <label className="form-label" htmlFor="pf-phone">Số điện thoại</label>
+                          <input id="pf-phone" className="input" type="tel" autoComplete="tel" maxLength={20} value={draft.phoneNumber ?? ''} onChange={(event) => updateDraft('phoneNumber', event.target.value)} readOnly={saving} />
+                        </div>
+                        <div className="pf-field">
+                          <label className="form-label" htmlFor="pf-birthday">Ngày sinh</label>
+                          <input id="pf-birthday" className="input" type="date" autoComplete="bday" max={new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }).format()} value={draft.dob} onChange={(event) => updateDraft('dob', event.target.value)} readOnly={saving} required={Boolean(profile.dob)} />
+                        </div>
+                        <div className="pf-field">
+                          <label className="form-label" htmlFor="pf-gender">Giới tính</label>
+                          <select id="pf-gender" className="input" value={draft.gender} onChange={(event) => updateDraft('gender', event.target.value)} disabled={saving}>
+                            <option value="" disabled={Boolean(profile.gender)}>Chưa cập nhật</option>
+                            {Object.entries(GENDERS).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="pf-actions">
+                        <button type="button" className="btn btn-secondary" onClick={cancelEdit} disabled={saving}>Hủy</button>
+                        <button type="submit" className="btn btn-primary" disabled={saving}><CheckIcon size={17} />{saving ? 'Đang lưu…' : 'Lưu thay đổi'}</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <dl className="pf-details">
+                      {accountFields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Chưa cập nhật'}</dd></div>)}
+                    </dl>
+                  )}
+                </section>
               </>
-            ) : (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', opacity: 0.95 }}>
-                <SparkIcon size={16} />
-                <span>Bạn đã đạt hạng thành viên cao nhất của MoviePTIT!</span>
-              </div>
-            )}
+            ))}
+            {active === 'promos' && <PromotionsPanel promotions={promotions} state={promoState} onRetry={() => {
+              setPromoState('loading');
+              setPromoAttempt((attempt) => attempt + 1);
+            }} />}
+            {active === 'password' && <PasswordPanel />}
           </div>
-        )}
-
-        {/* Available Promotions Section */}
-        {(activeSection === 'promos' || (activeSection === 'info' && promotions.length > 0)) && (
-          <div id="promos" className="card" style={{ padding: '24px 32px', marginBottom: 24 }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.15rem', fontWeight: 800, marginBottom: 16 }}>
-              <GiftIcon size={20} style={{ color: 'var(--accent)' }} />
-              <span>Mã khuyến mãi khả dụng</span>
-            </h2>
-            {promotions.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
-                Hiện tại chưa có mã khuyến mãi nào đang mở.
-              </p>
-            ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {promotions.map((p) => {
-                  const isCopied = copiedCode === p.code;
-                  return (
-                    <div key={p.id || p.code} className="pf-promo-card">
-                      <div>
-                        <strong style={{ color: 'var(--accent)', letterSpacing: '0.5px', fontSize: '1rem' }}>
-                          {p.code}
-                        </strong>
-                        <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                          {p.description || `Giảm ${p.discountPercent}%`}
-                          {p.maxDiscount && ` (tối đa ${formatCurrency(p.maxDiscount)})`}
-                        </div>
-                        {p.minMembershipTier && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            Áp dụng từ hạng {TIER_CONFIG[p.minMembershipTier]?.name || p.minMembershipTier}
-                          </span>
-                        )}
-                      </div>
-                      <div className="pf-promo-actions">
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent)' }}>
-                          -{p.discountPercent}%
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleCopyPromo(p.code)}
-                          style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                        >
-                          {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-                          {isCopied ? 'Đã chép' : 'Sao chép'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Info Section */}
-        {activeSection === 'info' && (
-          <div id="info" className="card profile-section-card" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Thông tin cá nhân</h2>
-              <button
-                type="button"
-                className={`btn ${isEditing ? 'btn-ghost' : 'btn-secondary'} btn-sm`}
-                onClick={() => setIsEditing(!isEditing)}
-              >
-                <EditIcon size={15} />
-                {isEditing ? 'Huỷ chỉnh sửa' : 'Chỉnh sửa hồ sơ'}
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateProfile}>
-              <div className="pf-form-grid">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pf-username">Tên đăng nhập</label>
-                  <input
-                    id="pf-username"
-                    className="input"
-                    value={profile?.username || ''}
-                    disabled
-                    style={{ opacity: 0.7 }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pf-fullname">Họ và tên</label>
-                  <input
-                    id="pf-fullname"
-                    className="input"
-                    value={profile?.fullName || ''}
-                    onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pf-email">Email</label>
-                  <input
-                    id="pf-email"
-                    className="input"
-                    type="email"
-                    value={profile?.email || ''}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pf-phone">Số điện thoại</label>
-                  <input
-                    id="pf-phone"
-                    className="input"
-                    value={profile?.phoneNumber || ''}
-                    onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pf-birthday">Ngày sinh</label>
-                  <input
-                    id="pf-birthday"
-                    className="input"
-                    type="date"
-                    value={profile?.dob ? String(profile.dob).substring(0, 10) : ''}
-                    onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="pf-gender">Giới tính</label>
-                  <select
-                    id="pf-gender"
-                    className="input"
-                    value={profile?.gender || ''}
-                    onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
-                    disabled={!isEditing}
-                  >
-                    <option value="">Chưa cập nhật</option>
-                    <option value="MALE">Nam</option>
-                    <option value="FEMALE">Nữ</option>
-                    <option value="OTHER">Khác</option>
-                  </select>
-                </div>
-              </div>
-
-              {isEditing && (
-                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setIsEditing(false);
-                      fetchProfile();
-                    }}
-                  >
-                    Huỷ
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    <CheckIcon size={18} />
-                    Lưu thay đổi
-                  </button>
-                </div>
-              )}
-            </form>
-          </div>
-        )}
-
-        {/* Password Section */}
-        {activeSection === 'password' && (
-          <div id="password" className="card profile-section-card" style={{ padding: '32px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '24px' }}>Đổi mật khẩu</h2>
-            <form onSubmit={handleChangePassword}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="pf-cur-pass">Mật khẩu hiện tại</label>
-                <input
-                  id="pf-cur-pass"
-                  className="input"
-                  type="password"
-                  autoComplete="current-password"
-                  value={passwords.currentPassword}
-                  onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="pf-new-pass">Mật khẩu mới</label>
-                <input
-                  id="pf-new-pass"
-                  className="input"
-                  type="password"
-                  autoComplete="new-password"
-                  value={passwords.newPassword}
-                  onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="pf-cfm-pass">Xác nhận mật khẩu mới</label>
-                <input
-                  id="pf-cfm-pass"
-                  className="input"
-                  type="password"
-                  autoComplete="new-password"
-                  value={passwords.confirmPassword}
-                  onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                <CheckIcon size={18} />
-                Cập nhật mật khẩu
-              </button>
-            </form>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default ProfilePage;
+}
