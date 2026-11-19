@@ -38,6 +38,7 @@ public interface BookingMapper {
   @Mapping(target = "refundAmount", source = "payment.refundAmount")
   @Mapping(target = "refundGatewayStatus", source = "payment.refundGatewayStatus")
   @Mapping(target = "refundGatewayMessage", source = "payment.refundGatewayMessage")
+  @Mapping(target = "refundDeadline", ignore = true)
   BookingResponse toBookingResponse(Booking booking);
 
   default String ticketToSeatCode(Ticket ticket) {

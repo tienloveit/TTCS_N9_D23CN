@@ -28,7 +28,8 @@ class PromotionCorsTest {
     assertThat(response.getHeader("Access-Control-Allow-Origin"))
         .isEqualTo("http://localhost:5173");
     assertThat(response.getHeader("Access-Control-Allow-Methods")).contains("PATCH");
-    assertThat(response.getHeader("Access-Control-Allow-Headers").toLowerCase())
-        .contains("authorization", "content-type");
+    assertThat(response.getHeader("Access-Control-Allow-Headers"))
+        .containsIgnoringCase("authorization")
+        .containsIgnoringCase("content-type");
   }
 }

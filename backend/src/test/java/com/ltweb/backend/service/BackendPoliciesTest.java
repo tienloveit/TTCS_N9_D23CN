@@ -113,7 +113,9 @@ class BackendPoliciesTest {
     verifyNoInteractions(users);
     SecurityContextHolder.getContext()
         .setAuthentication(new UsernamePasswordAuthenticationToken("customer", null, List.of()));
-    when(users.findByUsername("customer")).thenReturn(Optional.of(customer), Optional.empty());
+    when(users.findByUsername("customer"))
+        .thenReturn(Optional.of(customer))
+        .thenReturn(Optional.empty());
     assertThat(provider.requireUser()).isSameAs(customer);
     assertDenied(provider::requireUser, ErrorCode.USER_NOT_FOUND);
   }

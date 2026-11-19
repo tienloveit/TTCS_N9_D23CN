@@ -26,4 +26,10 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['src/components/Common/CinemaIcons.jsx'],
+    rules: {
+      'react-refresh/only-export-components': ['error', { extraHOCs: ['withLucideDefaults'] }],
+    },
+  },
 ])

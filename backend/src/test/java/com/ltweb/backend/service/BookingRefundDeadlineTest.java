@@ -39,7 +39,7 @@ class BookingRefundDeadlineTest {
             mock(TicketRepository.class),
             mock(FoodRepository.class),
             users,
-            mock(org.springframework.data.redis.core.RedisTemplate.class),
+            mock(org.springframework.data.redis.core.StringRedisTemplate.class),
             mock(org.springframework.messaging.simp.SimpMessagingTemplate.class),
             mapper,
             mock(org.springframework.security.crypto.password.PasswordEncoder.class),

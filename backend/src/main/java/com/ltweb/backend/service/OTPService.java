@@ -4,6 +4,7 @@ import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,10 @@ public class OTPService {
     String limitKey = "otp:limit:" + email;
     String codeKey = "otp:code:" + email;
 
-    Long count = stringRedisTemplate.opsForValue().increment(limitKey);
+    long count =
+        Objects.requireNonNull(
+            stringRedisTemplate.opsForValue().increment(limitKey),
+            "Redis did not return the OTP rate limit counter");
     // Luôn reset TTL về 1 phút sau mỗi lần increment
     stringRedisTemplate.expire(limitKey, Duration.ofMinutes(1));
 

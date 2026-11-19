@@ -80,7 +80,10 @@ public class BookingRefundService {
 
   private BookingResponse process(
       Long id, RefundRequest direct, boolean approved, String note, String ip) {
-    Decision decision = transaction().execute(status -> prepare(id, direct, approved, note, ip));
+    Decision decision =
+        Objects.requireNonNull(
+            transaction().execute(status -> prepare(id, direct, approved, note, ip)),
+            "Refund transaction did not return a decision");
     if (decision.action() == GatewayAction.RETURN_EXISTING) return decision.response();
     // The claim transaction must commit before any gateway I/O.
     VnpayRefundGateway.Result result;

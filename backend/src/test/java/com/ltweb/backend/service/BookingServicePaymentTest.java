@@ -48,7 +48,7 @@ class BookingServicePaymentTest {
             org.mockito.Mockito.mock(org.springframework.web.client.RestTemplate.class),
             bookingRepository,
             org.mockito.Mockito.mock(com.ltweb.backend.repository.TicketRepository.class),
-            org.mockito.Mockito.mock(org.springframework.data.redis.core.RedisTemplate.class),
+            org.mockito.Mockito.mock(org.springframework.data.redis.core.StringRedisTemplate.class),
             org.mockito.Mockito.mock(
                 org.springframework.messaging.simp.SimpMessagingTemplate.class),
             org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class),

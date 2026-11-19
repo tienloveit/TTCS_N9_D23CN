@@ -20,6 +20,8 @@ public interface UserMapper {
   @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "bookings", ignore = true)
   @Mapping(target = "password", ignore = true)
+  @Mapping(target = "membershipTier", ignore = true)
+  @Mapping(target = "totalSpending", ignore = true)
   User toUser(CreateUserRequest request);
 
   @Mapping(target = "id", ignore = true)
@@ -29,6 +31,8 @@ public interface UserMapper {
   @Mapping(target = "bookings", ignore = true)
   @Mapping(target = "authorities", ignore = true)
   @Mapping(target = "password", ignore = true)
+  @Mapping(target = "membershipTier", ignore = true)
+  @Mapping(target = "totalSpending", ignore = true)
   void updateUser(@MappingTarget User user, UpdateUserRequest request);
 
   @BeanMapping(

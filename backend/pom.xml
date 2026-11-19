@@ -144,6 +144,8 @@
                 <executions>
                     <execution>
                         <id>check-java-format</id>
+                        <!-- Run Spotless with Maven on the project JDK, outside the IDE's embedded Maven. -->
+                        <?m2e ignore?>
                         <phase>validate</phase>
                         <goals><goal>check</goal></goals>
                     </execution>

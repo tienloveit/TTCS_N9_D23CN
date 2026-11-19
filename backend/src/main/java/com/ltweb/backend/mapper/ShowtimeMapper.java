@@ -35,5 +35,7 @@ public interface ShowtimeMapper {
   @Mapping(source = "room.branch.branchId", target = "branchId")
   @Mapping(source = "movie.id", target = "movieId")
   @Mapping(source = "movie.movieName", target = "movieName")
+  @Mapping(target = "availableSeats", ignore = true)
+  @Mapping(target = "totalSeats", ignore = true)
   ShowtimeResponse toResponse(Showtime showtime);
 }

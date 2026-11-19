@@ -163,6 +163,8 @@ Dừng backend, sao lưu database và đối chiếu schema đang dùng với [b
 | --- | --- |
 | MySQL từ chối xác thực | Schema `cinema`, username và `SPRING_DATASOURCE_PASSWORD`. |
 | `invalid target release: 21` | `java -version` và `JAVA_HOME` trỏ tới JDK 21. |
+| VS Code báo lỗi Java trong `.gitnexus` hoặc `.tmp` | Đóng các tab từ thư mục lưu tạm, thêm `**/.gitnexus/**` và `**/.tmp/**` vào `java.import.exclusions`, rồi tải lại cửa sổ. Project Maven của ứng dụng nằm ở `backend/pom.xml`. |
+| Kiểm tra định dạng Java | Chạy `mvnw` với JDK 21 trong `backend/`. Maven chạy Spotless ở bước `validate`, còn bộ import Maven trong VS Code bỏ qua riêng bước này. |
 | Redis connection refused | Kiểm tra dịch vụ cổng 6379 và `redis-cli ping`. |
 | Cổng 8081 đã dùng | Kiểm tra tiến trình hiện tại hoặc đổi `SERVER_PORT` cùng `VITE_API_BASE_URL`. |
 | API 404 hoặc lỗi CORS | Kiểm tra hậu tố `/api`, origin frontend trong `SecurityConfig` và khởi động lại Vite sau khi sửa `.env`. |

@@ -23,22 +23,34 @@ const AuditLogPage = () => {
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [reloadCount, setReloadCount] = useState(0);
 
-  const fetchLogs = () => {
+  const reloadLogs = () => {
     setLoading(true);
-    auditLogApi
-      .getRecent()
-      .then((res) => {
-        setLogs(res.data.result || []);
-        setError('');
-      })
-      .catch((err) => setError(err.response?.data?.message || 'Không thể tải nhật ký hệ thống'))
-      .finally(() => setLoading(false));
+    setReloadCount((count) => count + 1);
   };
 
   useEffect(() => {
-    fetchLogs();
-  }, []);
+    let active = true;
+
+    auditLogApi
+      .getRecent()
+      .then((res) => {
+        if (!active) return;
+        setLogs(res.data.result || []);
+        setError('');
+      })
+      .catch((err) => {
+        if (active) setError(err.response?.data?.message || 'Không thể tải nhật ký hệ thống');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [reloadCount]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -62,7 +74,7 @@ const AuditLogPage = () => {
           <h1 className="page-title">Nhật ký hệ thống</h1>
           <p className="page-subtitle">Theo dõi các thao tác quan trọng như bán vé, hoàn tiền, check-in và cập nhật tồn kho.</p>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={fetchLogs} disabled={loading}>
+        <button type="button" className="btn btn-secondary" onClick={reloadLogs} disabled={loading}>
           <RefreshIcon size={16} />
           <span>Làm mới</span>
         </button>

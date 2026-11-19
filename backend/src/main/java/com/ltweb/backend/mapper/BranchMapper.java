@@ -14,11 +14,15 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface BranchMapper {
 
   @Mapping(target = "branchId", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
   Branch toBranchEntity(CreateBranchRequest createBranchRequest);
 
   BranchResponse toBranchResponse(Branch branch);
 
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
   @Mapping(target = "branchId", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
   void updateBranch(UpdateBranchRequest request, @MappingTarget Branch branch);
 }

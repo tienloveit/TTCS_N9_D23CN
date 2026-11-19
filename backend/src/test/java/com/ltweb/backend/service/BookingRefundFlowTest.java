@@ -275,7 +275,9 @@ class BookingRefundFlowTest {
     newer.getPayment().setPaymentStatus(PaymentStatus.PAID);
     newer.getPayment().setRefundRequestId("newer-attempt");
     newer.getPayment().setRefundGatewayStatus(RefundGatewayStatus.PROCESSING);
-    when(bookings.findByIdForUpdate(5L)).thenReturn(Optional.of(booking), Optional.of(newer));
+    when(bookings.findByIdForUpdate(5L))
+        .thenReturn(Optional.of(booking))
+        .thenReturn(Optional.of(newer));
     when(gateway.refund(any())).thenReturn(success());
 
     assertThat(service.processRefund(5L, true, null).getStatus())

@@ -27,7 +27,7 @@ class ClockedJwtServiceTest {
 
   @Test
   void issuanceValidationAndRevocationAllUseTheInjectedClock() {
-    ValueOperations<String, String> values = mock(ValueOperations.class);
+    ValueOperations<String, String> values = mock();
     when(redis.opsForValue()).thenReturn(values);
     JwtService service = service(clock);
     String token = service.generateAccessToken(user).getToken();

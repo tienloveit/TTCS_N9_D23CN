@@ -192,7 +192,9 @@ const ShowtimeManagement = () => {
   const { isAdmin, isManager, isAdminOrManager } = useAuth();
   const canEditShowtime = isAdminOrManager;
   const [showtimes, setShowtimes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [reloadCount, setReloadCount] = useState(0);
+  const [completedRequest, setCompletedRequest] = useState(null);
+  const loading = completedRequest?.reloadCount !== reloadCount || completedRequest?.isManager !== isManager;
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('calendar');
   const [selectedDate, setSelectedDate] = useState(toDateInputValue());
@@ -206,7 +208,6 @@ const ShowtimeManagement = () => {
   const [movies, setMovies] = useState([]);
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
-  const [filteredRooms, setFilteredRooms] = useState([]);
 
   const [formData, setFormData] = useState({
     showtimeId: null,
@@ -220,47 +221,49 @@ const ShowtimeManagement = () => {
     ticketPrice: '',
   });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [stRes, branchRes, roomRes] = await Promise.all([
-        showtimeApi.getAll(),
-        branchApi.getAll(),
-        roomApi.getAll(),
-      ]);
-      const movieList = isManager
-        ? await Promise.all([movieApi.getNowShowing(), movieApi.getUpcoming()]).then(([nowRes, upcomingRes]) => {
-          const moviesById = new Map();
-          [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach((movie) => {
-            moviesById.set(movie.movieId, movie);
-          });
-          return [...moviesById.values()];
-        })
-        : (await movieApi.getAll()).data.result || [];
-      const branchList = branchRes.data.result || [];
-      setShowtimes(stRes.data.result || []);
-      setMovies(movieList);
-      setBranches(branchList);
-      setRooms(roomRes.data.result || []);
-      setSelectedBranchId((current) => current || (branchList.length === 1 ? String(branchList[0].branchId) : ''));
-    } catch {
-      toast.error('Lỗi khi tải dữ liệu');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let active = true;
+
+    const fetchData = async () => {
+      try {
+        const [stRes, branchRes, roomRes] = await Promise.all([
+          showtimeApi.getAll(),
+          branchApi.getAll(),
+          roomApi.getAll(),
+        ]);
+        if (!active) return;
+        const movieList = isManager
+          ? await Promise.all([movieApi.getNowShowing(), movieApi.getUpcoming()]).then(([nowRes, upcomingRes]) => {
+            const moviesById = new Map();
+            [...(nowRes.data.result || []), ...(upcomingRes.data.result || [])].forEach((movie) => {
+              moviesById.set(movie.movieId, movie);
+            });
+            return [...moviesById.values()];
+          })
+          : (await movieApi.getAll()).data.result || [];
+        if (!active) return;
+        const branchList = branchRes.data.result || [];
+        setShowtimes(stRes.data.result || []);
+        setMovies(movieList);
+        setBranches(branchList);
+        setRooms(roomRes.data.result || []);
+        setSelectedBranchId((current) => current || (branchList.length === 1 ? String(branchList[0].branchId) : ''));
+      } catch {
+        if (active) toast.error('Lỗi khi tải dữ liệu');
+      } finally {
+        if (active) setCompletedRequest({ reloadCount, isManager });
+      }
+    };
+
     fetchData();
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [isManager, reloadCount]);
 
-  useEffect(() => {
-    if (formData.branchId) {
-      setFilteredRooms(rooms.filter((room) => String(room.branchId || room.branch_id) === String(formData.branchId)));
-    } else {
-      setFilteredRooms([]);
-    }
-  }, [formData.branchId, rooms]);
+  const filteredRooms = formData.branchId
+    ? rooms.filter((room) => String(room.branchId || room.branch_id) === String(formData.branchId))
+    : [];
 
   const calendarShowtimes = useMemo(
     () =>
@@ -324,7 +327,7 @@ const ShowtimeManagement = () => {
         toast.success('Thêm suất chiếu thành công!');
       }
       setShowModal(false);
-      fetchData();
+      setReloadCount((count) => count + 1);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -353,7 +356,7 @@ const ShowtimeManagement = () => {
       await showtimeApi.delete(deleteTargetId);
       toast.success('Xóa suất chiếu thành công!');
       setDeleteTargetId(null);
-      fetchData();
+      setReloadCount((count) => count + 1);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Xóa thất bại');
     } finally {

@@ -39,7 +39,7 @@ final class BackendServiceFixtures {
         mock(TicketRepository.class),
         mock(FoodRepository.class),
         users,
-        mock(RedisTemplate.class),
+        mock(StringRedisTemplate.class),
         mock(SimpMessagingTemplate.class),
         mapper,
         mock(PasswordEncoder.class),
