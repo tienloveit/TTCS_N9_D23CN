@@ -1,167 +1,60 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# MoviePTIT — Context toàn dự án
 
-This project is indexed by GitNexus as **TTCS_N9_D23CN** (6456 symbols, 14063 relationships, 480 execution flows).
+Đối chiếu mã nguồn ngày **2026-11-19** tại commit `9d84c88`. MoviePTIT là hệ thống đặt vé rạp phim gồm website khách hàng, quầy bán vé và khu quản trị.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
+- [README](README.md) hướng dẫn cài đặt, cấu hình, chạy và tạo dữ liệu demo.
+- [Context backend](backend/CLAUDE.md) mô tả REST API, quyền, dữ liệu, transaction, tích hợp và migration.
+- [Context frontend](frontend/CLAUDE.md) mô tả route, màn hình, Axios, realtime và kiểm tra.
+- [Hướng dẫn làm việc cho AI](AGENTS.md) áp dụng ở gốc repo và dẫn đến quy tắc riêng của từng phần.
 
-## Always Do
+## Kiến trúc và điểm vào
 
-- **MUST run impact before editing.** Use `impact({target: "symbolName", direction: "upstream"})` or `node .gitnexus/run.cjs impact "symbolName" --direction upstream --repo .`; report callers, processes, and risk. Never substitute grep for graph analysis.
-- **MUST analyze graph changes before committing.** Use `detect_changes({scope: "all"})` (MCP) or `node .gitnexus/run.cjs detect-changes --scope all --repo .` (CLI fallback). `partial: true` or `truncated: true` is not a clean check — a zero means unseen, not unaffected; re-run it. For regression review: `detect_changes({scope: "compare", base_ref: "main"})` or `node .gitnexus/run.cjs detect-changes --scope compare --base-ref "main" --repo .`.
-- MUST warn on HIGH/CRITICAL `risk` pre-edit; never use `riskSharedAxes` to waive a HIGH/CRITICAL `risk` warning. Compare File/symbol: MCP File omits axes; Graph-RAG expands File.
-- **MUST treat `risk: UNKNOWN` as unresolved, not as low.** An empty caller set is not evidence the symbol is unused — it can also mean the callers are not resolvable by the index (plain-object property access, dynamic dispatch, cross-language calls). `impact` pairs `UNKNOWN` with a `riskNote` saying so. Confirm with a text search before treating the symbol as safe to change or delete; do not proceed on the strength of a zero.
-- **MUST use `query({search_query: "concept"})` for concepts/flows, `context({name: "symbolName"})` for a named symbol, or `impact` for blast radius, on read-only callers, dependencies, imports, or execution flow.** Graph first; text search only for empty/`UNKNOWN`/literals.
-- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
+| Phần | Nơi bắt đầu | Runtime mặc định |
+| --- | --- | --- |
+| Frontend | [main.jsx](frontend/src/main.jsx) → [App.jsx](frontend/src/App.jsx) → [AnimatedRoutes.jsx](frontend/src/AnimatedRoutes.jsx) | React 19, Vite 8, React Router 7, `http://localhost:5173` |
+| HTTP client | [axiosClient.js](frontend/src/api/axiosClient.js), [các nhóm API](frontend/src/api/index.js) | `VITE_API_BASE_URL`, mặc định `http://localhost:8081/api`. Vite gọi trực tiếp backend |
+| Backend | [BackendApplication.java](backend/src/main/java/com/ltweb/backend/BackendApplication.java), [application.yaml](backend/src/main/resources/application.yaml) | Java 21, Spring Boot 3.4.0, Spring Security, JPA/JDBC, MapStruct |
+| Dữ liệu | [movie.sql](backend/movie.sql), [migrations](backend/migrations), entity và repository | MySQL 8, schema `cinema`, Redis cho JWT, OTP và khóa ghế |
+| Realtime | `WebSocketConfig`, `TicketService`, `SeatSelectPage`, `StaffBookingPage` | SockJS tại `${API_BASE_URL}/ws`, STOMP topic `/topic/showtime/{showtimeId}/seats` |
+| Tích hợp | Security/OAuth2, `VnpayService`, `VnpayRefundGateway`, `EmailService` | Google OAuth2, VNPay sandbox, Gmail SMTP, ZXing cho QR |
 
-## Never Do
+Các thư mục `backend/` và `frontend/` nằm trực tiếp dưới gốc repo. Lệnh Maven chạy trong `backend/`, lệnh npm và Node tests chạy trong `frontend/`. Mỗi phần có mẫu cấu hình `.env.example`.
 
-- NEVER edit a function, class, or method before MCP/CLI impact analysis.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis, and never read `UNKNOWN` as an all-clear — it means the walk could not answer, which is the one verdict that requires confirming by other means.
-- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
-- NEVER commit before MCP/CLI graph change analysis.
+## Vai trò
 
-## Resources
+| Vai trò | Giao diện chính | Phạm vi nghiệp vụ |
+| --- | --- | --- |
+| USER | Trang công khai, `/profile`, `/my-bookings` | Đặt vé, thanh toán, vé QR, hủy đơn chờ và yêu cầu hoàn tiền cho đơn của mình, đánh giá phim |
+| STAFF | `/staff` | Bán vé, check-in, tra cứu đơn và dashboard theo phạm vi backend |
+| MANAGER | `/manager` | Suất chiếu, phòng/chi nhánh, người dùng, bắp nước, khuyến mãi, hoàn tiền và báo cáo thuộc chi nhánh theo quyền từng API |
+| ADMIN | `/admin`, có thể vào `/staff` | Quản trị toàn hệ thống, danh mục phim, cấu hình và nghiệp vụ vận hành |
 
-| Resource | Use for |
+Route guard điều hướng giao diện. Backend xác thực JWT, kiểm tra role bằng `SecurityConfig` và method security, rồi áp dụng quy tắc chủ sở hữu/chi nhánh trong service. Ví dụ backend cho MANAGER check-in đúng chi nhánh, trong khi route `/staff/check-in` nhận STAFF và ADMIN.
+
+## Luồng liên tầng
+
+1. **Đăng nhập**. UI lưu cặp access/refresh token, Axios gắn Bearer token. Các request 401 đồng thời dùng chung một lần refresh. Backend phân loại token bằng `token_use` và tiêu thụ refresh token một lần bằng Redis.
+2. **Tìm suất chiếu**. Khách đi từ phim hoặc chi nhánh đến suất chiếu. `ShowtimeService` tạo ticket cho từng ghế trong phòng khi tạo suất. Công nghệ phòng và định dạng chiếu là hai thuộc tính riêng.
+3. **Đặt và thanh toán**. Backend tính giá, kiểm tra quyền/phạm vi, khóa ticket trong DB và giữ ghế ở Redis theo mã booking. Đơn online chờ VNPay, tiền mặt tại quầy có thể hoàn tất ngay. `BookingPaidEvent` dẫn tới cập nhật hạng thành viên và gửi vé sau commit.
+4. **Hủy và hết hạn**. Backend trả ghế và hoàn tồn bắp nước cho đơn chờ bị hủy/hết hạn. Job dọn hết hạn chạy mỗi 120 giây. TTL giữ ghế mặc định 6 phút, giới hạn mặc định 8 vé mỗi giao dịch.
+5. **Check-in và hoàn tiền**. Check-in ghi người và thời điểm quét. Khách gửi yêu cầu hoàn trong thời hạn backend trả về. ADMIN hoặc MANAGER đúng chi nhánh xử lý, và giao diện chỉ báo hoàn tất khi backend trả `REFUNDED`.
+6. **Vận hành**. Dashboard nhân viên, dashboard quản trị, báo cáo doanh thu/vận hành, đơn hàng, thông báo và nhật ký dùng các API riêng. XLSX báo cáo được tạo ở backend, XLSX danh sách đơn được tạo ở trình duyệt.
+
+## Hợp đồng dùng chung
+
+| Chủ đề | Hợp đồng hiện tại |
 | --- | --- |
-| `gitnexus://repo/TTCS_N9_D23CN/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/TTCS_N9_D23CN/clusters` | All functional areas |
-| `gitnexus://repo/TTCS_N9_D23CN/processes` | All execution flows |
-| `gitnexus://repo/TTCS_N9_D23CN/process/{name}` | Step-by-step execution trace |
+| JSON | Phần lớn API trả `ApiResponse<T>`, frontend đọc `data.result`. Callback/IPN, tệp và XLSX có hợp đồng riêng. |
+| ID | PK đơn là `id` trong DB. JSON có thể dùng `bookingId`, `showtimeId` hoặc `notificationId` theo DTO. |
+| Đơn và thanh toán | `Booking` liên kết một-một với `Payment`. `BookingResponse` vẫn trả các trường thanh toán/hoàn tiền ở cấp ngoài. Người bán là `staffUser`, lưu ở `booked_staff`. |
+| Phim | `isPublic` điều khiển hiển thị, cùng các trạng thái `UPCOMING`, `NOW_SHOWING`, `ENDED`. |
+| Giá và định dạng | `Showtime.ticketPrice` dùng chung cho suất, `Ticket.price` giữ giá của vé. `roomTechnology` và `screeningFormat` độc lập. |
+| Ghế và vé | `Seat` có `STANDARD`, `VIP`, `COUPLE`. Vé có `AVAILABLE`, `HOLDING`, `BOOKED`. Check-in được biểu diễn bằng `checkedInAt` và `checkedInBy`. |
+| Thời gian | Backend dùng `Clock` theo `Asia/Ho_Chi_Minh` trong các luồng nghiệp vụ đã inject clock. UI lịch sử vé và thanh toán dùng tiện ích thời gian rạp, một số màn hình có formatter riêng. |
+| Quyền và chi phí | Backend quyết định quyền, giá, hạn giữ ghế, tồn bắp nước và thời hạn hoàn. UI hiển thị hoặc ước tính trong khi chờ dữ liệu chính thức. |
 
-## CLI
+Seed khi khởi động và API cleanup mặc định tắt. Cách bật trên database demo và phạm vi reset có trong [README](README.md#dữ-liệu-demo). Với database cũ, xem [thứ tự và điều kiện áp dụng migration](backend/CLAUDE.md#migration-và-kiểm-tra).
 
-| Task | Read this skill file |
-| --- | --- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
+## Tra cứu mã nguồn
 
-<!-- gitnexus:end -->
-
-# Frontend UI & Icon System Rules (`frontend`)
-
-- **Standard Icon Library (`lucide-react`)**: Always use **Lucide Icons** (`lucide-react`) via centralized exports in `frontend/src/components/Common/CinemaIcons.jsx` (or import from `lucide-react` and register in `CinemaIcons.jsx`).
-- **NO AI-Generated Inline SVGs**: Never write raw `<svg>` / `<path>` elements inside React pages or components. Only `MoviePTITLogoIcon` in `CinemaIcons.jsx` may use custom brand SVG geometry.
-- **NO Emoji Icons in UI**: Never use Unicode emojis (`🎬`, `🍿`, `🎟️`, `💳`, `🔔`, `⏳`, `✅`, `❌`, etc.) as icons for buttons, navigation items, status badges, headers, or action controls. Always use Lucide icon components.
-
-## MoviePTIT — Project Context
-
-Cập nhật: **2026-11-12**, đối chiếu với mã nguồn trong working tree, bao gồm thay đổi chưa commit. Đây là tài liệu định hướng; controller, service, DTO và cấu hình hiện tại là nguồn xác nhận hành vi.
-
-### Tài liệu theo phần
-
-- [Frontend context và hướng dẫn chạy](frontend/AGENTS.md)
-- [Backend context và luồng nghiệp vụ](backend/AGENTS.md)
-- [Hướng dẫn chạy toàn dự án](README.md#6-cách-chạy-dự-án)
-- Quy tắc làm việc: [AGENTS.md](AGENTS.md), đặc biệt GitNexus và hệ thống icon.
-
-### Tổng quan
-
-MoviePTIT là ứng dụng đặt vé rạp phim, gồm frontend React và backend Spring Boot. Chức năng chính: tra cứu phim/rạp/suất chiếu, chọn ghế realtime, mua bắp nước, khuyến mãi, thanh toán VNPay, vé QR, check-in, lịch sử đặt vé, đánh giá phim, hoàn tiền và báo cáo quản trị.
-
-| Phần | Công nghệ / cấu hình trong repo |
-| --- | --- |
-| Frontend | React 19, Vite 8, React Router 7, Axios, Framer Motion, Recharts |
-| Backend | Java 21, Spring Boot 3.4.0, Spring Security, JPA/JDBC, MapStruct, Lombok |
-| Dữ liệu | MySQL `cinema` tại `localhost:3306`; Redis tại `localhost:6379` |
-| REST API | `http://localhost:8081/api` |
-| Frontend dev | `http://localhost:5173` khi cổng còn trống |
-| Realtime | SockJS/STOMP tại `http://localhost:8081/api/ws` |
-| Tích hợp | VNPay sandbox, Google OAuth2, Gmail SMTP, ZXing |
-
-### Cấu trúc
-
-```text
-./
-  backend/
-    pom.xml
-    AGENTS.md
-    migrations/                  # SQL chuyển đổi schema/dữ liệu thủ công
-    src/main/resources/application.yaml
-    src/main/java/com/ltweb/backend/
-      config/ controller/ dto/ entity/ enums/ event/
-      exception/ job/ mapper/ repository/ service/ util/
-    src/test/java/com/ltweb/backend/service/
-  frontend/
-    AGENTS.md
-    package.json
-    src/
-      App.jsx
-      AnimatedRoutes.jsx
-      api/ assets/ components/ context/ pages/ utils/
-      index.css
-```
-
-`CLAUDE.md` và tài liệu chung nằm ở gốc repository. Cấu hình IDE dùng ở gốc repository; mở `TTCS_N9_D23CN` để nạp cả hai phần của dự án.
-
-### Chạy và kiểm tra
-
-Backend, từ `backend`:
-
-```powershell
-mvn spring-boot:run
-mvn -q -DskipTests compile
-mvn test
-```
-
-Frontend, từ `frontend`:
-
-```powershell
-npm install
-npm run dev
-npm run build
-npm run lint
-```
-
-Backend cần MySQL, Redis và biến môi trường theo `application.yaml`: `SPRING_DATASOURCE_PASSWORD`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD`, `JWT_SECRET_KEY`, `VNPAY_TMN_CODE`, `VNPAY_SECRET_KEY`. Google login dùng `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; có thể cấu hình `APP_OAUTH2_SUCCESS_URL` và `APP_OAUTH2_FAILURE_URL`. YAML nạp các file `.env` tùy chọn theo đường dẫn được khai báo. Không chép giá trị bí mật vào tài liệu.
-
-Frontend đọc `VITE_API_BASE_URL`, mặc định `http://localhost:8081/api`. `vite.config.js` hiện không cấu hình proxy API.
-
-### Vai trò và phạm vi
-
-- `USER`: đặt vé, thanh toán, xem đơn cá nhân, yêu cầu hoàn tiền, đánh giá phim.
-- `STAFF`: bán vé, check-in, xem đơn và dashboard trong phạm vi chi nhánh được phân công.
-- `MANAGER`: quản lý nghiệp vụ chi nhánh qua `/manager`, gồm suất chiếu, bắp nước, người dùng, báo cáo, hoàn tiền, thông báo và nhật ký theo quyền backend.
-- `ADMIN`: quản trị toàn hệ thống, danh mục phim và cấu hình hệ thống.
-
-Frontend có route guard để điều hướng theo role. Backend kiểm tra quyền bằng `SecurityConfig`, `@PreAuthorize` và điều kiện chủ sở hữu/chi nhánh trong service; route guard frontend không thay thế các kiểm tra này.
-
-### Hợp đồng dữ liệu cần giữ đồng bộ
-
-- Entity dùng khóa chính `id`; DTO vẫn có tên theo API như `bookingId`, `showtimeId`, `notificationId`. Không suy ra tên JSON trực tiếp từ entity.
-- `Booking` liên kết `Payment` một-một. Trạng thái thanh toán, phương thức, mã giao dịch và dữ liệu hoàn tiền nằm trong `payments`. `BookingMapper` vẫn trả các trường thanh toán phẳng trong `BookingResponse`.
-- Người bán là `Booking.staffUser`, ánh xạ cột `booked_staff`.
-- `Room.roomTechnology` và `Showtime.screeningFormat` tách biệt; không dùng mô hình `RoomType` cũ.
-- `Showtime.ticketPrice` là giá chung cho suất chiếu; `Ticket.price` giữ giá tại thời điểm bán. Không dùng bảng giá theo loại ghế cũ.
-- `Seat` có loại `STANDARD`, `VIP`, `COUPLE`, không còn thuộc tính `isActive`.
-- `MovieStatus`: `UPCOMING`, `NOW_SHOWING`, `ENDED`; khả năng hiển thị công khai dùng `isPublic`, không dùng trạng thái `INACTIVE`.
-- `TicketStatus`: `AVAILABLE`, `HOLDING`, `BOOKED`. Check-in ghi `checkedInAt` và `checkedInBy`, không đổi sang trạng thái `CHECKED_IN`.
-
-### Trạng thái nghiệp vụ hiện tại
-
-- API cleanup mặc định tắt; chỉ đăng ký khi có profile `dev`, không có `prod`, và `app.maintenance.cleanup-enabled=true`, đồng thời yêu cầu ADMIN. Script reset demo đăng nhập trước cleanup. VNPay query/refund chỉ cho ADMIN hoặc MANAGER đúng chi nhánh; service kiểm tra tài khoản hiện tại trong DB và dùng thông tin giao dịch phía server. Xem backend context để bật chế độ reset và biết giới hạn với giao dịch cũ.
-- JWT phân biệt `token_use=access|refresh`; Redis tách `auth:access:revoked:{jti}` và `auth:refresh:active:{jti}`. Chữ ký/claim được kiểm tra trước Redis; refresh tiêu thụ nguyên tử, chặn BLOCKED/INACTIVE. Token cũ thiếu claim mới bị từ chối và cần đăng nhập lại. Frontend dùng chung một lần refresh cho các request 401 đồng thời.
-- Giới hạn số vé mỗi giao dịch vẫn tồn tại: `booking.maxTicketsPerTransaction`, mặc định 8, áp dụng cho khách và nhân viên. Giới hạn cộng dồn theo phim `booking.maxTicketsPerMovie` đã gỡ bỏ.
-- Thời gian giữ ghế lấy từ `booking.holdMinutes`, mặc định 6 phút. Redis key `seat_hold:{showtimeId}:{seatId}` chứa mã booking làm chủ sở hữu.
-- `BookingTransactionEffects` chỉ giải phóng khóa đúng chủ sở hữu, dọn khóa khi rollback và thực hiện các cập nhật bên ngoài DB sau commit.
-- Đơn tiền mặt tại quầy hoàn tất ngay; phương thức khác tiền mặt tạo đơn chờ thanh toán. VNPay tạo URL dựa trên booking và số tiền lưu phía server.
-- Duyệt hoàn VNPAY và API refund trực tiếp dùng chung `BookingRefundService`: commit lần thử trước gọi cổng, chỉ hoàn tất REFUNDED sau xác nhận có chữ ký/đúng giao dịch. PROCESSING/UNKNOWN không gửi lệnh refund mới và không được từ chối; bấm lại chỉ kiểm tra kết quả. CASH hoàn thủ công. Migration `20261112_refund_gateway_attempt.sql` thêm marker nullable; lịch sử REFUNDED cũ phải đối soát riêng. Xem backend context để biết giới hạn phục hồi và kiểm thử.
-- `BookingCleanupJob` chạy mỗi 120 giây, chuyển đơn chờ đã hết hạn sang `CANCELLED`, giải phóng ghế và hoàn tồn bắp nước.
-- Tồn kho bắp nước **vẫn hoạt động** trong `FoodStockService`: reserve khi đặt, release khi hủy/hết hạn; tồn `null` nghĩa là không giới hạn. Có cảnh báo `LOW_STOCK`. Bảng lịch sử `food_stock_transactions` là phần cũ có migration xóa riêng.
-- Đã gỡ mở/chốt ca, bàn giao tiền, chấm công và lịch trực; staff còn `/staff/dashboard`, bán vé, check-in, đơn hàng và thông báo.
-- Báo cáo vận hành hiện gồm doanh thu, thanh toán, yêu cầu hoàn tiền, mức lấp đầy suất chiếu; DTO không còn phần ca trực/lịch trực/tồn kho.
-- Thông báo có lọc người nhận, role và chi nhánh. Danh sách và số chưa đọc hiện chỉ xét 100 thông báo mới nhất toàn hệ thống trước khi lọc.
-
-### Quy tắc khi cập nhật
-
-- Chạy GitNexus impact trước khi sửa symbol; dùng đúng repo `TTCS_N9_D23CN`. `UNKNOWN` cần đối chiếu nguồn và tham chiếu. Chạy `detect_changes` trước commit.
-- Index GitNexus quan sát trong lần cập nhật này được tạo ngày 2026-11-11; mã nguồn working tree được đọc trực tiếp để xác nhận các phần đang thay đổi. Khi graph không khớp, cập nhật index bằng `node .gitnexus/run.cjs analyze --index-only` từ root.
-- Đổi DTO phải kiểm tra mapper, API client và các trang dùng dữ liệu. Không sửa mã sinh trong `target/` hoặc bundle `dist/` như mã nguồn.
-- Icon UI dùng Lucide qua `frontend/src/components/Common/CinemaIcons.jsx`; không thêm emoji icon hoặc SVG tự viết. Chỉ logo thương hiệu `MoviePTITLogoIcon` được dùng SVG tùy chỉnh.
-- Migration trong `backend/migrations/` cần đọc riêng theo schema hiện có; có script đổi tên/xóa cột, bảng và dữ liệu. `ddl-auto: update` không thay thế chuyển đổi dữ liệu. Việc cập nhật context này không chạy migration.
-- Backend có test nghiệp vụ trong `src/test`, bao gồm `JwtSecurityTest`. Frontend có build/lint và test interceptor JWT bằng Node: `node --experimental-vm-modules --test tests/axiosClient.test.mjs` từ thư mục frontend; chưa khai báo script `test` trong package.json.
+GitNexus đăng ký repo `TTCS_N9_D23CN`. Các luồng điển hình để đối chiếu gồm `applyPromotion` từ controller tới booking/payment, `processRefund` và `prepare` cho hoàn tiền, và `resetPassword` tới `OTPService.checkOTP`. Dùng kết quả đồ thị cùng mã nguồn, đặc biệt ở đoạn nối HTTP, Spring annotation và callback từ trình duyệt.
