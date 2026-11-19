@@ -1,8 +1,6 @@
 import { createElement, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -14,14 +12,15 @@ import {
 import { analyticsApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 import {
-  FilmIcon,
-  MapPinIcon,
-  RefreshIcon,
-  ReportIcon,
-  SparkIcon,
+  ArmchairIcon,
+  ArrowRightIcon,
+  BanknoteIcon,
+  CalendarIcon,
+  PopcornIcon,
   TicketIcon,
 } from '../../components/Common/CinemaIcons';
 import { SkeletonBox } from '../../components/Common/Skeleton';
+import './AdminDashboard.css';
 
 const emptyAnalytics = {
   summary: {
@@ -75,30 +74,21 @@ const getStatusClass = (status) => {
   return 'status--pending';
 };
 
-const StatCard = ({ icon, label, value, note, color, loading }) => {
-  const iconNode = createElement(icon, { width: 24, height: 24 });
+const StatCard = ({ icon, label, value, note, loading }) => (
+  <div className="dashboard-stat">
+    <dt>{createElement(icon, { size: 16, 'aria-hidden': true })} {label}</dt>
+    {loading ? (
+      <dd><SkeletonBox width="120px" height="29px" borderRadius="4px" /></dd>
+    ) : (
+      <>
+        <dd className="dashboard-stat-value">{value}</dd>
+        <dd className="dashboard-stat-note">{note}</dd>
+      </>
+    )}
+  </div>
+);
 
-  return (
-    <div className="stat-card">
-      <div className="stat-icon" style={{ backgroundColor: `${color}18`, color }}>
-        {iconNode}
-      </div>
-      <div className="stat-info">
-        <span className="stat-label">{label}</span>
-        {loading ? (
-          <SkeletonBox width="120px" height="28px" borderRadius="4px" />
-        ) : (
-          <>
-            <h3 className="stat-value">{value}</h3>
-            {note && <span className="stat-note">{note}</span>}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const EmptyState = ({ children }) => <div className="analytics-empty">{children}</div>;
+const EmptyState = ({ children }) => <p className="dashboard-empty">{children}</p>;
 
 const MoneyTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) {
@@ -106,25 +96,19 @@ const MoneyTooltip = ({ active, payload, label }) => {
   }
 
   return (
-    <div className="analytics-tooltip">
+    <div className="dashboard-tooltip">
       <strong>{label}</strong>
       <span>{formatCurrency(payload[0].value)}</span>
     </div>
   );
 };
 
-const PercentTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) {
-    return null;
-  }
-
-  return (
-    <div className="analytics-tooltip">
-      <strong>{label}</strong>
-      <span>{formatPercent(payload[0].value)}</span>
-    </div>
-  );
-};
+const compactNumber = new Intl.NumberFormat('vi-VN', { notation: 'compact' });
+const periodDate = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: '2-digit',
+  timeZone: 'UTC',
+});
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -134,7 +118,7 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState(emptyAnalytics);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [trendDays, setTrendDays] = useState(30); // 7 | 14 | 30
+  const [trendDays, setTrendDays] = useState(30);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -164,181 +148,202 @@ const AdminDashboard = () => {
     }
     return all;
   }, [analytics.revenueTrend, trendDays]);
-  const occupancyByBranch = useMemo(
-    () =>
-      (analytics.occupancyByBranch || []).map((item) => ({
-        ...item,
-        occupancyRate: Number(item.occupancyRate || 0),
-      })),
-    [analytics.occupancyByBranch]
-  );
+  const trendRevenue = revenueTrend.reduce((total, item) => total + item.revenue, 0);
+  const occupancyByBranch = analytics.occupancyByBranch || [];
   const topMovies = analytics.topMovies || [];
   const foodSales = analytics.foodSales || [];
   const recentBookings = analytics.recentBookings || [];
   const periodLabel =
     analytics.fromDate && analytics.toDate
-      ? `${formatDate(analytics.fromDate)} - ${formatDate(analytics.toDate)}`
+      ? `${periodDate.format(new Date(analytics.fromDate))} – ${periodDate.format(new Date(analytics.toDate))}`
       : '30 ngày gần nhất';
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <div>
-          <h1 className="page-title">
-            {isManager ? 'Tổng quan Chi nhánh' : 'Tổng quan Hệ thống'}
-          </h1>
-          <p className="page-subtitle">
-            Doanh thu, sức chứa phòng, phim bán chạy và doanh số bắp nước ({periodLabel}).
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <Link to={`${basePath}/operations`} className="btn btn-secondary btn-sm">
-            <ReportIcon size={15} />
-            <span>Báo cáo vận hành</span>
-          </Link>
-          <Link to={`${basePath}/revenue`} className="btn btn-secondary btn-sm">
-            <ReportIcon size={15} />
-            <span>Doanh thu chi tiết</span>
-          </Link>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={fetchAnalytics}
-            disabled={loading}
-          >
-            <RefreshIcon size={15} />
-            <span>Làm mới</span>
-          </button>
-        </div>
-      </div>
+    <div className="cinema-dashboard">
+      <header className="dashboard-heading">
+        <h1>{isManager ? 'Tổng quan chi nhánh' : 'Tổng quan hệ thống'}</h1>
+        <p className="dashboard-period">
+          <CalendarIcon size={14} aria-hidden="true" />
+          <span>{periodLabel}</span>
+        </p>
+      </header>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="dashboard-error" role="alert">{error}</div>}
 
-      <div className="stats-grid">
+      <dl className="dashboard-stats" aria-label="Chỉ số trong kỳ" aria-busy={loading}>
         <StatCard
-          icon={SparkIcon}
-          label="Doanh thu"
+          icon={BanknoteIcon}
+          label="Tổng doanh thu"
           value={formatCurrency(summary.revenue)}
           note={`${formatNumber(summary.paidBookings)} đơn đã thanh toán`}
-          color="#16a34a"
           loading={loading}
         />
         <StatCard
           icon={TicketIcon}
           label="Vé đã bán"
           value={formatNumber(summary.ticketsSold)}
-          note={`AOV ${formatCurrency(summary.averageOrderValue)}`}
-          color="#0756a6"
+          note={`Trung bình ${formatCurrency(summary.averageOrderValue)}/đơn`}
           loading={loading}
         />
         <StatCard
-          icon={MapPinIcon}
-          label="Lấp đầy"
+          icon={ArmchairIcon}
+          label="Tỷ lệ lấp đầy"
           value={formatPercent(summary.occupancyRate)}
           note={`${formatNumber(summary.totalCapacity)} ghế khả dụng`}
-          color="#f59e0b"
           loading={loading}
         />
         <StatCard
-          icon={FilmIcon}
+          icon={PopcornIcon}
           label="Doanh thu bắp nước"
           value={formatCurrency(summary.foodRevenue)}
-          note={`Vé ${formatCurrency(summary.ticketRevenue)}`}
-          color="#7c3aed"
+          note={`Doanh thu vé ${formatCurrency(summary.ticketRevenue)}`}
           loading={loading}
         />
-      </div>
+      </dl>
 
-      <div className="analytics-grid analytics-grid--wide">
-        <section className="analytics-card">
-          <div className="analytics-card-header" style={{ flexWrap: 'wrap', gap: 10 }}>
+      <div className="dashboard-grid dashboard-grid--overview">
+        <section className="dashboard-panel" aria-labelledby="dashboard-revenue" aria-busy={loading}>
+          <div className="dashboard-panel-heading">
             <div>
-              <h3>Doanh thu theo ngày</h3>
-              <small style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                Tổng kỳ: {formatCurrency(summary.revenue)}
-              </small>
+              <h2 id="dashboard-revenue">Doanh thu theo ngày</h2>
+              <Link to={`${basePath}/revenue`} className="dashboard-link">
+                Doanh thu chi tiết <ArrowRightIcon size={14} aria-hidden="true" />
+              </Link>
             </div>
-            <div style={{ display: 'inline-flex', gap: 6 }}>
-              {[7, 14, 30].map((d) => (
+            <div className="dashboard-range" role="group" aria-label="Khoảng thời gian biểu đồ">
+              {[7, 14, 30].map((days) => (
                 <button
-                  key={d}
+                  key={days}
                   type="button"
-                  className={`pos-time-pill ${trendDays === d ? 'pos-time-pill--active' : ''}`}
-                  onClick={() => setTrendDays(d)}
+                  aria-pressed={trendDays === days}
+                  onClick={() => setTrendDays(days)}
                 >
-                  {d} ngày
+                  {days} ngày
                 </button>
               ))}
             </div>
           </div>
-          {loading ? (
-            <SkeletonBox height="280px" />
-          ) : revenueTrend.length === 0 ? (
-            <EmptyState>Chưa có doanh thu trong kỳ này.</EmptyState>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={revenueTrend} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe4ef" vertical={false} />
-                <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis
-                  stroke="#64748b"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${Math.round(value / 1000)}k`}
-                />
-                <Tooltip content={<MoneyTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#16a34a"
-                  strokeWidth={3}
-                  dot={{ r: 3, fill: '#16a34a' }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
+          <div className="dashboard-chart">
+            {loading ? (
+              <SkeletonBox height="274px" />
+            ) : revenueTrend.length === 0 ? (
+              <EmptyState>Chưa có doanh thu trong kỳ này.</EmptyState>
+            ) : (
+              <>
+                <p className="dashboard-chart-total">
+                  <strong>{formatCurrency(trendRevenue)}</strong>
+                  <span>Tổng trong {revenueTrend.length} ngày hiển thị</span>
+                </p>
+                <ResponsiveContainer width="100%" height={224} minWidth={0}>
+                  <LineChart data={revenueTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--dashboard-border)" vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      minTickGap={18}
+                    />
+                    <YAxis
+                      width={58}
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => compactNumber.format(value)}
+                    />
+                    <Tooltip content={<MoneyTooltip />} />
+                    <Line
+                      dataKey="revenue"
+                      stroke="var(--accent)"
+                      strokeWidth={2.5}
+                      dot={revenueTrend.length === 1}
+                      activeDot={{ r: 5 }}
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </>
+            )}
+          </div>
         </section>
 
-        <section className="analytics-card">
-          <div className="analytics-card-header">
-            <h3>Tỷ lệ lấp đầy theo chi nhánh</h3>
-            <span>{formatPercent(summary.occupancyRate)}</span>
+        <section className="dashboard-panel" aria-labelledby="dashboard-occupancy" aria-busy={loading}>
+          <div className="dashboard-panel-heading">
+            <h2 id="dashboard-occupancy">Lấp đầy theo chi nhánh</h2>
           </div>
           {loading ? (
-            <SkeletonBox height="280px" />
+            <SkeletonList />
           ) : occupancyByBranch.length === 0 ? (
             <EmptyState>Chưa có suất chiếu trong kỳ này.</EmptyState>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={occupancyByBranch} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe4ef" vertical={false} />
-                <XAxis dataKey="branchName" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis
-                  stroke="#64748b"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}%`}
+            <ul className="dashboard-list" aria-label="Chi nhánh">
+              {occupancyByBranch.map((branch) => (
+                <MetricRow
+                  key={branch.branchId}
+                  title={branch.branchName}
+                  meta={`${formatNumber(branch.ticketsSold)} / ${formatNumber(branch.capacity)} ghế`}
+                  value={formatPercent(branch.occupancyRate)}
+                  progress={branch.occupancyRate}
                 />
-                <Tooltip content={<PercentTooltip />} />
-                <Bar dataKey="occupancyRate" fill="#0756a6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+              ))}
+            </ul>
           )}
         </section>
       </div>
 
-      <div className="analytics-grid">
-        <section className="analytics-card">
-          <div className="analytics-card-header">
-            <h3>Top phim</h3>
+      <section className="dashboard-panel" aria-labelledby="dashboard-bookings" aria-busy={loading}>
+        <div className="dashboard-panel-heading">
+          <h2 id="dashboard-bookings">Đơn đặt vé gần đây</h2>
+          <Link to={`${basePath}/bookings`} className="dashboard-link">
+            Quản lý vé <ArrowRightIcon size={14} aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="dashboard-table-scroll" tabIndex={0} role="region" aria-labelledby="dashboard-bookings">
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th scope="col">Mã đơn</th>
+                <th scope="col">Phim</th>
+                <th scope="col">Ngày đặt</th>
+                <th scope="col" className="dashboard-table-amount">Tổng tiền</th>
+                <th scope="col">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <SkeletonRows />
+              ) : recentBookings.length === 0 ? (
+                <tr><td colSpan={5} className="dashboard-table-empty">Chưa có đơn hàng nào.</td></tr>
+              ) : (
+                recentBookings.map((booking) => (
+                  <tr key={booking.bookingId}>
+                    <td className="dashboard-booking-code">{booking.bookingCode || `#${booking.bookingId}`}</td>
+                    <td>{booking.movieName || '–'}</td>
+                    <td>{formatDate(booking.createdAt)}</td>
+                    <td className="dashboard-table-amount">{formatCurrency(booking.totalAmount)}</td>
+                    <td><span className={`dashboard-status ${getStatusClass(booking.status)}`}>
+                      {getStatusLabel(booking.status)}
+                    </span></td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="dashboard-grid">
+        <section className="dashboard-panel" aria-labelledby="dashboard-films" aria-busy={loading}>
+          <div className="dashboard-panel-heading">
+            <h2 id="dashboard-films">Phim có doanh thu cao</h2>
             <Link
               to={isManager ? `${basePath}/showtimes` : '/admin/movies'}
-              className="btn btn-ghost btn-sm"
+              className="dashboard-link"
             >
               {isManager ? 'Quản lý suất chiếu' : 'Quản lý phim'}
+              <ArrowRightIcon size={14} aria-hidden="true" />
             </Link>
           </div>
           {loading ? (
@@ -346,25 +351,25 @@ const AdminDashboard = () => {
           ) : topMovies.length === 0 ? (
             <EmptyState>Chưa có phim nào phát sinh doanh thu.</EmptyState>
           ) : (
-            <div className="analytics-list">
+            <ul className="dashboard-list">
               {topMovies.map((movie) => (
                 <MetricRow
                   key={movie.movieId}
                   title={movie.movieName}
-                  meta={`${formatNumber(movie.ticketsSold)} vé - ${formatNumber(movie.showtimes)} suất`}
+                  meta={`${formatNumber(movie.ticketsSold)} vé · ${formatNumber(movie.showtimes)} suất`}
                   value={formatCurrency(movie.revenue)}
-                  percent={movie.occupancyRate}
+                  detail={`${formatPercent(movie.occupancyRate)} lấp đầy`}
                 />
               ))}
-            </div>
+            </ul>
           )}
         </section>
 
-        <section className="analytics-card">
-          <div className="analytics-card-header">
-            <h3>Doanh số bắp nước</h3>
-            <Link to={`${basePath}/foods`} className="btn btn-ghost btn-sm">
-              Quản lý F&B
+        <section className="dashboard-panel" aria-labelledby="dashboard-food" aria-busy={loading}>
+          <div className="dashboard-panel-heading">
+            <h2 id="dashboard-food">Doanh số bắp nước</h2>
+            <Link to={`${basePath}/foods`} className="dashboard-link">
+              Quản lý F&B <ArrowRightIcon size={14} aria-hidden="true" />
             </Link>
           </div>
           {loading ? (
@@ -372,7 +377,7 @@ const AdminDashboard = () => {
           ) : foodSales.length === 0 ? (
             <EmptyState>Chưa có món ăn nào được bán.</EmptyState>
           ) : (
-            <div className="analytics-list">
+            <ul className="dashboard-list">
               {foodSales.map((food) => (
                 <MetricRow
                   key={food.foodId}
@@ -381,86 +386,37 @@ const AdminDashboard = () => {
                   value={formatCurrency(food.revenue)}
                 />
               ))}
-            </div>
+            </ul>
           )}
         </section>
-      </div>
-
-      <div className="admin-table-card">
-        <div className="table-header">
-          <h3 className="section-title">Đơn hàng mới nhất</h3>
-          <Link to={`${basePath}/bookings`} className="btn btn-ghost btn-sm">
-            Quản lý vé
-          </Link>
-        </div>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Mã đơn</th>
-              <th>Phim</th>
-              <th>Ngày đặt</th>
-              <th>Tổng tiền</th>
-              <th>Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonRows />
-            ) : recentBookings.length === 0 ? (
-              <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>
-                  Chưa có đơn hàng nào
-                </td>
-              </tr>
-            ) : (
-              recentBookings.map((booking) => (
-                <tr key={booking.bookingId}>
-                  <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                    {booking.bookingCode || `#${booking.bookingId}`}
-                  </td>
-                  <td>{booking.movieName || '-'}</td>
-                  <td>{formatDate(booking.createdAt)}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {formatCurrency(booking.totalAmount)}
-                  </td>
-                  <td>
-                    <span className={`status-badge ${getStatusClass(booking.status)}`}>
-                      {getStatusLabel(booking.status)}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
       </div>
     </div>
   );
 };
 
-const MetricRow = ({ title, meta, value, percent }) => (
-  <div className="analytics-list-row">
-    <div className="analytics-list-main">
-      <strong>{title || '-'}</strong>
+const MetricRow = ({ title, meta, value, detail, progress }) => (
+  <li className="dashboard-list-row">
+    <div className="dashboard-list-main">
+      <strong>{title || '–'}</strong>
       <span>{meta}</span>
-      {percent !== undefined && (
-        <div className="analytics-progress" aria-label={`Lấp đầy ${formatPercent(percent)}`}>
-          <span style={{ width: `${Math.min(Number(percent || 0), 100)}%` }} />
-        </div>
-      )}
     </div>
-    <div className="analytics-list-value">
+    <div className="dashboard-list-value">
       <strong>{value}</strong>
-      {percent !== undefined && <span>{formatPercent(percent)}</span>}
+      {detail && <span>{detail}</span>}
     </div>
-  </div>
+    {progress !== undefined && (
+      <div className="dashboard-progress" aria-hidden="true">
+        <span style={{ width: `${Math.max(0, Math.min(Number(progress || 0), 100))}%` }} />
+      </div>
+    )}
+  </li>
 );
 
 const SkeletonList = () => (
-  <div className="analytics-list">
+  <div className="dashboard-list" aria-hidden="true">
     {[...Array(5)].map((_, index) => (
-      <div className="analytics-list-row" key={index}>
-        <div className="analytics-list-main">
+      <div className="dashboard-list-row" key={index}>
+        <div className="dashboard-list-main">
           <SkeletonBox width="70%" height="18px" />
           <SkeletonBox width="42%" height="14px" />
         </div>
@@ -483,7 +439,7 @@ const SkeletonRows = () => (
         <td>
           <SkeletonBox width="90px" height="16px" />
         </td>
-        <td>
+        <td className="dashboard-table-amount">
           <SkeletonBox width="110px" height="16px" />
         </td>
         <td>

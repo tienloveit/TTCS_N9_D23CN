@@ -1,17 +1,20 @@
 import { ROOM_TECHNOLOGY_LABELS, formatScreening } from '../../utils/cinemaFormats';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import {
   CalendarIcon as LucideCalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   EditIcon as LucideEditIcon,
   PlusIcon,
   SearchIcon,
   TrashIcon as LucideTrashIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import './ShowtimeCalendar.css';
 
 const EditIcon = () => <LucideEditIcon size={15} />;
 const TrashIcon = () => <LucideTrashIcon size={15} />;
@@ -25,10 +28,16 @@ const STATUS_MAP = {
   CANCELLED: { label: 'Đã hủy', className: 'status--inactive' },
 };
 
-const SLOT_COLORS = ['#0756a6', '#0f766e', '#7c3aed', '#be123c', '#b45309', '#4338ca'];
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 24;
-const HOUR_WIDTH = 96;
+const HOUR_WIDTH = 90;
+const calendarDate = new Intl.DateTimeFormat('vi-VN', {
+  weekday: 'long',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 
 const toDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
@@ -51,6 +60,133 @@ const formatTime = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '--:--';
+
+const shiftCalendarDate = (value, days) => {
+  const date = new Date(value);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+const layoutRoomShowtimes = (showtimes, date, firstMinute) => {
+  const laneEnds = [];
+  const slots = showtimes.map((showtime) => {
+    const start = toMinutes(showtime.startTime);
+    const end = new Date(showtime.endTime) > new Date(showtime.startTime)
+      ? (isSameDate(showtime.endTime, date) ? toMinutes(showtime.endTime) : DAY_END_HOUR * 60)
+      : start + 30;
+    const visibleEnd = Math.min(DAY_END_HOUR * 60, Math.max(end, start + 20));
+    const availableLane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+    const lane = availableLane === -1 ? laneEnds.length : availableLane;
+    laneEnds[lane] = visibleEnd;
+    const minutes = DAY_END_HOUR * 60 - firstMinute;
+    return {
+      showtime,
+      style: {
+        '--slot-offset': `${(start - firstMinute) / minutes * 100}%`,
+        '--slot-width': `${(visibleEnd - start) / minutes * 100}%`,
+        '--slot-lane': lane,
+      },
+    };
+  });
+  return { slots, lanes: Math.max(laneEnds.length, 1) };
+};
+
+const ShowtimeCalendar = ({ date, rooms, showtimes, branches, canEdit, onSelect }) => {
+  const scrollRef = useRef(null);
+  const firstShowtimeMinute = showtimes.length ? toMinutes(showtimes[0].startTime) : DAY_START_HOUR * 60;
+  const firstShowtimeHour = Math.floor(firstShowtimeMinute / 60);
+  const firstHour = Math.min(DAY_START_HOUR, firstShowtimeHour);
+  const hours = Array.from({ length: DAY_END_HOUR - firstHour }, (_, index) => firstHour + index);
+  const branchNames = new Map(branches.map((branch) => [String(branch.branchId), branch.name]));
+  const showtimesByRoom = new Map();
+  for (const showtime of showtimes) {
+    const roomId = String(showtime.roomId);
+    if (!showtimesByRoom.has(roomId)) showtimesByRoom.set(roomId, []);
+    showtimesByRoom.get(roomId).push(showtime);
+  }
+  const openCount = showtimes.filter((showtime) => showtime.status === 'OPEN').length;
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      const leadHours = scrollRef.current.clientWidth < 480 ? 0 : 1;
+      scrollRef.current.scrollLeft = Math.max(0, (firstShowtimeHour - firstHour - leadHours) * HOUR_WIDTH);
+    }
+  }, [date, firstHour, firstShowtimeHour]);
+
+  return (
+    <section className="schedule-calendar" aria-labelledby="schedule-calendar-title">
+      <header className="schedule-calendar-heading">
+        <div>
+          <h2 id="schedule-calendar-title">Lịch chiếu theo phòng</h2>
+          <p aria-live="polite">
+            <time dateTime={date}>{calendarDate.format(new Date(date))}</time>
+            <span> · {showtimes.length} suất · {rooms.length} phòng · {openCount} đang mở bán</span>
+          </p>
+        </div>
+        {rooms.length > 0 && (
+          <ul className="schedule-legend" aria-label="Trạng thái suất chiếu">
+            {Object.entries(STATUS_MAP).map(([status, info]) => (
+              <li key={status} data-status={status}>{info.label}</li>
+            ))}
+          </ul>
+        )}
+      </header>
+      {rooms.length === 0 ? (
+        <p className="schedule-empty">Không có suất chiếu trong ngày và chi nhánh đang chọn.</p>
+      ) : (
+        <div className="schedule-scroll" ref={scrollRef} role="region" tabIndex={0} aria-label="Trục giờ chiếu theo phòng">
+          <div className="schedule-grid" style={{ '--schedule-hours': hours.length, '--schedule-hour-width': `${HOUR_WIDTH}px` }}>
+            <div className="schedule-row schedule-hour-header">
+              <span className="schedule-room">Phòng chiếu</span>
+              <div className="schedule-hours">
+                {hours.map((hour) => <span key={hour}>{String(hour).padStart(2, '0')}:00</span>)}
+              </div>
+            </div>
+            {rooms.map((room) => {
+              const roomShowtimes = showtimesByRoom.get(String(room.id)) || [];
+              const { slots, lanes } = layoutRoomShowtimes(roomShowtimes, date, firstHour * 60);
+              const branchName = branchNames.get(String(room.branchId)) || roomShowtimes[0]?.branchName;
+              const technology = ROOM_TYPE_LABELS[room.roomTechnology] || room.roomTechnology;
+              return (
+                <div className="schedule-row" key={room.id} role="group" aria-label={branchName ? `${room.name}, ${branchName}` : room.name}>
+                  <div className="schedule-room">
+                    <strong>{room.name}</strong>
+                    {branchName && <span>{branchName}</span>}
+                    <span>{[technology, `${room.seatCapacity || 0} ghế`].filter(Boolean).join(' · ')}</span>
+                  </div>
+                  <div className="schedule-track" style={{ '--schedule-lanes': lanes }}>
+                    {slots.map(({ showtime, style }) => {
+                      const status = STATUS_MAP[showtime.status]?.label || showtime.status || '–';
+                      const time = `${formatTime(showtime.startTime)} – ${formatTime(showtime.endTime)}`;
+                      const label = `${showtime.movieName}, ${time}, ${status}`;
+                      return (
+                        <button
+                          key={showtime.showtimeId}
+                          type="button"
+                          className="schedule-slot"
+                          data-status={showtime.status}
+                          style={style}
+                          title={label}
+                          aria-label={label}
+                          disabled={!canEdit}
+                          onClick={() => onSelect(showtime)}
+                        >
+                          <span className="schedule-slot-time">{time}</span>
+                          <strong>{showtime.movieName}</strong>
+                          <span className="schedule-slot-meta">{formatScreening(showtime.screeningFormat, showtime.roomTechnology)} · {status}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
 
 const ShowtimeManagement = () => {
   const { isAdmin, isManager, isAdminOrManager } = useAuth();
@@ -142,17 +278,6 @@ const ShowtimeManagement = () => {
       .filter((room) => roomIdsWithSchedule.has(String(room.id)))
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [rooms, calendarShowtimes, selectedBranchId]);
-
-  const timelineHours = useMemo(
-    () => Array.from({ length: DAY_END_HOUR - DAY_START_HOUR + 1 }, (_, index) => DAY_START_HOUR + index),
-    [],
-  );
-
-  const dayStats = useMemo(() => {
-    const openCount = calendarShowtimes.filter((showtime) => showtime.status === 'OPEN').length;
-    const usedRooms = new Set(calendarShowtimes.map((showtime) => showtime.roomId)).size;
-    return { openCount, usedRooms, total: calendarShowtimes.length };
-  }, [calendarShowtimes]);
 
   const handleOpenModal = (showtime = null) => {
     if (!canEditShowtime) return;
@@ -247,23 +372,6 @@ const ShowtimeManagement = () => {
     );
   });
 
-  const getShowtimesForRoom = (roomId) =>
-    calendarShowtimes.filter((showtime) => String(showtime.roomId) === String(roomId));
-
-  const getSlotStyle = (showtime, index) => {
-    const start = Math.max(toMinutes(showtime.startTime), DAY_START_HOUR * 60);
-    const end = Math.min(toMinutes(showtime.endTime), DAY_END_HOUR * 60);
-    const left = ((start - DAY_START_HOUR * 60) / 60) * HOUR_WIDTH;
-    const width = Math.max(((end - start) / 60) * HOUR_WIDTH, 74);
-    const color = showtime.status === 'CANCELLED' ? '#64748b' : SLOT_COLORS[index % SLOT_COLORS.length];
-    return {
-      left,
-      width,
-      background: color,
-      opacity: showtime.status === 'CANCELLED' ? 0.58 : 1,
-    };
-  };
-
   const formatDT = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
@@ -280,155 +388,71 @@ const ShowtimeManagement = () => {
   if (loading && showtimes.length === 0) return <div className="loading"><div className="spinner" /></div>;
 
   return (
-    <div>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18 }}>
+    <div className="showtime-management">
+      <header className="schedule-page-heading">
         <div>
-          <h1 className="page-title">Quản lý Suất chiếu</h1>
-          <p className="page-subtitle">
-            {viewMode === 'calendar' ? (
-              <><strong>{dayStats.total}</strong> suất trong ngày đang chọn · <strong>{dayStats.usedRooms}</strong> phòng có lịch</>
-            ) : (
-              <><strong>{listShowtimes.length}</strong> suất chiếu trên hệ thống</>
-            )}
-          </p>
+          <h1>Quản lý Suất chiếu</h1>
+          {viewMode === 'list' && <p>{listShowtimes.length} suất chiếu</p>}
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!canEditShowtime} style={!canEditShowtime ? { display: 'none' } : undefined}>
-          <PlusIcon size={18} />
-          Thêm suất chiếu
-        </button>
-      </div>
+        {canEditShowtime && (
+          <button type="button" className="schedule-button schedule-button--primary" onClick={() => handleOpenModal()}>
+            <PlusIcon size={16} aria-hidden="true" />
+            Thêm suất chiếu
+          </button>
+        )}
+      </header>
 
-      <div className="admin-table-card" style={{ padding: 18, marginBottom: 18 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 180px minmax(220px, 1fr) auto', gap: 12, alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 8, padding: 4, background: 'var(--bg-card-hover)', borderRadius: 8 }}>
-            <button
-              type="button"
-              className={`btn btn-sm ${viewMode === 'calendar' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setViewMode('calendar')}
-              style={{ flex: 1, justifyContent: 'center' }}
-            >
-              <CalendarIcon />
-              Calendar
+      <div className="schedule-toolbar">
+        {viewMode === 'calendar' && (
+          <div className="schedule-date-controls" role="group" aria-label="Điều hướng lịch chiếu">
+            <button type="button" className="schedule-button schedule-arrow" aria-label="Ngày trước" onClick={() => setSelectedDate(shiftCalendarDate(selectedDate, -1))}>
+              <ChevronLeftIcon size={16} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setViewMode('list')}
-              style={{ flex: 1, justifyContent: 'center' }}
-            >
-              Danh sách
+            <button type="button" className="schedule-button" onClick={() => setSelectedDate(toDateInputValue())}>Hôm nay</button>
+            <button type="button" className="schedule-button schedule-arrow" aria-label="Ngày sau" onClick={() => setSelectedDate(shiftCalendarDate(selectedDate, 1))}>
+              <ChevronRightIcon size={16} aria-hidden="true" />
             </button>
+            <input
+              className="schedule-field schedule-date-field"
+              aria-label="Ngày chiếu"
+              type="date"
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value || toDateInputValue())}
+            />
           </div>
+        )}
 
-          {viewMode === 'calendar' && (
-            <input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-          )}
-
-          <select className="input" value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}>
+        <label className="schedule-branch">
+          <span>Chi nhánh</span>
+          <select className="schedule-field" aria-label="Chi nhánh" value={selectedBranchId} onChange={(event) => setSelectedBranchId(event.target.value)}>
             <option value="">Tất cả chi nhánh</option>
             {branches.map((branch) => (
               <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
             ))}
           </select>
+        </label>
 
-          {viewMode === 'calendar' && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() - 1))))}>
-                Trước
-              </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue())}>
-                Hôm nay
-              </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(toDateInputValue(new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1))))}>
-                Sau
-              </button>
-            </div>
-          )}
+        <div className="schedule-views" role="group" aria-label="Kiểu hiển thị suất chiếu">
+          <button type="button" className="schedule-button" aria-pressed={viewMode === 'calendar'} onClick={() => setViewMode('calendar')}>
+            <CalendarIcon />
+            Lịch
+          </button>
+          <button type="button" className="schedule-button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}>
+            Danh sách
+          </button>
         </div>
       </div>
 
       {viewMode === 'calendar' ? (
-        <div className="admin-table-card" style={{ overflow: 'hidden' }}>
-          <div className="table-header">
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Lịch chiếu theo phòng</h3>
-              <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                {dayStats.openCount} suất đang mở bán · timeline {DAY_START_HOUR}:00 - {DAY_END_HOUR}:00
-              </p>
-            </div>
-          </div>
-
-          {calendarRooms.length === 0 ? (
-            <div style={{ padding: 44, textAlign: 'center', color: 'var(--text-muted)' }}>
-              Không có suất chiếu nào trong ngày/chi nhánh đang chọn.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <div style={{ minWidth: 240 + timelineHours.length * HOUR_WIDTH }}>
-                <div style={{ display: 'grid', gridTemplateColumns: `220px ${timelineHours.length * HOUR_WIDTH}px`, borderBottom: '1px solid var(--border)', background: 'var(--bg-card-hover)' }}>
-                  <div style={{ padding: '12px 16px', fontWeight: 800 }}>Phòng</div>
-                  <div style={{ position: 'relative', height: 44 }}>
-                    {timelineHours.map((hour) => (
-                      <div key={hour} style={{ position: 'absolute', left: (hour - DAY_START_HOUR) * HOUR_WIDTH, top: 0, width: HOUR_WIDTH, height: 44, borderLeft: '1px solid var(--border)', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)' }}>
-                        {String(hour).padStart(2, '0')}:00
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {calendarRooms.map((room) => {
-                  const roomShowtimes = getShowtimesForRoom(room.id);
-                  return (
-                    <div key={room.id} style={{ display: 'grid', gridTemplateColumns: `220px ${timelineHours.length * HOUR_WIDTH}px`, borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ padding: 16, borderRight: '1px solid var(--border)' }}>
-                        <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{room.name}</div>
-                        <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span className="movie-badge">{ROOM_TYPE_LABELS[room.roomTechnology] || room.roomTechnology}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{room.seatCapacity || 0} ghế</span>
-                        </div>
-                      </div>
-                      <div style={{ position: 'relative', height: 92, background: '#f8fafc' }}>
-                        {timelineHours.map((hour) => (
-                          <div key={hour} style={{ position: 'absolute', left: (hour - DAY_START_HOUR) * HOUR_WIDTH, top: 0, bottom: 0, borderLeft: '1px solid #e2e8f0' }} />
-                        ))}
-                        {roomShowtimes.map((showtime, index) => {
-                          const statusInfo = STATUS_MAP[showtime.status] || { label: showtime.status || '-', className: '' };
-                          return (
-                            <button
-                              key={showtime.showtimeId}
-                              type="button"
-                              title={`${showtime.movieName} · ${formatTime(showtime.startTime)} - ${formatTime(showtime.endTime)}`}
-                              onClick={() => handleOpenModal(showtime)}
-                              style={{
-                                position: 'absolute',
-                                top: 14 + (index % 2) * 34,
-                                height: 30,
-                                border: 'none',
-                                borderRadius: 6,
-                                color: '#fff',
-                                textAlign: 'left',
-                                padding: '4px 8px',
-                                overflow: 'hidden',
-                                cursor: canEditShowtime ? 'pointer' : 'default',
-                                boxShadow: '0 6px 14px rgba(15,23,42,0.14)',
-                                ...getSlotStyle(showtime, index),
-                              }}
-                            >
-                              <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {formatTime(showtime.startTime)} {showtime.movieName}
-                              </div>
-                              <div style={{ fontSize: 10, opacity: 0.88 }}>{formatScreening(showtime.screeningFormat, showtime.roomTechnology)} · {statusInfo.label}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        <ShowtimeCalendar
+          key={selectedBranchId}
+          date={selectedDate}
+          rooms={calendarRooms}
+          showtimes={calendarShowtimes}
+          branches={branches}
+          canEdit={canEditShowtime}
+          onSelect={handleOpenModal}
+        />
       ) : (
         <div className="admin-table-card">
           <div className="console-toolbar">

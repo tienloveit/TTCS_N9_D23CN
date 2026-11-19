@@ -1,16 +1,22 @@
-import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { branchApi, operationsApi, reportsApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 import {
   AlertTriangleIcon,
+  ArmchairIcon,
+  ArrowRightIcon,
+  BanknoteIcon,
   DownloadIcon,
   RefreshIcon,
-  SparkIcon,
   TicketIcon,
 } from '../../components/Common/CinemaIcons';
+import { SkeletonBox } from '../../components/Common/Skeleton';
+import './OperationsReportPage.css';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const businessDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
+const today = () => businessDate.format(new Date());
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', {
@@ -22,70 +28,87 @@ const formatCurrency = (amount) =>
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 
 const formatDateTime = (value) =>
-  value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-';
+  value ? new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '–';
+
+const percentFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'percent',
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+const formatPercent = (value) => percentFormatter.format(Number(value || 0) / 100);
+const paymentLabels = { CASH: 'Tiền mặt', CARD: 'Thẻ', VNPAY: 'VNPay' };
 
 const OperationsReportPage = () => {
   const { user } = useAuth();
-  const [date, setDate] = useState(today());
+  const isAdmin = user?.role === 'ADMIN';
+  const [date, setDate] = useState(today);
   const [branchId, setBranchId] = useState('');
   const [branches, setBranches] = useState([]);
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [revision, setRevision] = useState(0);
+  const [response, setResponse] = useState(null);
   const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState('');
+  const requestKey = `${date}/${branchId}/${revision}`;
+  const currentResponse = response?.key === requestKey ? response : null;
+  const loading = !currentResponse;
+  const report = currentResponse?.report;
+  const error = currentResponse?.error;
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') {
+    if (!isAdmin) {
       return;
     }
     branchApi.getAll()
       .then((res) => setBranches(res.data.result || []))
       .catch(() => setBranches([]));
-  }, [user?.role]);
-
-  const fetchReport = useCallback(() => {
-    setLoading(true);
-    operationsApi.getDailyReport({ date, branchId: branchId || undefined })
-      .then((res) => {
-        setReport(res.data.result);
-        setError('');
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || 'Không thể tải báo cáo vận hành');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [date, branchId]);
+  }, [isAdmin]);
 
   useEffect(() => {
-    fetchReport();
-  }, [fetchReport]);
+    let cancelled = false;
+    operationsApi.getDailyReport({ date, branchId: branchId || undefined })
+      .then((res) => {
+        if (!cancelled) {
+          setResponse({ key: requestKey, report: res.data.result });
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setResponse({
+            key: requestKey,
+            error: err.response?.data?.message || 'Không thể tải báo cáo vận hành',
+          });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [date, branchId, requestKey]);
 
-  const summary = useMemo(() => report?.summary || {}, [report]);
-  const statCards = useMemo(() => [
+  const summary = report?.summary || {};
+  const stats = [
     {
-      label: 'Doanh thu trong ngày',
+      label: 'Doanh thu',
       value: formatCurrency(summary.revenue),
-      note: `${formatNumber(summary.completedBookings)} đơn hoàn tất`,
-      icon: SparkIcon,
-      color: '#16a34a',
+      note: `${formatNumber(summary.completedBookings)} đơn đã thanh toán`,
+      icon: BanknoteIcon,
     },
     {
       label: 'Vé đã bán',
       value: formatNumber(summary.ticketsSold),
-      note: `Lấp đầy ${Number(summary.occupancyRate || 0).toFixed(1)}%`,
+      note: `${formatCurrency(summary.ticketRevenue)} doanh thu vé`,
       icon: TicketIcon,
-      color: '#7c3aed',
     },
     {
-      label: 'Cảnh báo cần xử lý',
-      value: formatNumber(summary.refundRequests),
-      note: 'Yêu cầu hoàn tiền chờ xử lý',
-      icon: AlertTriangleIcon,
-      color: '#d97706',
+      label: 'Tỷ lệ lấp đầy',
+      value: formatPercent(summary.occupancyRate),
+      note: `${formatNumber(summary.showtimes)} suất · ${formatNumber(summary.totalCapacity)} ghế`,
+      icon: ArmchairIcon,
     },
-  ], [summary]);
+    {
+      label: 'Hoàn tiền chờ duyệt',
+      value: formatNumber(summary.refundRequests),
+      note: `${formatCurrency(summary.refundedAmount)} đã hoàn trong ngày`,
+      icon: AlertTriangleIcon,
+      attention: summary.refundRequests > 0,
+    },
+  ];
 
   const exportExcel = async () => {
     setExporting(true);
@@ -105,128 +128,212 @@ const OperationsReportPage = () => {
     }
   };
 
+  const paymentRows = (report?.paymentBreakdown || []).map((item) => ({
+    key: item.paymentMethod,
+    cells: [
+      paymentLabels[item.paymentMethod] || item.paymentMethod || '–',
+      formatNumber(item.bookings),
+      formatCurrency(item.amount),
+    ],
+  }));
+  const refundRows = (report?.refundQueue || []).map((item) => ({
+    key: item.bookingId,
+    cells: [
+      <span className="ops-booking-code">{item.bookingCode || `#${item.bookingId}`}</span>,
+      item.customerName || '–',
+      formatCurrency(item.amount),
+      item.reason || '–',
+    ],
+  }));
+  const showtimeRows = (report?.showtimeLoads || []).map((item) => {
+    const occupancy = Number(item.occupancyRate || 0);
+    return {
+      key: item.showtimeId,
+      cells: [
+        <span className="ops-showtime">{formatDateTime(item.startTime)}</span>,
+        <div className="ops-screening">
+          <strong>{item.movieName || '–'}</strong>
+          <span>{item.roomName || '–'}</span>
+        </div>,
+        `${formatNumber(item.ticketsSold)} / ${formatNumber(item.capacity)}`,
+        <div className="ops-occupancy">
+          <span className="ops-occupancy-track" aria-hidden="true">
+            <span style={{ width: `${Math.max(0, Math.min(occupancy, 100))}%` }} />
+          </span>
+          <strong>{formatPercent(occupancy)}</strong>
+        </div>,
+      ],
+    };
+  });
+
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <div>
-          <h1 className="page-title">Báo cáo vận hành</h1>
-          <p className="page-subtitle">Đối soát doanh thu, tồn kho và yêu cầu hoàn tiền theo ngày.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button
-            type="button"
-            className={`pos-time-pill ${date === today() ? 'pos-time-pill--active' : ''}`}
-            onClick={() => setDate(today())}
-          >
+    <div className="operations-report">
+      <header className="ops-heading">
+        <h1>Báo cáo vận hành</h1>
+        <button
+          type="button"
+          className="ops-button ops-button--primary"
+          onClick={exportExcel}
+          disabled={exporting}
+        >
+          <DownloadIcon size={16} aria-hidden="true" />
+          {exporting ? 'Đang xuất…' : 'Xuất Excel'}
+        </button>
+      </header>
+
+      <div className="ops-filters" role="group" aria-label="Bộ lọc báo cáo">
+        <div className="ops-date">
+          <label className="ops-field">
+            <span>Ngày báo cáo</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value || today())} />
+          </label>
+          <button type="button" className="ops-button ops-today" onClick={() => setDate(today())}>
             Hôm nay
           </button>
-          <input className="input" style={{ width: 'auto' }} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          {user?.role === 'ADMIN' && (
-            <select className="input" style={{ width: 'auto' }} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+        </div>
+        {isAdmin ? (
+          <label className="ops-field">
+            <span>Chi nhánh</span>
+            <select value={branchId} onChange={(event) => setBranchId(event.target.value)}>
               <option value="">Tất cả chi nhánh</option>
               {branches.map((branch) => (
                 <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
               ))}
             </select>
-          )}
-          <button type="button" className="btn btn-secondary" onClick={fetchReport} disabled={loading}>
-            <RefreshIcon size={16} />
-            <span>Làm mới</span>
-          </button>
-          <button type="button" className="btn btn-primary" onClick={exportExcel} disabled={exporting}>
-            <DownloadIcon size={16} />
-            <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
-          </button>
-        </div>
-      </div>
-
-      {error && <div className="error-message">{error}</div>}
-
-      <div className="stats-grid">
-        {statCards.map((card) => (
-          <div className="stat-card" key={card.label}>
-            <div className="stat-icon" style={{ backgroundColor: `${card.color}18`, color: card.color }}>
-              {createElement(card.icon, { size: 22 })}
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">{card.label}</span>
-              <h3 className="stat-value">{loading ? '...' : card.value}</h3>
-              <span className="stat-note">{card.note}</span>
-            </div>
+          </label>
+        ) : report?.branchName && (
+          <div className="ops-field">
+            <span>Chi nhánh</span>
+            <strong className="ops-branch">{report.branchName}</strong>
           </div>
-        ))}
+        )}
+        <button
+          type="button"
+          className="ops-button ops-refresh"
+          onClick={() => setRevision((value) => value + 1)}
+          disabled={loading}
+        >
+          <RefreshIcon size={16} aria-hidden="true" />
+          Làm mới
+        </button>
       </div>
 
-      <div className="analytics-grid">
-        <ReportTable
-          title="Đối soát thanh toán"
-          headers={['Phương thức', 'Số đơn', 'Doanh thu']}
-          rows={(report?.paymentBreakdown || []).map((item) => [
-            <strong key="m">{item.paymentMethod || '-'}</strong>,
-            formatNumber(item.bookings),
-            <strong key="a" style={{ color: 'var(--text-primary)' }}>{formatCurrency(item.amount)}</strong>,
-          ])}
-        />
-        <ReportTable
-          title="Yêu cầu hoàn tiền chờ duyệt"
-          headers={['Mã đơn', 'Khách hàng', 'Số tiền', 'Lý do']}
-          rows={(report?.refundQueue || []).map((item) => [
-            <span key="c" style={{ fontFamily: 'monospace', fontWeight: 700 }}>{item.bookingCode}</span>,
-            item.customerName || '-',
-            <strong key="amt" style={{ color: '#dc2626' }}>{formatCurrency(item.amount)}</strong>,
-            item.reason || '-',
-          ])}
-        />
-      </div>
-
-      <ReportTable
-        title="Tải suất chiếu trong ngày"
-        headers={['Phim', 'Phòng', 'Giờ chiếu', 'Vé bán', 'Tỷ lệ lấp đầy']}
-        rows={(report?.showtimeLoads || []).map((item) => {
-          const occ = Number(item.occupancyRate || 0);
-          const fillClass = occ >= 70 ? 'is-high' : occ >= 35 ? '' : 'is-warn';
-          return [
-            <strong key="mv">{item.movieName}</strong>,
-            item.roomName,
-            formatDateTime(item.startTime),
-            `${formatNumber(item.ticketsSold)} / ${formatNumber(item.capacity)}`,
-            <div key="occ" className="mini-progress-wrap">
-              <div className="mini-progress-track">
-                <div className={`mini-progress-fill ${fillClass}`} style={{ width: `${Math.min(occ, 100)}%` }} />
+      {error ? (
+        <p className="ops-error" role="alert">{error}</p>
+      ) : (
+        <>
+          <dl className="ops-stats" aria-label="Tổng hợp trong ngày" aria-busy={loading}>
+            {stats.map((stat) => (
+              <div className="ops-stat" key={stat.label} data-attention={stat.attention || undefined}>
+                <dt>{createElement(stat.icon, { size: 16, 'aria-hidden': true })}{stat.label}</dt>
+                {loading ? (
+                  <dd><SkeletonBox width="75%" height="28px" /></dd>
+                ) : (
+                  <>
+                    <dd className="ops-stat-value">{stat.value}</dd>
+                    <dd className="ops-stat-note">{stat.note}</dd>
+                  </>
+                )}
               </div>
-              <strong style={{ fontSize: '0.82rem', minWidth: 44, textAlign: 'right' }}>
-                {occ.toFixed(1)}%
-              </strong>
-            </div>,
-          ];
-        })}
-      />
+            ))}
+          </dl>
+
+          <div className="ops-grid">
+            <ReportTable
+              id="ops-payments"
+              title="Đối soát thanh toán"
+              headers={['Phương thức', 'Số đơn', 'Doanh thu']}
+              numericColumns={[1, 2]}
+              rows={paymentRows}
+              loading={loading}
+              emptyText="Chưa có thanh toán trong ngày."
+              footer={paymentRows.length > 0 && [
+                'Tổng cộng',
+                formatNumber(summary.completedBookings),
+                formatCurrency(summary.revenue),
+              ]}
+            />
+            <ReportTable
+              id="ops-refunds"
+              title="Hoàn tiền chờ duyệt"
+              detail={summary.refundRequests > refundRows.length
+                ? `Hiển thị ${formatNumber(refundRows.length)} / ${formatNumber(summary.refundRequests)} yêu cầu`
+                : undefined}
+              headers={['Mã đơn', 'Khách hàng', 'Số tiền', 'Lý do']}
+              numericColumns={[2]}
+              rows={refundRows}
+              loading={loading}
+              emptyText="Không có yêu cầu hoàn tiền chờ duyệt."
+              action={
+                <Link className="ops-link" to={isAdmin ? '/admin/refunds' : '/manager/refunds'}>
+                  Quản lý hoàn tiền <ArrowRightIcon size={14} aria-hidden="true" />
+                </Link>
+              }
+            />
+          </div>
+
+          <ReportTable
+            id="ops-showtimes"
+            title="Suất chiếu trong ngày"
+            detail={!loading && `${formatNumber(showtimeRows.length)} suất chiếu`}
+            headers={['Giờ chiếu', 'Phim / Phòng', 'Vé / Ghế', 'Lấp đầy']}
+            numericColumns={[2, 3]}
+            rows={showtimeRows}
+            loading={loading}
+            emptyText="Không có suất chiếu trong ngày."
+          />
+        </>
+      )}
     </div>
   );
 };
 
-const ReportTable = ({ title, headers, rows }) => (
-  <section className="admin-table-card">
-    <div className="table-header">
-      <h3 className="section-title">{title}</h3>
-      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{rows.length} dòng</span>
-    </div>
-    <table className="admin-table">
-      <thead>
-        <tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr><td colSpan={headers.length} style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)' }}>Chưa có dữ liệu</td></tr>
-        ) : (
-          rows.map((row, index) => (
-            <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>
-          ))
+const ReportTable = ({ id, title, detail, headers, numericColumns, rows, loading, emptyText, action, footer }) => (
+  <section className="ops-panel" aria-labelledby={id} aria-busy={loading}>
+    <header className="ops-panel-heading">
+      <div>
+        <h2 id={id}>{title}</h2>
+        {detail && <p>{detail}</p>}
+      </div>
+      {action}
+    </header>
+    <div className="ops-table-scroll" role="region" tabIndex={0} aria-labelledby={id}>
+      <table className="ops-table">
+        <thead>
+          <tr>
+            {headers.map((header, index) => (
+              <th key={header} scope="col" data-numeric={numericColumns.includes(index) || undefined}>{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
+            <tr><td className="ops-table-message" colSpan={headers.length}><SkeletonBox height="36px" /></td></tr>
+          ) : rows.length === 0 ? (
+            <tr><td className="ops-table-message" colSpan={headers.length}>{emptyText}</td></tr>
+          ) : (
+            rows.map((row) => (
+              <tr key={row.key}>
+                {row.cells.map((cell, index) => (
+                  <td key={headers[index]} data-numeric={numericColumns.includes(index) || undefined}>{cell}</td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+        {footer && (
+          <tfoot>
+            <tr>
+              <th scope="row">{footer[0]}</th>
+              {footer.slice(1).map((cell, index) => (
+                <td key={headers[index + 1]} data-numeric="true">{cell}</td>
+              ))}
+            </tr>
+          </tfoot>
         )}
-      </tbody>
-    </table>
+      </table>
+    </div>
   </section>
 );
 
 export default OperationsReportPage;
-
