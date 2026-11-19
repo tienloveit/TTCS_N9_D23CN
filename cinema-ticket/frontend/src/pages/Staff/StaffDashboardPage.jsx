@@ -1,428 +1,179 @@
-import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api';
-import './StaffDashboardPage.css';
 import {
-  ArmchairIcon,
-  ArrowRightIcon,
-  BanknoteIcon,
-  ClockIcon,
-  CreditCardIcon,
-  FilmIcon,
-  MapPinIcon,
-  PopcornIcon,
-  RefreshIcon,
-  ReportIcon,
-  ScanIcon,
-  TicketIcon,
+  ArrowRightIcon, CalendarIcon, CreditCardIcon, FilmIcon, ListIcon, MapPinIcon,
+  RefreshIcon, ScanIcon, TicketIcon, TimerIcon,
 } from '../../components/Common/CinemaIcons';
+import { StaffSkeleton, StaffState } from './StaffUI';
 
-const emptyDashboard = {
-  summary: {
-    revenue: 0,
-    cashRevenue: 0,
-    cardRevenue: 0,
-    foodRevenue: 0,
-    paidBookings: 0,
-    pendingBookings: 0,
-    ticketsSold: 0,
-    checkedInTickets: 0,
-    refundRequests: 0,
-  },
-  upcomingShowtimes: [],
-  recentBookings: [],
+const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+const number = new Intl.NumberFormat('vi-VN');
+const shortTime = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
+const shortDate = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' });
+const dateTime = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
+const todayLabel = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full', timeZone: 'Asia/Ho_Chi_Minh' });
+const format = (formatter, value) => value == null ? '—' : formatter.format(value);
+const bookingStatuses = {
+  COMPLETED: ['Hoàn tất', 'success'], PENDING: ['Chờ thanh toán', 'warning'],
+  CANCELLED: ['Đã hủy', 'neutral'], EXPIRED: ['Hết hạn', 'neutral'],
+  REFUND_REQUESTED: ['Yêu cầu hoàn tiền', 'warning'], REFUNDED: ['Đã hoàn tiền', 'neutral'],
 };
 
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(Number(amount || 0));
-
-const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
-
-const formatDateTime = (value) =>
-  value
-    ? new Date(value).toLocaleString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    : '—';
-
-const formatTimeShort = (value) =>
-  value
-    ? new Date(value).toLocaleTimeString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '—';
-
-export default function StaffDashboardPage() {
-  const [dashboard, setDashboard] = useState(emptyDashboard);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadDashboard = async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
-
-    try {
-      const res = await staffApi.getDashboard();
-      const data = res.data.result || emptyDashboard;
-      setDashboard(data);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Không tải được dữ liệu tổng quan nhân viên');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const summary = dashboard.summary || emptyDashboard.summary;
-  const upcomingShowtimes = dashboard.upcomingShowtimes || [];
-  const recentBookings = dashboard.recentBookings || [];
-
-  const checkInRate = useMemo(() => {
-    const sold = Number(summary.ticketsSold || 0);
-    const checked = Number(summary.checkedInTickets || 0);
-    if (sold <= 0) return 0;
-    return Math.min(100, Math.round((checked / sold) * 100));
-  }, [summary.ticketsSold, summary.checkedInTickets]);
-
-  if (loading) {
-    return (
-      <div className="loading">
-        <div className="spinner" />
-      </div>
-    );
-  }
-
+function OverviewMetrics({ summary }) {
+  const metrics = [
+    ['Doanh thu hôm nay', format(currency, summary.revenue), CreditCardIcon, `${format(number, summary.paidBookings)} đơn đã thanh toán`],
+    ['Vé đã bán', format(number, summary.ticketsSold), TicketIcon],
+    ['Vé đã check-in', format(number, summary.checkedInTickets), ScanIcon],
+    ['Đơn cần theo dõi', format(number, (summary.pendingBookings ?? 0) + (summary.refundRequests ?? 0)), TimerIcon,
+      `${format(number, summary.pendingBookings)} chờ thanh toán · ${format(number, summary.refundRequests)} yêu cầu hoàn`],
+  ];
   return (
-    <div className="staff-dashboard-page staff-overview">
-      {/* ===== 1. STAFF DASHBOARD HEADER ===== */}
-      <div className="staff-dashboard-top-bar">
-        <div className="staff-dashboard-heading">
-          <span className="staff-dashboard-eyebrow">QUẢN LÝ QUẦY VÉ</span>
-          <div className="pos-top-title">
-            <h1>Tổng quan nhân viên</h1>
-            <p>Doanh thu và hoạt động bán vé trong ngày.</p>
-          </div>
-        </div>
+    <>
+      <section className="staff-metrics" aria-label="Chỉ số hôm nay">
+        {metrics.map(([label, value, icon, detail]) => {
+          const Icon = icon;
+          return (
+            <article className="staff-panel staff-metric" key={label}>
+              <div><span>{label}</span><Icon size={19} aria-hidden="true" /></div>
+              <strong>{value}</strong>
+              {detail && <small>{detail}</small>}
+            </article>
+          );
+        })}
+      </section>
+      <dl className="staff-breakdown staff-panel" aria-label="Chi tiết doanh thu">
+        <div><dt>Tiền mặt</dt><dd>{format(currency, summary.cashRevenue)}</dd></div>
+        <div><dt>Thẻ / VNPay</dt><dd>{format(currency, summary.cardRevenue)}</dd></div>
+        <div><dt>Bắp nước</dt><dd>{format(currency, summary.foodRevenue)}</dd></div>
+      </dl>
+    </>
+  );
+}
 
-        <div className="staff-dashboard-top-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ padding: '9px 14px', fontSize: '0.84rem' }}
-            onClick={() => loadDashboard(true)}
-            disabled={refreshing}
-          >
-            <RefreshIcon size={16} />
-            <span>{refreshing ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
-
-          <Link
-            to="/staff/check-in"
-            className="btn btn-secondary"
-            style={{ padding: '9px 16px', fontSize: '0.84rem' }}
-          >
-            <ScanIcon size={16} />
-            <span>Soát vé</span>
-          </Link>
-
-          <Link
-            to="/staff/booking"
-            className="btn btn-primary"
-            style={{ padding: '9px 18px', fontSize: '0.86rem' }}
-          >
-            <TicketIcon size={16} />
-            <span>Bán vé tại quầy</span>
-          </Link>
-        </div>
+function UpcomingShowtimes({ showtimes }) {
+  return (
+    <section className="staff-panel" aria-labelledby="staff-upcoming-title">
+      <div className="staff-panel-heading">
+        <h2 id="staff-upcoming-title"><FilmIcon size={19} /> Suất chiếu sắp tới</h2>
+        <Link className="staff-text-link" to="/staff/booking">Xem lịch chiếu <ArrowRightIcon size={16} /></Link>
       </div>
+      {showtimes.length === 0 ? <StaffState icon={CalendarIcon} title="Chưa có suất chiếu sắp tới" /> : (
+        <ul className="staff-showtimes">
+          {showtimes.map((showtime) => {
+            const { availableSeats, totalSeats } = showtime;
+            const tone = availableSeats === 0 ? 'neutral' : availableSeats <= 5 ? 'warning' : 'success';
+            return (
+              <li key={showtime.showtimeId}>
+                <time className="staff-showtime-time" dateTime={showtime.startTime}>
+                  {format(shortTime, showtime.startTime && new Date(showtime.startTime))}
+                  <small>{format(shortDate, showtime.startTime && new Date(showtime.startTime))}</small>
+                </time>
+                <div className="staff-showtime-movie">
+                  <strong>{showtime.movieName}</strong>
+                  <small><MapPinIcon size={13} /> {[showtime.branchName, showtime.roomName].filter(Boolean).join(' · ')}</small>
+                </div>
+                {availableSeats != null && (
+                  <span className={`staff-status staff-status--${tone}`}>
+                    {availableSeats === 0 ? 'Hết ghế' : `Còn ${availableSeats}${totalSeats ? `/${totalSeats}` : ''} ghế`}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
-      {/* ===== 2. 4 KPI METRIC CARDS ===== */}
-      <div className="staff-dashboard-kpi-grid">
-        <div className="staff-dashboard-kpi-card">
-          <div className="staff-dashboard-kpi-head">
-            <span className="staff-dashboard-kpi-label">Doanh thu hôm nay</span>
-            <div
-              className="staff-dashboard-kpi-icon"
-              style={{ background: 'rgba(22, 163, 74, 0.12)', color: '#16a34a' }}
-            >
-              <ReportIcon size={20} />
-            </div>
-          </div>
-          <h3 className="staff-dashboard-kpi-value" style={{ color: '#15803d' }}>
-            {formatCurrency(summary.revenue)}
-          </h3>
-          <div className="staff-dashboard-kpi-sub">
-            <span>Đơn hoàn tất:</span>
-            <strong style={{ color: '#0f172a' }}>{formatNumber(summary.paidBookings)} đơn</strong>
-          </div>
-        </div>
-
-        <div className="staff-dashboard-kpi-card">
-          <div className="staff-dashboard-kpi-head">
-            <span className="staff-dashboard-kpi-label">Doanh thu tiền mặt</span>
-            <div
-              className="staff-dashboard-kpi-icon"
-              style={{ background: 'rgba(7, 86, 166, 0.12)', color: '#0756a6' }}
-            >
-              <BanknoteIcon size={20} />
-            </div>
-          </div>
-          <h3 className="staff-dashboard-kpi-value">{formatCurrency(summary.cashRevenue)}</h3>
-          <div className="staff-dashboard-kpi-sub">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <CreditCardIcon size={13} /> Thẻ / VNPay:
-            </span>
-            <strong style={{ color: '#0756a6' }}>{formatCurrency(summary.cardRevenue)}</strong>
-          </div>
-        </div>
-
-        <div className="staff-dashboard-kpi-card">
-          <div className="staff-dashboard-kpi-head">
-            <span className="staff-dashboard-kpi-label">Vé đã bán</span>
-            <div
-              className="staff-dashboard-kpi-icon"
-              style={{ background: 'rgba(245, 158, 11, 0.14)', color: '#d97706' }}
-            >
-              <TicketIcon size={20} />
-            </div>
-          </div>
-          <h3 className="staff-dashboard-kpi-value">
-            {formatNumber(summary.ticketsSold)}{' '}
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#64748b' }}>vé</span>
-          </h3>
-          <div className="staff-dashboard-kpi-sub">
-            <span>Đã check-in hôm nay:</span>
-            <strong style={{ color: '#d97706' }}>
-              {formatNumber(summary.checkedInTickets)} vé ({checkInRate}%)
-            </strong>
-          </div>
-        </div>
-
-        <div className="staff-dashboard-kpi-card">
-          <div className="staff-dashboard-kpi-head">
-            <span className="staff-dashboard-kpi-label">Doanh thu bắp nước</span>
-            <div
-              className="staff-dashboard-kpi-icon"
-              style={{ background: 'rgba(124, 58, 237, 0.12)', color: '#7c3aed' }}
-            >
-              <PopcornIcon size={20} />
-            </div>
-          </div>
-          <h3 className="staff-dashboard-kpi-value">{formatCurrency(summary.foodRevenue)}</h3>
-          <div className="staff-dashboard-kpi-sub">
-            <span>Chờ thanh toán / Hoàn vé:</span>
-            <strong style={{ color: summary.refundRequests > 0 ? '#dc2626' : '#0f172a' }}>
-              {formatNumber(summary.pendingBookings)} chờ • {formatNumber(summary.refundRequests)} hoàn
-            </strong>
-          </div>
-        </div>
+function RecentBookings({ bookings }) {
+  return (
+    <section className="staff-panel" aria-labelledby="staff-recent-title">
+      <div className="staff-panel-heading">
+        <h2 id="staff-recent-title"><ListIcon size={19} /> Giao dịch gần đây</h2>
+        <Link className="staff-text-link" to="/staff/bookings">Xem tất cả <ArrowRightIcon size={16} /></Link>
       </div>
-
-      {/* ===== 3. UPCOMING SHOWTIMES ===== */}
-      <div className="staff-dashboard-workspace">
-        {/* RIGHT: UPCOMING SHOWTIMES RADAR */}
-        <section className="staff-dashboard-card staff-dashboard-showtimes-panel">
-          <div className="staff-dashboard-card-header">
-            <div className="staff-dashboard-card-title">
-              <FilmIcon size={20} style={{ color: '#ea580c' }} />
-              <h3>Suất chiếu sắp tới <span className="staff-dashboard-count">{upcomingShowtimes.length}</span></h3>
-            </div>
-            <Link to="/staff/booking" className="btn btn-ghost btn-sm">
-              <span>Xem lịch chiếu</span>
-              <ArrowRightIcon size={14} />
-            </Link>
-          </div>
-
-          {upcomingShowtimes.length === 0 ? (
-            <div
-              style={{
-                padding: '38px 20px',
-                textAlign: 'center',
-                color: 'var(--text-muted)',
-                background: '#f8fafc',
-                borderRadius: 12,
-                border: '1px dashed var(--border)',
-              }}
-            >
-              Hiện không có suất chiếu nào sắp diễn ra trong khung giờ tới.
-            </div>
-          ) : (
-            <div className="staff-dashboard-showtime-list">
-              {upcomingShowtimes.map((showtime) => {
-                const total = Math.max(1, Number(showtime.totalSeats || 0));
-                const available = Math.max(0, Number(showtime.availableSeats || 0));
-                const sold = Math.max(0, total - available);
-                const occupancyPct = Math.min(100, Math.round((sold / total) * 100));
-                const fillColor =
-                  occupancyPct >= 85 ? '#dc2626' : occupancyPct >= 50 ? '#f59e0b' : '#0756a6';
-
+      {bookings.length === 0 ? <StaffState icon={TicketIcon} title="Chưa có giao dịch hôm nay" /> : (
+        <div className="staff-table-scroll" tabIndex={0} role="region" aria-label="Giao dịch gần đây">
+          <table className="admin-table staff-recent-table">
+            <thead><tr><th>Mã đơn / Khách</th><th>Phim / Suất chiếu</th><th>Tổng tiền</th><th>Trạng thái</th><th>Chi tiết</th></tr></thead>
+            <tbody>
+              {bookings.map((booking) => {
+                const code = booking.bookingCode || `#${booking.bookingId}`;
+                const [label, tone] = bookingStatuses[booking.status] || [booking.status || '—', 'neutral'];
                 return (
-                  <div className="staff-dashboard-showtime-item" key={showtime.showtimeId}>
-                    <div className="staff-dashboard-showtime-top">
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: '0.95rem',
-                            color: '#0f172a',
-                            marginBottom: 4,
-                          }}
-                        >
-                          {showtime.movieName}
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 10,
-                            fontSize: '0.78rem',
-                            color: '#64748b',
-                          }}
-                        >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <ClockIcon size={13} />
-                            <strong style={{ color: '#0756a6' }}>
-                              {formatTimeShort(showtime.startTime)}
-                            </strong>{' '}
-                            ({formatDateTime(showtime.startTime)})
-                          </span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <MapPinIcon size={13} /> {showtime.roomName}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: '0.82rem',
-                            fontWeight: 800,
-                            color: available === 0 ? '#dc2626' : '#0f172a',
-                          }}
-                        >
-                          <ArmchairIcon size={14} />
-                          Còn {formatNumber(available)}/{formatNumber(showtime.totalSeats)} ghế
-                        </span>
-                        <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: 2 }}>
-                          Lấp đầy {occupancyPct}%
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="staff-dashboard-occupancy-bar">
-                      <div
-                        className="staff-dashboard-occupancy-fill"
-                        style={{ width: `${occupancyPct}%`, background: fillColor }}
-                      />
-                    </div>
-                  </div>
+                  <tr key={booking.bookingId}>
+                    <td><strong>{code}</strong><small>{booking.username || 'Khách tại quầy'}</small></td>
+                    <td><strong>{booking.movieName || '—'}</strong><small>{format(dateTime, booking.showtimeStart && new Date(booking.showtimeStart))}</small></td>
+                    <td>{format(currency, booking.totalAmount)}</td>
+                    <td><span className={`staff-status staff-status--${tone}`}>{label}</span></td>
+                    <td><Link className="staff-icon-button" aria-label={`Xem đơn ${code}`} to={`/staff/bookings?booking=${booking.bookingId}`}><ArrowRightIcon size={17} /></Link></td>
+                  </tr>
                 );
               })}
-            </div>
-          )}
-        </section>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function StaffDashboardPage() {
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const { data } = await staffApi.getDashboard();
+      setDashboard(data.result);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Vui lòng kiểm tra kết nối và thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadDashboard(); }, [loadDashboard]);
+
+  const refresh = () => {
+    setLoading(true);
+    void loadDashboard();
+  };
+
+  return (
+    <div className="staff-dashboard staff-page">
+      <header className="staff-marquee">
+        <div className="staff-marquee-copy">
+          <span className="staff-marquee-date"><CalendarIcon size={16} /> {todayLabel.format(new Date())}</span>
+          <h1>Tổng quan ca làm việc</h1>
+          <nav className="staff-marquee-actions" aria-label="Thao tác nhanh">
+            <Link to="/staff/booking"><TicketIcon size={18} /> Bán vé tại quầy</Link>
+            <Link to="/staff/check-in"><ScanIcon size={18} /> Soát vé vào rạp</Link>
+            <Link to="/staff/bookings"><ListIcon size={18} /> Tra cứu đơn</Link>
+          </nav>
+        </div>
+      </header>
+      <div className="staff-section-line">
+        <h2>Hoạt động hôm nay</h2>
+        <button type="button" className="btn btn-secondary" onClick={refresh} disabled={loading}>
+          <RefreshIcon size={17} /> Làm mới
+        </button>
       </div>
 
-      <section className="staff-dashboard-card staff-dashboard-activity-panel">
-        <div className="staff-dashboard-card-header">
-          <h3>Đơn bán gần đây</h3>
-          <Link to="/staff/bookings" className="btn btn-ghost btn-sm">
-            <span>Xem tất cả đơn đặt vé</span><ArrowRightIcon size={14} />
-          </Link>
-        </div>
-          <div className="admin-table-card" style={{ borderRadius: 12 }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Mã đơn</th>
-                  <th>Phim & Suất chiếu</th>
-                  <th>Phòng / Ghế</th>
-                  <th>Thanh toán</th>
-                  <th>Tổng tiền</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBookings.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}
-                    >
-                      Chưa có đơn bán vé nào phát sinh hôm nay.
-                    </td>
-                  </tr>
-                ) : (
-                  recentBookings.map((booking) => (
-                    <tr key={booking.bookingId}>
-                      <td style={{ fontWeight: 800, fontFamily: 'monospace', color: '#0756a6' }}>
-                        {booking.bookingCode}
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                          {booking.movieName || '—'}
-                        </div>
-                        {booking.showtimeStart && (
-                          <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                            {formatDateTime(booking.showtimeStart)}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 700 }}>
-                          {booking.seatCodes?.join(', ') || '—'}
-                        </div>
-                        {booking.roomName && (
-                          <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                            {booking.roomName}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>
-                          {booking.paymentMethod === 'CASH'
-                            ? 'Tiền mặt'
-                            : booking.paymentMethod === 'VNPAY'
-                            ? 'VNPay'
-                            : booking.paymentMethod || 'Tại quầy'}
-                        </span>
-                      </td>
-                      <td style={{ fontWeight: 800, color: '#0f172a' }}>
-                        {formatCurrency(booking.totalAmount)}
-                      </td>
-                      <td>
-                        <span
-                          className={`status-badge ${
-                            booking.status === 'COMPLETED' ? 'status--active' : 'status--pending'
-                          }`}
-                        >
-                          {booking.status === 'COMPLETED' ? 'Hoàn tất' : 'Chờ xử lý'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-      </section>
+      {loading && !dashboard && <StaffSkeleton label="Đang tải tổng quan" />}
+      {error && <StaffState title="Không tải được tổng quan" description={error} error onRetry={refresh} />}
+      {!loading && !error && !dashboard?.summary && <StaffState title="Chưa có số liệu hôm nay" icon={CalendarIcon} />}
+      {dashboard && (
+        <>
+          {dashboard.summary && <OverviewMetrics summary={dashboard.summary} />}
+          <UpcomingShowtimes showtimes={[...(dashboard.upcomingShowtimes || [])].sort((a, b) => a.startTime.localeCompare(b.startTime))} />
+          <RecentBookings bookings={dashboard.recentBookings || []} />
+        </>
+      )}
     </div>
   );
 }

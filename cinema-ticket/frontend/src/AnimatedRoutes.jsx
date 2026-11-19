@@ -96,6 +96,11 @@ const StaffRoute = ({ children }) => {
   return children;
 };
 
+function StaffBookings() {
+  const { search } = useLocation();
+  return <BookingManagement staff requestedBookingId={new URLSearchParams(search).get('booking')} />;
+}
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const { user } = useAuth();
@@ -128,11 +133,11 @@ const AnimatedRoutes = () => {
           }
         >
           <Route index element={<Navigate to="/staff/dashboard" replace />} />
-          <Route path="dashboard" element={<PageWrapper><StaffDashboardPage /></PageWrapper>} />
-          <Route path="booking" element={<PageWrapper><StaffBookingPage /></PageWrapper>} />
-          <Route path="check-in" element={<PageWrapper><CheckInPage /></PageWrapper>} />
-          <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
-          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
+          <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="booking" element={<StaffBookingPage />} />
+          <Route path="check-in" element={<CheckInPage />} />
+          <Route path="bookings" element={<StaffBookings />} />
+          <Route path="notifications" element={<NotificationPage staff />} />
         </Route>
 
         {/* Admin routes */}

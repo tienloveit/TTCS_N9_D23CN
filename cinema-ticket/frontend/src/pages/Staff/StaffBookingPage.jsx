@@ -9,6 +9,7 @@ import { bookingApi, foodApi, movieApi, showtimeApi, ticketApi, promotionApi } f
 import { API_BASE_URL } from '../../api/axiosClient';
 import DigitalTicket from '../../components/Ticket/DigitalTicket';
 import SafeImage from '../../components/Common/SafeImage';
+import { StaffPageHeading, StaffSkeleton, StaffState } from './StaffUI';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -18,9 +19,11 @@ import {
   ClockIcon,
   CreditCardIcon,
   GiftIcon,
+  PlusIcon,
   PopcornIcon,
   PrinterIcon,
   SearchIcon,
+  SlidersIcon,
   TicketIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
@@ -212,6 +215,11 @@ export default function StaffBookingPage() {
   const [error, setError] = useState('');
   const [foodError, setFoodError] = useState('');
   const stompClient = useRef(null);
+  const submissionPending = useRef(false);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const [catalogError, setCatalogError] = useState('');
+  const [ticketAttempt, setTicketAttempt] = useState(0);
+  const [ticketError, setTicketError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -223,11 +231,12 @@ export default function StaffBookingPage() {
         if (showtimeResult.status === 'fulfilled') {
           setShowtimes(showtimeResult.value.data.result || []);
         } else {
-          setError('Không tải được danh sách suất chiếu');
+          setCatalogError('Không tải được danh sách suất chiếu.');
         }
 
         if (foodResult.status === 'fulfilled') {
           setFoods((foodResult.value.data.result || []).filter((food) => food.active !== false));
+          setFoodError('');
         } else {
           setFoodError('Không tải được menu đồ ăn');
         }
@@ -250,9 +259,10 @@ export default function StaffBookingPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [catalogAttempt]);
 
   useEffect(() => {
+    setTicketError('');
     setTickets([]);
     setSelectedSeats([]);
     setSelectedFoods({});
@@ -276,7 +286,7 @@ export default function StaffBookingPage() {
         if (mounted) setTickets(res.data.result || []);
       })
       .catch(() => {
-        if (mounted) setError('Không tải được sơ đồ ghế');
+        if (mounted) setTicketError('Không tải được sơ đồ ghế.');
       })
       .finally(() => {
         if (mounted) setLoadingTickets(false);
@@ -311,7 +321,7 @@ export default function StaffBookingPage() {
       mounted = false;
       client.deactivate();
     };
-  }, [showtimeId]);
+  }, [showtimeId, ticketAttempt]);
 
   function isShowtimeAvailable(showtime) {
     const now = new Date();
@@ -614,13 +624,11 @@ export default function StaffBookingPage() {
   const numericCashReceived = Number(cashReceived || 0);
   const cashChange = numericCashReceived - finalPrice;
 
-  const hasActiveFilters =
-    searchQuery ||
-    dateFilter ||
-    branchFilter !== 'ALL' ||
-    timeFilter !== 'ALL' ||
-    statusFilter !== 'AVAILABLE' ||
-    roomTypeFilter !== 'ALL';
+  const detailFilterCount = [
+    Boolean(dateFilter), branchFilter !== 'ALL', timeFilter !== 'ALL',
+    statusFilter !== 'AVAILABLE', roomTypeFilter !== 'ALL',
+  ].filter(Boolean).length;
+  const hasActiveFilters = Boolean(searchQuery || detailFilterCount);
 
   const canContinueSelection = Boolean(showtimeId);
   const canContinueSeats = selectedSeats.length > 0;
@@ -629,7 +637,7 @@ export default function StaffBookingPage() {
     { key: 'SELECTION', label: 'Suất chiếu', badge: selectedShowtime ? '1' : null },
     { key: 'SEATS', label: 'Chọn ghế', badge: selectedSeats.length > 0 ? String(selectedSeats.length) : null },
     { key: 'ADDONS', label: 'Bắp nước', badge: foodQuantity > 0 ? String(foodQuantity) : null },
-    { key: 'CHECKOUT', label: 'Thu tiền & Xuất vé', badge: null },
+    { key: 'CHECKOUT', label: 'Thanh toán & xuất vé', badge: null },
   ];
 
   const siblingShowtimes = useMemo(() => {
@@ -686,6 +694,7 @@ export default function StaffBookingPage() {
   };
 
   const handleResetOrder = () => {
+    submissionPending.current = false;
     setSelectedSeats([]);
     setSelectedFoods({});
     setPromoCode('');
@@ -809,6 +818,7 @@ export default function StaffBookingPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submissionPending.current || currentStep !== 'CHECKOUT' || lastBooking) return;
 
     if (!showtimeId) {
       toast.error('Chọn suất chiếu');
@@ -819,6 +829,8 @@ export default function StaffBookingPage() {
       return;
     }
 
+    submissionPending.current = true;
+    let bookingConfirmed = false;
     setSubmitting(true);
     setError('');
     try {
@@ -831,6 +843,11 @@ export default function StaffBookingPage() {
         ...customer,
       });
       const booking = res.data.result;
+      if (booking?.bookingId == null) {
+        setError('Chưa nhận được xác nhận. Hãy tra cứu đơn vé trước khi gửi lại.');
+        return;
+      }
+      bookingConfirmed = true;
       if (paymentMethod === 'CARD') {
         toast.info('Đang chuyển hướng đến cổng thanh toán VNPay...');
         navigate(`/booking/${booking.bookingId}/payment`);
@@ -845,14 +862,15 @@ export default function StaffBookingPage() {
       setPromoError('');
       setCashReceived('');
 
-      const ticketRes = await ticketApi.getByShowtimeId(showtimeId);
-      setTickets(ticketRes.data.result || []);
       toast.success('Đặt vé tại quầy thành công');
     } catch (err) {
-      const message = err.response?.data?.message || 'Đặt vé thất bại';
+      const message = err.response?.data?.message || (!err.response
+        ? 'Chưa xác nhận được đơn. Hãy kiểm tra kết nối và tra cứu đơn vé trước khi gửi lại.'
+        : 'Đặt vé thất bại');
       setError(message);
       toast.error(message);
     } finally {
+      if (!bookingConfirmed) submissionPending.current = false;
       setSubmitting(false);
     }
   };
@@ -869,7 +887,12 @@ export default function StaffBookingPage() {
     printWindow.document.close();
   };
 
-  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (loading) return <StaffSkeleton label="Đang tải lịch chiếu" />;
+  if (catalogError) return <StaffState title={catalogError} error onRetry={() => {
+    setCatalogError('');
+    setLoading(true);
+    setCatalogAttempt((attempt) => attempt + 1);
+  }} />;
 
   const activeIndex = stepItems.findIndex((item) => item.key === currentStep);
   const posterUrl =
@@ -879,26 +902,16 @@ export default function StaffBookingPage() {
     '';
 
   return (
-    <form onSubmit={handleSubmit} className="pos-page">
+    <form onSubmit={(event) => event.preventDefault()} className="pos-page">
       {/* ===== TOP POS CONTROL BAR ===== */}
       {!lastBooking && (
         <div className="pos-top-bar">
-          <div className="pos-top-bar-left">
-            <span className="pos-badge-live">
-              <span className="pos-badge-live-dot" />
-              POS Quầy vé
-            </span>
-            <div className="pos-top-title">
-              <h1>Bán vé trực tiếp tại quầy</h1>
-              <p>
-                {selectedShowtime
-                  ? `${selectedShowtime.movieName} • ${formatTime(selectedShowtime.startTime)} (${selectedShowtime.roomName || 'Phòng chiếu'})`
-                  : 'Chọn suất chiếu để mở sơ đồ ghế thời gian thực'}
-              </p>
-            </div>
-          </div>
+          <StaffPageHeading icon={TicketIcon} title="Bán vé tại quầy"
+            description={selectedShowtime
+              ? `${selectedShowtime.movieName} · ${formatTime(selectedShowtime.startTime)} · ${selectedShowtime.roomName || 'Phòng chiếu'}`
+              : 'Chọn phim và suất chiếu để bắt đầu bán vé.'} />
 
-          <div className="pos-stepper">
+          <div className="pos-stepper" role="group" aria-label="Các bước bán vé">
             {stepItems.map((step, index) => {
               const isActive = step.key === currentStep;
               const isDone =
@@ -914,7 +927,8 @@ export default function StaffBookingPage() {
                 <button
                   key={step.key}
                   type="button"
-                  disabled={disabled}
+                  disabled={disabled || submitting}
+                  aria-current={isActive ? 'step' : undefined}
                   onClick={() => handleStepNavigation(step.key)}
                   className={`pos-step-pill ${isActive ? 'pos-step-pill--active' : ''} ${
                     isDone ? 'pos-step-pill--done' : ''
@@ -932,43 +946,22 @@ export default function StaffBookingPage() {
         </div>
       )}
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="error-message" role="alert">{error}</div>}
 
       {lastBooking ? (
         /* ===== SUCCESS RECEIPT PAGE ===== */
-        <div
-          className="card checkin-result-card"
-          style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', padding: 36 }}
-        >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '8px 18px',
-              borderRadius: 999,
-              background: 'rgba(22, 163, 74, 0.12)',
-              color: 'var(--green)',
-              fontWeight: 800,
-              marginBottom: 20,
+        <section className="staff-sale-complete">
+          <StaffPageHeading icon={CheckIcon} title="Đã xuất vé tại quầy"
+            description={lastBooking.bookingCode ? `Mã đơn ${lastBooking.bookingCode}` : undefined} />
+          <DigitalTicket
+            booking={{
+              ...lastBooking,
+              startTime: lastBooking.showtimeStart,
+              seatCodes:
+                lastBooking.seatCodes || (lastBooking.tickets || []).map((t) => t.seatCode),
+              status: 'COMPLETED',
             }}
-          >
-            <CheckIcon size={18} strokeWidth={3} />
-            <span>XUẤT VÉ TẠI QUẦY THÀNH CÔNG</span>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <DigitalTicket
-              booking={{
-                ...lastBooking,
-                startTime: lastBooking.showtimeStart,
-                seatCodes:
-                  lastBooking.seatCodes || (lastBooking.tickets || []).map((t) => t.seatCode),
-                status: 'COMPLETED',
-              }}
-            />
-          </div>
-
+          />
           {lastBooking.foods && lastBooking.foods.length > 0 && (
             <div
               style={{
@@ -980,7 +973,7 @@ export default function StaffBookingPage() {
             >
               <h3 style={{ margin: '0 0 12px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <PopcornIcon size={18} />
-                <span>Đồ ăn cần chuẩn bị giao khách:</span>
+                <span>Bắp nước cần giao</span>
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {lastBooking.foods.map((bf) => (
@@ -1005,15 +998,7 @@ export default function StaffBookingPage() {
             </div>
           )}
 
-          <div
-            style={{
-              marginTop: 28,
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="staff-sale-actions">
             <button type="button" className="btn btn-secondary" onClick={handlePrintLastBooking}>
               <PrinterIcon size={18} />
               <span>In vé / Hóa đơn nhiệt (80mm)</span>
@@ -1026,10 +1011,10 @@ export default function StaffBookingPage() {
                 handleResetOrder();
               }}
             >
-              + Tạo đơn bán vé mới
+              <PlusIcon size={17} /> Bán vé tiếp
             </button>
           </div>
-        </div>
+        </section>
       ) : (
         /* ===== 2-COLUMN POS WORKSPACE ===== */
         <div className="pos-workspace">
@@ -1039,10 +1024,15 @@ export default function StaffBookingPage() {
             {currentStep === 'SELECTION' && (
               <>
                 <div className="pos-filter-card">
+                  <div className="staff-section-line">
+                    <h2>Lịch chiếu</h2>
+                    <span role="status">{filteredShowtimes.length} suất chiếu</span>
+                  </div>
                   {/* Quick Date Strip */}
                   <div className="pos-date-ribbon">
                     <button
                       type="button"
+                      aria-pressed={!dateFilter}
                       className={`pos-date-chip ${dateFilter === '' ? 'pos-date-chip--active' : ''}`}
                       onClick={() => setDateFilter('')}
                     >
@@ -1053,6 +1043,7 @@ export default function StaffBookingPage() {
                       <button
                         key={d.key}
                         type="button"
+                        aria-pressed={dateFilter === d.key}
                         className={`pos-date-chip ${
                           dateFilter === d.key ? 'pos-date-chip--active' : ''
                         }`}
@@ -1065,107 +1056,110 @@ export default function StaffBookingPage() {
                   </div>
 
                   {/* Search & Dropdown Filters */}
-                  <div className="pos-filter-row">
-                    <div className="pos-search-box">
-                      <SearchIcon />
-                      <input
-                        type="text"
-                        className="input"
-                        placeholder="Tìm nhanh tên phim, phòng chiếu, rạp..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-
+                  <div className="pos-search-box">
+                    <SearchIcon />
                     <input
-                      type="date"
-                      className="pos-filter-select"
-                      value={dateFilter}
-                      onChange={(e) => setDateFilter(e.target.value)}
-                      title="Chọn ngày cụ thể"
+                      type="search"
+                      className="input"
+                      aria-label="Tìm phim, phòng chiếu hoặc rạp"
+                      placeholder="Tìm nhanh tên phim, phòng chiếu, rạp..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                     />
-
-                    <select
-                      className="pos-filter-select"
-                      value={branchFilter}
-                      onChange={handleBranchFilterChange}
-                    >
-                      <option value="ALL">Tất cả chi nhánh</option>
-                      {branchOptions.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="pos-filter-select"
-                      value={roomTypeFilter}
-                      onChange={(e) => setRoomTypeFilter(e.target.value)}
-                    >
-                      <option value="ALL">Mọi định dạng phòng</option>
-                      {roomTypeOptions.map((rt) => (
-                        <option key={rt} value={rt}>
-                          Phòng {rt}
-                        </option>
-                      ))}
-                    </select>
-
-                    {hasActiveFilters && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ height: 42, padding: '0 14px', fontSize: '0.82rem' }}
-                        onClick={clearFilters}
-                      >
-                        Đặt lại
-                      </button>
-                    )}
                   </div>
+                  <details className="pos-more-filters">
+                    <summary><SlidersIcon size={16} /> Bộ lọc lịch chiếu{detailFilterCount > 0 && ` (${detailFilterCount})`}</summary>
+                    <div className="pos-filter-row">
+                      <input
+                        type="date"
+                        className="pos-filter-select"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        aria-label="Ngày chiếu"
+                      />
 
-                  {/* Time of day pills + Status toggle */}
-                  <div className="pos-time-pills">
-                    <div className="pos-time-pill-group">
-                      {TIME_FILTERS.map((tf) => (
+                      <select
+                        className="pos-filter-select"
+                        aria-label="Chi nhánh"
+                        value={branchFilter}
+                        onChange={handleBranchFilterChange}
+                      >
+                        <option value="ALL">Tất cả chi nhánh</option>
+                        {branchOptions.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        className="pos-filter-select"
+                        aria-label="Định dạng chiếu"
+                        value={roomTypeFilter}
+                        onChange={(e) => setRoomTypeFilter(e.target.value)}
+                      >
+                        <option value="ALL">Mọi định dạng phòng</option>
+                        {roomTypeOptions.map((rt) => (
+                          <option key={rt} value={rt}>
+                            Phòng {rt}
+                          </option>
+                        ))}
+                      </select>
+
+                      {hasActiveFilters && (
                         <button
-                          key={tf.key}
                           type="button"
-                          className={`pos-time-pill ${
-                            timeFilter === tf.key ? 'pos-time-pill--active' : ''
-                          }`}
-                          onClick={() => setTimeFilter(tf.key)}
+                          className="btn btn-secondary"
+                          style={{ height: 42, padding: '0 14px', fontSize: '0.82rem' }}
+                          onClick={clearFilters}
                         >
-                          {tf.label}
+                          Đặt lại
                         </button>
-                      ))}
+                      )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <label
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          color: '#475569',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={statusFilter === 'AVAILABLE'}
-                          onChange={(e) =>
-                            setStatusFilter(e.target.checked ? 'AVAILABLE' : 'ALL')
-                          }
-                        />
-                        Chỉ hiện suất còn mở bán
-                      </label>
-                      <span className="pos-result-Summary">
-                        ({filteredShowtimes.length} suất chiếu)
-                      </span>
+                    {/* Time of day pills + Status toggle */}
+                    <div className="pos-time-pills">
+                      <div className="pos-time-pill-group">
+                        {TIME_FILTERS.map((tf) => (
+                          <button
+                            key={tf.key}
+                            type="button"
+                            aria-pressed={timeFilter === tf.key}
+                            className={`pos-time-pill ${
+                              timeFilter === tf.key ? 'pos-time-pill--active' : ''
+                            }`}
+                            onClick={() => setTimeFilter(tf.key)}
+                          >
+                            {tf.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <label
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            color: '#475569',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={statusFilter === 'AVAILABLE'}
+                            onChange={(e) =>
+                              setStatusFilter(e.target.checked ? 'AVAILABLE' : 'ALL')
+                            }
+                          />
+                          Chỉ hiện suất còn mở bán
+                        </label>
+                      </div>
                     </div>
-                  </div>
+                  </details>
                 </div>
 
                 {/* Movie Grouped Showtime Cards */}
@@ -1221,15 +1215,6 @@ export default function StaffBookingPage() {
                                   )}
                                 </div>
                               </div>
-                              <span
-                                style={{
-                                  fontSize: '0.75rem',
-                                  color: '#64748b',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                Nhấp chọn giờ chiếu (Nhấp đúp để vào chọn ghế ngay)
-                              </span>
                             </div>
 
                             {movie.branches.map((branch) => (
@@ -1245,12 +1230,14 @@ export default function StaffBookingPage() {
                                       availSeats != null && totalSeats != null && totalSeats > 0;
                                     const isLow = hasSeatCount && availSeats > 0 && availSeats <= 15;
                                     const isFull = hasSeatCount && availSeats === 0;
+                                    const started = st.startTime && new Date(st.startTime) <= new Date();
 
                                     return (
                                       <button
                                         key={st.showtimeId}
                                         type="button"
                                         disabled={!available || isFull}
+                                        aria-pressed={selected}
                                         onClick={() => handleSelectShowtime(st, false)}
                                         onDoubleClick={() => handleSelectShowtime(st, true)}
                                         className={`pos-slot-btn ${
@@ -1268,14 +1255,14 @@ export default function StaffBookingPage() {
                                         </div>
                                         <div className="pos-slot-room">
                                           {st.roomName || 'Phòng chiếu'}
-                                          {!dateFilter && st.startTime
-                                            ? ` • ${new Date(st.startTime).toLocaleDateString(
-                                                'vi-VN',
-                                                { day: '2-digit', month: '2-digit' }
-                                              )}`
-                                            : ''}
                                         </div>
-                                        {hasSeatCount ? (
+                                        {!dateFilter && st.startTime && <span className="pos-slot-date">
+                                          {new Date(st.startTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                        </span>}
+                                        {started && <span className="pos-slot-date">Đã bắt đầu</span>}
+                                        {!available && !isFull ? (
+                                          !started && <div className="pos-slot-date">Ngừng bán</div>
+                                        ) : hasSeatCount ? (
                                           <div
                                             className={`pos-slot-seats ${
                                               isFull
@@ -1287,7 +1274,7 @@ export default function StaffBookingPage() {
                                           >
                                             {isFull
                                               ? 'Hết ghế'
-                                              : `Còn ${availSeats}/${totalSeats} ghế`}
+                                              : `${isLow ? 'Sắp hết · ' : ''}${availSeats}/${totalSeats} ghế`}
                                           </div>
                                         ) : (
                                           <div className="pos-slot-seats">
@@ -1385,7 +1372,13 @@ export default function StaffBookingPage() {
                     )}
                   </div>
 
-                  {loadingTickets ? (
+                  {ticketError ? (
+                    <StaffState title={ticketError} error onRetry={() => {
+                      setTicketError('');
+                      setLoadingTickets(true);
+                      setTicketAttempt((attempt) => attempt + 1);
+                    }} />
+                  ) : loadingTickets ? (
                     <div className="loading">
                       <div className="spinner" />
                     </div>
@@ -1396,7 +1389,8 @@ export default function StaffBookingPage() {
                         <span className="pos-screen-label">Màn hình chiếu</span>
                       </div>
 
-                      <div className="seat-map-wrapper">
+                      <p className="pos-seat-scroll-hint">Vuốt ngang để xem các ghế còn lại.</p>
+                      <div className="seat-map-wrapper" role="region" aria-label="Sơ đồ ghế" tabIndex={0}>
                         <div className="seat-map" style={{ padding: '12px 16px 24px' }}>
                           {sortedRows.map(([row, seats]) => (
                             <div key={row} className="seat-row">
@@ -1411,6 +1405,7 @@ export default function StaffBookingPage() {
                                     type="button"
                                     disabled={!isAvailable}
                                     aria-pressed={isSelected}
+                                    aria-label={'Ghế ' + ticket.seatCode}
                                     className={getSeatClass(ticket)}
                                     onClick={() => toggleSeat(ticket)}
                                     title={`${ticket.seatCode}${ticket.seatType ? ` (${ticket.seatType})` : ''} • ${formatCurrency(ticket.price)} (${
@@ -1545,6 +1540,7 @@ export default function StaffBookingPage() {
                         <div className="food-stepper">
                           <button
                             type="button"
+                            aria-label={`Giảm số lượng ${food.name}`}
                             onClick={() => updateFoodQuantity(food.id, -1)}
                             disabled={quantity === 0 || submitting}
                           >
@@ -1553,6 +1549,7 @@ export default function StaffBookingPage() {
                           <span>{quantity}</span>
                           <button
                             type="button"
+                            aria-label={`Tăng số lượng ${food.name}`}
                             onClick={() => updateFoodQuantity(food.id, 1)}
                             disabled={submitting || soldOut || atLimit}
                           >
@@ -1579,6 +1576,7 @@ export default function StaffBookingPage() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('CASH')}
+                      aria-pressed={paymentMethod === 'CASH'}
                       className={`pos-pay-card ${
                         paymentMethod === 'CASH' ? 'pos-pay-card--active' : ''
                       }`}
@@ -1595,6 +1593,7 @@ export default function StaffBookingPage() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('CARD')}
+                      aria-pressed={paymentMethod === 'CARD'}
                       className={`pos-pay-card ${
                         paymentMethod === 'CARD' ? 'pos-pay-card--active' : ''
                       }`}
@@ -1848,16 +1847,16 @@ export default function StaffBookingPage() {
             <div className="pos-receipt-banner">
               <div className="pos-receipt-banner-title">
                 <TicketIcon style={{ width: 18, height: 18 }} />
-                <span>Phiếu thanh toán quầy</span>
+                <span>Phiếu bán vé</span>
               </div>
               {(showtimeId || selectedSeats.length > 0 || foodQuantity > 0) && (
-                <button type="button" className="pos-receipt-reset" onClick={handleResetOrder}>
-                  Làm mới
+                <button type="button" className="pos-receipt-reset" disabled={submitting} onClick={handleResetOrder}>
+                  Xóa giỏ
                 </button>
               )}
             </div>
 
-            {/* Movie & Showtime Header */}
+            <div className="pos-receipt-details" tabIndex={0} role="region" aria-label="Chi tiết giỏ hàng">
             <div className="pos-receipt-movie">
               {selectedShowtime && (
                 <SafeImage
@@ -1892,7 +1891,7 @@ export default function StaffBookingPage() {
                   </div>
                 ) : (
                   <div className="pos-receipt-empty">
-                    Vui lòng chọn một suất chiếu ở bảng bên trái để bắt đầu tạo hóa đơn.
+                    Chọn một suất chiếu để bắt đầu lập phiếu.
                   </div>
                 )}
               </div>
@@ -1960,12 +1959,12 @@ export default function StaffBookingPage() {
               )}
             </div>
 
+            </div>
+
             {/* Totals Summary */}
             <div className="pos-receipt-summary">
-              <div className="pos-receipt-line">
-                <span style={{ color: '#64748b' }}>Tạm tính</span>
-                <strong>{formatCurrency(total)}</strong>
-              </div>
+              <div className="pos-receipt-line"><span>Tiền vé</span><strong>{formatCurrency(seatTotal)}</strong></div>
+              <div className="pos-receipt-line"><span>Tiền bắp nước</span><strong>{formatCurrency(foodTotal)}</strong></div>
               {promoDiscount > 0 && (
                 <div className="pos-receipt-line" style={{ color: 'var(--green)' }}>
                   <span>Mã giảm giá ({promoCode})</span>
@@ -2047,7 +2046,8 @@ export default function StaffBookingPage() {
                     <span>Quay lại</span>
                   </button>
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit}
                     className="btn btn-primary seat-sidebar-btn"
                     disabled={submitting}
                   >
@@ -2070,7 +2070,7 @@ export default function StaffBookingPage() {
       )}
 
       {/* Mobile bottom bar */}
-      {!lastBooking && selectedSeats.length > 0 && (
+      {!lastBooking && (
         <div className="booking-bar seat-page-mobile-bar">
           <span>
             <strong>{selectedSeats.length}</strong> ghế
@@ -2080,15 +2080,16 @@ export default function StaffBookingPage() {
               <strong>{foodQuantity}</strong> món
             </span>
           )}
-          <span className="booking-bar-total">{formatCurrency(finalPrice)}</span>
+          <span className="pos-mobile-total">{formatCurrency(finalPrice)}</span>
           {currentStep === 'CHECKOUT' ? (
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Đang xử lý...' : 'Xuất vé'}
+            <button type="button" onClick={handleSubmit} className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Đang xử lý…' : paymentMethod === 'CASH' ? 'Thu tiền & xuất vé' : 'Sang VNPay'}
             </button>
           ) : (
             <button
               type="button"
               className="btn btn-primary"
+              disabled={currentStep === 'SELECTION' ? !canContinueSelection : currentStep === 'SEATS' && !canContinueSeats}
               onClick={() => {
                 if (currentStep === 'SELECTION') continueFromSelection();
                 else if (currentStep === 'SEATS') continueFromSeats();

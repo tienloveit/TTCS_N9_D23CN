@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import jsQR from 'jsqr';
+import { StaffPageHeading, StaffSkeleton, StaffState } from '../Staff/StaffUI';
 import { bookingApi, ticketApi } from '../../api';
 import {
   AlertTriangleIcon,
@@ -12,6 +13,7 @@ import {
   ClockIcon,
   MapPinIcon,
   RefreshIcon,
+  ScanIcon,
   SearchIcon,
   SparkIcon,
   TicketIcon,
@@ -69,6 +71,9 @@ export default function CheckInPage() {
 
   // Live WebRTC Camera (with BarcodeDetector when supported + jsQR fallback)
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStarting, setCameraStarting] = useState(false);
+  const cameraRequest = useRef(null);
+  const checkInPending = useRef(false);
   const [cameraError, setCameraError] = useState('');
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -77,6 +82,7 @@ export default function CheckInPage() {
   // Quick Booking Lookup
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [lookupError, setLookupError] = useState('');
   const [lookupQuery, setLookupQuery] = useState('');
   const [lookupFilter, setLookupFilter] = useState(initialSession?.lookupFilter || 'TODAY'); // 'TODAY' | 'ALL'
 
@@ -91,6 +97,8 @@ export default function CheckInPage() {
 
   // Stop camera on unmount or tab switch
   const stopCamera = () => {
+    cameraRequest.current = null;
+    setCameraStarting(false);
     if (scanLoopRef.current) {
       clearInterval(scanLoopRef.current);
       scanLoopRef.current = null;
@@ -105,6 +113,7 @@ export default function CheckInPage() {
   // Load bookings & sync already checked-in tickets of today
   const fetchBookingsForLookup = async () => {
     setLoadingBookings(true);
+    setLookupError('');
     try {
       const res = await bookingApi.getAll();
       const all = (res.data.result || []).filter(
@@ -169,7 +178,7 @@ export default function CheckInPage() {
         });
       }
     } catch {
-      toast.error('Không tải được danh sách đơn đặt vé');
+      setLookupError('Không tải được danh sách đơn đặt vé.');
     } finally {
       setLoadingBookings(false);
     }
@@ -198,7 +207,6 @@ export default function CheckInPage() {
   useEffect(() => {
     fetchBookingsForLookup();
     return () => stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -208,7 +216,8 @@ export default function CheckInPage() {
     if (activeTab !== 'SCANNER') {
       stopCamera();
     } else {
-      setTimeout(() => codeInputRef.current?.focus(), 80);
+      const focusTimer = setTimeout(() => codeInputRef.current?.focus(), 80);
+      return () => clearTimeout(focusTimer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -266,13 +275,29 @@ export default function CheckInPage() {
     }
   };
 
+  const reportCheckInError = (err, label, fallback) => {
+    const httpStatus = err.response?.status;
+    const technicalFailure = !httpStatus || httpStatus >= 500 || [401, 408, 429].includes(httpStatus);
+    const errorMsg = technicalFailure
+      ? 'Chưa xác nhận được kết quả soát vé. Hãy kiểm tra kết nối rồi quét lại.'
+      : err.response?.data?.message || fallback;
+    setVerdict({ type: technicalFailure ? 'CONNECTION' : 'ERROR', errorMsg, scannedCode: label });
+    if (!technicalFailure) {
+      recordHistory({ code: label, movieName: errorMsg, seats: '', roomName: '', status: 'ERROR', statusLabel: 'Từ chối' });
+    }
+    toast.error(errorMsg);
+  };
+
   const performCodeCheckIn = async (rawCode) => {
+    if (checkInPending.current) return;
     const trimmed = String(rawCode || '').trim();
     if (!trimmed) {
       toast.error('Vui lòng nhập mã vé, mã đơn hoặc quét QR');
       return;
     }
 
+    checkInPending.current = true;
+    stopCamera();
     setChecking(true);
     try {
       const res = await ticketApi.checkIn({ code: trimmed });
@@ -284,22 +309,9 @@ export default function CheckInPage() {
         fetchBookingsForLookup();
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Mã vé không hợp lệ hoặc không thuộc chi nhánh';
-      setVerdict({
-        type: 'ERROR',
-        errorMsg: msg,
-        scannedCode: trimmed,
-      });
-      recordHistory({
-        code: trimmed,
-        movieName: msg,
-        seats: '',
-        roomName: '',
-        status: 'ERROR',
-        statusLabel: 'Từ chối',
-      });
-      toast.error(msg);
+      reportCheckInError(err, trimmed, 'Mã vé không hợp lệ hoặc không thuộc chi nhánh.');
     } finally {
+      checkInPending.current = false;
       setChecking(false);
       setTimeout(() => codeInputRef.current?.focus(), 60);
     }
@@ -312,20 +324,28 @@ export default function CheckInPage() {
 
   // Start Live Camera with automatic continuous QR detection (BarcodeDetector + jsQR universal fallback)
   const startCamera = async () => {
+    if (cameraRequest.current || streamRef.current || checkInPending.current) return;
     setCameraError('');
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError('Trình duyệt không hỗ trợ mở Camera trực tiếp.');
       return;
     }
+    const request = {};
+    cameraRequest.current = request;
+    setCameraStarting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
+      if (cameraRequest.current !== request) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       setCameraActive(true);
 
       setTimeout(() => {
-        if (videoRef.current) {
+        if (streamRef.current === stream && videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
@@ -348,6 +368,7 @@ export default function CheckInPage() {
           if (nativeDetector) {
             try {
               const barcodes = await nativeDetector.detect(video);
+              if (streamRef.current !== stream) return;
               if (barcodes.length > 0 && barcodes[0].rawValue) {
                 const detected = barcodes[0].rawValue.trim();
                 if (detected) {
@@ -382,15 +403,24 @@ export default function CheckInPage() {
           isProcessingFrame = false;
         }
       }, 250);
-    } catch {
-      setCameraError('Không thể cấp quyền truy cập Camera. Bạn có thể chụp/tải ảnh QR lên.');
+    } catch (err) {
+      if (cameraRequest.current !== request) return;
+      stopCamera();
+      setCameraError(err.name === 'NotAllowedError'
+        ? 'Quyền camera bị từ chối. Cho phép camera trong trình duyệt rồi thử lại, hoặc nhập mã vé.'
+        : 'Không mở được camera. Kiểm tra thiết bị rồi thử lại, hoặc nhập mã vé.');
+    } finally {
+      if (cameraRequest.current === request) {
+        cameraRequest.current = null;
+        setCameraStarting(false);
+      }
     }
   };
 
   // Capture current video frame & decode via jsQR first (or fallback to backend QR decoder)
   const captureCameraFrameAndCheckIn = async () => {
-    if (!videoRef.current) return;
     const video = videoRef.current;
+    if (!video?.videoWidth || checkInPending.current) return;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
@@ -411,39 +441,28 @@ export default function CheckInPage() {
       // Fallback to backend image upload below
     }
 
+    const stream = streamRef.current;
     canvas.toBlob(async (blob) => {
-      if (!blob) return;
+      if (!blob || streamRef.current !== stream || !stream) return;
       const file = new File([blob], 'camera-capture.png', { type: 'image/png' });
-      stopCamera();
       await checkInWithFile(file);
     }, 'image/png');
   };
 
   const checkInWithFile = async (targetFile) => {
-    if (!targetFile) return;
+    if (!targetFile || checkInPending.current) return;
 
+    checkInPending.current = true;
+    stopCamera();
     setChecking(true);
     try {
       const res = await ticketApi.checkInByQRImage(targetFile);
       const data = res.data.result;
       evaluateCheckInResult(data, targetFile.name);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Không đọc được mã QR từ khung hình này';
-      setVerdict({
-        type: 'ERROR',
-        errorMsg: msg,
-        scannedCode: targetFile.name,
-      });
-      recordHistory({
-        code: targetFile.name,
-        movieName: msg,
-        seats: '',
-        roomName: '',
-        status: 'ERROR',
-        statusLabel: 'Lỗi ảnh QR',
-      });
-      toast.error(msg);
+      reportCheckInError(err, targetFile.name, 'Không đọc được mã QR từ khung hình này.');
     } finally {
+      checkInPending.current = false;
       setChecking(false);
     }
   };
@@ -490,23 +509,14 @@ export default function CheckInPage() {
   return (
     <div className="gate-page">
       {/* ===== TOP GATE CONTROL BAR ===== */}
+      <StaffPageHeading icon={ScanIcon} title="Soát vé vào rạp" description="Quét mã QR, nhập mã vé hoặc tìm đơn của khách." />
       <div className="gate-top-bar">
-        <div className="pos-top-bar-left">
-          <span className="pos-badge-live">
-            <span className="pos-badge-live-dot" />
-            Gate Control
-          </span>
-          <div className="pos-top-title">
-            <h1>Cổng kiểm soát & Check-in vé</h1>
-            <p>Quét mã QR, nhập mã vé/mã đơn hoặc tra cứu danh sách khách vào phòng chiếu</p>
-          </div>
-        </div>
 
         <div className="gate-stats-row">
           <div className="gate-stat-chip">
             <span className="gate-stat-chip-dot" style={{ background: '#0756a6' }} />
             <div>
-              <small>Lượt quét ca này</small>
+              <small>Lượt trong nhật ký</small>
               <strong>{stats.total}</strong>
             </div>
           </div>
@@ -530,7 +540,7 @@ export default function CheckInPage() {
           <div className="gate-stat-chip">
             <span className="gate-stat-chip-dot" style={{ background: '#dc2626' }} />
             <div>
-              <small>Từ chối / Lỗi</small>
+              <small>Từ chối</small>
               <strong style={{ color: '#dc2626' }}>{stats.failed}</strong>
             </div>
           </div>
@@ -547,6 +557,7 @@ export default function CheckInPage() {
               <button
                 type="button"
                 className={`gate-mode-tab ${activeTab === 'SCANNER' ? 'gate-mode-tab--active' : ''}`}
+                aria-pressed={activeTab === 'SCANNER'}
                 onClick={() => setActiveTab('SCANNER')}
               >
                 <TicketIcon />
@@ -556,6 +567,7 @@ export default function CheckInPage() {
               <button
                 type="button"
                 className={`gate-mode-tab ${activeTab === 'LOOKUP' ? 'gate-mode-tab--active' : ''}`}
+                aria-pressed={activeTab === 'LOOKUP'}
                 onClick={() => setActiveTab('LOOKUP')}
               >
                 <SearchIcon size={18} />
@@ -577,6 +589,7 @@ export default function CheckInPage() {
                     type="button"
                     className="btn btn-secondary"
                     style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                    disabled={cameraStarting || checking}
                     onClick={() => (cameraActive ? stopCamera() : startCamera())}
                   >
                     {cameraActive ? (
@@ -587,13 +600,14 @@ export default function CheckInPage() {
                     ) : (
                       <>
                         <CameraIcon size={15} />
-                        <span>Bật Camera</span>
+                        <span>{cameraStarting ? 'Đang mở camera…' : cameraError ? 'Thử lại camera' : 'Bật camera'}</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                {cameraError && <div className="error-message">{cameraError}</div>}
+                <p className="gate-camera-status" role="status">{cameraActive ? 'Camera đang quét' : cameraStarting ? 'Đang chờ quyền camera' : 'Camera đang tắt'}</p>
+                {cameraError && <div className="error-message" role="alert">{cameraError}</div>}
 
                 {cameraActive && (
                   <div style={{ display: 'grid', gap: 10 }}>
@@ -634,6 +648,7 @@ export default function CheckInPage() {
 
                 <form onSubmit={handleSubmitCode}>
                   <label
+                    htmlFor="gate-ticket-code"
                     style={{
                       display: 'block',
                       fontSize: '0.8rem',
@@ -648,7 +663,10 @@ export default function CheckInPage() {
                   <div className="gate-input-wrap">
                     <input
                       ref={codeInputRef}
+                      id="gate-ticket-code"
                       type="text"
+                      autoComplete="off"
+                      spellCheck={false}
                       className="gate-code-input"
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
@@ -727,6 +745,7 @@ export default function CheckInPage() {
                       className="btn btn-secondary"
                       style={{ padding: '6px 12px', fontSize: '0.78rem' }}
                       onClick={fetchBookingsForLookup}
+                      aria-label="Làm mới danh sách tra cứu"
                       disabled={loadingBookings}
                     >
                       <RefreshIcon size={14} />
@@ -735,9 +754,9 @@ export default function CheckInPage() {
                 </div>
 
                 {loadingBookings ? (
-                  <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-                    Đang tải danh sách đơn đặt vé...
-                  </div>
+                  <StaffSkeleton label="Đang tải danh sách đơn để soát vé" />
+                ) : lookupError ? (
+                  <StaffState title={lookupError} error onRetry={fetchBookingsForLookup} />
                 ) : filteredLookupBookings.length === 0 ? (
                   <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
                     Không tìm thấy đơn đặt vé hoàn tất nào khớp với điều kiện.
@@ -805,183 +824,23 @@ export default function CheckInPage() {
             )}
           </section>
 
-          {/* ===== SESSION CHECK-IN LOG ===== */}
-          <section className="gate-card">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                marginBottom: 14,
-                flexWrap: 'wrap',
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800 }}>
-                Nhật ký soát vé trong phiên ({filteredHistory.length})
-              </h3>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Lọc mã, ghế, phim..."
-                  value={historySearch}
-                  onChange={(e) => setHistorySearch(e.target.value)}
-                  style={{ height: 30, width: 150, fontSize: '0.78rem', padding: '0 10px' }}
-                />
-                {[
-                  { key: 'ALL', label: 'Tất cả' },
-                  { key: 'SUCCESS', label: 'Hợp lệ' },
-                  { key: 'DUPLICATE', label: 'Quét trùng' },
-                  { key: 'ERROR', label: 'Từ chối' },
-                ].map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    className={`pos-time-pill ${
-                      historyFilter === f.key ? 'pos-time-pill--active' : ''
-                    }`}
-                    onClick={() => setHistoryFilter(f.key)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-                {recentCheckIns.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    style={{ fontSize: '0.76rem', padding: '4px 8px' }}
-                    onClick={() => {
-                      setRecentCheckIns([]);
-                      setVerdict(null);
-                      try {
-                        localStorage.removeItem(CHECKIN_STORAGE_KEY);
-                      } catch {
-                        // ignore
-                      }
-                    }}
-                  >
-                    Xóa nhật ký
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {filteredHistory.length === 0 ? (
-              <div
-                style={{
-                  padding: '28px 16px',
-                  textAlign: 'center',
-                  color: 'var(--text-muted)',
-                  background: '#f8fafc',
-                  borderRadius: 12,
-                  border: '1px dashed var(--border)',
-                  fontSize: '0.88rem',
-                }}
-              >
-                Chưa có lượt check-in nào trong bộ lọc này.
-              </div>
-            ) : (
-              <div className="admin-table-card" style={{ borderRadius: 12 }}>
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Giờ</th>
-                      <th>Mã đơn / Vé</th>
-                      <th>Phim & Ghế</th>
-                      <th>Kết quả</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredHistory.map((item) => (
-                      <tr
-                        key={item.id}
-                        style={{ cursor: item.rawResponse ? 'pointer' : 'default' }}
-                        onClick={() => {
-                          if (item.rawResponse) {
-                            evaluateCheckInResult(item.rawResponse, item.code);
-                          }
-                        }}
-                      >
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                          {item.time}
-                        </td>
-                        <td style={{ fontFamily: 'monospace', fontWeight: 800, color: '#0f172a' }}>
-                          {item.code.length > 22 ? `${item.code.slice(0, 20)}...` : item.code}
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.86rem' }}>
-                            {item.movieName}
-                          </div>
-                          {item.seats && (
-                            <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                              Ghế: <strong>{item.seats}</strong>
-                              {item.roomName ? ` • ${item.roomName}` : ''}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          <span
-                            className={`status-badge ${
-                              item.status === 'SUCCESS'
-                                ? 'status--active'
-                                : item.status === 'DUPLICATE'
-                                ? 'status--pending'
-                                : 'status--inactive'
-                            }`}
-                          >
-                            {item.statusLabel}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
         </div>
 
         {/* ===== RIGHT COLUMN: LIVE GATE PASS VERDICT DISPLAY ===== */}
-        <div className="gate-col">
-          {!verdict ? (
-            <div
-              className="gate-card"
-              style={{
-                minHeight: 380,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                gap: 14,
-                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-              }}
-            >
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: '50%',
-                  background: 'rgba(7, 86, 166, 0.08)',
-                  color: 'var(--blue)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <TicketIcon style={{ width: 34, height: 34 }} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 6 }}>
-                  Sẵn sàng kiểm tra vé vào rạp
-                </h2>
-                <p style={{ color: 'var(--text-muted)', maxWidth: 380, fontSize: '0.9rem' }}>
-                  Kết quả xác thực vé, thông tin phòng chiếu, danh sách ghế và trạng thái vào cổng
-                  sẽ hiển thị tức thì tại đây.
-                </p>
+        <section className="gate-col gate-result" aria-label="Kết quả soát vé" aria-live="polite" aria-atomic="true" aria-busy={checking}>
+          {checking ? (
+            <StaffState title="Đang xác thực vé…" icon={TicketIcon} />
+          ) : !verdict ? (
+            <div className="staff-gate-pass">
+              <div className="staff-gate-pass-head"><TicketIcon size={20} /> Kết quả soát vé</div>
+              <div className="staff-gate-pass-body">
+                <ScanIcon size={38} strokeWidth={1.5} />
+                <h2>Đang chờ mã vé</h2>
+                <p>Sau khi quét, kiểm tra phòng chiếu và số ghế tại đây.</p>
               </div>
             </div>
+          ) : verdict.type === 'CONNECTION' ? (
+            <StaffState title="Chưa xác nhận được vé" description={verdict.errorMsg} error />
           ) : verdict.type === 'ERROR' ? (
             <div className="gate-verdict gate-verdict--error">
               <div className="gate-verdict-banner">
@@ -1168,7 +1027,142 @@ export default function CheckInPage() {
               </div>
             </div>
           )}
-        </div>
+        </section>
+          {/* ===== SESSION CHECK-IN LOG ===== */}
+          <section className="gate-card gate-history">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginBottom: 14,
+                flexWrap: 'wrap',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800 }}>
+                Nhật ký soát vé trong phiên ({filteredHistory.length})
+              </h3>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Lọc mã, ghế, phim..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  style={{ height: 30, width: 150, fontSize: '0.78rem', padding: '0 10px' }}
+                />
+                {[
+                  { key: 'ALL', label: 'Tất cả' },
+                  { key: 'SUCCESS', label: 'Hợp lệ' },
+                  { key: 'DUPLICATE', label: 'Quét trùng' },
+                  { key: 'ERROR', label: 'Từ chối' },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    className={`pos-time-pill ${
+                      historyFilter === f.key ? 'pos-time-pill--active' : ''
+                    }`}
+                    onClick={() => setHistoryFilter(f.key)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+                {recentCheckIns.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: '0.76rem', padding: '4px 8px' }}
+                    onClick={() => {
+                      setRecentCheckIns([]);
+                      setVerdict(null);
+                      try {
+                        localStorage.removeItem(CHECKIN_STORAGE_KEY);
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                  >
+                    Xóa nhật ký
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {filteredHistory.length === 0 ? (
+              <div
+                style={{
+                  padding: '28px 16px',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)',
+                  background: '#f8fafc',
+                  borderRadius: 12,
+                  border: '1px dashed var(--border)',
+                  fontSize: '0.88rem',
+                }}
+              >
+                Chưa có lượt check-in nào trong bộ lọc này.
+              </div>
+            ) : (
+              <div className="admin-table-card" style={{ borderRadius: 12 }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Giờ</th>
+                      <th>Mã đơn / Vé</th>
+                      <th>Phim & Ghế</th>
+                      <th>Kết quả</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHistory.map((item) => (
+                      <tr
+                        key={item.id}
+                        style={{ cursor: item.rawResponse ? 'pointer' : 'default' }}
+                        onClick={() => {
+                          if (item.rawResponse) {
+                            evaluateCheckInResult(item.rawResponse, item.code);
+                          }
+                        }}
+                      >
+                        <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                          {item.time}
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 800, color: '#0f172a' }}>
+                          {item.code.length > 22 ? `${item.code.slice(0, 20)}...` : item.code}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.86rem' }}>
+                            {item.movieName}
+                          </div>
+                          {item.seats && (
+                            <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                              Ghế: <strong>{item.seats}</strong>
+                              {item.roomName ? ` • ${item.roomName}` : ''}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            className={`status-badge ${
+                              item.status === 'SUCCESS'
+                                ? 'status--active'
+                                : item.status === 'DUPLICATE'
+                                ? 'status--pending'
+                                : 'status--inactive'
+                            }`}
+                          >
+                            {item.statusLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
       </div>
     </div>
   );

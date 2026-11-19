@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
@@ -127,7 +127,7 @@ async function downloadBookings(bookings) {
   }).toFile('don-dat-ve-' + dateKeyFormatter.format(new Date()) + '.xlsx');
 }
 
-const BookingManagement = () => {
+const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
   const { isAdmin, isManager } = useAuth();
   const canProcessRefund = isAdmin || isManager;
   const [bookings, setBookings] = useState([]);
@@ -142,29 +142,40 @@ const BookingManagement = () => {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [exporting, setExporting] = useState(false);
   const [refundError, setRefundError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [lookupNotice, setLookupNotice] = useState('');
+  const openedRequest = useRef(null);
   const drawer = useRef(null);
   const closeButton = useRef(null);
   const pageCheckbox = useRef(null);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const res = await bookingApi.getAll();
       const sorted = (res.data.result || []).sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
       setBookings(sorted);
+      if (staff && requestedBookingId && openedRequest.current !== requestedBookingId) {
+        openedRequest.current = requestedBookingId;
+        const requested = sorted.find((booking) => String(booking.bookingId) === requestedBookingId);
+        if (requested) setDetailBooking(requested);
+        else setLookupNotice('Không tìm thấy đơn trong danh sách hiện có.');
+      }
     } catch (err) {
       console.error('Lỗi khi tải đơn đặt vé:', err);
-      toast.error('Không thể tải danh sách đơn đặt vé');
+      if (staff) setLoadError(err.response?.data?.message || 'Không thể tải danh sách đơn đặt vé.');
+      else toast.error('Không thể tải danh sách đơn đặt vé');
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestedBookingId, staff]);
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
 
   const requestProcessRefund = (booking, approved) => {
     if (!canProcessRefund) return;
@@ -244,10 +255,11 @@ const BookingManagement = () => {
         const day = dateKeyFormatter.format(date);
         if ((filters.from && day < filters.from) || (filters.to && day > filters.to)) return false;
       }
-      return !query || [bookingCode(booking), customerName(booking), booking.movieName, booking.branchName]
+      return !query || [bookingCode(booking), customerName(booking), booking.movieName, booking.branchName,
+        ...(staff ? (booking.tickets || []).map((ticket) => String(ticket.id ?? '')) : [])]
         .some((value) => value?.toLocaleLowerCase('vi').includes(query));
     });
-  }, [bookings, filters, invalidRange, searchTerm, statusFilter]);
+  }, [bookings, filters, invalidRange, searchTerm, staff, statusFilter]);
 
   const stats = useMemo(() => filtered.reduce((totals, booking) => {
     if (booking.status === 'COMPLETED') totals.completed++;
@@ -327,9 +339,12 @@ const BookingManagement = () => {
   return (
     <div className="dashboard-container booking-management">
       <header className="dashboard-header booking-header">
-        <div>
-          <h1 className="page-title">Quản lý Đơn đặt vé</h1>
-          <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
+        <div className={staff ? 'staff-heading-copy' : undefined}>
+          {staff && <span className="staff-heading-icon"><ListIcon size={24} /></span>}
+          <div>
+            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý Đơn đặt vé'}</h1>
+            <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
+          </div>
         </div>
         <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => {
           setSelectedIds(new Set());
@@ -343,7 +358,7 @@ const BookingManagement = () => {
         {summary.map(({ label, value, icon, tone }) => (
           <article className="booking-kpi" key={label}>
             <span className={'booking-kpi-icon booking-tone--' + tone}>{icon}</span>
-            <div><span>{label}</span><strong>{loading ? DASH : value}</strong></div>
+            <div><span>{label}</span><strong>{loading || (loadError && !bookings.length) ? DASH : value}</strong></div>
           </article>
         ))}
       </section>
@@ -352,7 +367,7 @@ const BookingManagement = () => {
         <div className="booking-list-heading">
           <div>
             <h2 id="booking-list-title">Danh sách đơn</h2>
-            <p role="status">{numberFormatter.format(filtered.length)} đơn phù hợp</p>
+            <p role="status">{loading ? 'Đang tải…' : loadError && !bookings.length ? 'Chưa tải được dữ liệu' : numberFormatter.format(filtered.length) + ' đơn phù hợp'}</p>
           </div>
           {isAdmin && (
             <button type="button" className="btn btn-primary" disabled={loading || exporting || !selectedBookings.length} onClick={exportSelection}>
@@ -365,7 +380,7 @@ const BookingManagement = () => {
         <div className="booking-filters">
           <label>Tìm kiếm
             <span className="booking-search"><SearchIcon size={17} />
-              <input type="search" className="input" placeholder="Mã đơn, khách, phim" value={searchTerm}
+              <input type="search" className="input" placeholder={staff ? 'Mã đơn, mã vé, khách, phim' : 'Mã đơn, khách, phim'} value={searchTerm}
                 onChange={(event) => { setSearchTerm(event.target.value); resetSelection(); }} />
             </span>
           </label>
@@ -405,7 +420,11 @@ const BookingManagement = () => {
           </div>
         )}
 
-        {loading ? <div className="booking-empty" role="status">Đang tải đơn đặt vé…</div> : (
+        {lookupNotice && <p className="staff-booking-notice" role="status">{lookupNotice}</p>}
+        {loadError && <div className="staff-state staff-state--error" role="alert">
+          <strong>{loadError}</strong><button type="button" className="btn btn-secondary" onClick={fetchBookings}>Thử lại</button>
+        </div>}
+        {loading ? <div className="booking-empty" role="status">Đang tải đơn đặt vé…</div> : (!loadError || bookings.length > 0) && (
           <div className="booking-table-scroll" tabIndex={0} role="region" aria-label="Bảng đơn đặt vé">
             <table className="admin-table booking-table">
               <thead>
@@ -418,7 +437,7 @@ const BookingManagement = () => {
                     </th>
                   )}
                   <th scope="col" className="booking-order-column">Mã đơn / Khách</th>
-                  <th scope="col">Phim / Rạp</th>
+                  <th scope="col">{staff ? 'Phim / Suất chiếu' : 'Phim / Rạp'}</th>
                   <th scope="col" className="booking-date">Ngày đặt</th>
                   <th scope="col" className="booking-money">Tổng tiền</th>
                   <th scope="col" className="booking-status-column">Trạng thái đơn</th>
@@ -448,6 +467,7 @@ const BookingManagement = () => {
                       </td>
                       <td>
                         <strong className="booking-cell-main" title={booking.movieName}>{booking.movieName || DASH}</strong>
+                        {staff && booking.showtimeStart && <span className="booking-cell-secondary">{formatDateTime(booking.showtimeStart)}</span>}
                         <span className="booking-cell-secondary" title={location}>{location || DASH}</span>
                       </td>
                       <td className="booking-date" title={formatDateTime(booking.createdAt)}>{formatDate(booking.createdAt)}</td>
@@ -520,6 +540,25 @@ const BookingManagement = () => {
                   <div><dt>Ghế</dt><dd>{seats(detailBooking) || DASH}</dd></div>
                 </dl>
               </section>
+              {staff && detailBooking.tickets?.length > 0 && (
+                <section className="booking-detail-section">
+                  <h3>Trạng thái từng vé</h3>
+                  <ul className="booking-food-list">
+                    {detailBooking.tickets.map((ticket) => (
+                      <li key={ticket.id ?? ticket.seatId}>
+                        <span>{ticket.seatCode || DASH}{ticket.id != null ? ' · Vé #' + ticket.id : ''}</span>
+                        <span className={'staff-status' + (ticket.checkedInAt ? ' staff-status--success' : '')}>
+                          {ticket.checkedInAt ? 'Đã check-in · ' + formatDateTime(ticket.checkedInAt)
+                            : detailBooking.status === 'REFUNDED' ? 'Đơn đã hoàn tiền'
+                            : detailBooking.status === 'CANCELLED' ? 'Đơn đã hủy'
+                            : ticket.ticketStatus === 'BOOKED' ? 'Chưa check-in'
+                            : ticket.ticketStatus === 'HOLDING' ? 'Đang giữ' : 'Chưa xác nhận'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               {detailBooking.foods?.length > 0 && (
                 <section className="booking-detail-section">
                   <h3>Bắp, nước và combo</h3>
