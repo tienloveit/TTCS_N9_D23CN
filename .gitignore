@@ -4,6 +4,9 @@ node_modules/
 .env.*
 !.env.example
 .idea/
+.ai/mcp/
+.claude/
+.vscode/
 *.log
 backend/module/
 uploads/

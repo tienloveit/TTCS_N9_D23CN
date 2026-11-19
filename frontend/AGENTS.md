@@ -1,6 +1,6 @@
 ﻿# MoviePTIT — Frontend Context
 
-Cập nhật: **2026-11-12**, theo mã nguồn working tree. Xem thêm [context toàn dự án](../../codex.md) và [backend context](../backend/backend_overview.md).
+Cập nhật: **2026-11-12**, theo mã nguồn working tree. Xem thêm [context toàn dự án](../CLAUDE.md) và [backend context](../backend/AGENTS.md).
 
 ## Chạy frontend
 
