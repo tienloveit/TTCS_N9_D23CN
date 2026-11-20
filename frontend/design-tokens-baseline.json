@@ -6,11 +6,10 @@
   "src/components/Ticket/DigitalTicket.css": 28,
   "src/components/Ticket/DigitalTicket.jsx": 1,
   "src/index.css": 331,
-  "src/pages/Admin/Admin.css": 40,
+  "src/pages/Admin/Admin.css": 39,
   "src/pages/Admin/AdminDashboard.css": 8,
   "src/pages/Admin/BookingManagement.css": 16,
   "src/pages/Admin/BookingManagement.jsx": 2,
-  "src/pages/Admin/BranchManagement.jsx": 21,
   "src/pages/Admin/FoodManagement.jsx": 1,
   "src/pages/Admin/MovieForm.css": 4,
   "src/pages/Admin/MovieManagement.jsx": 1,
@@ -36,6 +35,6 @@
   "src/pages/Staff/checkin/CheckInPage.jsx": 7,
   "src/pages/Staff/checkin/CheckInScannerTab.jsx": 3,
   "src/pages/Staff/checkin/CheckInVerdictPanel.jsx": 12,
-  "src/pages/Staff/StaffPortal.css": 78,
+  "src/pages/Staff/StaffPortal.css": 77,
   "src/pages/Staff/StaffWorkspaces.css": 58
 }

@@ -268,7 +268,7 @@ body:has(.staff-portal dialog[open]) { overflow: hidden; }
 .staff-state--error { background: #fff3f2; border-radius: 10px; color: #9b241f; }
 .staff-state--error .staff-state-icon { background: #fce2df; color: inherit; }
 .staff-skeleton { display: grid; gap: 12px; padding: 24px; }
-.staff-skeleton span { display: block; height: 15px; background: #e7edf5; border-radius: 5px; }
+.staff-skeleton span { display: block; height: 15px; background: var(--staff-border); border-radius: 5px; }
 .staff-skeleton span:first-child { width: 48%; }
 .staff-skeleton span:last-child { width: 75%; }
 .staff-status {
