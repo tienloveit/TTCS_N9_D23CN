@@ -322,13 +322,6 @@
 
 .catalog-hero-controls button:hover { background: #ffffff33; }
 
-.catalog-hero-controls .catalog-hero-toggle {
-  margin-left: 6px;
-  padding-inline: 9px;
-  font-size: .76rem;
-  font-weight: 650;
-}
-
 .catalog-hero-dots button {
   min-width: 24px;
   border-color: transparent;
@@ -506,7 +499,6 @@
 .cinema-navbar .navbar-links { gap: 3px; }
 .cinema-navbar .navbar-user { gap: 5px; }
 .cinema-navbar .navbar-links > a,
-.cinema-navbar .navbar-link-btn,
 .cinema-navbar .navbar-user-trigger { padding-inline: 9px; white-space: nowrap; }
 .cinema-navbar .navbar-user-trigger span { overflow: hidden; max-width: 12ch; text-overflow: ellipsis; }
 .cinema-navbar .navbar-links > .btn-primary { background: var(--catalog-cta); color: #fff; }
@@ -543,7 +535,6 @@
 
 @media (max-width: 1050px) and (min-width: 901px) {
   .cinema-navbar .navbar-links > a,
-  .cinema-navbar .navbar-link-btn,
   .cinema-navbar .navbar-user-trigger { font-size: .81rem; padding-inline: 7px; }
 }
 

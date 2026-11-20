@@ -15,7 +15,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "genres")
+@Table(
+    name = "genres",
+    uniqueConstraints =
+        @jakarta.persistence.UniqueConstraint(name = "uk_genres_name", columnNames = "name"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,6 +29,7 @@ public class Genre {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @jakarta.persistence.Column(nullable = false)
   private String name;
 
   @ManyToMany(mappedBy = "genres")

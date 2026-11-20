@@ -2,26 +2,22 @@ package com.ltweb.backend.service;
 
 import com.ltweb.backend.dto.request.UpdateBookingRequest;
 import com.ltweb.backend.dto.response.BookingResponse;
-import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
-import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
-import com.ltweb.backend.repository.TicketRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -34,12 +30,10 @@ public class BookingCommandService {
   private final BookingPricingService bookingPricingService;
   private final java.time.Clock clock;
   private final BookingRepository bookingRepository;
-  private final TicketRepository ticketRepository;
-  private final RedisTemplate<String, String> redisTemplate;
-  private final SimpMessagingTemplate simpMessagingTemplate;
   private final BookingMapper bookingMapper;
   private final NotificationService notificationService;
-  private final FoodStockService foodStockService;
+  private final BookingReleaseService bookingReleaseService;
+  private final PromotionService promotionService;
 
   @Transactional
   public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
@@ -67,41 +61,12 @@ public class BookingCommandService {
     }
 
     booking.setStatus(BookingStatus.CANCELLED);
-    bookingRepository.save(booking);
-    foodStockService.release(booking);
-
-    // Trả trạng thái của vé về AVAILABLE
-    booking
-        .getTickets()
-        .forEach(
-            ticket -> {
-              ticket.setBooking(null); // huỷ connect với booking
-              ticket.setTicketStatus(TicketStatus.AVAILABLE);
-              ticket.setQrCode(null);
-              ticket.setCheckedInAt(null);
-              ticket.setCheckedInBy(null);
-              ticketRepository.save(ticket);
-
-              BookingTransactionEffects.afterCommit(
-                  () ->
-                      simpMessagingTemplate.convertAndSend(
-                          "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
-                          SeatStatusEvent.builder()
-                              .seatId(ticket.getSeat().getId())
-                              .status("AVAILABLE")
-                              .build()));
-            });
-
-    BookingTransactionEffects.releaseAfterCommit(
-        redisTemplate,
-        booking.getShowtime().getId(),
-        booking.getTickets(),
-        booking.getBookingCode()); // chủ động huỷ
-
     if (booking.getPayment().getPaymentStatus() == PaymentStatus.PENDING) {
       booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
-      bookingRepository.save(booking);
     }
+    // Trả ghế, tồn bắp nước và lượt khuyến mãi đã giữ.
+    bookingReleaseService.releaseUnpaid(booking);
+    bookingRepository.save(booking);
 
     log.info("Booking cancelled: {}", bookingId);
   }
@@ -140,6 +105,12 @@ public class BookingCommandService {
             promotionCode,
             user.getId(),
             bookingAccessPolicy.branchId(booking));
+    // Đổi mã: trả lượt của mã cũ rồi giữ lượt mã mới. Lỗi giữ lượt sẽ rollback cả việc trả lượt.
+    bookingReleaseService.releasePromotionUsage(booking);
+    if (StringUtils.hasText(price.promotionCode())) {
+      promotionService.reserveUsage(price.promotionCode());
+      booking.setPromotionUsageReserved(true);
+    }
     booking.setPromotionCode(price.promotionCode());
     booking.setDiscountAmount(price.discountAmount());
     booking.setTotalAmount(price.totalAmount());

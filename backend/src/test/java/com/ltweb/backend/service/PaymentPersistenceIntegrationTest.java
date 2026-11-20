@@ -46,7 +46,7 @@ import org.springframework.test.util.ReflectionTestUtils;
     matches = "cinema_payment_test_\\d{14}")
 @TestPropertySource(
     properties = {
-      "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/${PAYMENT_TEST_DATABASE}",
+      "spring.datasource.url=jdbc:mysql://127.0.0.1:${PAYMENT_TEST_PORT:3306}/${PAYMENT_TEST_DATABASE}",
       "spring.datasource.username=${PAYMENT_TEST_USER}",
       "spring.datasource.password=${PAYMENT_TEST_PASSWORD}",
       "spring.jpa.hibernate.ddl-auto=validate"

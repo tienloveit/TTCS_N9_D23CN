@@ -15,10 +15,21 @@ spring:
     url: jdbc:mysql://localhost:3306/cinema
     username: root
     password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      # Giờ rạp cho phiên MySQL: CURRENT_TIMESTAMP/NOW() trong DEFAULT, ON UPDATE và SQL thuần
+      # khớp với Clock của ứng dụng (Asia/Ho_Chi_Minh, không có giờ mùa hè) dù server MySQL chạy UTC.
+      connection-init-sql: SET time_zone = '+07:00'
+  # Flyway tạo và nâng cấp schema; Hibernate chỉ kiểm tra entity khớp schema.
+  flyway:
+    locations: classpath:db/migration
+    # Database đã có bảng từ trước Flyway: đánh dấu là V1 rồi chạy tiếp V2 trở đi.
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: Schema co tu truoc Flyway
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
 
   data:

@@ -101,20 +101,33 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
       DataIntegrityViolationException exception, WebRequest request) {
-    String detailedMessage =
-        exception.getMostSpecificCause() != null
-            ? exception.getMostSpecificCause().getMessage()
-            : ErrorCode.DATA_INTEGRITY_VIOLATION.getMessage();
+    // Chi tiết SQL (tên bảng, ràng buộc, giá trị) chỉ ghi log, không trả cho client.
+    log.warn("Data integrity violation: {}", exception.getMostSpecificCause().getMessage());
+    ErrorCode errorCode = classifyIntegrityViolation(exception);
 
     ErrorResponse response =
         ErrorResponse.builder()
             .timestamp(new Date())
-            .code(ErrorCode.DATA_INTEGRITY_VIOLATION.getCode())
-            .error(ErrorCode.DATA_INTEGRITY_VIOLATION.getStatus().getReasonPhrase())
-            .message(detailedMessage)
+            .code(errorCode.getCode())
+            .error(errorCode.getStatus().getReasonPhrase())
+            .message(errorCode.getMessage())
             .path(request.getDescription(false).replace("uri=", ""))
             .build();
-    return ResponseEntity.badRequest().body(response);
+    return ResponseEntity.status(errorCode.getStatus()).body(response);
+  }
+
+  /**
+   * Mã lỗi MySQL: 1451 = còn bản ghi khác tham chiếu tới dòng bị xóa/sửa (dữ liệu đang được dùng,
+   * nên ngừng hoạt động thay vì xóa); 1062 = trùng giá trị unique.
+   */
+  public static ErrorCode classifyIntegrityViolation(DataIntegrityViolationException exception) {
+    for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+      if (cause instanceof java.sql.SQLException sql) {
+        if (sql.getErrorCode() == 1451) return ErrorCode.RESOURCE_IN_USE;
+        if (sql.getErrorCode() == 1062) return ErrorCode.DUPLICATE_VALUE;
+      }
+    }
+    return ErrorCode.DATA_INTEGRITY_VIOLATION;
   }
 
   // 7. Catch-all cho các exceptions không được xử lý

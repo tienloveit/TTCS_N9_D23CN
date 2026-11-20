@@ -3285,10 +3285,9 @@ select:disabled {
   color: var(--text-muted);
 }
 
-/* ==================== NAVBAR DROPDOWN ==================== */
+/* ==================== NAVBAR LINKS ==================== */
 
-.navbar-link,
-.navbar-link-btn {
+.navbar-link {
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
@@ -3302,8 +3301,7 @@ select:disabled {
   gap: 5px;
 }
 
-.navbar-link:hover,
-.navbar-link-btn:hover {
+.navbar-link:hover {
   color: var(--text-primary);
   background: var(--bg-card);
 }
@@ -3311,33 +3309,6 @@ select:disabled {
 .navbar-link--active {
   color: var(--accent) !important;
   background: rgba(249, 115, 22, 0.1);
-}
-
-.navbar-chevron {
-  transition: transform var(--transition);
-  margin-left: 2px;
-}
-
-.navbar-chevron--open {
-  transform: rotate(180deg);
-}
-
-.navbar-dropdown {
-  position: relative;
-}
-
-.navbar-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  min-width: 220px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 8px;
-  z-index: 200;
-  animation: dropdownFade 0.15s ease;
 }
 
 @keyframes dropdownFade {
@@ -3350,24 +3321,6 @@ select:disabled {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.navbar-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all var(--transition);
-  text-decoration: none;
-}
-
-.navbar-dropdown-item:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
 }
 
 .navbar-dropdown-icon {
@@ -3984,10 +3937,6 @@ select:disabled {
 
   .navbar-links {
     gap: 4px;
-  }
-
-  .navbar-dropdown-menu {
-    left: -60px;
   }
 
   .navbar-search-wrapper {

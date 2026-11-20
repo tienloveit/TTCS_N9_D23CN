@@ -13,7 +13,6 @@ dist/
 .vscode/
 .claude/
 .ai/
-.gitnexus/
 .tmp/
 
 # Runtime files

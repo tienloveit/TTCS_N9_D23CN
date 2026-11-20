@@ -14,7 +14,7 @@
 | Frontend | [main.jsx](frontend/src/main.jsx) → [App.jsx](frontend/src/App.jsx) → [AnimatedRoutes.jsx](frontend/src/AnimatedRoutes.jsx) | React 19, Vite 8, React Router 7, `http://localhost:5173` |
 | HTTP client | [axiosClient.js](frontend/src/api/axiosClient.js), [các nhóm API](frontend/src/api/index.js) | `VITE_API_BASE_URL`, mặc định `http://localhost:8081/api`. Vite gọi trực tiếp backend |
 | Backend | [BackendApplication.java](backend/src/main/java/com/ltweb/backend/BackendApplication.java), [application.yaml](backend/src/main/resources/application.yaml) | Java 21, Spring Boot 3.4.0, Spring Security, JPA/JDBC, MapStruct |
-| Dữ liệu | [movie.sql](backend/movie.sql), [migrations](backend/migrations), entity và repository | MySQL 8, schema `cinema`, Redis cho JWT, OTP và khóa ghế |
+| Dữ liệu | [Flyway migration](backend/src/main/resources/db/migration), entity và repository; [script cũ](backend/migrations) cho database rất cũ | MySQL 8, schema `cinema`, Redis cho JWT, OTP và khóa ghế |
 | Realtime | `WebSocketConfig`, `TicketService`, `SeatSelectPage`, `StaffBookingPage` | SockJS tại `${API_BASE_URL}/ws`, STOMP topic `/topic/showtime/{showtimeId}/seats` |
 | Tích hợp | Security/OAuth2, `VnpayService`, `VnpayRefundGateway`, `EmailService` | Google OAuth2, VNPay sandbox, Gmail SMTP, ZXing cho QR |
 
@@ -57,4 +57,6 @@ Seed khi khởi động và API cleanup mặc định tắt. Cách bật trên d
 
 ## Tra cứu mã nguồn
 
-GitNexus đăng ký repo `TTCS_N9_D23CN`. Các luồng điển hình để đối chiếu gồm `applyPromotion` từ controller tới booking/payment, `processRefund` và `prepare` cho hoàn tiền, và `resetPassword` tới `OTPService.checkOTP`. Dùng kết quả đồ thị cùng mã nguồn, đặc biệt ở đoạn nối HTTP, Spring annotation và callback từ trình duyệt.
+Lần theo route trong [AnimatedRoutes.jsx](frontend/src/AnimatedRoutes.jsx), component trang và [API client](frontend/src/api/index.js), rồi tìm đường dẫn HTTP trong controller và service tương ứng bằng `rg` hoặc tìm kiếm của IDE. Ví dụ, `/my-bookings` mở `MyBookingsPage`, gọi `bookingApi.getMyBookings()` tới `GET /booking/my-bookings/list`. `BookingController` chuyển yêu cầu qua `BookingService` tới `BookingQueryService.getMyBookingsList()`.
+
+Các luồng điển hình để đối chiếu gồm `applyPromotion` từ controller tới booking/payment, `processRefund` và `prepare` cho hoàn tiền, và `resetPassword` tới `OTPService.checkOTP`. Khi lần theo các luồng này, đối chiếu endpoint HTTP, annotation của Spring và callback phía trình duyệt.
