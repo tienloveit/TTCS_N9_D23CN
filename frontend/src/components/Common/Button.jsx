@@ -33,7 +33,8 @@ export default function Button({
   children,
   ...props
 }) {
-  const classes = ['btn', VARIANT_CLASS[variant], SIZE_CLASS[size], block && 'btn-block', className]
+  const iconOnly = Boolean(icon) && (children === undefined || children === null || children === false);
+  const classes = ['btn', VARIANT_CLASS[variant], SIZE_CLASS[size], iconOnly && 'btn-icon-only', block && 'btn-block', className]
     .filter(Boolean)
     .join(' ');
 
