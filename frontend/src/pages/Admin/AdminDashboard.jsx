@@ -21,6 +21,7 @@ import {
 } from '../../components/Common/CinemaIcons';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import './AdminDashboard.css';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const emptyAnalytics = {
   summary: {
@@ -50,7 +51,7 @@ const formatCurrency = (amount) =>
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 
 const formatDate = (value) =>
-  value ? new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '-';
+  formatCinema(value, { day: '2-digit', month: '2-digit' }, '-');
 
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
 

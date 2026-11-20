@@ -3,6 +3,7 @@ import { branchApi, userApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import {
   EditIcon as LucideEditIcon,
   LockIcon as LucideLockIcon,
@@ -12,6 +13,7 @@ import {
   UnlockIcon as LucideUnlockIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { formatDate as formatCinemaDate } from '../../utils/cinemaTime';
 
 /* ─── Icons ─────────────────────────────────────────────── */
 const LockIcon = () => <LucideLockIcon size={15} />;
@@ -63,6 +65,7 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState(null);   // null = add mode
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const dialog = useModalDialog(isModalOpen, () => closeModal(), { disabled: submitting });
   const roleOptions = isManager
     ? ROLE_OPTIONS.filter((option) => option.value === 'STAFF')
     : ROLE_OPTIONS;
@@ -207,7 +210,7 @@ const UserManagement = () => {
   };
 
   /* ── Helpers ── */
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
+  const formatDate = (d) => formatCinemaDate(d);
   const getRoleInfo = (role) => {
     const map = {
       MANAGER: { label: 'Manager', color: 'rgba(139,92,246,0.1)', text: 'var(--purple)' },
@@ -296,7 +299,7 @@ const UserManagement = () => {
             <div style={{ position: 'relative', minWidth: '250px' }}>
               <SearchIcon
                 size={16}
-                style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+                className="input-leading-icon"
               />
               <input
                 type="text"
@@ -406,16 +409,16 @@ const UserManagement = () => {
 
       {/* ─── Modal Thêm / Sửa ─── */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
+        <div className="modal-overlay" {...dialog.overlayProps}>
           <div
             className="modal-content admin-modal"
-            onClick={(e) => e.stopPropagation()}
+            {...dialog.contentProps}
             style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
           >
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px' }}>
+                <h2 id={dialog.titleId} style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px' }}>
                   {editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
                 </h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -424,7 +427,7 @@ const UserManagement = () => {
                     : 'Điền đầy đủ thông tin để tạo tài khoản mới'}
                 </p>
               </div>
-              <button type="button" onClick={closeModal} className="modal-close" style={{ position: 'static', width: 34, height: 34 }} aria-label="Đóng">
+              <button type="button" onClick={closeModal} className="modal-close modal-close--inline modal-close--lg" aria-label="Đóng">
                 <XIcon size={18} />
               </button>
             </div>

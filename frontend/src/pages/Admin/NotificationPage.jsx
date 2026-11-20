@@ -4,6 +4,7 @@ import StaffInbox from '../Staff/StaffInbox';
 import { toast } from 'react-toastify';
 import { notificationApi } from '../../api';
 import { CheckIcon, RefreshIcon, SearchIcon } from '../../components/Common/CinemaIcons';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const typeLabels = {
   BOOKING_STATUS: 'Đơn vé',
@@ -13,7 +14,7 @@ const typeLabels = {
   SYSTEM: 'Hệ thống',
 };
 
-const formatDateTime = (value) => value ? new Date(value).toLocaleString('vi-VN') : '-';
+const formatDateTime = (value) => formatCinema(value, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' }, '-');
 
 const NotificationPage = ({ staff = false }) => {
   const staffOutlet = useOutletContext();

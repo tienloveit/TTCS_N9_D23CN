@@ -5,6 +5,7 @@ import { useAuth } from '../../context/useAuth';
 import { DownloadIcon, RotateCcwIcon } from '../../components/Common/CinemaIcons';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import './RevenueReportPage.css';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const businessDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
 const dateDaysAgo = (days) => {
@@ -20,7 +21,7 @@ const formatCurrency = (amount) =>
     .format(Number(amount || 0));
 
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
-const formatDateTime = (value) => value ? new Date(value).toLocaleString('vi-VN') : '-';
+const formatDateTime = (value) => formatCinema(value, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' }, '-');
 const shareFormatter = new Intl.NumberFormat('vi-VN', { style: 'percent', maximumFractionDigits: 1 });
 const paymentLabels = { CASH: 'Tiền mặt', CARD: 'Thẻ', VNPAY: 'VNPay' };
 const groups = [

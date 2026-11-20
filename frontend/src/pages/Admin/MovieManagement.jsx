@@ -6,6 +6,7 @@ import SafeImage from '../../components/Common/SafeImage';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import { useAuth } from '../../context/useAuth';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon } from '../../components/Common/CinemaIcons';
+import { formatDate as formatCinemaDate } from '../../utils/cinemaTime';
 
 const MOVIE_STATUS_TABS = [
   { key: 'ALL', label: 'Tất cả' },
@@ -173,7 +174,7 @@ const MovieManagement = () => {
           <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 320px' }}>
             <SearchIcon
               size={16}
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+              className="input-leading-icon"
             />
             <input
               type="text"
@@ -242,7 +243,7 @@ const MovieManagement = () => {
                     <td>{movie.durationMinutes ? `${movie.durationMinutes} phút` : '—'}</td>
                     <td>
                       {movie.releaseDate
-                        ? new Date(movie.releaseDate).toLocaleDateString('vi-VN')
+                        ? formatCinemaDate(movie.releaseDate)
                         : '—'}
                     </td>
                     <td>

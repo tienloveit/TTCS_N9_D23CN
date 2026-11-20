@@ -36,8 +36,8 @@ import RevenueReportPage from './pages/Admin/RevenueReportPage';
 import NotificationPage from './pages/Admin/NotificationPage';
 import StaffLayout from './pages/Staff/StaffLayout';
 import StaffDashboardPage from './pages/Staff/StaffDashboardPage';
-import StaffBookingPage from './pages/Staff/StaffBookingPage';
-import CheckInPage from './pages/Staff/CheckInPage';
+import StaffBookingPage from './pages/Staff/booking/StaffBookingPage';
+import CheckInPage from './pages/Staff/checkin/CheckInPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 
 const SeatSelectPage = lazy(() => import('./pages/SeatSelect/SeatSelectPage'));
@@ -74,9 +74,15 @@ const PrivateRoute = ({ children }) => {
 
 const AdminRoute = ({ children }) => {
   const { user, loading, isAdmin, isManager, isStaff } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin && !isManager) return <Navigate to={isStaff ? '/staff' : '/'} replace />;
+  // MANAGER dùng khu /manager (menu và trang theo phạm vi chi nhánh); đưa link /admin/* về đúng khu.
+  if (!isAdmin && isManager && /^\/admin(\/|$)/.test(location.pathname)) {
+    const managerPath = location.pathname.replace(/^\/admin/, '/manager');
+    return <Navigate to={`${managerPath}${location.search}`} replace />;
+  }
   return children;
 };
 

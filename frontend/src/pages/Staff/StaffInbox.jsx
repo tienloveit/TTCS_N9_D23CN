@@ -1,5 +1,6 @@
 import { BellIcon, CheckIcon, CreditCardIcon, GiftIcon, BoxIcon, ListIcon, MailIcon, RefreshIcon, SearchIcon, TicketIcon } from '../../components/Common/CinemaIcons';
 import { StaffPageHeading, StaffSkeleton, StaffState } from './StaffUI';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const filters = [
   ['ALL', 'Tất cả', ListIcon], ['UNREAD', 'Chưa đọc', MailIcon], ['REFUND_REQUEST', 'Hoàn tiền', CreditCardIcon],
@@ -58,7 +59,7 @@ export default function StaffInbox({
                     <div className="staff-inbox-copy">
                       <div className="staff-inbox-meta">
                         <span>{type}</span>
-                        {item.createdAt && <time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('vi-VN')}</time>}
+                        {item.createdAt && <time dateTime={item.createdAt}>{formatCinema(item.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' })}</time>}
                         {!item.read && <span className="staff-status staff-unread-label">Chưa đọc</span>}
                       </div>
                       <h2>{item.title}</h2>

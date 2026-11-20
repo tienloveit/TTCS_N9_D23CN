@@ -3,6 +3,7 @@ import { branchApi, roomApi, seatApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import {
   ArmchairIcon,
   EditIcon,
@@ -59,13 +60,17 @@ const Icon = ({ name }) => {
 
 const BranchManagement = () => {
   const { isAdmin } = useAuth();
+  const [branchModal, setBranchModal] = useState(false);
+  const [roomModal, setRoomModal] = useState(false);
+  const [seatMapModal, setSeatMapModal] = useState(false);
+  const branchDialog = useModalDialog(branchModal, () => setBranchModal(false));
+  const roomDialog = useModalDialog(roomModal, () => setRoomModal(false));
+  // Sơ đồ ghế có thay đổi chưa lưu: không đóng bằng Esc/click nền, chỉ bằng nút trong modal.
+  const seatMapDialog = useModalDialog(seatMapModal, null, { disabled: true });
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [branchModal, setBranchModal] = useState(false);
-  const [roomModal, setRoomModal] = useState(false);
-  const [seatMapModal, setSeatMapModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
 
@@ -551,11 +556,11 @@ const BranchManagement = () => {
       </div>
 
       {branchModal && (
-        <div className="modal-overlay" onClick={() => setBranchModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
+        <div className="modal-overlay" {...branchDialog.overlayProps}>
+          <div className="modal-content" {...branchDialog.contentProps} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ margin: 0 }}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
-              <button type="button" className="modal-close" style={{ position: 'static', width: 32, height: 32 }} onClick={() => setBranchModal(false)} aria-label="Đóng">
+              <h2 id={branchDialog.titleId} style={{ margin: 0 }}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
+              <button type="button" className="modal-close modal-close--inline" onClick={() => setBranchModal(false)} aria-label="Đóng">
                 <XIcon size={16} />
               </button>
             </div>
@@ -599,11 +604,11 @@ const BranchManagement = () => {
       )}
 
       {roomModal && (
-        <div className="modal-overlay" onClick={() => setRoomModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
+        <div className="modal-overlay" {...roomDialog.overlayProps}>
+          <div className="modal-content" {...roomDialog.contentProps} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ margin: 0 }}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
-              <button type="button" className="modal-close" style={{ position: 'static', width: 32, height: 32 }} onClick={() => setRoomModal(false)} aria-label="Đóng">
+              <h2 id={roomDialog.titleId} style={{ margin: 0 }}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
+              <button type="button" className="modal-close modal-close--inline" onClick={() => setRoomModal(false)} aria-label="Đóng">
                 <XIcon size={16} />
               </button>
             </div>
@@ -663,11 +668,11 @@ const BranchManagement = () => {
 
       {seatMapModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: 'min(1180px, 96vw)', maxWidth: 1180, height: 'min(86vh, 860px)', aspectRatio: 'unset', overflow: 'hidden', background: 'var(--bg-card)', padding: 0, borderRadius: 'var(--radius-lg)' }}>
+          <div className="modal-content" {...seatMapDialog.contentProps} style={{ width: 'min(1180px, 96vw)', maxWidth: 1180, height: 'min(86vh, 860px)', aspectRatio: 'unset', overflow: 'hidden', background: 'var(--bg-card)', padding: 0, borderRadius: 'var(--radius-lg)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ padding: '22px 26px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '1.35rem' }}>Sơ đồ ghế - {seatMapRoom?.name}</h2>
+                  <h2 id={seatMapDialog.titleId} style={{ margin: 0, fontSize: '1.35rem' }}>Sơ đồ ghế - {seatMapRoom?.name}</h2>
                   <p style={{ margin: '6px 0 0', color: 'var(--text-muted)' }}>
                     {sortedSeats.length} ghế · kéo ghế sang ô trống để tạo lối đi, kéo vào ghế khác để đổi chỗ
                   </p>

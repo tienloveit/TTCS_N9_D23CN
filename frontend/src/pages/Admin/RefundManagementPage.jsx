@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
+import useModalDialog from '../../components/Common/useModalDialog';
 import {
   CheckIcon,
   EyeIcon,
@@ -8,12 +9,13 @@ import {
   SearchIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
     .format(Number(amount || 0));
 
-const formatDateTime = (value) => value ? new Date(value).toLocaleString('vi-VN') : '-';
+const formatDateTime = (value) => formatCinema(value, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' }, '-');
 
 const STATUS_TABS = [
   { key: 'REFUND_REQUESTED', label: 'Chờ xử lý' },
@@ -29,6 +31,7 @@ const RefundManagementPage = () => {
   const [status, setStatus] = useState('REFUND_REQUESTED');
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const dialog = useModalDialog(Boolean(selected), () => setSelected(null), { disabled: submitting });
 
   const fetchRefunds = async () => {
     setLoading(true);
@@ -196,18 +199,17 @@ const RefundManagementPage = () => {
       </div>
 
       {selected && (
-        <div className="modal-overlay" onClick={() => setSelected(null)}>
+        <div className="modal-overlay" {...dialog.overlayProps}>
           <div
             className="modal-content admin-modal"
-            onClick={(e) => e.stopPropagation()}
+            {...dialog.contentProps}
             style={{ maxWidth: 680, height: 'auto', aspectRatio: 'unset', padding: 28, background: 'var(--bg-card)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>Yêu cầu {selected.bookingCode}</h2>
+              <h2 id={dialog.titleId} style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>Yêu cầu {selected.bookingCode}</h2>
               <button
                 type="button"
-                className="modal-close"
-                style={{ position: 'static', width: 32, height: 32 }}
+                className="modal-close modal-close--inline"
                 onClick={() => setSelected(null)}
                 aria-label="Đóng"
               >
