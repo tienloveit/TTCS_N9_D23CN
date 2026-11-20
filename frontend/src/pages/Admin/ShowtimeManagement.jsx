@@ -396,7 +396,7 @@ const ShowtimeManagement = () => {
     <div className="showtime-management">
       <header className="schedule-page-heading">
         <div>
-          <h1>Quản lý Suất chiếu</h1>
+          <h1>Quản lý suất chiếu</h1>
           {viewMode === 'list' && <p>{listShowtimes.length} suất chiếu</p>}
         </div>
         {canEditShowtime && (

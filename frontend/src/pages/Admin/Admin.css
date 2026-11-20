@@ -146,8 +146,6 @@
   font-size: 0.7rem;
   color: #93a4b8;
   font-weight: var(--fw-regular);
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 /* --- Navigation --- */
@@ -164,11 +162,9 @@
 
 .admin-nav-label {
   padding: 16px 16px 8px;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
   color: #93a4b8;
-  text-transform: uppercase;
-  letter-spacing: 0;
   user-select: none;
   overflow: hidden;
   white-space: nowrap;
@@ -535,7 +531,6 @@
   color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: var(--fw-bold);
-  text-transform: uppercase;
 }
 
 .stat-value {
@@ -738,8 +733,6 @@
   color: var(--text-secondary);
   font-size: 0.76rem;
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -771,6 +764,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .status-badge::before {

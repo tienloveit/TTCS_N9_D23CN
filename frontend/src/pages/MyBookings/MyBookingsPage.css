@@ -319,8 +319,6 @@
   color: #ffc093;
   font-size: .75rem;
   font-weight: var(--fw-bold);
-  letter-spacing: .08em;
-  text-transform: uppercase;
 }
 .mt-card--featured .mt-title {
   margin: 8px 0 10px;

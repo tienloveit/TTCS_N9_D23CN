@@ -63,8 +63,8 @@
   border-color: var(--brand-strong) !important;
   box-shadow: none !important;
 }
-.staff-portal .pos-slot-btn:disabled { opacity: 1; background: #f0f3f7; color: var(--staff-muted); }
-.staff-portal .pos-slot-btn:disabled .pos-slot-time { color: #55657b; }
+.staff-portal .pos-slot-btn:disabled { opacity: 1; background: var(--staff-bg); color: var(--staff-muted); }
+.staff-portal .pos-slot-btn:disabled .pos-slot-time { color: var(--staff-muted); }
 .staff-portal .pos-slot-type { overflow-wrap: anywhere; }
 .staff-portal .pos-receipt {
   position: sticky;
@@ -94,7 +94,7 @@
 .staff-portal .seat-map-wrapper { border: 1px solid var(--staff-border); border-radius: 8px; }
 .staff-portal .seat-map { width: max-content; min-width: 100%; }
 .staff-portal .seat { flex-shrink: 0; }
-.staff-portal .seat-page-mobile-bar { display: none; }
+.staff-portal .booking-bar.seat-page-mobile-bar { display: none; }
 .staff-portal .pos-customer-grid { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); }
 .staff-portal .pos-screen-arc { background: linear-gradient(#746358, #d9c6af66); box-shadow: 0 6px 16px #74593d22; }
 .staff-portal .food-select-card { background: var(--staff-surface); border: 1px solid var(--staff-border); border-radius: var(--staff-radius); }
@@ -189,7 +189,7 @@
   .staff-portal .booking-kpi-icon svg { width: 16px; height: 16px; }
   .staff-portal .pos-page { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
   .staff-portal .pos-receipt-actions { display: none; }
-  .staff-portal .seat-page-mobile-bar {
+  .staff-portal .booking-bar.seat-page-mobile-bar {
     position: fixed;
     inset: auto 0 0;
     z-index: 15;
@@ -225,8 +225,8 @@
 .staff-showtime-time { text-align: center; }
 .staff-showtime-time small { display: block; color: #765e4c; font-size: 11px; font-weight: var(--fw-semibold); }
 .staff-portal .btn-primary:disabled, .staff-portal .gate-code-submit:disabled {
-  background: #e1e8f2;
-  color: #526176;
+  background: var(--staff-border);
+  color: var(--staff-muted);
   box-shadow: none;
   cursor: not-allowed;
 }
