@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { branchApi, userApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import useModalDialog from '../../components/Common/useModalDialog';
 import {
@@ -192,13 +194,13 @@ const UserManagement = () => {
       if (confirmState.type === 'DELETE') {
         const target = confirmState.payload;
         await userApi.delete(target.id);
-        toast.success(`Đã xoá tài khoản "${target.username}"`);
+        toast.success(`Đã xóa tài khoản "${target.username}"`);
         fetchUsers();
       } else if (confirmState.type === 'STATUS') {
         const target = confirmState.payload;
         const newStatus = target.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
         await userApi.updateStatus(target.id, newStatus);
-        toast.success(newStatus === 'BLOCKED' ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản');
+        toast.success(newStatus === 'BLOCKED' ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
         fetchUsers();
       }
       setConfirmState(null);
@@ -213,12 +215,12 @@ const UserManagement = () => {
   const formatDate = (d) => formatCinemaDate(d);
   const getRoleInfo = (role) => {
     const map = {
-      MANAGER: { label: 'Manager', color: 'rgba(139,92,246,0.1)', text: 'var(--purple)' },
-      ADMIN: { label: 'Admin', color: 'rgba(229,9,20,0.1)', text: 'var(--accent)' },
-      STAFF: { label: 'Staff', color: 'rgba(59,130,246,0.1)', text: 'var(--blue)' },
-      USER: { label: 'User', color: 'rgba(16,185,129,0.1)', text: 'var(--green)' },
+      MANAGER: { label: 'Manager', tone: 'info' },
+      ADMIN: { label: 'Admin', tone: 'brand' },
+      STAFF: { label: 'Staff', tone: 'warning' },
+      USER: { label: 'User', tone: 'neutral' },
     };
-    return map[role] || { label: role, color: 'transparent', text: 'var(--text-muted)' };
+    return map[role] || { label: role, tone: 'neutral' };
   };
 
   const filtered = useMemo(() => {
@@ -239,17 +241,16 @@ const UserManagement = () => {
   return (
     <div>
       {/* Page header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header page-header--split">
         <div>
           <h1 className="page-title">Quản lý người dùng</h1>
           <p className="page-subtitle">
             Tổng cộng <strong>{users.length}</strong> tài khoản trong hệ thống.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={openAddModal}>
-          <PlusIcon />
+        <Button variant="primary" icon={<PlusIcon />} onClick={openAddModal}>
           Thêm người dùng
-        </button>
+        </Button>
       </div>
 
       {/* Table card */}
@@ -284,30 +285,27 @@ const UserManagement = () => {
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="admin-toolbar-filters">
             <select
-              className="input"
-              style={{ width: 'auto', height: 38, fontSize: '0.84rem' }}
+              className="input input-sm input-auto"
+              aria-label="Lọc theo trạng thái tài khoản"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="ALL">Mọi trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
-              <option value="BLOCKED">Bị khoá</option>
+              <option value="BLOCKED">Bị khóa</option>
             </select>
 
-            <div style={{ position: 'relative', minWidth: '250px' }}>
-              <SearchIcon
-                size={16}
-                className="input-leading-icon"
-              />
+            <div className="admin-search">
+              <SearchIcon size={16} className="input-leading-icon" aria-hidden="true" />
               <input
-                type="text"
-                className="input"
+                type="search"
+                className="input input-sm"
                 placeholder="Tìm username, tên, email, SĐT..."
+                aria-label="Tìm người dùng"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
               />
             </div>
           </div>
@@ -316,7 +314,7 @@ const UserManagement = () => {
         <table className="admin-table">
           <thead>
             <tr>
-              <th style={{ width: '40px' }}>#</th>
+              <th className="col-index">#</th>
               <th>Tài khoản</th>
               <th>Họ tên</th>
               <th>Email</th>
@@ -324,14 +322,14 @@ const UserManagement = () => {
               <th>Vai trò</th>
               <th>Trạng thái</th>
               <th>Ngày tạo</th>
-              <th style={{ width: '130px' }}>Hành động</th>
+              <th className="col-actions">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  {searchTerm ? 'Không tìm thấy người dùng phù hợp' : 'Chưa có người dùng nào'}
+                <td colSpan="9" className="admin-table-empty">
+                  {searchTerm ? 'Không tìm thấy người dùng phù hợp. Thử từ khóa khác.' : 'Chưa có người dùng nào.'}
                 </td>
               </tr>
             ) : (
@@ -339,64 +337,61 @@ const UserManagement = () => {
                 const roleInfo = getRoleInfo(user.role);
                 return (
                   <tr key={user.id || idx}>
-                    <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                    <td className="cell-index">{idx + 1}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{
-                          width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                          background: 'linear-gradient(135deg, var(--purple), var(--blue))',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 700, fontSize: '0.8rem', color: '#fff',
-                        }}>
+                      <div className="admin-media-cell">
+                        <div className="admin-avatar" aria-hidden="true">
                           {(user.username || 'U').charAt(0).toUpperCase()}
                         </div>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user.username}</span>
+                        <span className="cell-strong">{user.username}</span>
                       </div>
                     </td>
                     <td>{user.fullName || '—'}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{user.email || '—'}</td>
+                    <td className="cell-muted cell-break">{user.email || '—'}</td>
                     <td>{user.phoneNumber || '—'}</td>
                     <td>
-                      <span className="status-badge" style={{ background: roleInfo.color, color: roleInfo.text }}>
-                        {roleInfo.label}
-                      </span>
+                      <Badge tone={roleInfo.tone}>{roleInfo.label}</Badge>
                     </td>
                     <td>
-                      <span className={`status-badge ${user.status === 'ACTIVE' ? 'status--active' : user.status === 'BLOCKED' ? 'status--inactive' : 'status--pending'}`}>
-                        {user.status === 'ACTIVE' ? 'Hoạt động' : user.status === 'BLOCKED' ? 'Bị khoá' : user.status || '—'}
-                      </span>
+                      <Badge
+                        tone={user.status === 'ACTIVE' ? 'success' : user.status === 'BLOCKED' ? 'danger' : 'warning'}
+                        dot
+                      >
+                        {user.status === 'ACTIVE' ? 'Hoạt động' : user.status === 'BLOCKED' ? 'Bị khóa' : user.status || '—'}
+                      </Badge>
                     </td>
                     <td>{formatDate(user.createdAt)}</td>
                     <td>
                       <div className="action-btns">
                         {/* Sửa */}
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          title="Chỉnh sửa người dùng"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Sửa người dùng"
+                          aria-label={`Sửa tài khoản ${user.username}`}
+                          icon={<EditIcon />}
                           onClick={() => openEditModal(user)}
-                        >
-                          <EditIcon />
-                        </button>
+                        />
 
-                        {/* Khoá / Mở khoá */}
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          title={user.status === 'BLOCKED' ? 'Mở khoá tài khoản' : 'Khoá tài khoản'}
-                          style={{ color: user.status === 'BLOCKED' ? '#10b981' : '#f59e0b' }}
+                        {/* Khóa / Mở khóa */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={user.status === 'BLOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                          aria-label={`${user.status === 'BLOCKED' ? 'Mở khóa' : 'Khóa'} tài khoản ${user.username}`}
+                          icon={user.status === 'BLOCKED' ? <UnlockIcon /> : <LockIcon />}
                           onClick={() => handleToggleStatus(user)}
-                        >
-                          {user.status === 'BLOCKED' ? <UnlockIcon /> : <LockIcon />}
-                        </button>
+                        />
 
-                        {/* Xoá */}
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          title="Xoá tài khoản"
-                          style={{ color: '#ef4444' }}
+                        {/* Xóa */}
+                        <Button
+                          variant="ghost-danger"
+                          size="sm"
+                          title="Xóa tài khoản"
+                          aria-label={`Xóa tài khoản ${user.username}`}
+                          icon={<TrashIcon />}
                           onClick={() => handleDelete(user)}
-                        >
-                          <TrashIcon />
-                        </button>
+                        />
                       </div>
                     </td>
                   </tr>
@@ -410,21 +405,17 @@ const UserManagement = () => {
       {/* ─── Modal Thêm / Sửa ─── */}
       {isModalOpen && (
         <div className="modal-overlay" {...dialog.overlayProps}>
-          <div
-            className="modal-content admin-modal"
-            {...dialog.contentProps}
-            style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
-          >
+          <div className="modal-content admin-modal admin-modal--md" {...dialog.contentProps}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div className="admin-modal-header">
               <div>
-                <h2 id={dialog.titleId} style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '4px' }}>
+                <h2 id={dialog.titleId}>
                   {editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
                 </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                <p>
                   {editingUser
-                    ? `Đang sửa tài khoản: ${editingUser.username}`
-                    : 'Điền đầy đủ thông tin để tạo tài khoản mới'}
+                    ? `Tài khoản: ${editingUser.username}`
+                    : 'Trường có dấu * là bắt buộc.'}
                 </p>
               </div>
               <button type="button" onClick={closeModal} className="modal-close modal-close--inline modal-close--lg" aria-label="Đóng">
@@ -433,14 +424,14 @@ const UserManagement = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="auth-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <form onSubmit={handleSubmit} className="admin-form admin-form--grid">
 
               {/* Username — chỉ hiển thị khi thêm mới */}
               {!editingUser && (
                 <div className="form-group">
-                  <label className="form-label">Tên đăng nhập <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label className="form-label" htmlFor="user-username">Tên đăng nhập <span className="required-mark" aria-hidden="true">*</span></label>
                   <input
-                    type="text" name="username" className="input"
+                    id="user-username" type="text" name="username" className="input"
                     value={formData.username} onChange={handleInputChange}
                     required placeholder="Ví dụ: nguyenvana"
                   />
@@ -450,9 +441,9 @@ const UserManagement = () => {
               {/* Password — chỉ bắt buộc khi thêm mới */}
               {!editingUser && (
                 <div className="form-group">
-                  <label className="form-label">Mật khẩu <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label className="form-label" htmlFor="user-password">Mật khẩu <span className="required-mark" aria-hidden="true">*</span></label>
                   <input
-                    type="password" name="password" className="input"
+                    id="user-password" type="password" name="password" className="input"
                     value={formData.password} onChange={handleInputChange}
                     required minLength={6} placeholder="Tối thiểu 6 ký tự"
                   />
@@ -460,10 +451,10 @@ const UserManagement = () => {
               )}
 
               {/* Họ tên */}
-              <div className="form-group" style={editingUser ? {} : { gridColumn: 'span 2' }}>
-                <label className="form-label">Họ và tên</label>
+              <div className={`form-group${editingUser ? '' : ' span-full'}`}>
+                <label className="form-label" htmlFor="user-fullname">Họ và tên</label>
                 <input
-                  type="text" name="fullName" className="input"
+                  id="user-fullname" type="text" name="fullName" className="input"
                   value={formData.fullName} onChange={handleInputChange}
                   placeholder="Nguyễn Văn A"
                 />
@@ -471,9 +462,9 @@ const UserManagement = () => {
 
               {/* Email */}
               <div className="form-group">
-                <label className="form-label">Email</label>
+                <label className="form-label" htmlFor="user-email">Email</label>
                 <input
-                  type="email" name="email" className="input"
+                  id="user-email" type="email" name="email" className="input"
                   value={formData.email} onChange={handleInputChange}
                   placeholder="example@gmail.com"
                 />
@@ -481,9 +472,9 @@ const UserManagement = () => {
 
               {/* SĐT */}
               <div className="form-group">
-                <label className="form-label">Số điện thoại</label>
+                <label className="form-label" htmlFor="user-phone">Số điện thoại</label>
                 <input
-                  type="tel" name="phoneNumber" className="input"
+                  id="user-phone" type="tel" name="phoneNumber" className="input"
                   value={formData.phoneNumber} onChange={handleInputChange}
                   placeholder="0901234567"
                 />
@@ -491,8 +482,8 @@ const UserManagement = () => {
 
               {/* Giới tính */}
               <div className="form-group">
-                <label className="form-label">Giới tính</label>
-                <select name="gender" className="input" value={formData.gender} onChange={handleInputChange}>
+                <label className="form-label" htmlFor="user-gender">Giới tính</label>
+                <select id="user-gender" name="gender" className="input" value={formData.gender} onChange={handleInputChange}>
                   {GENDER_OPTIONS.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -501,46 +492,38 @@ const UserManagement = () => {
 
               {/* Ngày sinh */}
               <div className="form-group">
-                <label className="form-label">Ngày sinh</label>
+                <label className="form-label" htmlFor="user-dob">Ngày sinh</label>
                 <input
-                  type="date" name="dob" className="input"
+                  id="user-dob" type="date" name="dob" className="input"
                   value={formData.dob} onChange={handleInputChange}
                 />
               </div>
 
               {/* Vai trò — chỉ admin mới assign */}
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Vai trò</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
+              <fieldset className="form-group span-full">
+                <legend className="form-label">Vai trò</legend>
+                <div className="admin-choice-group">
                   {roleOptions.map(o => (
-                    <label key={o.value} style={{
-                      display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                      flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-md)',
-                      border: `2px solid ${formData.role === o.value ? 'var(--accent)' : 'var(--border)'}`,
-                      background: formData.role === o.value ? 'var(--accent-glow)' : 'transparent',
-                      transition: 'all 0.2s',
-                    }}>
+                    <label
+                      key={o.value}
+                      className={`admin-choice${formData.role === o.value ? ' is-checked' : ''}`}
+                    >
                       <input
                         type="radio" name="role" value={o.value}
                         checked={formData.role === o.value}
                         onChange={handleInputChange}
-                        style={{ accentColor: 'var(--accent)' }}
                       />
-                      <span style={{
-                        fontWeight: 600, fontSize: '0.85rem',
-                        color: formData.role === o.value ? 'var(--accent)' : 'var(--text-secondary)',
-                      }}>
-                        {o.label}
-                      </span>
+                      <span>{o.label}</span>
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               {['MANAGER', 'STAFF'].includes(formData.role) && (
-                <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="form-label">Chi nhánh quản lý</label>
+                <div className="form-group span-full">
+                  <label className="form-label" htmlFor="user-branch">Chi nhánh quản lý</label>
                   <select
+                    id="user-branch"
                     name="branchId"
                     className="input"
                     value={formData.branchId}
@@ -558,13 +541,11 @@ const UserManagement = () => {
               )}
 
               {/* Buttons */}
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
-                  {submitting ? 'Đang lưu...' : editingUser ? 'Lưu thay đổi' : 'Tạo tài khoản'}
-                </button>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={closeModal}>
-                  Huỷ bỏ
-                </button>
+              <div className="admin-form-actions span-full">
+                <Button onClick={closeModal}>Hủy</Button>
+                <Button type="submit" variant="primary" disabled={submitting}>
+                  {submitting ? 'Đang lưu...' : editingUser ? 'Lưu tài khoản' : 'Tạo tài khoản'}
+                </Button>
               </div>
             </form>
           </div>
@@ -575,17 +556,17 @@ const UserManagement = () => {
         open={Boolean(confirmState)}
         title={
           confirmState?.type === 'DELETE'
-            ? 'Xoá tài khoản người dùng'
+            ? 'Xóa tài khoản người dùng'
             : confirmState?.payload?.status === 'BLOCKED'
-              ? 'Mở khoá tài khoản'
-              : 'Khoá tài khoản'
+              ? 'Mở khóa tài khoản'
+              : 'Khóa tài khoản'
         }
         message={
           confirmState?.type === 'DELETE'
-            ? `Bạn có chắc chắn muốn xoá tài khoản "${confirmState?.payload?.username}"?\nHành động này không thể hoàn tác.`
+            ? `Bạn có chắc chắn muốn xóa tài khoản "${confirmState?.payload?.username}"?\nHành động này không thể hoàn tác.`
             : confirmState?.payload?.status === 'BLOCKED'
-              ? `Mở khoá hoạt động cho tài khoản "${confirmState?.payload?.username}"?`
-              : `Khoá quyền truy cập của tài khoản "${confirmState?.payload?.username}"?`
+              ? `Mở khóa hoạt động cho tài khoản "${confirmState?.payload?.username}"?`
+              : `Khóa quyền truy cập của tài khoản "${confirmState?.payload?.username}"?`
         }
         confirmText="Xác nhận"
         variant={

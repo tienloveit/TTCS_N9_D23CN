@@ -50,6 +50,15 @@
   width: 100%;
 }
 
+/* Nút chỉ có icon (Button tự thêm class khi không có chữ): vuông, không padding ngang thừa */
+.btn.btn-icon-only {
+  padding: 8px;
+}
+
+.btn.btn-sm.btn-icon-only {
+  padding: 7px;
+}
+
 /* ---------- Badge ---------- */
 .badge {
   display: inline-flex;
