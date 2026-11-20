@@ -336,7 +336,7 @@ export default function SeatSelectPage() {
     { label: 'Suất chiếu', done: true },
     { label: 'Chọn ghế', active: bookingStep === 1, done: bookingStep > 1 },
     { label: 'Bắp nước', active: bookingStep === 2, done: bookingStep > 2 },
-    { label: 'Thu tiền & Xuất vé' },
+    { label: 'Thanh toán' },
   ];
 
   return (

@@ -1,8 +1,17 @@
+import Button from './Button';
 import { AlertTriangleIcon, XIcon } from './CinemaIcons';
 import useModalDialog from './useModalDialog';
 
+const CONFIRM_VARIANT = {
+  danger: 'danger',
+  warning: 'primary',
+  primary: 'primary',
+};
+
 /**
- * Reusable accessible confirmation modal to replace native browser window.confirm()
+ * Hộp xác nhận thay cho window.confirm(): có Esc, giữ focus và trả focus khi đóng.
+ * - variant: danger | warning | primary (màu icon và nút xác nhận)
+ * - message: chuỗi hoặc phần tử React
  */
 const ConfirmDialog = ({
   open,
@@ -10,7 +19,7 @@ const ConfirmDialog = ({
   message = 'Bạn có chắc chắn muốn thực hiện thao tác này?',
   confirmText = 'Xác nhận',
   cancelText = 'Hủy bỏ',
-  variant = 'danger', // 'danger' | 'warning' | 'primary'
+  variant = 'danger',
   loading = false,
   onConfirm,
   onCancel,
@@ -19,50 +28,15 @@ const ConfirmDialog = ({
 
   if (!open) return null;
 
-  const isDanger = variant === 'danger';
-
   return (
     <div className="modal-overlay" {...dialog.overlayProps}>
-      <div
-        className="modal-content admin-modal"
-        {...dialog.contentProps}
-        style={{
-          maxWidth: 460,
-          height: 'auto',
-          aspectRatio: 'unset',
-          padding: 28,
-          borderRadius: 'var(--radius-lg)',
-          background: 'var(--bg-card)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 12,
-            marginBottom: 14,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                background: isDanger ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.14)',
-                color: isDanger ? '#dc2626' : '#d97706',
-              }}
-            >
+      <div className="modal-content confirm-dialog" {...dialog.contentProps}>
+        <div className="confirm-dialog-header">
+          <div className="confirm-dialog-title">
+            <div className={`confirm-dialog-icon confirm-dialog-icon--${variant}`} aria-hidden="true">
               <AlertTriangleIcon size={20} />
             </div>
-            <h3 id={dialog.titleId} style={{ margin: 0, fontSize: '1.12rem', fontWeight: 700 }}>
-              {title}
-            </h3>
+            <h3 id={dialog.titleId}>{title}</h3>
           </div>
           <button
             type="button"
@@ -75,40 +49,15 @@ const ConfirmDialog = ({
           </button>
         </div>
 
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            fontSize: '0.92rem',
-            lineHeight: 1.55,
-            margin: '0 0 22px',
-            whiteSpace: 'pre-line',
-          }}
-        >
-          {message}
-        </p>
+        <p className="confirm-dialog-message">{message}</p>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onCancel}
-            disabled={loading}
-          >
+        <div className="confirm-dialog-actions">
+          <Button onClick={onCancel} disabled={loading}>
             {cancelText}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={
-              isDanger
-                ? { background: '#dc2626', borderColor: '#dc2626', color: '#fff' }
-                : undefined
-            }
-            onClick={onConfirm}
-            disabled={loading}
-          >
+          </Button>
+          <Button variant={CONFIRM_VARIANT[variant] || 'primary'} onClick={onConfirm} disabled={loading}>
             {loading ? 'Đang xử lý...' : confirmText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -116,4 +65,3 @@ const ConfirmDialog = ({
 };
 
 export default ConfirmDialog;
-
