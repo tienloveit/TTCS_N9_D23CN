@@ -12,6 +12,9 @@ import {
   TimerIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { formatDate, formatTime, parseLocalDateTime } from '../../utils/cinemaTime';
+
+const secondsUntil = (timestampMs) => Math.max(0, Math.floor((timestampMs - Date.now()) / 1000));
 
 export default function PaymentPage() {
   const { bookingId } = useParams();
@@ -23,6 +26,8 @@ export default function PaymentPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(null);
+  // undefined = đang tải, null = backend không trả hạn giữ ghế.
+  const [expiresAtMs, setExpiresAtMs] = useState(undefined);
   const [promoCode, setPromoCode] = useState('');
   const [promoError, setPromoError] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
@@ -64,15 +69,18 @@ export default function PaymentPage() {
           return;
         }
 
-        const expiry = data.expiresAt
-          ? new Date(data.expiresAt).getTime()
-          : new Date(data.createdAt).getTime() + 6 * 60 * 1000;
-        const now = new Date().getTime();
-        const initialTime = Math.max(0, Math.floor((expiry - now) / 1000));
+        // Hạn giữ ghế do backend quyết định (booking.holdMinutes); không tự ước tính.
+        const expiry = parseLocalDateTime(data.expiresAt);
+        if (!expiry) {
+          setExpiresAtMs(null);
+          return;
+        }
 
+        const initialTime = secondsUntil(expiry.getTime());
         if (initialTime <= 0) {
           handleCancel(true);
         } else {
+          setExpiresAtMs(expiry.getTime());
           setTimeLeft(initialTime);
         }
       })
@@ -81,38 +89,23 @@ export default function PaymentPage() {
   }, [bookingId, handleCancel, navigate]);
 
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) {
-      if (timeLeft === 0) handleCancel(true);
-      return undefined;
-    }
+    if (expiresAtMs === null) return undefined;
 
+    // Tính lại từ mốc hết hạn mỗi lần để không bị lệch khi tab bị trình duyệt tạm dừng.
     const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
+      const remaining = secondsUntil(expiresAtMs);
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        handleCancel(true);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, handleCancel]);
+  }, [expiresAtMs, handleCancel]);
 
-  const parseLocalDateTime = (dateStr) => {
-    if (!dateStr) return null;
-    const [datePart, timePart] = dateStr.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hour, minute);
-  };
-
-  const formatShowtime = (dateStr) => {
-    const date = parseLocalDateTime(dateStr);
-    if (!date) return '-';
-
-    const dd = date.getDate().toString().padStart(2, '0');
-    const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-    const yyyy = date.getFullYear();
-    const hh = date.getHours().toString().padStart(2, '0');
-    const min = date.getMinutes().toString().padStart(2, '0');
-
-    return `${hh}:${min} - ${dd}/${mm}/${yyyy}`;
-  };
+  const formatShowtime = (dateStr) =>
+    parseLocalDateTime(dateStr) ? `${formatTime(dateStr)} - ${formatDate(dateStr)}` : '-';
 
   const formatTimeLimit = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -237,7 +230,20 @@ export default function PaymentPage() {
         <div className="pay-layout" style={{ marginTop: 12 }}>
           {/* ===== LEFT COLUMN: Timer + Promotions + Payment Method ===== */}
           <div className="pay-main">
-            {timeLeft !== null && (
+            {expiresAtMs === null && (
+              <div className="pay-timer-banner" role="status">
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.95rem' }}>
+                    Chưa xác định được hạn giữ ghế
+                  </strong>
+                  <span style={{ fontSize: '0.82rem', opacity: 0.9 }}>
+                    Hệ thống sẽ kiểm tra lại khi bạn thanh toán. Vui lòng hoàn tất sớm.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {expiresAtMs !== null && timeLeft !== null && (
               <div className={`pay-timer-banner ${isUrgent ? 'is-urgent' : ''}`} role="timer" aria-live="polite">
                 <div>
                   <strong style={{ display: 'block', fontSize: '0.95rem' }}>
@@ -415,7 +421,13 @@ export default function PaymentPage() {
               className="btn btn-primary"
               style={{ width: '100%', height: 52, fontSize: '1.02rem' }}
               onClick={handleVNPayPayment}
-              disabled={paying || cancelling || applyingPromo || timeLeft === null || timeLeft <= 0}
+              disabled={
+                paying ||
+                cancelling ||
+                applyingPromo ||
+                expiresAtMs === undefined ||
+                (expiresAtMs !== null && (timeLeft === null || timeLeft <= 0))
+              }
             >
               <CreditCardIcon size={18} />
               {paying ? 'Đang chuyển hướng VNPay...' : 'Thanh toán qua VNPay'}

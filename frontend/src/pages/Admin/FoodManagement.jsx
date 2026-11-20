@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { foodApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
 
 const formatCurrency = (amount) =>
@@ -22,6 +23,7 @@ const FoodManagement = () => {
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const dialog = useModalDialog(isModalOpen, () => handleCloseModal());
   const [editingFood, setEditingFood] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -331,10 +333,10 @@ const FoodManagement = () => {
 
       {/* Food Modal */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
+        <div className="modal-overlay" {...dialog.overlayProps}>
           <div
             className="modal-content admin-modal"
-            onClick={(e) => e.stopPropagation()}
+            {...dialog.contentProps}
             style={{
               maxWidth: '600px',
               maxHeight: '90vh',
@@ -350,14 +352,13 @@ const FoodManagement = () => {
                 marginBottom: '24px',
               }}
             >
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+              <h2 id={dialog.titleId} style={{ fontSize: '1.5rem', fontWeight: 800 }}>
                 {editingFood ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="modal-close"
-                style={{ position: 'static', width: 34, height: 34 }}
+                className="modal-close modal-close--inline modal-close--lg"
                 aria-label="Đóng"
               >
                 <XIcon size={18} />

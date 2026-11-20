@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { bookingApi, foodApi, ticketApi, showtimeApi, movieApi } from '../../api';
@@ -7,6 +8,14 @@ import { API_BASE_URL } from '../../api/axiosClient';
 import { useAuth } from '../../context/useAuth';
 import BookingReceipt from '../../components/Common/BookingReceipt';
 import { CheckIcon, ClockIcon, RotateCcwIcon } from '../../components/Common/CinemaIcons';
+import {
+  formatDate as formatCinemaDate,
+  formatTime as formatCinemaTime,
+  getCinemaWeekday,
+} from '../../utils/cinemaTime';
+
+// Khớp message của ErrorCode.SHOWTIME_NOT_FOUND ở backend.
+const SHOWTIME_UNAVAILABLE_MESSAGE = 'Showtime does not exist';
 
 export default function SeatSelectPage() {
   const { showtimeId } = useParams();
@@ -179,17 +188,13 @@ export default function SeatSelectPage() {
   const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
 
   // Format time from ISO string
-  const formatTime = (isoStr) => {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
+  const formatTime = (isoStr) => (isoStr ? formatCinemaTime(isoStr) : '');
 
   const formatDate = (isoStr) => {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
+    const weekday = getCinemaWeekday(isoStr);
+    if (weekday === null) return '';
     const weekdays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-    return `${weekdays[d.getDay()]}, ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+    return `${weekdays[weekday]}, ${formatCinemaDate(isoStr)}`;
   };
 
   const toggleSeat = (ticket) => {
@@ -280,11 +285,11 @@ export default function SeatSelectPage() {
       const bookingData = res.data.result;
       navigate(`/booking/${bookingData.bookingId}/payment`);
     } catch (err) {
-      const code = err.response?.data?.code;
       const msg = err.response?.data?.message || '';
-      // Showtime đã bị xóa hoặc đã đóng → quay lại chọn suất
-      if (code === 1012 || msg.toLowerCase().includes('showtime')) {
-        alert('Suất chiếu này không còn khả dụng. Vui lòng chọn suất chiếu khác.');
+      // ErrorCode.SHOWTIME_NOT_FOUND: suất đã xóa/đóng/hủy, phim ẩn hoặc phòng/rạp ngừng hoạt động.
+      // Backend dùng chung code 400 cho nhiều lỗi nên phân biệt bằng message chính xác.
+      if (msg === SHOWTIME_UNAVAILABLE_MESSAGE) {
+        toast.error('Suất chiếu này không còn khả dụng. Vui lòng chọn suất chiếu khác.');
         navigate(-1);
       } else {
         setError(msg || 'Đặt vé thất bại. Vui lòng thử lại.');

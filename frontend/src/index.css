@@ -2629,6 +2629,29 @@ select:disabled {
   transform: scale(1.2) rotate(90deg);
 }
 
+/* Nút đóng nằm trong header của modal dạng form (không nổi phía trên như modal trailer).
+   Selector ghép để luôn thắng .modal-close gốc. */
+.modal-close.modal-close--inline {
+  position: static;
+  width: 32px;
+  height: 32px;
+}
+
+.modal-close.modal-close--inline.modal-close--lg {
+  width: 34px;
+  height: 34px;
+}
+
+/* Icon nằm bên trái trong ô nhập (ô tìm kiếm có padding-left chừa chỗ). */
+.input-leading-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
 /* ==================== HERO BANNER ==================== */
 
 .hero-banner {

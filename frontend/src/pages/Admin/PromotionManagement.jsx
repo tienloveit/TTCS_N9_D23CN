@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { promotionApi, branchApi } from '../../api';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
+import { formatDateTime as formatCinemaDateTime } from '../../utils/cinemaTime';
 
 const TIER_OPTIONS = [
   { value: '', label: 'Tất cả hạng' },
@@ -19,8 +21,7 @@ const formatCurrency = (amount) =>
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  return formatCinemaDateTime(dateStr);
 };
 
 const toDateTimeLocal = (dateStr) => {
@@ -37,6 +38,7 @@ const PromotionManagement = () => {
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, code }
   const [deleting, setDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const dialog = useModalDialog(isModalOpen, () => handleCloseModal());
   const [editingPromo, setEditingPromo] = useState(null);
   const [formData, setFormData] = useState({
     code: '', description: '', discountPercent: '', maxDiscount: '', minOrderAmount: '',
@@ -201,7 +203,7 @@ const PromotionManagement = () => {
           <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 300px' }}>
             <SearchIcon
               size={16}
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+              className="input-leading-icon"
             />
             <input
               type="text"
@@ -293,12 +295,12 @@ const PromotionManagement = () => {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-content admin-modal" onClick={(e) => e.stopPropagation()}
+        <div className="modal-overlay" {...dialog.overlayProps}>
+          <div className="modal-content admin-modal" {...dialog.contentProps}
             style={{ maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{editingPromo ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h2>
-              <button type="button" onClick={handleCloseModal} className="modal-close" style={{ position: 'static', width: 34, height: 34 }} aria-label="Đóng">
+              <h2 id={dialog.titleId} style={{ fontSize: '1.5rem', fontWeight: 800 }}>{editingPromo ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h2>
+              <button type="button" onClick={handleCloseModal} className="modal-close modal-close--inline modal-close--lg" aria-label="Đóng">
                 <XIcon size={18} />
               </button>
             </div>

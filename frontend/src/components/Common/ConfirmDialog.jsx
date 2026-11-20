@@ -1,4 +1,5 @@
 import { AlertTriangleIcon, XIcon } from './CinemaIcons';
+import useModalDialog from './useModalDialog';
 
 /**
  * Reusable accessible confirmation modal to replace native browser window.confirm()
@@ -14,21 +15,17 @@ const ConfirmDialog = ({
   onConfirm,
   onCancel,
 }) => {
+  const dialog = useModalDialog(Boolean(open), onCancel, { disabled: loading });
+
   if (!open) return null;
 
   const isDanger = variant === 'danger';
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={loading ? undefined : onCancel}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-    >
+    <div className="modal-overlay" {...dialog.overlayProps}>
       <div
         className="modal-content admin-modal"
-        onClick={(e) => e.stopPropagation()}
+        {...dialog.contentProps}
         style={{
           maxWidth: 460,
           height: 'auto',
@@ -63,14 +60,13 @@ const ConfirmDialog = ({
             >
               <AlertTriangleIcon size={20} />
             </div>
-            <h3 id="confirm-dialog-title" style={{ margin: 0, fontSize: '1.12rem', fontWeight: 800 }}>
+            <h3 id={dialog.titleId} style={{ margin: 0, fontSize: '1.12rem', fontWeight: 800 }}>
               {title}
             </h3>
           </div>
           <button
             type="button"
-            className="modal-close"
-            style={{ position: 'static', width: 32, height: 32 }}
+            className="modal-close modal-close--inline"
             onClick={onCancel}
             disabled={loading}
             aria-label="Đóng"
