@@ -1,6 +1,6 @@
 # MoviePTIT — Context toàn dự án
 
-Đối chiếu mã nguồn ngày **2026-11-19** tại commit `9d84c88`. MoviePTIT là hệ thống đặt vé rạp phim gồm website khách hàng, quầy bán vé và khu quản trị.
+Đối chiếu mã nguồn ngày **2026-11-20** tại commit `685f713`, gồm cả thay đổi xác thực JWT bằng `JwtAuthenticationFilter` đang có trong working tree. MoviePTIT là hệ thống đặt vé rạp phim gồm website khách hàng, quầy bán vé và khu quản trị.
 
 - [README](README.md) hướng dẫn cài đặt, cấu hình, chạy và tạo dữ liệu demo.
 - [Context backend](backend/CLAUDE.md) mô tả REST API, quyền, dữ liệu, transaction, tích hợp và migration.
@@ -33,7 +33,7 @@ Route guard điều hướng giao diện. Backend xác thực JWT, kiểm tra ro
 
 ## Luồng liên tầng
 
-1. **Đăng nhập**. UI lưu cặp access/refresh token, Axios gắn Bearer token. Các request 401 đồng thời dùng chung một lần refresh. Backend phân loại token bằng `token_use` và tiêu thụ refresh token một lần bằng Redis.
+1. **Đăng nhập**. UI lưu cặp access/refresh token, Axios gắn Bearer token. Các request 401 đồng thời dùng chung một lần refresh. Backend xác minh Bearer token trong `JwtAuthenticationFilter`, phân loại token bằng `token_use` và tiêu thụ refresh token một lần bằng Redis.
 2. **Tìm suất chiếu**. Khách đi từ phim hoặc chi nhánh đến suất chiếu. `ShowtimeService` tạo ticket cho từng ghế trong phòng khi tạo suất. Công nghệ phòng và định dạng chiếu là hai thuộc tính riêng.
 3. **Đặt và thanh toán**. Backend tính giá, kiểm tra quyền/phạm vi, khóa ticket trong DB và giữ ghế ở Redis theo mã booking. Đơn online chờ VNPay, tiền mặt tại quầy có thể hoàn tất ngay. `BookingPaidEvent` dẫn tới cập nhật hạng thành viên và gửi vé sau commit.
 4. **Hủy và hết hạn**. Backend trả ghế và hoàn tồn bắp nước cho đơn chờ bị hủy/hết hạn. Job dọn hết hạn chạy mỗi 120 giây. TTL giữ ghế mặc định 6 phút, giới hạn mặc định 8 vé mỗi giao dịch.

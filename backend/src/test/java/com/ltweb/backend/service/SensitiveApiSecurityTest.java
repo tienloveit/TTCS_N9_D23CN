@@ -3,11 +3,20 @@ package com.ltweb.backend.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ltweb.backend.config.*;
+import com.ltweb.backend.controller.AuthController;
 import com.ltweb.backend.controller.CleanupController;
+import com.ltweb.backend.controller.MovieController;
+import com.ltweb.backend.controller.UserController;
 import com.ltweb.backend.controller.VnpayController;
+import com.ltweb.backend.dto.response.UserResponse;
+import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.UserRole;
+import java.time.Clock;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,13 +25,18 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.registration.*;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.FilterChainProxy;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -126,6 +140,86 @@ class SensitiveApiSecurityTest {
             });
   }
 
+  @Test
+  void customFilterAuthenticatesSignedAccessTokensAndRejectsInvalidBearerCredentials() {
+    context("default", false)
+        .run(
+            ctx -> {
+              FilterChainProxy chain = ctx.getBean(FilterChainProxy.class);
+              assertThat(chain.getFilters("/my-info"))
+                  .filteredOn(JwtAuthenticationFilter.class::isInstance)
+                  .hasSize(1);
+              assertThat(chain.getFilters("/my-info"))
+                  .noneMatch(BearerTokenAuthenticationFilter.class::isInstance);
+
+              String secret = "synthetic-filter-test-key-".repeat(4);
+              JwtService jwtService =
+                  new JwtService(Clock.systemUTC(), mock(StringRedisTemplate.class));
+              JwtDecoderConfig decoder = new JwtDecoderConfig(jwtService);
+              ReflectionTestUtils.setField(jwtService, "secretKey", secret);
+              ReflectionTestUtils.setField(decoder, "secretKey", secret);
+              doAnswer(call -> decoder.decode(call.getArgument(0)))
+                  .when(ctx.getBean(JwtDecoderConfig.class))
+                  .decode(anyString());
+              User user = User.builder().username("customer").role(UserRole.USER).build();
+              String accessToken = jwtService.generateAccessToken(user).getToken();
+              String refreshToken = jwtService.generateRefreshToken(user).getToken();
+              UserService users = AopTestUtils.getTargetObject(ctx.getBean(UserService.class));
+              when(users.getMyInfo())
+                  .thenReturn(UserResponse.builder().username(user.getUsername()).build());
+
+              MockMvc mvc = mockMvc(ctx.getSourceApplicationContext(), chain);
+              mvc.perform(request("GET", "/my-info", accessToken))
+                  .andExpect(status().isOk())
+                  .andExpect(jsonPath("$.result.username").value("customer"));
+              for (String invalidToken : new String[] {null, refreshToken, "malformed bearer"}) {
+                mvc.perform(request("GET", "/my-info", invalidToken))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
+              }
+              mvc.perform(request("POST", "/v1/vnpay/querydr", accessToken).content("{}"))
+                  .andExpect(status().isForbidden())
+                  .andExpect(header().exists(HttpHeaders.WWW_AUTHENTICATE));
+            });
+  }
+
+  @Test
+  void publicMovieAndAuthRoutesAllowRequestsWithoutBearerTokens() {
+    context("default", false)
+        .run(
+            ctx -> {
+              MockMvc mvc =
+                  mockMvc(ctx.getSourceApplicationContext(), ctx.getBean(FilterChainProxy.class));
+              mvc.perform(request("GET", "/movie/now-showing", null)).andExpect(status().isOk());
+              mvc.perform(request("POST", "/auth/login", null).content("{}"))
+                  .andExpect(status().isOk());
+              mvc.perform(
+                      request("POST", "/auth/refresh", null)
+                          .content("{\"refreshToken\":\"submitted-token\"}"))
+                  .andExpect(status().isOk());
+              verify(ctx.getBean(MovieService.class)).getNowShowingMovies();
+              verify(ctx.getBean(AuthService.class)).login(any());
+              verify(ctx.getBean(AuthService.class)).refresh("submitted-token");
+            });
+  }
+
+  @Test
+  void googleAuthorizationAndCallbackStillReachOAuth2Filters() {
+    context("default", false)
+        .run(
+            ctx -> {
+              MockMvc mvc =
+                  mockMvc(ctx.getSourceApplicationContext(), ctx.getBean(FilterChainProxy.class));
+              mvc.perform(request("GET", "/oauth2/authorization/google", null))
+                  .andExpect(status().is3xxRedirection());
+              mvc.perform(
+                  request("GET", "/login/oauth2/code/google", null)
+                      .param("error", "access_denied"));
+              verify(ctx.getBean(OAuth2LoginFailureHandler.class))
+                  .onAuthenticationFailure(any(), any(), any());
+            });
+  }
+
   private MockHttpServletRequestBuilder request(String method, String path, String role) {
     SecurityContextHolder.clearContext();
     MockHttpServletRequestBuilder request =
@@ -145,8 +239,30 @@ class SensitiveApiSecurityTest {
 
   @Configuration(proxyBeanMethods = false)
   @EnableWebMvc
-  @Import({SecurityConfig.class, CleanupController.class, VnpayController.class})
+  @Import({
+    SecurityConfig.class,
+    AuthController.class,
+    CleanupController.class,
+    MovieController.class,
+    UserController.class,
+    VnpayController.class
+  })
   static class TestConfig {
+    @Bean
+    AuthService auth() {
+      return mock(AuthService.class);
+    }
+
+    @Bean
+    MovieService movies() {
+      return mock(MovieService.class);
+    }
+
+    @Bean
+    UserService users() {
+      return mock(UserService.class);
+    }
+
     @Bean
     CustomUserDetailService userDetailsService() {
       return mock(CustomUserDetailService.class);
