@@ -1,12 +1,22 @@
+# Build output
 target/
 node_modules/
+dist/
+
+# Local configuration and secrets
 .env
 .env.*
 !.env.example
+
+# IDE and local AI/tooling state
 .idea/
-.ai/mcp/
-.claude/
 .vscode/
+.claude/
+.ai/
+.gitnexus/
+.tmp/
+
+# Runtime files
 *.log
 backend/module/
 uploads/
