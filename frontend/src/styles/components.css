@@ -1,0 +1,81 @@
+/* ============================================================
+   Component dùng chung: Button, Badge
+   React: components/Common/Button.jsx, components/Common/Badge.jsx
+   .btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-sm, .btn-lg nằm ở index.css;
+   file này bổ sung biến thể còn thiếu và trạng thái chung.
+   ============================================================ */
+
+/* ---------- Button ---------- */
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: var(--ink-inverse);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-strong);
+  color: var(--ink-inverse);
+}
+
+/* Nút chỉ có icon trong bảng: chữ đỏ, nền nhạt khi hover */
+.btn-ghost-danger {
+  background: transparent;
+  color: var(--danger);
+}
+
+.btn-ghost-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+}
+
+.btn-xs {
+  padding: 5px 8px;
+  font-size: var(--fs-xs);
+  gap: var(--space-1);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---------- Badge ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-body);
+  white-space: nowrap;
+}
+
+.badge--dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Mọi tone đạt ≥ 4.5:1 giữa chữ và nền */
+.badge--success { background: var(--success-soft); color: var(--success); }
+.badge--warning { background: var(--warning-soft); color: var(--warning); }
+.badge--danger { background: var(--danger-soft); color: var(--danger); }
+.badge--info { background: var(--info-soft); color: var(--info); }
+.badge--brand { background: var(--brand-soft); color: var(--brand); }

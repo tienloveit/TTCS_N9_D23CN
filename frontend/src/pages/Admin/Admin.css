@@ -775,19 +775,145 @@
   background: currentColor;
 }
 
+/* Cùng màu với Badge tone success/danger/warning (styles/components.css) */
 .status--active {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--green);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .status--inactive {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .status--pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--gold);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* ---------- Bộ khung modal và form quản trị ----------
+   Dùng với .modal-content và useModalDialog:
+   <div className="modal-content admin-modal">
+     <div className="admin-modal-header"><h2/>…nút đóng</div>
+     <form className="admin-form">…<div className="admin-form-actions">…</div></form>
+   </div> */
+.modal-content.admin-modal {
+  width: min(600px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.modal-content.admin-modal--md {
+  width: min(650px, 100%);
+}
+
+.admin-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+}
+
+.admin-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Hai hoặc ba trường trên một hàng, tự xuống dòng khi hẹp */
+.admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.admin-form-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.admin-form-actions > .btn {
+  flex: 1;
+}
+
+/* ---------- Bảng và thanh công cụ ---------- */
+.page-header--split {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.page-header-actions,
+.admin-toolbar-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-section-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.admin-table-card--spaced {
+  margin-bottom: 28px;
+}
+
+.admin-table-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.admin-table .cell-index {
+  color: var(--text-muted);
+}
+
+.admin-table .cell-strong {
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.admin-table .cell-truncate {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-search {
+  position: relative;
+  min-width: 200px;
+}
+
+.input.input-sm {
+  height: 36px;
+  padding-block: 0;
+  font-size: var(--fs-sm);
+}
+
+.admin-table .movie-badge {
+  white-space: nowrap;
+}
+
+.admin-search .input {
+  padding-left: 36px;
+}
+
+.input.input-auto {
+  width: auto;
 }
 
 /* ---------- Sidebar Overlay (mobile) ---------- */
