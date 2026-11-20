@@ -1,6 +1,6 @@
 # MoviePTIT — Backend Context
 
-Đối chiếu mã nguồn ngày **2026-11-19**. Xem [context toàn dự án](../CLAUDE.md), [context frontend](../frontend/CLAUDE.md) và [hướng dẫn AI cho backend](AGENTS.md).
+Đối chiếu mã nguồn ngày **2026-11-20** (commit `685f713` cùng thay đổi `JwtAuthenticationFilter`/`SecurityConfig` chưa commit). Xem [context toàn dự án](../CLAUDE.md), [context frontend](../frontend/CLAUDE.md) và [hướng dẫn AI cho backend](AGENTS.md).
 
 ## Runtime và cấu hình
 
@@ -12,6 +12,7 @@ Java **21**, Spring Boot **3.4.0**, Maven; Spring Web, Security/OAuth2 Resource 
 | MySQL | `jdbc:mysql://localhost:3306/cinema`, user `root` |
 | Redis | `localhost:6379` |
 | JPA | `ddl-auto: update`, bật SQL log |
+| Cache | `spring.cache.type: redis`. `TicketService` cố ý không cache trạng thái ghế vì cần đọc khóa Redis theo thời gian thực |
 | Email | Gmail SMTP, cổng 587, STARTTLS |
 | OAuth2 | Google; redirect frontend `/oauth2/callback` |
 | VNPay | Sandbox; frontend return `/payment/vnpay-return` |
@@ -102,6 +103,8 @@ Entity dùng PK `id`. Các ràng buộc đáng chú ý: room `(branch_id, code)`
 
 JWT HS512; access token 30 phút (`token_use=access`), refresh token 30 ngày (`token_use=refresh`). Hai loại token không dùng thay nhau. Xác minh thuật toán, chữ ký và claim bắt buộc (`sub`, `jti`, `iat`, `exp`, `role`, `token_use`) trước khi truy cập Redis; token lỗi trả lỗi xác thực có kiểm soát.
 
+`JwtAuthenticationFilter` (trong `config`) đọc Bearer token bằng `DefaultBearerTokenResolver`, chuyển cho `JwtAuthenticationProvider` dùng `JwtDecoderConfig` và `jwtAuthenticationConverter` để xác minh, rồi lưu kết quả vào `SecurityContext` của request qua `RequestAttributeSecurityContextRepository` (không dùng session). `SecurityConfig` đăng ký filter bằng `addFilterAt(..., BearerTokenAuthenticationFilter.class)` thay cho cấu hình `oauth2ResourceServer`, nên chuỗi filter không còn `BearerTokenAuthenticationFilter`. Khi request thiếu Bearer token, filter chuyển tiếp để các quy tắc truy cập quyết định; nhờ vậy route public và luồng Google OAuth2 (`/oauth2/authorization/google`, `/login/oauth2/code/google`) vẫn chạy bình thường. Header Bearer sai định dạng, refresh token dùng làm access token hoặc token không hợp lệ trả JSON `401` (`code: 401`) qua `JwtAuthenticationEntryPoint`. Request đã xác thực JWT nhưng thiếu role nhận `403` từ `BearerTokenAccessDeniedHandler`, kèm header `WWW-Authenticate`.
+
 - Refresh đang hoạt động lưu ở `auth:refresh:active:{jti}`, giá trị là username, TTL đến thời điểm token hết hạn. Refresh dùng Lua compare-and-delete nguyên tử, chỉ một request dùng được token cũ, rồi cấp/lưu cặp mới. Tài khoản BLOCKED/INACTIVE không được cấp token mới qua refresh.
 - Logout blacklist access token ở `auth:access:revoked:{jti}` đến khi hết hạn. Access token bị thu hồi không thể dùng để refresh. Logout hiện thu hồi access token được gửi lên, không thu hồi mọi refresh session của tài khoản.
 - `RedisToken`/`RedisTokenRepository` là mô hình cũ, không còn được luồng auth mới sử dụng. Không cần xóa dữ liệu Redis cũ để cập nhật; token thiếu `token_use` bị từ chối, người dùng cần đăng nhập lại sau triển khai.
@@ -109,7 +112,7 @@ JWT HS512; access token 30 phút (`token_use=access`), refresh token 30 ngày (`
 
 OTP dùng SecureRandom tạo chuỗi 6 chữ số, TTL 5 phút, key `otp:code:{email}`. Bộ đếm `otp:limit:{email}` từ chối khi vượt 5 lần; TTL bộ đếm được đặt lại 1 phút sau mỗi lần increment.
 
-`SecurityConfig` cho public các endpoint đăng ký/đăng nhập/refresh/quên mật khẩu, OAuth2, callback VNPay, WebSocket và một số GET danh mục. Cleanup yêu cầu ADMIN và điều kiện môi trường ở trên. GET public ở filter vẫn có thể bị chặn bởi method security. Các route khác yêu cầu auth; đọc cả controller lẫn service để xác định quyền đầy đủ.
+`SecurityConfig` cho public `/sign-up`, `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/oauth2/**`, `/login/oauth2/**`, `/v1/vnpay/return`, `/v1/vnpay/ipn`, `/ws/**` và GET dưới `/movie`, `/showtime`, `/ticket/showtime`, `/genre`, `/director`, `/food`, `/branch`, `/room`. Cleanup yêu cầu ADMIN và điều kiện môi trường ở trên. Route public ở filter vẫn có thể bị chặn bởi method security, ví dụ `GET /showtime/today` (ADMIN/STAFF), `GET /room/**`, `GET /food/all`, `GET /branch/{id}` (ADMIN/MANAGER) và `POST /user` (ADMIN/MANAGER). Các route khác yêu cầu auth; đọc cả controller lẫn service để xác định quyền đầy đủ.
 
 - ADMIN có phạm vi toàn hệ thống; MANAGER/STAFF chịu kiểm tra chi nhánh trong các nghiệp vụ tương ứng.
 - Bán vé tại quầy và staff dashboard: ADMIN/STAFF.
@@ -118,7 +121,7 @@ OTP dùng SecureRandom tạo chuỗi 6 chữ số, TTL 5 phút, key `otp:code:{e
 - System settings: ADMIN.
 - Thông báo: mọi tài khoản đăng nhập, lọc theo người nhận/role/chi nhánh.
 
-CORS REST cho localhost và 127.0.0.1 ở cổng 5173/5174/3000. Danh sách method là GET/POST/PUT/PATCH/DELETE/OPTIONS. `PromotionCorsTest` kiểm tra preflight PATCH cho API áp mã khuyến mãi. `WebSocketConfig` có cấu hình origin riêng cho SockJS.
+CORS REST cho localhost và 127.0.0.1 ở cổng 5173/5174/3000. Danh sách method là GET/POST/PUT/PATCH/DELETE/OPTIONS. `PromotionCorsTest` kiểm tra preflight PATCH cho API áp mã khuyến mãi. `WebSocketConfig` có cấu hình origin riêng cho SockJS: endpoint `/ws` hiện nhận mọi origin qua `setAllowedOriginPatterns("*")`.
 
 ## Đặt vé và transaction
 
@@ -231,6 +234,6 @@ Các API đọc đơn của khách trả `refundDeadline` theo `refund.windowHou
 
 Khi cần dùng các script gỡ chức năng, đọc đúng thứ tự phụ thuộc: `remove_staff_handover` còn giữ STAFF_SCHEDULE, sau đó `remove_staff_scheduling` mới loại STAFF_SCHEDULE. `drop_unused_food_stock_transactions` chỉ xóa bảng lịch sử cũ; tồn hiện tại vẫn nằm ở Food.
 
-Test hiện có trong `src/test/java/com/ltweb/backend/service/` bao phủ thanh toán/persistence, refund, transaction effects, giới hạn vé, staff dashboard, tồn bắp nước, giá suất chiếu, layout ghế, mapping check-in và ràng buộc schema. `JwtSecurityTest` kiểm tra phân loại token, logout, refresh/replay/đồng thời, tài khoản bị khóa, chữ ký sai và claim thiếu/lỗi; Redis được giả lập trong test này. Chạy riêng bằng `mvn -Dtest=JwtSecurityTest test`, hoặc chạy toàn bộ bằng `mvn test`. Không sửa mã MapStruct sinh ra trong `target/`.
+Test hiện có trong `src/test/java/com/ltweb/backend/service/` bao phủ thanh toán/persistence, refund, transaction effects, giới hạn vé, staff dashboard, tồn bắp nước, giá suất chiếu, layout ghế, mapping check-in và ràng buộc schema. `JwtSecurityTest` kiểm tra phân loại token, logout, refresh/replay/đồng thời, tài khoản bị khóa, chữ ký sai và claim thiếu/lỗi; Redis được giả lập trong test này. Chạy riêng bằng `mvn -Dtest=JwtSecurityTest test`, hoặc chạy toàn bộ bằng `mvn test`. `SensitiveApiSecurityTest` dựng chuỗi filter thật bằng MockMvc: xác nhận chỉ có `JwtAuthenticationFilter` (không còn `BearerTokenAuthenticationFilter`), access token hợp lệ vào được `/my-info`, request thiếu token/refresh token/header sai trả `401`, role không đủ trả `403` kèm `WWW-Authenticate`, route public và OAuth2 Google vẫn hoạt động, cùng điều kiện đăng ký cleanup. `VnpayManagementSecurityTest` và `UserProfileSecurityTest` kiểm tra quyền quản lý VNPay và cập nhật hồ sơ. Không sửa mã MapStruct sinh ra trong `target/`.
 
 `BookingRefundFlowTest` kiểm tra commit trước gọi cổng, timeout/query lại, chống gửi trùng khi đồng thời, lỗi commit và CASH. Transaction/concurrency được giả lập trong unit test; không thay thế kiểm thử MySQL. `VnpayRefundGatewayTest` kiểm tra chữ ký, đối chiếu giao dịch, pending/rejection và phản hồi không rõ kết quả bằng HTTP mock; `RefundDecisionResponseTest` kiểm tra cả hai route không báo thành công sớm. Test persistence cần DB riêng qua `PAYMENT_TEST_DATABASE`; bị skip nếu chưa cấu hình.
