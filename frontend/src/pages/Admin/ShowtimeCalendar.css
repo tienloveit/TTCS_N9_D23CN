@@ -73,7 +73,7 @@
 
 .schedule-button {
   justify-content: center;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 
@@ -100,12 +100,12 @@
   min-width: 0;
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .schedule-branch select {
   max-width: min(250px, 100%);
-  font-weight: 500;
+  font-weight: var(--fw-regular);
 }
 
 .schedule-views {
@@ -151,7 +151,7 @@
 
 .schedule-calendar-heading time {
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .schedule-legend {
@@ -230,7 +230,7 @@
   background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -313,7 +313,7 @@
 .schedule-slot strong {
   margin-block: 2px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .schedule-slot-time,

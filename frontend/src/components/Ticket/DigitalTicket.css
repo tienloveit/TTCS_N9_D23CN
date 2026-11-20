@@ -35,7 +35,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: #0756a6;
   font-size: 1.25rem;
 }
@@ -47,7 +47,7 @@
 
 .ticket-status-tag {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 6px 12px;
   border-radius: 6px;
   text-transform: uppercase;
@@ -74,7 +74,7 @@
 
 .ticket-movie-title {
   font-size: 2rem;
-  font-weight: 900;
+  font-weight: var(--fw-bold);
   margin-bottom: 24px;
   line-height: 1.1;
   color: #111827;
@@ -94,12 +94,12 @@
   color: #6b7280;
   text-transform: uppercase;
   margin-bottom: 4px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: 0;
 }
 
 .info-item span {
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   font-size: 1.1rem;
   color: #1f2937;
 }
@@ -174,7 +174,7 @@
 .stub-text {
   font-size: 0.75rem;
   text-transform: uppercase;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: #9ca3af;
   letter-spacing: 0;
 }
@@ -211,7 +211,7 @@
   padding: 12px 28px;
   border-radius: 100px;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   cursor: pointer;
   transition: all 0.3s;
   display: flex;

@@ -442,7 +442,7 @@ export default function MovieDetailPage() {
             const isFilled = star <= Math.round(averageRating);
             return (
               <span key={star} className={isFilled ? 'is-active' : ''}>
-                <StarIcon size={16} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                <StarIcon size={16} style={isFilled ? { fill: 'var(--rating)', color: 'var(--rating)' } : undefined} />
               </span>
             );
           })}
@@ -469,7 +469,7 @@ export default function MovieDetailPage() {
                 aria-label={`Chọn ${star} sao`}
                 aria-pressed={userRating === star}
               >
-                <StarIcon size={22} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                <StarIcon size={22} style={isFilled ? { fill: 'var(--rating)', color: 'var(--rating)' } : undefined} />
               </button>
             );
           })}
@@ -542,7 +542,7 @@ export default function MovieDetailPage() {
                 )}
                 {ratingCount > 0 && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    <StarIcon size={16} style={{ fill: 'var(--gold)', color: 'var(--gold)' }} />
+                    <StarIcon size={16} style={{ fill: 'var(--rating)', color: 'var(--rating)' }} />
                     {averageRating.toFixed(1)} ({ratingCount})
                   </span>
                 )}
@@ -761,7 +761,7 @@ export default function MovieDetailPage() {
                           const isFilled = s <= review.score;
                           return (
                             <span key={s} className={isFilled ? 'is-active' : ''}>
-                              <StarIcon size={13} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                              <StarIcon size={13} style={isFilled ? { fill: 'var(--rating)', color: 'var(--rating)' } : undefined} />
                             </span>
                           );
                         })}

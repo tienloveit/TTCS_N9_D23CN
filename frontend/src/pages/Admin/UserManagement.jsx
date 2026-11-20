@@ -418,7 +418,7 @@ const UserManagement = () => {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
-                <h2 id={dialog.titleId} style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px' }}>
+                <h2 id={dialog.titleId} style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '4px' }}>
                   {editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
                 </h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>

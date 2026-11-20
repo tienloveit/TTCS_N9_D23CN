@@ -1,36 +1,28 @@
 /* ============================================================
-   ADMIN LAYOUT — Premium Dark Theme
-   Synced with the main Cinema design system (index.css vars)
+   ADMIN LAYOUT
+   Dùng token chung trong src/styles/tokens.css. Khu vận hành chỉ đổi
+   màu nhấn sang --ops; mọi màu khác kế thừa từ :root.
    ============================================================ */
 
 /* ---------- Layout Shell ---------- */
+.admin-layout,
+.staff-layout {
+  /* Biến alias phải được gán lại ở đây: var() trong :root đã được tính tại :root. */
+  --accent: var(--ops);
+  --accent-hover: var(--ops-strong);
+  --accent-glow: var(--ops-glow);
+  --bg-card-hover: var(--ops-soft);
+  --focus-ring: 0 0 0 3px var(--ops-glow);
+}
+
 .admin-layout {
-  --bg-primary: #f6f9fd;
-  --bg-secondary: #eef4fb;
-  --bg-card: #ffffff;
-  --bg-card-hover: #eef4ff;
-  --bg-input: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --accent: #0756a6;
-  --accent-hover: #034a91;
-  --accent-glow: rgba(7, 86, 166, 0.14);
-  --border: #dbe4ef;
-  --border-light: #b7c7da;
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.1);
-  --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.14);
   display: flex;
   min-height: 100vh;
   background: var(--bg-primary);
 }
 
 .staff-layout {
-  --accent: #0756a6;
-  --accent-hover: #034a91;
-  --accent-glow: rgba(7, 86, 166, 0.16);
-  background: #f6f9fd;
+  background: var(--surface-page);
 }
 
 .staff-layout .admin-sidebar {
@@ -141,7 +133,7 @@
 
 .admin-logo-text strong {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   background: none;
   -webkit-background-clip: text;
   -webkit-text-fill-color: currentColor;
@@ -153,7 +145,7 @@
 .admin-logo-text small {
   font-size: 0.7rem;
   color: #93a4b8;
-  font-weight: 500;
+  font-weight: var(--fw-regular);
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -173,7 +165,7 @@
 .admin-nav-label {
   padding: 16px 16px 8px;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: #93a4b8;
   text-transform: uppercase;
   letter-spacing: 0;
@@ -189,7 +181,7 @@
   padding: 11px 16px;
   border-radius: var(--radius-md);
   color: #d4deea;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   font-size: 0.9rem;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -206,7 +198,7 @@
 .admin-nav-item--active {
   background: linear-gradient(135deg, #0b63b6, #0d75d3);
   color: #ffffff !important;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   box-shadow: 0 10px 24px rgba(3, 74, 145, 0.28);
 }
 
@@ -263,7 +255,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: 0.85rem;
   color: #fff;
   flex-shrink: 0;
@@ -303,7 +295,7 @@
   border: 1px solid rgba(239, 68, 68, 0.15);
   color: #ef4444;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -374,7 +366,7 @@
 
 .admin-header-title {
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
   letter-spacing: 0;
 }
@@ -393,7 +385,7 @@
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: var(--fw-regular);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -457,7 +449,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: 0.82rem;
   color: #fff;
   flex-shrink: 0;
@@ -532,7 +524,7 @@
 
 .stat-info h3 {
   font-size: 1.55rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
   letter-spacing: 0;
 }
@@ -542,7 +534,7 @@
   margin-bottom: 4px;
   color: var(--text-secondary);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   text-transform: uppercase;
 }
 
@@ -555,7 +547,7 @@
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .dashboard-container {
@@ -577,7 +569,7 @@
   color: var(--text-secondary);
   padding: 8px 12px;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   white-space: nowrap;
 }
 
@@ -611,13 +603,13 @@
   margin: 0;
   color: var(--text-primary);
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
 }
 
 .analytics-card-header span {
   color: var(--text-secondary);
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   white-space: nowrap;
 }
 
@@ -650,7 +642,7 @@
 .analytics-tooltip span {
   color: var(--accent);
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
 }
 
 .analytics-list {
@@ -688,7 +680,7 @@
 .analytics-list-value span {
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .analytics-list-value {
@@ -731,7 +723,7 @@
 
 .table-header h3 {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .admin-table {
@@ -745,7 +737,7 @@
   background: #f8fafc;
   color: var(--text-secondary);
   font-size: 0.76rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0;
   border-bottom: 1px solid var(--border);
@@ -775,7 +767,7 @@
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   display: inline-flex;
   align-items: center;
   gap: 5px;

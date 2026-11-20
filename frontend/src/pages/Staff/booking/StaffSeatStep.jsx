@@ -60,25 +60,25 @@ export default function StaffSeatStep({
           <div className="pos-seat-stats">
             <span className="pos-seat-stat-pill">
               Trống:{' '}
-              <strong style={{ color: 'var(--seat-available)' }}>
+              <strong style={{ color: 'var(--seat-available-ink)' }}>
                 {seatMapStats.available}
               </strong>
             </span>
             <span className="pos-seat-stat-pill">
               Đang chọn:{' '}
-              <strong style={{ color: 'var(--seat-selected)' }}>
+              <strong style={{ color: 'var(--brand)' }}>
                 {selectedSeats.length}
               </strong>
             </span>
             <span className="pos-seat-stat-pill">
               Đang giữ:{' '}
-              <strong style={{ color: 'var(--seat-holding)' }}>
+              <strong style={{ color: 'var(--seat-holding-ink)' }}>
                 {seatMapStats.holding}
               </strong>
             </span>
             <span className="pos-seat-stat-pill">
               Đã bán:{' '}
-              <strong style={{ color: 'var(--seat-booked)' }}>
+              <strong style={{ color: 'var(--seat-booked-ink)' }}>
                 {seatMapStats.booked}
               </strong>
             </span>
@@ -148,51 +148,27 @@ export default function StaffSeatStep({
 
             <div className="seat-legend">
               <div className="seat-legend-item">
-                <div
-                  className="seat-legend-dot"
-                  style={{
-                    background: 'rgba(16,185,129,0.15)',
-                    borderColor: 'var(--seat-available)',
-                  }}
-                />
+                <div className="seat-legend-dot" aria-hidden="true" />
                 Ghế thường
               </div>
               <div className="seat-legend-item">
-                <div className="seat-legend-dot seat-legend-dot--vip" />
+                <div className="seat-legend-dot seat-legend-dot--vip" aria-hidden="true" />
                 Ghế VIP
               </div>
               <div className="seat-legend-item">
-                <div className="seat-legend-dot seat-legend-dot--couple" />
+                <div className="seat-legend-dot seat-legend-dot--couple" aria-hidden="true" />
                 Ghế đôi
               </div>
               <div className="seat-legend-item">
-                <div
-                  className="seat-legend-dot"
-                  style={{
-                    background: 'rgba(59,130,246,0.3)',
-                    borderColor: 'var(--seat-selected)',
-                  }}
-                />
+                <div className="seat-legend-dot seat-legend-dot--selected" aria-hidden="true" />
                 Đang chọn
               </div>
               <div className="seat-legend-item">
-                <div
-                  className="seat-legend-dot"
-                  style={{
-                    background: 'rgba(245,158,11,0.15)',
-                    borderColor: 'var(--seat-holding)',
-                  }}
-                />
+                <div className="seat-legend-dot seat-legend-dot--holding" aria-hidden="true" />
                 Khách khác đang giữ
               </div>
               <div className="seat-legend-item">
-                <div
-                  className="seat-legend-dot"
-                  style={{
-                    background: 'rgba(239,68,68,0.15)',
-                    borderColor: 'var(--seat-booked)',
-                  }}
-                />
+                <div className="seat-legend-dot seat-legend-dot--booked" aria-hidden="true" />
                 Đã đặt
               </div>
             </div>

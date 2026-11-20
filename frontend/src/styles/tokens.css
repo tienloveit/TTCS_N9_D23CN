@@ -1,0 +1,164 @@
+/* ============================================================
+   MoviePTIT design tokens
+   Nguồn duy nhất cho màu, chữ, khoảng cách, bo góc, đổ bóng, lớp chồng.
+   Mã màu hex mới chỉ được thêm ở file này (kiểm tra bằng npm run lint:tokens).
+   ============================================================ */
+
+:root {
+  /* ---------- Thương hiệu ---------- */
+  --brand: #b9380c;            /* chữ trắng trên nền này: 5.78:1 */
+  --brand-strong: #952b08;     /* hover/active: 7.99:1 */
+  --brand-soft: #fff1e8;       /* nền tab/chip đang chọn; chữ --brand trên nền này: 5.23:1 */
+  --brand-glow: rgba(185, 56, 12, 0.2);
+
+  /* Khu vận hành (/admin, /manager) dùng xanh cho màn dày dữ liệu */
+  --ops: #0756a6;              /* 7.26:1 trên nền trắng */
+  --ops-strong: #034a91;
+  --ops-soft: #e8f2ff;
+  --ops-glow: rgba(7, 86, 166, 0.14);
+
+  /* ---------- Chữ ---------- */
+  --ink: #172033;              /* 15.29:1 trên --surface-page */
+  --ink-secondary: #334155;
+  --ink-muted: #526079;        /* 6.35:1 trên nền trắng */
+  --ink-inverse: #ffffff;
+
+  /* ---------- Bề mặt và đường viền ---------- */
+  --surface-page: #f6f8fb;
+  --surface-sunken: #eef4fb;
+  --surface: #ffffff;
+  --surface-hover: #f2f6fb;
+  --line: #dfe5ee;
+  --line-strong: #b9c7d8;
+
+  /* ---------- Ngữ nghĩa ---------- */
+  --success: #15803d;
+  --success-soft: #ecfdf3;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --info: #0756a6;
+  --info-soft: #eff6ff;
+
+  /* Hạng ghế (là thuộc tính, không phải trạng thái) */
+  --tier-vip: #b45309;
+  --tier-vip-soft: #fffbeb;
+  --tier-couple: #6d28d9;
+  --tier-couple-soft: #f5f3ff;
+
+  /* Sao đánh giá: 3.19:1, đạt ngưỡng 3:1 cho đồ họa */
+  --rating: #d97706;
+
+  /* ---------- Trạng thái ghế ----------
+     Mỗi trạng thái có một tín hiệu ngoài màu:
+     trống = viền rỗng, đang chọn = tô đặc, đang giữ = sọc chéo, đã đặt = nền xám + gạch ngang. */
+  --seat-available-bg: #ffffff;
+  --seat-available-line: #7b8798;   /* 3.65:1, đạt ngưỡng 3:1 cho thành phần UI */
+  --seat-available-ink: #334155;
+  --seat-selected-bg: var(--brand);
+  --seat-selected-ink: #ffffff;
+  --seat-holding-bg: #fef3c7;
+  --seat-holding-line: #b45309;
+  --seat-holding-ink: #92400e;
+  --seat-holding-hatch: rgba(180, 83, 9, 0.28);
+  --seat-booked-bg: #e2e8f0;
+  --seat-booked-line: #cbd5e1;
+  --seat-booked-ink: #64748b;
+
+  /* ---------- Chữ ---------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Thang chữ tỉ lệ ~1.25 */
+  --fs-xs: 0.75rem;    /* 12 */
+  --fs-sm: 0.875rem;   /* 14 */
+  --fs-base: 1rem;     /* 16 */
+  --fs-md: 1.125rem;   /* 18 */
+  --fs-lg: 1.375rem;   /* 22 */
+  --fs-xl: 1.75rem;    /* 28 */
+  --fs-2xl: 2.25rem;   /* 36 */
+  --fs-3xl: clamp(2.5rem, 5vw, 3.5rem);
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.4;
+  --lh-body: 1.6;
+
+  /* ---------- Khoảng cách (bước 4px) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---------- Bo góc theo thứ bậc ---------- */
+  --radius-sm: 6px;      /* input, chip, ghế */
+  --radius-md: 10px;     /* nút, thẻ */
+  --radius-lg: 16px;     /* panel, modal */
+  --radius-xl: 24px;     /* khối lớn, hero */
+  --radius-pill: 999px;
+
+  /* ---------- Đổ bóng ---------- */
+  --shadow-1: 0 1px 3px rgba(23, 32, 51, 0.08);
+  --shadow-2: 0 10px 24px rgba(23, 32, 51, 0.1);
+  --shadow-3: 0 22px 56px rgba(23, 32, 51, 0.14);
+  --focus-ring: 0 0 0 3px var(--brand-glow);
+
+  /* ---------- Lớp chồng ---------- */
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
+  /* ---------- Chuyển động ---------- */
+  --duration-fast: 0.15s;
+  --duration: 0.2s;
+  --duration-slow: 0.4s;
+  --ease: ease;
+
+  /* Breakpoint quy ước (CSS variable không dùng được trong @media):
+     480px · 768px · 1024px · 1280px */
+
+  /* ============================================================
+     Tên cũ: giữ để các màn hiện có tiếp tục chạy.
+     Code mới dùng tên ở trên; tên cũ sẽ được thay dần.
+     ============================================================ */
+  --bg-primary: var(--surface-page);
+  --bg-secondary: var(--surface-sunken);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-hover);
+  --bg-input: var(--surface);
+
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-secondary);
+  --text-muted: var(--ink-muted);
+
+  --accent: var(--brand);
+  --accent-hover: var(--brand-strong);
+  --accent-glow: var(--brand-glow);
+
+  --gold: var(--tier-vip);
+  --green: var(--success);
+  --blue: var(--ops);
+  --purple: var(--tier-couple);
+
+  --border: var(--line);
+  --border-light: var(--line-strong);
+
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --shadow-glow: 0 0 20px var(--accent-glow);
+
+  --transition: var(--duration) var(--ease);
+  --transition-slow: var(--duration-slow) var(--ease);
+}

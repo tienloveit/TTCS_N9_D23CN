@@ -86,7 +86,7 @@ const DigitalTicket = ({ booking }) => {
             </div>
             <div className="info-item" style={{ textAlign: 'right' }}>
               <label>Mã đơn hàng</label>
-              <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>{booking.bookingCode || 'BK-XXXXXX'}</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{booking.bookingCode || 'BK-XXXXXX'}</span>
             </div>
           </div>
         </div>

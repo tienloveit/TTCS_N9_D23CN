@@ -60,7 +60,7 @@ const ConfirmDialog = ({
             >
               <AlertTriangleIcon size={20} />
             </div>
-            <h3 id={dialog.titleId} style={{ margin: 0, fontSize: '1.12rem', fontWeight: 800 }}>
+            <h3 id={dialog.titleId} style={{ margin: 0, fontSize: '1.12rem', fontWeight: 700 }}>
               {title}
             </h3>
           </div>

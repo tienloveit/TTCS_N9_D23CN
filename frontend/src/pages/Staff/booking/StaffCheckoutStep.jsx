@@ -236,7 +236,7 @@ export default function StaffCheckoutStep({
                     }}
                   >
                     <div>
-                      <strong style={{ color: 'var(--seat-available)' }}>
+                      <strong style={{ color: 'var(--success)' }}>
                         {promo.code}
                       </strong>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>

@@ -18,7 +18,7 @@ const NotFoundPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 style={{ fontSize: '8rem', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>
+        <h1 style={{ fontSize: '8rem', fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>
           404
         </h1>
         <h2 style={{ fontSize: '2rem', marginBottom: '16px' }}>Trang không tồn tại</h2>

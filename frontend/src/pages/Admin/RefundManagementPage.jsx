@@ -206,7 +206,7 @@ const RefundManagementPage = () => {
             style={{ maxWidth: 680, height: 'auto', aspectRatio: 'unset', padding: 28, background: 'var(--bg-card)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <h2 id={dialog.titleId} style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>Yêu cầu {selected.bookingCode}</h2>
+              <h2 id={dialog.titleId} style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700 }}>Yêu cầu {selected.bookingCode}</h2>
               <button
                 type="button"
                 className="modal-close modal-close--inline"

@@ -429,72 +429,39 @@ export default function SeatSelectPage() {
                   </div>
 
                   <div className="seat-legend-wrap">
-                    <div className="seat-legend" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+                    <div className="seat-legend">
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(16,185,129,0.15)',
-                            borderColor: 'var(--seat-available)',
-                          }}
-                        />
+                        <div className="seat-legend-dot" aria-hidden="true" />
                         Trống
                       </div>
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(59,130,246,0.3)',
-                            borderColor: 'var(--seat-selected)',
-                          }}
-                        />
+                        <div className="seat-legend-dot seat-legend-dot--selected" aria-hidden="true" />
                         Đang chọn
                       </div>
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(245,158,11,0.15)',
-                            borderColor: 'var(--seat-holding)',
-                          }}
-                        />
+                        <div className="seat-legend-dot seat-legend-dot--holding" aria-hidden="true" />
                         Đang giữ
                       </div>
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(239,68,68,0.15)',
-                            borderColor: 'var(--seat-booked)',
-                          }}
-                        />
+                        <div className="seat-legend-dot seat-legend-dot--booked" aria-hidden="true" />
                         Đã đặt
                       </div>
                     </div>
 
                     {seatTierPricing.length > 0 && (
-                      <div className="seat-legend" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+                      <div className="seat-legend">
                         {seatTierPricing.map(([tierName, tierPrice]) => {
                           const upper = tierName.toUpperCase();
                           const isVip = upper.includes('VIP');
                           const isCouple = upper.includes('COUPLE') || upper.includes('ĐÔI');
+                          const tierDotClass = isVip
+                            ? ' seat-legend-dot--vip'
+                            : isCouple
+                              ? ' seat-legend-dot--couple'
+                              : '';
                           return (
                             <div key={tierName} className="seat-legend-item">
-                              <div
-                                className="seat-legend-dot"
-                                style={{
-                                  background: isVip
-                                    ? 'rgba(245,158,11,0.14)'
-                                    : isCouple
-                                      ? 'rgba(124,58,237,0.14)'
-                                      : 'rgba(16,185,129,0.15)',
-                                  borderColor: isVip
-                                    ? 'var(--gold)'
-                                    : isCouple
-                                      ? 'var(--purple)'
-                                      : 'var(--seat-available)',
-                                }}
-                              />
+                              <div className={`seat-legend-dot${tierDotClass}`} aria-hidden="true" />
                               <span>
                                 {tierName}: <strong>{formatCurrency(tierPrice)}</strong>
                               </span>

@@ -299,7 +299,7 @@ const PromotionManagement = () => {
           <div className="modal-content admin-modal" {...dialog.contentProps}
             style={{ maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 id={dialog.titleId} style={{ fontSize: '1.5rem', fontWeight: 800 }}>{editingPromo ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h2>
+              <h2 id={dialog.titleId} style={{ fontSize: '1.5rem', fontWeight: 700 }}>{editingPromo ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h2>
               <button type="button" onClick={handleCloseModal} className="modal-close modal-close--inline modal-close--lg" aria-label="Đóng">
                 <XIcon size={18} />
               </button>

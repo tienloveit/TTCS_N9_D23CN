@@ -96,7 +96,7 @@ export default function CheckInScannerTab({
           style={{
             display: 'block',
             fontSize: '0.8rem',
-            fontWeight: 800,
+            fontWeight: 700,
             color: '#475569',
             textTransform: 'uppercase',
             marginBottom: 8,
