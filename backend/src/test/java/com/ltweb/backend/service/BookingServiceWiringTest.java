@@ -32,6 +32,8 @@ class BookingServiceWiringTest {
             BookingQueryService.class,
             BookingMembershipService.class,
             BookingPricingService.class,
+            BookingReleaseService.class,
+            PaymentEventService.class,
             StaffCustomerService.class,
             BookingRefundService.class)
         .withBean(BookingRepository.class, () -> mock(BookingRepository.class))
@@ -52,6 +54,9 @@ class BookingServiceWiringTest {
         .withBean(VnpayRefundGateway.class, () -> mock(VnpayRefundGateway.class))
         .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
         .withBean(EntityManager.class, () -> mock(EntityManager.class))
+        .withBean(
+            com.ltweb.backend.repository.PaymentEventRepository.class,
+            () -> mock(com.ltweb.backend.repository.PaymentEventRepository.class))
         .run(
             context -> {
               assertThat(context)

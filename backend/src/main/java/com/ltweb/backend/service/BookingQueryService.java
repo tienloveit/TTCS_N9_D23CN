@@ -25,17 +25,11 @@ public class BookingQueryService {
   private final RefundPolicy refundPolicy;
 
   public List<BookingResponse> getAllBookings() {
-    return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
-        .map(bookingMapper::toBookingResponse)
-        .toList();
+    return scopedBookings(null).stream().map(bookingMapper::toBookingResponse).toList();
   }
 
   public List<BookingResponse> getRefundBookings() {
-    return scopeBookingsForBranchOperator(bookingRepository.findAll()).stream()
-        .filter(
-            booking ->
-                booking.getStatus() == BookingStatus.REFUND_REQUESTED
-                    || booking.getStatus() == BookingStatus.REFUNDED)
+    return scopedBookings(REFUND_STATUSES).stream()
         .sorted(
             java.util.Comparator.comparing(
                     Booking::getUpdatedAt,
@@ -76,23 +70,27 @@ public class BookingQueryService {
     return response;
   }
 
-  private List<Booking> scopeBookingsForBranchOperator(List<Booking> bookings) {
+  private static final List<BookingStatus> REFUND_STATUSES =
+      List.of(BookingStatus.REFUND_REQUESTED, BookingStatus.REFUNDED);
+
+  /**
+   * ADMIN thấy toàn hệ thống; STAFF/MANAGER chỉ thấy chi nhánh được phân công; vai trò khác không
+   * thấy gì. Lọc chi nhánh và trạng thái ngay trong truy vấn DB.
+   */
+  private List<Booking> scopedBookings(List<BookingStatus> statuses) {
     User currentUser = getUserCurrent();
     if (currentUser.getRole() == UserRole.ADMIN) {
-      return bookings;
+      return statuses == null
+          ? bookingRepository.findAll()
+          : bookingRepository.findByStatusIn(statuses);
     }
-    if (!isBranchOperator(currentUser)) {
-      return List.of();
-    }
-    Long branchId = currentUser.getBranchId();
+    Long branchId = isBranchOperator(currentUser) ? currentUser.getBranchId() : null;
     if (branchId == null) {
       return List.of();
     }
-    return bookings.stream().filter(booking -> isBookingInBranch(booking, branchId)).toList();
-  }
-
-  private boolean isBookingInBranch(Booking booking, Long branchId) {
-    return bookingAccessPolicy.isInBranch(booking, branchId);
+    return statuses == null
+        ? bookingRepository.findByBranchId(branchId)
+        : bookingRepository.findByBranchIdAndStatusIn(branchId, statuses);
   }
 
   private boolean isBranchOperator(User user) {

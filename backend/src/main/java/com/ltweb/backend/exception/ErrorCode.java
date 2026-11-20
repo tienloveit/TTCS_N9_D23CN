@@ -77,6 +77,10 @@ public enum ErrorCode {
   // Booking Management
   BOOKING_NOT_FOUND(400, "Booking does not exist", HttpStatus.BAD_REQUEST),
   BOOKING_CANNOT_CANCEL(400, "Only pending bookings can be cancelled", HttpStatus.BAD_REQUEST),
+  BOOKING_PENDING_LIMIT(
+      400,
+      "You have too many bookings awaiting payment. Pay or cancel them before booking again",
+      HttpStatus.BAD_REQUEST),
   MAX_TICKET_PER_TRANSACTION(
       400, "Cannot book more than 8 tickets in a single transaction", HttpStatus.BAD_REQUEST),
 
@@ -113,7 +117,12 @@ public enum ErrorCode {
       400, "Refund request window has expired (24 hours after payment)", HttpStatus.BAD_REQUEST),
 
   // Database
-  DATA_INTEGRITY_VIOLATION(400, "Database constraint violated", HttpStatus.BAD_REQUEST);
+  DATA_INTEGRITY_VIOLATION(400, "Database constraint violated", HttpStatus.BAD_REQUEST),
+  RESOURCE_IN_USE(
+      409,
+      "This record is still used by other data and cannot be deleted. Deactivate it instead",
+      HttpStatus.CONFLICT),
+  DUPLICATE_VALUE(409, "A record with the same unique value already exists", HttpStatus.CONFLICT);
 
   private final int code;
   private final String message;

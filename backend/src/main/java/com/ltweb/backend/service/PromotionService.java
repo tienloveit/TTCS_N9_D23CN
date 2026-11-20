@@ -194,16 +194,29 @@ public class PromotionService {
     return discount;
   }
 
-  /** Tăng usedCount sau khi booking thành công. */
+  /**
+   * Giữ một lượt dùng cho đơn đang tạo/áp mã. Thao tác nguyên tử ở DB nên các đơn đồng thời không
+   * vượt usageLimit; ném PROMOTION_USAGE_LIMIT khi đã hết lượt.
+   */
+  @Transactional
+  public void reserveUsage(String code) {
+    if (promotionRepository.reserveUsage(code.trim()) == 0) {
+      throw new AppException(ErrorCode.PROMOTION_USAGE_LIMIT);
+    }
+  }
+
+  /** Trả lượt đã giữ khi đơn bị hủy, hết hạn hoặc thanh toán thất bại. */
+  @Transactional
+  public void releaseUsage(String code) {
+    promotionRepository.releaseUsage(code.trim());
+  }
+
+  /**
+   * Tăng usedCount sau khi thanh toán đơn chưa giữ lượt từ trước (đơn tạo trước cơ chế giữ lượt).
+   */
   @Transactional
   public void incrementUsage(String code) {
-    promotionRepository
-        .findByCodeIgnoreCase(code.trim())
-        .ifPresent(
-            p -> {
-              p.setUsedCount(p.getUsedCount() + 1);
-              promotionRepository.save(p);
-            });
+    promotionRepository.incrementUsage(code.trim());
   }
 
   // ===== HELPERS =====

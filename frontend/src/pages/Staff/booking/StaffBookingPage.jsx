@@ -6,6 +6,7 @@ import {
   getCinemaHour,
   parseLocalDateTime,
 } from '../../../utils/cinemaTime';
+import { MAX_FOOD_QUANTITY } from '../../../utils/bookingLimits';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -639,7 +640,7 @@ export default function StaffBookingPage() {
   const updateFoodQuantity = (foodId, delta) => {
     const stock = foods.find((food) => food.id === foodId)?.stockQuantity;
     setSelectedFoods((prev) => {
-      const maxQuantity = stock == null ? Infinity : Math.max(0, stock);
+      const maxQuantity = Math.min(MAX_FOOD_QUANTITY, stock == null ? Infinity : Math.max(0, stock));
       const quantity = Math.min(maxQuantity, Math.max(0, (prev[foodId] || 0) + delta));
       const next = { ...prev };
       if (quantity === 0) delete next[foodId];

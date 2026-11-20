@@ -1,10 +1,12 @@
 import SafeImage from '../../components/Common/SafeImage';
 import {
   AlertCircleIcon,
+  ArmchairIcon,
   CalendarIcon,
   ClockIcon,
   CreditCardIcon,
   MapPinIcon,
+  PopcornIcon,
   QrCodeIcon,
   TicketIcon,
 } from '../../components/Common/CinemaIcons';
@@ -109,7 +111,7 @@ function BookingNote({ booking, changeNotice, onDismissChange }) {
 }
 
 export default function BookingCard({
-  booking, phase, now, changeNotice, onDismissChange, onOpenTicket, onPay, onCancel, onRequestRefund,
+  booking, phase, now, featured, changeNotice, onDismissChange, onOpenTicket, onPay, onCancel, onRequestRefund,
 }) {
   const meta = PHASE_META[phase];
   const tickets = booking.tickets || [];
@@ -127,32 +129,34 @@ export default function BookingCard({
   const isVoid = phase === 'cancelled' || phase === 'expired';
   const badgeLabel = (phase === 'refund_requested' && REFUND_PROGRESS[booking.refundGatewayStatus])
     || (holdExpired && 'Hết giờ giữ ghế') || meta.label;
+  const Title = featured ? 'h2' : 'h3';
 
   return (
-    <article className={`mt-card mt-card--${phase}`}>
+    <article className={`mt-card${featured ? ' mt-card--featured' : ''}`}>
       <div className="mt-card-main">
-        <div className="mt-card-head">
-          <SafeImage
-            key={booking.movieThumbnailUrl}
-            src={booking.movieThumbnailUrl}
-            fallback="/assets/img/empty-cinema.png"
-            alt=""
-            className="mt-poster"
-          />
-          <div className="mt-card-title">
-            <div className="mt-card-labels">
+        <SafeImage
+          key={booking.movieThumbnailUrl}
+          src={booking.movieThumbnailUrl}
+          fallback="/assets/img/empty-cinema.png"
+          alt=""
+          className="mt-poster"
+        />
+        <div className="mt-card-title">
+          <div className="mt-card-labels">
+            {featured ? (
+              <span className="mt-next-label"><TicketIcon size={16} />Suất chiếu kế tiếp</span>
+            ) : (
               <span className={`mt-badge mt-tone--${holdExpired ? 'neutral' : meta.tone}`}>{badgeLabel}</span>
-              {booking.bookingCode && <span className="mt-code">#{booking.bookingCode}</span>}
-            </div>
-            <h3 className="mt-title">{booking.movieName || 'Phim chưa xác định'}</h3>
-            {booking.showtimeStart && (
-              <p className="mt-showtime">
-                <CalendarIcon size={17} />
-                <strong>{formatTime(booking.showtimeStart)}{booking.showtimeEnd && ` – ${formatTime(booking.showtimeEnd)}`}</strong>
-                <span>{formatShowDate(booking.showtimeStart)}</span>
-              </p>
             )}
           </div>
+          <Title className="mt-title">{booking.movieName || 'Phim chưa xác định'}</Title>
+          {booking.showtimeStart && (
+            <p className="mt-showtime">
+              <CalendarIcon size={17} />
+              <strong>{formatTime(booking.showtimeStart)}{booking.showtimeEnd && ` – ${formatTime(booking.showtimeEnd)}`}</strong>
+              <span>{formatShowDate(booking.showtimeStart)}</span>
+            </p>
+          )}
         </div>
         <dl className="mt-meta">
           <div className="mt-meta-row">
@@ -160,7 +164,7 @@ export default function BookingCard({
             <dd>{[booking.branchName, booking.roomName].filter(Boolean).join(' · ') || '—'}</dd>
           </div>
           <div className="mt-meta-row">
-            <dt><TicketIcon size={17} />Ghế</dt>
+            <dt><ArmchairIcon size={17} />Ghế</dt>
             <dd className="mt-seats">
               {seats.length > 0 ? seats.map((seat, index) => (
                 <span className="mt-seat" key={`${seat}-${index}`}>{seat}</span>
@@ -172,7 +176,7 @@ export default function BookingCard({
           </div>
           {foods.length > 0 && (
             <div className="mt-meta-row">
-              <dt>Bắp nước</dt>
+              <dt><PopcornIcon size={17} />Bắp nước</dt>
               <dd>{foods.map((food) => `${food.quantity}× ${food.foodName}`).join(', ')}</dd>
             </div>
           )}
@@ -180,6 +184,7 @@ export default function BookingCard({
       </div>
 
       <div className="mt-stub">
+        {booking.bookingCode && <span className="mt-code">Mã đơn <b>{booking.bookingCode}</b></span>}
         <div className="mt-stub-price">
           <span className="mt-stub-label">{booking.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Tổng tiền đơn'}</span>
           <strong className={`mt-stub-amount ${isVoid ? 'is-void' : ''}`}>{formatCurrency(booking.totalAmount)}</strong>

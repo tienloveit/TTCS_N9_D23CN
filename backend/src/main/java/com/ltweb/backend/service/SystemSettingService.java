@@ -20,6 +20,7 @@ public class SystemSettingService {
   public static final String BOOKING_HOLD_MINUTES = "booking.holdMinutes";
   public static final String BOOKING_MAX_TICKETS_PER_TRANSACTION =
       "booking.maxTicketsPerTransaction";
+  public static final String BOOKING_MAX_PENDING_PER_USER = "booking.maxPendingPerUser";
   public static final String REFUND_WINDOW_HOURS = "refund.windowHours";
   public static final String SUPPORT_EMAIL = "cinema.supportEmail";
   public static final String SUPPORT_HOTLINE = "cinema.supportHotline";
@@ -32,6 +33,7 @@ public class SystemSettingService {
   public void seedDefaults() {
     createDefault(BOOKING_HOLD_MINUTES, "6", "So phut giu ghe khi khach dat ve");
     createDefault(BOOKING_MAX_TICKETS_PER_TRANSACTION, "8", "So ve toi da trong mot giao dich");
+    createDefault(BOOKING_MAX_PENDING_PER_USER, "2", "So don cho thanh toan toi da cua moi khach");
     createDefault(REFUND_WINDOW_HOURS, "24", "So gio cho phep khach gui yeu cau hoan tien");
     createDefault(SUPPORT_EMAIL, "support@movieptit.vn", "Email ho tro khach hang");
     createDefault(SUPPORT_HOTLINE, "1900 0000", "Hotline ho tro khach hang");

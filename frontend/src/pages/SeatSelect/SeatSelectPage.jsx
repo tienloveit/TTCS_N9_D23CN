@@ -13,6 +13,7 @@ import {
   formatTime as formatCinemaTime,
   getCinemaWeekday,
 } from '../../utils/cinemaTime';
+import { MAX_FOOD_QUANTITY } from '../../utils/bookingLimits';
 
 // Khớp message của ErrorCode.SHOWTIME_NOT_FOUND ở backend.
 const SHOWTIME_UNAVAILABLE_MESSAGE = 'Showtime does not exist';
@@ -213,7 +214,7 @@ export default function SeatSelectPage() {
     const stock = foods.find((food) => food.id === foodId)?.stockQuantity;
     setSelectedFoods((prev) => {
       const currentQuantity = prev[foodId] || 0;
-      const maxQuantity = stock == null ? Infinity : Math.max(0, stock);
+      const maxQuantity = Math.min(MAX_FOOD_QUANTITY, stock == null ? Infinity : Math.max(0, stock));
       const nextQuantity = Math.min(maxQuantity, Math.max(0, currentQuantity + delta));
       const nextSelectedFoods = { ...prev };
 

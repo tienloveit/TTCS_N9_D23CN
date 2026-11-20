@@ -11,7 +11,7 @@ Java **21**, Spring Boot **3.4.0**, Maven; Spring Web, Security/OAuth2 Resource 
 | API | `http://localhost:8081/api` (`server.port: 8081`, context path `/api`) |
 | MySQL | `jdbc:mysql://localhost:3306/cinema`, user `root` |
 | Redis | `localhost:6379` |
-| JPA | `ddl-auto: update`, bật SQL log |
+| Schema | Flyway (`db/migration`, baseline V1 cho database có sẵn); JPA `ddl-auto: validate`, bật SQL log |
 | Cache | `spring.cache.type: redis`. `TicketService` cố ý không cache trạng thái ghế vì cần đọc khóa Redis theo thời gian thực |
 | Email | Gmail SMTP, cổng 587, STARTTLS |
 | OAuth2 | Google; redirect frontend `/oauth2/callback` |
@@ -47,7 +47,7 @@ $env:APP_MAINTENANCE_CLEANUP_ENABLED = "true"
 
 `controller` nhận request → `service` kiểm tra quyền, nghiệp vụ và transaction → `repository` truy cập entity → `mapper` tạo DTO. `config` chứa Security/JWT/Redis/WebSocket/VNPay/OAuth2; `exception` chứa `AppException`, `ErrorCode`, handler; `event` chứa sự kiện thanh toán; `job` dọn đơn hết hạn.
 
-`BookingService` giữ API service hiện tại và điều phối 5 dependency: `BookingCheckoutService` tạo đơn online/tại quầy; `BookingCommandService` cập nhật, hủy, áp mã và yêu cầu hoàn; `BookingQueryService` đọc đơn; `BookingMembershipService` cập nhật chi tiêu/hạng; `BookingRefundService` duyệt và đối soát hoàn tiền. `BookingPricingService` tính giá vé, đồ ăn, khuyến mãi dùng chung; `StaffCustomerService` tìm/tạo khách tại quầy. Khóa vé/booking và thao tác reserve stock vẫn nằm trong transaction của use case.
+`BookingService` giữ API service hiện tại và điều phối 5 dependency: `BookingCheckoutService` tạo đơn online/tại quầy; `BookingCommandService` cập nhật, hủy, áp mã và yêu cầu hoàn; `BookingQueryService` đọc đơn (danh sách quản lý lọc chi nhánh/trạng thái ngay trong truy vấn `findByBranchId`, `findByStatusIn`, `findByBranchIdAndStatusIn`; vẫn trả toàn bộ danh sách vì frontend tự phân trang và xuất XLSX); `BookingMembershipService` cập nhật chi tiêu/hạng; `BookingRefundService` duyệt và đối soát hoàn tiền. `BookingPricingService` tính giá vé, đồ ăn, khuyến mãi dùng chung; `StaffCustomerService` tìm/tạo khách tại quầy; `BookingReleaseService` trả ghế, tồn bắp nước và lượt khuyến mãi. Khóa vé/booking và thao tác reserve stock vẫn nằm trong transaction của use case.
 
 `CurrentUserProvider` phân biệt người dùng bắt buộc với truy cập tùy chọn, không cache tài khoản giữa các request. `BookingAccessPolicy` giữ các quy tắc xem, quản lý, hủy, bán tại quầy và duyệt hoàn riêng biệt; quyền MANAGER không tự động bao gồm quyền hủy đơn. `RefundPolicy` dùng chung điều kiện thanh toán/chưa check-in và deadline; lúc duyệt không áp lại cửa sổ gửi yêu cầu của khách. `PasswordRecoveryService` xử lý đổi/quên/reset mật khẩu; `AuthService` tiếp tục điều phối đăng nhập, refresh và Google login.
 
@@ -62,6 +62,8 @@ Mặc định build vẫn ghi vào `target`. Nếu IDE đang tự compile vào t
 ```
 
 Test booking dùng `BackendServiceFixtures` để dựng service thật qua constructor, chỉ giả lập repository/gateway và các I/O liên quan. `BackendPoliciesTest`, `BookingPricingServiceTest`, `ClockedJwtServiceTest`, `PasswordRecoveryServiceTest` và `BookingServiceWiringTest` kiểm tra các ranh giới được tách ở trên.
+
+Lỗi ràng buộc dữ liệu không trả chi tiết SQL cho client: MySQL 1451 (dữ liệu còn được tham chiếu, ví dụ xóa chi nhánh còn nhân viên) trả `RESOURCE_IN_USE` 409 với gợi ý ngừng hoạt động thay vì xóa; 1062 (trùng giá trị unique) trả `DUPLICATE_VALUE` 409; còn lại trả `DATA_INTEGRITY_VIOLATION`. Chi tiết chỉ ghi log server.
 
 Response thành công thường bọc `ApiResponse<T>` với `code`, `message`, `result`; lỗi dùng `ErrorResponse` qua `GlobalExceptionHandler`. Xuất XLSX trả trực tiếp `ResponseEntity<byte[]>`. Đọc DTO/mapper để xác định hợp đồng JSON thay vì dùng tên field entity.
 
@@ -127,20 +129,22 @@ CORS REST cho localhost và 127.0.0.1 ở cổng 5173/5174/3000. Danh sách meth
 
 ### Khách đặt online
 
-1. `POST /booking` → `BookingService.createBooking`: lấy user, kiểm tra giới hạn vé/giao dịch, suất chiếu hợp lệ, seatIds không trùng.
-2. Lấy ticket bằng truy vấn khóa `findSeatsForUpdate`; tất cả phải AVAILABLE. Kiểm tra bắp nước/chi nhánh, reserve tồn, tính giá và khuyến mãi phía server.
+1. `POST /booking` → `BookingService.createBooking`: lấy user, kiểm tra giới hạn vé/giao dịch, suất chiếu hợp lệ (online chỉ bán trước giờ chiếu), giới hạn đơn chờ thanh toán và seatIds không trùng.
+2. Lấy ticket bằng truy vấn khóa `findSeatsForUpdate`; tất cả phải AVAILABLE. Kiểm tra bắp nước/chi nhánh, reserve tồn, tính giá và khuyến mãi phía server, rồi giữ một lượt khuyến mãi bằng `PromotionService.reserveUsage`.
 3. `BookingTransactionEffects.acquire` tạo Redis key `seat_hold:{showtimeId}:{seatId}`, giá trị là booking code, TTL theo `booking.holdMinutes` (mặc định 6).
 4. Lưu Booking PENDING và Payment PENDING, gắn ticket HOLDING, lưu BookingFood; broadcast trạng thái ghế sau commit.
 
-Giới hạn `booking.maxTicketsPerTransaction` mặc định 8, lấy từ system settings và chặn tối thiểu 1. Không còn giới hạn cộng dồn vé theo phim.
+Giới hạn `booking.maxTicketsPerTransaction` mặc định 8, lấy từ system settings và chặn tối thiểu 1. Không còn giới hạn cộng dồn vé theo phim. `booking.maxPendingPerUser` (mặc định 2) giới hạn số đơn PENDING còn hạn của một khách; vượt mức trả `BOOKING_PENDING_LIMIT`, để một tài khoản không giữ hết ghế của suất. Mỗi món bắp nước tối đa 50 phần một đơn (`CreateBookingFoodRequest.MAX_QUANTITY`, frontend dùng `MAX_FOOD_QUANTITY`).
+
+Mã đơn có dạng `BK-YYYYMMDD-XXXXXXXX`, 8 ký tự Crockford base32 sinh từ `SecureRandom`, sinh lại khi trùng (`existsByBookingCode`). Mã dùng được để check-in nên không được dễ đoán.
 
 `BookingTransactionEffects` dùng Lua để chỉ xóa khóa thuộc đúng booking. Khi acquire lỗi, chỉ dọn khóa đã lấy; rollback cũng dọn khóa của transaction. Release và broadcast theo các đường xử lý sử dụng after-commit để đồng bộ với DB.
 
 ### Nhân viên tại quầy
 
-`POST /booking/staff`: ADMIN/STAFF, xác thực chi nhánh, kiểm tra ghế/Redis, giới hạn vé và tồn bắp nước. Tìm hoặc tạo khách bằng thông tin liên hệ. `staffUser` ghi nhận người bán.
+`POST /booking/staff`: ADMIN/STAFF, xác thực chi nhánh, kiểm tra ghế/Redis, giới hạn vé và tồn bắp nước. Tìm hoặc tạo khách bằng thông tin liên hệ. `staffUser` ghi nhận người bán. Quầy được bán tới `BookingCheckoutService.STAFF_SALE_GRACE_MINUTES` (15) phút sau giờ chiếu, khớp với `isShowtimeAvailable` trong màn bán vé; khi đổi phải sửa cả hai nơi.
 
-CASH hoặc phương thức null: Booking COMPLETED, Payment PAID, ticket BOOKED, tạo QR và publish `BookingPaidEvent`. Phương thức khác CASH: PENDING/HOLDING, chờ xử lý thanh toán tiếp. Không có nghiệp vụ bắt buộc mở ca trước bán vé.
+CASH hoặc phương thức null: Booking COMPLETED, Payment PAID, ticket BOOKED, tạo QR và publish `BookingPaidEvent`, không lấy khóa Redis. Phương thức khác CASH: PENDING/HOLDING và giữ ghế ở Redis như đơn online, chờ xử lý thanh toán tiếp. Không có nghiệp vụ bắt buộc mở ca trước bán vé.
 
 ### VNPay
 
@@ -152,13 +156,19 @@ Hai API quản lý nhận `orderId` để tìm đơn, rồi dùng booking ID chu
 
 URL thanh toán mới dùng `Payment.paymentCreatedAt` làm `vnp_CreateDate`, để các lệnh quản lý tái sử dụng đúng thời gian này. Với URL/đơn phát sinh trước bản sửa, cần đối chiếu timestamp giao dịch gốc khi thực hiện truy vấn/hoàn tiền, vì trước đây URL có thể dùng thời gian khác giá trị đã lưu.
 
-Thanh toán thành công cập nhật Booking COMPLETED, Payment PAID/VNPAY, ticket BOOKED, QR, release hold và thông báo realtime; publish sự kiện gửi vé. Thanh toán thất bại/hủy giải phóng ghế và hoàn tồn theo đường xử lý tương ứng. Khi sửa callback, giữ tính idempotent và kiểm tra số tiền/trạng thái.
+Thanh toán thành công cập nhật Booking COMPLETED, Payment PAID/VNPAY, ticket BOOKED, QR, release hold và thông báo realtime; publish sự kiện gửi vé. Callback thành công vẫn xuất vé khi đã quá `expiresAt` nếu đơn còn PENDING và ghế còn giữ cho đơn (IPN có thể tới sau hạn). Nếu đơn đã hủy/hết hạn hoặc mất ghế, tiền đã bị trừ nên `recordLatePayment` ghi `providerTxnId`, đặt Payment PAID, Booking REFUND_REQUESTED, `spendingRecorded = false`, lý do `LATE_PAYMENT_REFUND_REASON`, báo quản lý qua thông báo REFUND_REQUEST và trả `00` cho VNPay; đơn này đi qua luồng duyệt hoàn tiền thường. Đơn REFUNDED/REFUND_REQUESTED/COMPLETED với payment chưa PAID không bị ghi đè. Thanh toán thất bại khi đơn còn hạn thì hủy và gọi `BookingReleaseService.releaseUnpaid`; thất bại sau hạn để job dọn dẹp xử lý. Khi sửa callback, giữ tính idempotent (payment PAID trả `02`) và kiểm tra số tiền/trạng thái. Mọi callback (cả sai chữ ký) và mọi lần gửi/truy vấn hoàn tiền được `PaymentEventService` ghi vào `payment_events` trong cùng transaction với thay đổi của đơn (không dùng REQUIRES_NEW vì dòng booking đang bị khóa); tra lịch sử một đơn bằng `PaymentEventRepository.findByBookingIdOrderByCreatedAtAscIdAsc`.
 
-`BookingTicketEmailListener.sendTicketEmail` nghe `BookingPaidEvent` bằng `@TransactionalEventListener(AFTER_COMMIT)`, đọc booking trong transaction mới rồi gọi `EmailService.sendBookingTickets`. `MembershipUpdateListener` cũng xử lý sự kiện sau commit để cập nhật tổng chi tiêu và hạng thành viên.
+`BookingTicketEmailListener.sendTicketEmail` nghe `BookingPaidEvent` bằng `@TransactionalEventListener(AFTER_COMMIT)`, đọc booking trong transaction mới rồi gọi `EmailService.sendBookingTickets`. `MembershipUpdateListener` cũng xử lý sự kiện sau commit để cập nhật tổng chi tiêu và hạng thành viên. `BookingMembershipService` khóa dòng user (`findByIdForUpdate`), chạy một lần cho mỗi đơn nhờ `Booking.spendingRecorded`, và chỉ cộng lượt khuyến mãi cho đơn cũ chưa giữ lượt (`promotionUsageReserved` khác TRUE).
+
+### Lượt khuyến mãi
+
+Lượt được giữ ngay khi tạo đơn hoặc áp mã bằng một câu UPDATE có điều kiện (`PromotionRepository.reserveUsage`), nên đơn đồng thời không vượt `usageLimit`. `Booking.promotionUsageReserved = TRUE` đánh dấu lượt đang giữ. Hủy, hết hạn, VNPay thất bại và thanh toán trễ trả lượt qua `BookingReleaseService.releasePromotionUsage` (không làm `usedCount` âm). Đổi mã ở `applyPromotion` trả lượt cũ rồi giữ lượt mới trong cùng transaction. Sau thanh toán, lượt giữ trở thành lượt đã dùng và không được trả khi hoàn tiền. Đơn cũ có cờ NULL vẫn tính lượt lúc thanh toán như trước.
 
 ### Hủy, hết hạn, hoàn tiền
 
-Hủy booking chỉ cho đơn PENDING theo quyền truy cập. `BookingCleanupJob.releaseExpiredBookings` chạy mỗi 120 giây, khóa và kiểm tra lại trạng thái/expiry, chuyển Booking/Payment sang CANCELLED, trả ticket AVAILABLE, xóa QR/check-in, hoàn tồn và giải phóng Redis sau commit.
+Hủy booking chỉ cho đơn PENDING theo quyền truy cập. `BookingCleanupJob.releaseExpiredBookings` chạy mỗi 120 giây; mỗi đơn chạy trong transaction `REQUIRES_NEW` riêng nên một đơn lỗi chỉ được ghi log và không chặn các đơn khác. Job khóa và kiểm tra lại trạng thái/expiry, chuyển Booking/Payment sang CANCELLED rồi gọi `releaseUnpaid`.
+
+`BookingReleaseService` là nơi duy nhất trả tài nguyên của đơn: `releaseSeats` (ticket AVAILABLE, xóa QR/check-in, broadcast và nhả Redis sau commit), `releaseUnpaid` (thêm hoàn tồn bắp nước và trả lượt khuyến mãi) và `releasePromotionUsage`. Hủy đơn, job hết hạn, VNPay thất bại/thanh toán trễ dùng `releaseUnpaid`; hoàn tiền chỉ dùng `releaseSeats`.
 
 Khách gửi yêu cầu hoàn tiền; ADMIN/MANAGER duyệt/từ chối theo chi nhánh. `BookingService.processRefund` và API VNPay refund cùng đi qua `BookingRefundService`. Với VNPAY, service khóa booking và commit mã lần thử/trạng thái PROCESSING vào Payment trước khi gọi mạng; không giữ transaction DB trong lúc chờ VNPay. Chỉ phản hồi có chữ ký hợp lệ, đúng merchant/đơn/số tiền, loại hoàn toàn phần `02`, response code `00`, transaction status `00` và mã giao dịch mới cho phép hoàn tất. `VnpayRefundGateway` kiểm tra chữ ký theo đặc tả [querydr/refund VNPay](https://sandbox.vnpayment.vn/apis/docs/truy-van-hoan-tien/querydr%26refund.html); HTTP thành công hoặc response code `00` riêng lẻ chưa đủ.
 
@@ -166,7 +176,7 @@ Payment lưu `refundRequestId`, `refundGatewayStatus`, `refundRequestedAt`, `ref
 
 Mỗi transaction của coordinator xóa cache JPA của request trước khi đọc lại dưới khóa, tránh dùng entity cũ khi Open EntityManager in View đang bật. Khi phản hồi tới muộn, service kiểm tra lại mã lần thử và trạng thái cuối cùng; kết quả của lần thử cũ không được ghi đè lần mới.
 
-Sau xác nhận thành công, transaction mới chuyển Booking/Payment sang REFUNDED, ghi số tiền/ngày hoàn, trả ghế, điều chỉnh tổng chi tiêu và hạng thành viên; thông báo ghế chạy sau commit. Duyệt lặp khi đã REFUNDED không hoàn lại lần nữa. Người xử lý/ghi chú được lưu từ lúc gửi yêu cầu; không đồng nghĩa đã hoàn tiền. Không duyệt nếu vé đã check-in. CASH vẫn được xác nhận hoàn thủ công tại quầy; các phương thức khác chưa được hỗ trợ tự động. Từ chối đưa booking về COMPLETED nhưng bị chặn khi lần thử còn PROCESSING/UNKNOWN. Hoàn tiền không tự coi bắp nước đã được trả vật lý.
+Sau xác nhận thành công, transaction mới chuyển Booking/Payment sang REFUNDED, ghi số tiền/ngày hoàn, trả ghế, điều chỉnh tổng chi tiêu và hạng thành viên (bỏ qua khi `spendingRecorded = false`, tức thanh toán trễ chưa từng được cộng); thông báo ghế chạy sau commit. Duyệt lặp khi đã REFUNDED không hoàn lại lần nữa. Người xử lý/ghi chú được lưu từ lúc gửi yêu cầu; không đồng nghĩa đã hoàn tiền. Không duyệt nếu vé đã check-in. CASH vẫn được xác nhận hoàn thủ công tại quầy; các phương thức khác chưa được hỗ trợ tự động. Từ chối đưa booking về COMPLETED nhưng bị chặn khi lần thử còn PROCESSING/UNKNOWN. Hoàn tiền không tự coi bắp nước đã được trả vật lý.
 
 UI quản lý đọc trạng thái thực tế: chỉ báo thành công khi REFUNDED; nếu chưa xác nhận thì giữ đơn chờ và hiển thị “Kiểm tra kết quả”. API `/v1/vnpay/refund` trả tên trạng thái booking trong `result`, thay cho phản hồi thô từ cổng.
 
@@ -198,21 +208,46 @@ Tất cả đường dẫn sau tương đối với `http://localhost:8081/api`;
 
 Staff dashboard hiện tính doanh thu/đơn/vé bán của chính nhân viên trong ngày; check-in và yêu cầu hoàn tiền theo chi nhánh, kèm đơn gần đây và suất chiếu sắp tới. Không còn StaffShift, StaffSchedule, mở/chốt ca, bàn giao hay lịch trực.
 
+`DataConsistencyJob` giữ dữ liệu dẫn xuất: mỗi giờ chuyển trạng thái phim theo ngày (UPCOMING → NOW_SHOWING khi tới `releaseDate`, → ENDED khi qua `endDate`; chỉ đi tới và chỉ với phim có ngày, nên không lật ngược quyết định thủ công); 03:00 hằng đêm đối soát `users.total_spending` với tổng các đơn đã cộng (`spending_recorded`) và hạng thành viên, chỉ ghi log WARN các tài khoản lệch, không tự sửa. `SeatService` cập nhật `rooms.seat_capacity` bằng số ghế thật sau khi thêm, xóa hoặc chuyển ghế; báo cáo tỷ lệ lấp đầy dùng giá trị này.
+
 `AdminAnalyticsService` mặc định lấy 30 ngày. Chỉ số doanh thu lấy theo ngày thanh toán, còn tỷ lệ lấp đầy lấy theo ngày chiếu. `RevenueReportService` lọc theo khoảng ngày thanh toán, chi nhánh, phim, nhân viên và phương thức. Tổng hợp dùng toàn bộ tập kết quả đã lọc, còn DTO và file XLSX doanh thu lấy tối đa 200 dòng chi tiết.
 
 `OperationsReportResponse` có `summary`, `paymentBreakdown`, `refundQueue`, `showtimeLoads`; không còn phần báo cáo ca/lịch trực/tồn kho. XLSX operations hiện xuất các chỉ số tổng hợp, không phải toàn bộ mọi danh sách trong DTO.
 
-Notification lấy 100 bản ghi mới nhất toàn hệ thống trước khi lọc quyền; unread count cũng dựa trên tập này. `readAt` nằm trên bản ghi notification, không phải bảng trạng thái đọc riêng theo người dùng.
+Notification lọc ngay trong truy vấn `findVisibleCandidates` (gửi riêng cho người dùng, không chỉ định role, hoặc đúng role và chi nhánh), lấy 100 bản ghi mới nhất rồi `canView` quyết định cuối cùng; unread count dựa trên cùng tập này. Trạng thái đã đọc nằm trong `notification_reads` theo từng người (`NotificationRead`): một nhân viên đọc thông báo chung của chi nhánh không làm người khác thấy đã đọc. API vẫn trả `read`/`readAt` của người đang xem.
 
-System settings mặc định: `booking.holdMinutes=6`, `booking.maxTicketsPerTransaction=8`, `refund.windowHours=24`, `cinema.supportEmail`, `cinema.supportHotline`.
+System settings mặc định: `booking.holdMinutes=6`, `booking.maxTicketsPerTransaction=8`, `booking.maxPendingPerUser=2`, `refund.windowHours=24`, `cinema.supportEmail`, `cinema.supportHotline`.
 
 Các API đọc đơn của khách trả `refundDeadline` theo `refund.windowHours` hiện tại, tính từ `payment.paidAt`; chỉ có giá trị cho đơn COMPLETED đã thanh toán và chưa check-in. Frontend dùng thời hạn này thay vì tự cộng cố định 24 giờ. Cập nhật hồ sơ cá nhân dùng `UpdateProfileRequest` chỉ cho phép `fullName`, `dob`, `phoneNumber`, `gender`, `email`; không thay đổi quyền, chi nhánh hay trạng thái tài khoản.
 
 ## Migration và kiểm tra
 
-### Thứ tự theo schema đang dùng
+### Flyway
 
-[Schema khởi tạo](movie.sql) dùng `CREATE TABLE IF NOT EXISTS` cho các bảng nghiệp vụ chính trong `cinema` và không nạp bản ghi mẫu. Mặc định Hibernate tạo thêm cấu trúc cần thiết khi khởi động với `ddl-auto: update`. Với schema hiện hữu, đối chiếu từng thay đổi đã áp dụng và chạy script tương ứng khi backend dừng, sau khi sao lưu. Danh sách dưới đây nêu các phụ thuộc đã biết, không phải lệnh chạy cả thư mục theo thứ tự tên.
+Kết nối MySQL đặt `time_zone = '+07:00'` qua `spring.datasource.hikari.connection-init-sql`, nên `CURRENT_TIMESTAMP` trong DEFAULT/ON UPDATE và SQL thuần dùng giờ rạp như `Clock` của ứng dụng, kể cả khi server MySQL chạy UTC.
+
+Schema do Flyway quản lý trong [src/main/resources/db/migration](src/main/resources/db/migration) và chạy tự động khi backend khởi động, trước khi Hibernate kiểm tra entity (`ddl-auto: validate`). Không có đoạn code nào sửa schema lúc chạy; `BackendApplication` và `DataSeedService` trước đây tự `ALTER` cột `bookings.status`/`users.role` ở mỗi lần khởi động, việc đó nay nằm trong V2.
+
+| Version | Nội dung |
+| --- | --- |
+| [V1__baseline_schema](src/main/resources/db/migration/V1__baseline_schema.sql) | Toàn bộ schema cho database rỗng: bảng, index (`uk_*`, `idx_*`), CHECK (`chk_*`), FK (`fk_*`). Tên ràng buộc trùng với `@Table` của entity. |
+| [V2__legacy_catch_up](src/main/resources/db/migration/V2__legacy_catch_up.sql) | Đưa database có từ trước Flyway về đúng V1. Gộp các script chạy tay trước đây: marker lần hoàn tiền VNPay trong `payments`; cờ `promotion_usage_reserved`, `spending_recorded`; `users.role` thành VARCHAR và chỉ giữ `chk_users_role`; bảng/cột còn thiếu (`system_settings`, `notifications`, `audit_logs`, `users.branch_id`, cột tồn kho của `foods`); index check-in QR, job hết hạn, giới hạn đơn chờ, lịch chiếu, thông báo/nhật ký; NOT NULL cho tài khoản, trạng thái/số tiền đơn, `used_count`, `active`, tên thể loại (unique); `bookings.status` VARCHAR(50); CHECK số tiền/tỷ lệ/điểm; FK `branch_id` của users/foods/promotions (RESTRICT). Mọi bước kiểm tra trước khi đổi nên trên database tạo từ V1 không thay đổi gì. |
+| [V3__money_precision_and_enum_checks](src/main/resources/db/migration/V3__money_precision_and_enum_checks.sql) | Mọi cột tiền thành DECIMAL(15,2) (trước trộn 38/15/12); `refund_gateway_status` thống nhất VARCHAR(20); CHECK cho `payment_status`, `refund_gateway_status`. Quy ước enum: cột ENUM của MySQL giữ nguyên, enum lưu VARCHAR luôn có CHECK; thêm giá trị enum trong Java cần migration tương ứng. |
+| [V4__notification_reads](src/main/resources/db/migration/V4__notification_reads.sql) | Bảng `notification_reads` (đã đọc theo từng người). Chép trạng thái cũ cho mọi người nhận hợp lệ để giữ nguyên những gì họ đang thấy, rồi bỏ cột `notifications.read_at`. |
+| [V5__payment_events](src/main/resources/db/migration/V5__payment_events.sql) | Nhật ký chỉ ghi thêm `payment_events`: mỗi callback VNPay (return/IPN, kể cả sai chữ ký hoặc không khớp đơn) và mỗi lần gửi/truy vấn hoàn tiền với mã phản hồi. Không lưu chữ ký. FK tới bookings chặn xóa đơn đã có giao dịch. |
+| [V6__room_seat_capacity](src/main/resources/db/migration/V6__room_seat_capacity.sql) | Tính lại `seat_capacity` bằng số ghế thật; CHECK không âm. |
+
+Database rỗng: tạo `cinema` (utf8mb4) rồi khởi động backend, Flyway chạy V1 và V2. Database đã có bảng nhưng chưa có `flyway_schema_history`: `baseline-on-migrate` đánh dấu V1 rồi chạy V2. Điều kiện là database đã ở trạng thái sau các script `20261111_*` (PK `id`, bảng `payments` tách riêng…); nếu chưa, chạy các script đó trước theo bảng bên dưới.
+
+V2 kiểm tra dữ liệu trước khi siết ràng buộc và dừng với thông báo cụ thể nếu có NULL bắt buộc, tên thể loại hoặc mã QR trùng, chi nhánh mồ côi, giá trị âm hay ngoài khoảng. Nó chỉ tự chuẩn hóa NULL có một nghĩa duy nhất: `used_count` → 0, `active` NULL → 0 (ứng dụng coi là không hoạt động), user `status` NULL → ACTIVE, `role` NULL → USER, `discount_amount` NULL → 0. Khi V2 dừng: sửa dữ liệu theo thông báo, xóa dòng lỗi bằng `DELETE FROM flyway_schema_history WHERE success = 0;` rồi khởi động lại. MySQL không rollback DDL nhưng mọi bước của V2 đều chạy lại được.
+
+Khi đổi entity: thêm `V{n}__mo_ta.sql` mới (không sửa file đã phát hành), đặt tên ràng buộc/index giống trong `@Table`, chạy `mvn test` và khởi động thử trên database rỗng lẫn bản sao dữ liệu. Không dùng `ddl-auto: update`. Sau thay đổi này, việc xóa chi nhánh còn nhân viên/món/khuyến mãi bị FK chặn và tạo thể loại trùng tên trả lỗi ràng buộc dữ liệu.
+
+Marker lần hoàn tiền trong V2 không sửa lịch sử: đơn REFUNDED từ phiên bản cũ có marker null không phải bằng chứng VNPay đã hoàn tiền, cần đối soát riêng, không gửi lại hàng loạt.
+
+### Script chạy tay cho database rất cũ
+
+`migrations/` chỉ còn các script `20261111_*` cho database có trước đợt chuyển PK sang `id` và tách payments. Chạy khi backend dừng, sau khi sao lưu, theo phụ thuộc dưới đây (không chạy cả thư mục theo thứ tự tên), rồi mới khởi động backend để Flyway baseline và chạy V2.
 
 | Thay đổi | Script trong `migrations/` và điều kiện |
 | --- | --- |
@@ -223,17 +258,15 @@ Các API đọc đơn của khách trả `refundDeadline` theo `refund.windowHou
 | Metadata và khả năng hiển thị phim | [movie_editor](migrations/20261111_movie_editor.sql) thêm metadata và cột `published` trên schema cũ. Chạy [movie_is_public](migrations/20261111_movie_is_public.sql) sau bước đó nếu còn `published`. [remove_movie_inactive](migrations/20261111_remove_movie_inactive.sql) yêu cầu xử lý phim INACTIVE trước. |
 | Timestamp phim và đánh giá | [movie_timestamps_director_names](migrations/20261111_movie_timestamps_director_names.sql) thêm timestamp và cho phép đạo diễn trùng tên. [movie_rating_timestamps_not_null](migrations/20261111_movie_rating_timestamps_not_null.sql) điền timestamp thiếu trước khi đặt NOT NULL. |
 | Booking và vé | [booking_booked_staff](migrations/20261111_booking_booked_staff.sql), [ticket_checked_in_by](migrations/20261111_ticket_checked_in_by.sql), [ticket_status_booking_code_not_null](migrations/20261111_ticket_status_booking_code_not_null.sql). Dữ liệu cũ có NULL ở trạng thái vé hoặc mã đơn cần được sửa trước khi siết ràng buộc. |
-| Payment một-một | [extract_booking_payments](migrations/20261111_extract_booking_payments.sql) đối chiếu dữ liệu rồi mới xóa các cột payment trong bookings. [refund_gateway_attempt](migrations/20261112_refund_gateway_attempt.sql) bổ sung marker khi đã có bảng payments. |
+| Payment một-một | [extract_booking_payments](migrations/20261111_extract_booking_payments.sql) đối chiếu dữ liệu rồi mới xóa các cột payment trong bookings. |
 | Dọn cấu hình và bảng cũ | [remove_per_movie_ticket_limit](migrations/20261111_remove_per_movie_ticket_limit.sql), [remove_staff_handover](migrations/20261111_remove_staff_handover.sql) trước [remove_staff_scheduling](migrations/20261111_remove_staff_scheduling.sql), [drop_unused_food_stock_transactions](migrations/20261111_drop_unused_food_stock_transactions.sql) cho bảng lịch sử tồn cũ. |
 
-`PaymentPersistenceIntegrationTest` dùng database bản sao `cinema_payment_test_YYYYMMDDHHMMSS` đã áp dụng migration, với các biến `PAYMENT_TEST_DATABASE`, `PAYMENT_TEST_USER` và `PAYMENT_TEST_PASSWORD`. Test xác nhận schema và lưu/cập nhật/xóa booking cùng payment trong transaction rollback.
-
-`migrations/` có SQL cho PK `id`, tách payments, đổi cột người bán, giá chung theo suất, công nghệ phòng/định dạng chiếu, hiển thị phim, ràng buộc dữ liệu, check-in actor và gỡ giới hạn theo phim/ca/lịch trực. Đây là script chuyển đổi thủ công; không coi Hibernate update là công cụ tự di chuyển mọi dữ liệu cũ.
-
-`migrations/20261112_refund_gateway_attempt.sql` bổ sung 5 cột nullable vào `payments` trên MySQL 8, chạy được lại; áp dụng trước khi deploy với `ddl-auto=validate`. Không có cơ chế tự chạy migration này. Script không sửa lịch sử: đơn REFUNDED từ phiên bản cũ có marker null không phải bằng chứng VNPay đã hoàn tiền, cần đối soát riêng, không gửi lại hàng loạt.
+`PaymentPersistenceIntegrationTest` chạy trên database bản sao `cinema_payment_test_YYYYMMDDHHMMSS` có dữ liệu (cần phòng, suất chiếu), với `PAYMENT_TEST_DATABASE`, `PAYMENT_TEST_USER`, `PAYMENT_TEST_PASSWORD` và tùy chọn `PAYMENT_TEST_PORT` (mặc định 3306). Flyway tự migrate bản sao khi test khởi động. Test xác nhận schema và lưu/cập nhật/xóa booking cùng payment trong transaction rollback.
 
 Khi cần dùng các script gỡ chức năng, đọc đúng thứ tự phụ thuộc: `remove_staff_handover` còn giữ STAFF_SCHEDULE, sau đó `remove_staff_scheduling` mới loại STAFF_SCHEDULE. `drop_unused_food_stock_transactions` chỉ xóa bảng lịch sử cũ; tồn hiện tại vẫn nằm ở Food.
 
 Test hiện có trong `src/test/java/com/ltweb/backend/service/` bao phủ thanh toán/persistence, refund, transaction effects, giới hạn vé, staff dashboard, tồn bắp nước, giá suất chiếu, layout ghế, mapping check-in và ràng buộc schema. `JwtSecurityTest` kiểm tra phân loại token, logout, refresh/replay/đồng thời, tài khoản bị khóa, chữ ký sai và claim thiếu/lỗi; Redis được giả lập trong test này. Chạy riêng bằng `mvn -Dtest=JwtSecurityTest test`, hoặc chạy toàn bộ bằng `mvn test`. `SensitiveApiSecurityTest` dựng chuỗi filter thật bằng MockMvc: xác nhận chỉ có `JwtAuthenticationFilter` (không còn `BearerTokenAuthenticationFilter`), access token hợp lệ vào được `/my-info`, request thiếu token/refresh token/header sai trả `401`, role không đủ trả `403` kèm `WWW-Authenticate`, route public và OAuth2 Google vẫn hoạt động, cùng điều kiện đăng ký cleanup. `VnpayManagementSecurityTest` và `UserProfileSecurityTest` kiểm tra quyền quản lý VNPay và cập nhật hồ sơ. Không sửa mã MapStruct sinh ra trong `target/`.
+
+`BookingCheckoutRulesTest` kiểm tra giữ/trả/đổi lượt khuyến mãi, giới hạn đơn chờ, thời hạn bán online và tại quầy, giữ ghế Redis cho đơn quầy chưa trả tiền mặt, định dạng mã đơn và giới hạn số lượng bắp nước. `BookingCleanupJobTest` kiểm tra mỗi đơn hết hạn chạy transaction riêng. `DataIntegrityRulesTest` kiểm tra đã đọc theo từng người, nội dung nhật ký thanh toán (không lưu chữ ký), đồng bộ sức chứa phòng và phân loại lỗi ràng buộc không lộ SQL. `VnpayPaymentTest` có các trường hợp thanh toán trễ.
 
 `BookingRefundFlowTest` kiểm tra commit trước gọi cổng, timeout/query lại, chống gửi trùng khi đồng thời, lỗi commit và CASH. Transaction/concurrency được giả lập trong unit test; không thay thế kiểm thử MySQL. `VnpayRefundGatewayTest` kiểm tra chữ ký, đối chiếu giao dịch, pending/rejection và phản hồi không rõ kết quả bằng HTTP mock; `RefundDecisionResponseTest` kiểm tra cả hai route không báo thành công sớm. Test persistence cần DB riêng qua `PAYMENT_TEST_DATABASE`; bị skip nếu chưa cấu hình.
