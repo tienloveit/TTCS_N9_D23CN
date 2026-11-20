@@ -342,7 +342,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         <div className={staff ? 'staff-heading-copy' : undefined}>
           {staff && <span className="staff-heading-icon"><ListIcon size={24} /></span>}
           <div>
-            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý Đơn đặt vé'}</h1>
+            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý đơn đặt vé'}</h1>
             <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
           </div>
         </div>

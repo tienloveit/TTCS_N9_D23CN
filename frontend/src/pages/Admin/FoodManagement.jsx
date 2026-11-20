@@ -162,7 +162,7 @@ const FoodManagement = () => {
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
       >
         <div>
-          <h1 className="page-title">Quản lý Bắp & Nước</h1>
+          <h1 className="page-title">Quản lý bắp nước</h1>
           <p className="page-subtitle">
             Tổng cộng <strong>{foods.length}</strong> sản phẩm trong hệ thống.
           </p>

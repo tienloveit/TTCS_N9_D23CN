@@ -241,7 +241,7 @@ const UserManagement = () => {
       {/* Page header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="page-title">Quản lý Người dùng</h1>
+          <h1 className="page-title">Quản lý người dùng</h1>
           <p className="page-subtitle">
             Tổng cộng <strong>{users.length}</strong> tài khoản trong hệ thống.
           </p>

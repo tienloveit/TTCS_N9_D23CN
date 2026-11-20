@@ -138,7 +138,7 @@ const MovieManagement = () => {
     <div className="admin-movies">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="page-title">Quản lý Phim</h1>
+          <h1 className="page-title">Quản lý phim</h1>
           <p className="page-subtitle">
             Tổng cộng <strong>{movies.length}</strong> phim trong hệ thống.
           </p>

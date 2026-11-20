@@ -182,6 +182,8 @@
 .catalog-button--primary:hover { background: var(--brand-strong); color: #fff; }
 .catalog-button--secondary { border-color: var(--border); background: var(--bg-secondary); color: var(--text-primary); }
 .catalog-button--secondary:hover { border-color: var(--border-light); background: #e2ebf7; color: var(--text-primary); }
+.catalog-button--soft { background: var(--brand-soft); color: var(--brand); }
+.catalog-button--soft:hover { background: var(--brand); color: var(--ink-inverse); }
 .catalog-button--light { border-color: #ffffff75; background: #12182755; color: #fff; }
 .catalog-button--light:hover { border-color: #fff; background: #ffffff26; color: #fff; }
 

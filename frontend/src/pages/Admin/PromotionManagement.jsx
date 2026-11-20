@@ -170,7 +170,7 @@ const PromotionManagement = () => {
     <div className="admin-promotions">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="page-title">Quản lý Khuyến mãi</h1>
+          <h1 className="page-title">Quản lý khuyến mãi</h1>
           <p className="page-subtitle">Tổng cộng <strong>{promotions.length}</strong> mã khuyến mãi.</p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal()}>

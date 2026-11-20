@@ -370,7 +370,7 @@ const AdminDashboard = () => {
           <div className="dashboard-panel-heading">
             <h2 id="dashboard-food">Doanh số bắp nước</h2>
             <Link to={`${basePath}/foods`} className="dashboard-link">
-              Quản lý F&B <ArrowRightIcon size={14} aria-hidden="true" />
+              Quản lý bắp nước <ArrowRightIcon size={14} aria-hidden="true" />
             </Link>
           </div>
           {loading ? (

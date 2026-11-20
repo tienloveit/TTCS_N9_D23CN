@@ -373,7 +373,7 @@ const BranchManagement = () => {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="page-title">Quản lý Rạp &amp; Phòng</h1>
+          <h1 className="page-title">Quản lý rạp &amp; phòng</h1>
           <p className="page-subtitle">
             <strong>{branches.length}</strong> chi nhánh · <strong>{rooms.length}</strong> phòng chiếu
           </p>
