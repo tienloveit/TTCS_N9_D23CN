@@ -707,7 +707,7 @@ const BranchManagement = () => {
                       <div style={{ display: 'grid', gap: 8, justifyContent: 'center' }}>
                         {seatRows.map((rowLabel) => (
                           <div key={rowLabel} style={{ display: 'grid', gridTemplateColumns: `34px repeat(${gridColumns.length}, 44px)`, gap: 8, alignItems: 'center' }}>
-                            <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--text-secondary)' }}>{rowLabel}</div>
+                            <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--text-secondary)' }}>{rowLabel}</div>
                             {gridColumns.map((seatNumber) => {
                               const seat = getSeatAt(rowLabel, seatNumber);
                               const isSelected = seat?.seatId === selectedSeatId;
@@ -740,7 +740,7 @@ const BranchManagement = () => {
                                         border: `2px solid ${isSelected ? '#0f172a' : baseStyle.borderColor}`,
                                         background: baseStyle.background,
                                         color: baseStyle.color,
-                                        fontWeight: 800,
+                                        fontWeight: 700,
                                         fontSize: 12,
                                         cursor: 'grab',
                                         boxShadow: isSelected ? '0 0 0 3px rgba(15, 23, 42, 0.12)' : 'none',
@@ -765,7 +765,7 @@ const BranchManagement = () => {
                     <div style={{ display: 'grid', gap: 16 }}>
                       <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Ghế đang chọn</div>
-                        <div style={{ fontSize: 28, lineHeight: 1, fontWeight: 800 }}>{selectedSeat.seatCode}</div>
+                        <div style={{ fontSize: 28, lineHeight: 1, fontWeight: 700 }}>{selectedSeat.seatCode}</div>
                         <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>
                           Hàng {selectedSeat.rowLabel}, cột {selectedSeat.seatNumber}
                         </div>
@@ -785,7 +785,7 @@ const BranchManagement = () => {
                       </div>
 
                       <div style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid var(--border)' }}>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
                           Đổi nhanh cả Hàng {selectedSeat.rowLabel}
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>

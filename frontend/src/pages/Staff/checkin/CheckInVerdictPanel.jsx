@@ -111,7 +111,7 @@ export default function CheckInVerdictPanel({
                 style={{
                   display: 'inline-block',
                   fontSize: '0.75rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   color: '#0756a6',
                   background: '#eff6ff',
                   padding: '3px 10px',
@@ -121,7 +121,7 @@ export default function CheckInVerdictPanel({
               >
                 MÃ ĐƠN: {verdict.data?.bookingCode || '—'}
               </span>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 900, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
                 {verdict.data?.movieName || 'Vé xem phim'}
               </h3>
             </div>
@@ -152,7 +152,7 @@ export default function CheckInVerdictPanel({
               <div
                 style={{
                   fontSize: '0.78rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   textTransform: 'uppercase',
                   color: '#64748b',
                   marginBottom: 10,

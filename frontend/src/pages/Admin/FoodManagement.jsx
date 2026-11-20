@@ -352,7 +352,7 @@ const FoodManagement = () => {
                 marginBottom: '24px',
               }}
             >
-              <h2 id={dialog.titleId} style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+              <h2 id={dialog.titleId} style={{ fontSize: '1.5rem', fontWeight: 700 }}>
                 {editingFood ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
               <button

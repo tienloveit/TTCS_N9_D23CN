@@ -282,7 +282,7 @@ export default function PaymentPage() {
               {booking.promotionCode ? (
                 <div className="pay-promo-applied">
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--seat-available)', letterSpacing: 0.8 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--success)', letterSpacing: 0.8 }}>
                       {booking.promotionCode}
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -345,7 +345,7 @@ export default function PaymentPage() {
                             onClick={() => handleApplyPromo(promo.code)}
                           >
                             <div>
-                              <strong style={{ color: 'var(--seat-available)', fontSize: '0.92rem' }}>
+                              <strong style={{ color: 'var(--success)', fontSize: '0.92rem' }}>
                                 {promo.code}
                               </strong>
                               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -461,7 +461,7 @@ export default function PaymentPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: '#dc2626' }}>
               <AlertTriangleIcon size={22} />
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Xác nhận huỷ đơn đặt vé?
               </h3>
             </div>

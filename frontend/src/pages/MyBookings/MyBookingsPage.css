@@ -1,10 +1,7 @@
 .mt-page.page {
-  --mt-ink: #192438;
-  --mt-muted: #52627a;
+  --mt-ink: var(--ink);
+  --mt-muted: var(--ink-muted);
   --mt-border: #e0dfdc;
-  --mt-accent: #b9380c;
-  --mt-accent-hover: #8e2a09;
-  --mt-radius: 16px;
   --mt-paper: #f8f7f4;
   background: var(--mt-paper);
   color: var(--mt-ink);
@@ -19,7 +16,7 @@
 
 .mt-page svg { flex-shrink: 0; }
 .mt-page :is(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--mt-accent);
+  outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
 
@@ -33,7 +30,7 @@
 }
 .mt-heading {
   font-size: clamp(2.2rem, 4.4vw, 3.5rem);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   letter-spacing: -.045em;
   line-height: 1.15;
 }
@@ -68,7 +65,7 @@
 }
 .mt-field-control select { padding: 0 9px; }
 .mt-search { display: flex; align-items: center; padding-left: 11px; color: var(--mt-muted); }
-.mt-search:focus-within { border-color: var(--mt-accent); background: white; }
+.mt-search:focus-within { border-color: var(--brand); background: white; }
 .mt-search input {
   flex: 1;
   min-width: 0;
@@ -81,7 +78,7 @@
   font: inherit;
 }
 .mt-search input::placeholder { color: var(--mt-muted); }
-.mt-search:has(input:focus-visible) { outline: 2px solid var(--mt-accent); outline-offset: 2px; }
+.mt-search:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
 .mt-page .mt-search input:focus-visible { outline: none; }
 .mt-search button {
   display: grid;
@@ -92,7 +89,7 @@
   background: transparent;
   color: var(--mt-muted);
 }
-.mt-search button:hover { background: #fff0e6; color: var(--mt-accent-hover); }
+.mt-search button:hover { background: #fff0e6; color: var(--brand-strong); }
 .mt-tools .mt-refresh { justify-self: start; }
 
 .mt-section { margin-top: clamp(28px, 4vw, 48px); }
@@ -110,7 +107,7 @@
   align-items: center;
   font-size: clamp(1.15rem, 2.3vw, 1.45rem);
   line-height: 1.25;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   scroll-margin-top: 90px;
 }
 .mt-results { color: var(--mt-muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
@@ -120,7 +117,7 @@
   align-items: center;
   min-height: 300px;
   padding: clamp(24px, 6vw, 72px);
-  border-radius: var(--mt-radius);
+  border-radius: var(--radius-lg);
   background: linear-gradient(90deg, #171722 10%, #171722ed 38%, #1717224a),
     url('/assets/img/empty-cinema.png') right 60% / cover;
   color: white;
@@ -136,7 +133,7 @@
   min-width: 0;
   grid-template-columns: minmax(0, 1fr);
   border: 1px solid var(--mt-border);
-  border-radius: var(--mt-radius);
+  border-radius: var(--radius-lg);
   background: white;
 }
 .mt-card-main {
@@ -161,7 +158,7 @@
   padding: 3px 8px;
   border-radius: 6px;
   font-size: .75rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   line-height: 1.4;
 }
 .mt-tone--green { background: #e6f6ec; color: #17623d; }
@@ -173,14 +170,14 @@
 .mt-tone--neutral { background: #eef1f6; color: #40516a; }
 .mt-code { color: var(--mt-muted); font-size: .78rem; overflow-wrap: anywhere; }
 .mt-code b { margin-left: 4px; font-family: ui-monospace, monospace; letter-spacing: .04em; }
-.mt-title { margin: 4px 0; font-size: clamp(1.1rem, 2.2vw, 1.47rem); line-height: 1.2; font-weight: 800; overflow-wrap: anywhere; }
+.mt-title { margin: 4px 0; font-size: clamp(1.1rem, 2.2vw, 1.47rem); line-height: 1.2; font-weight: var(--fw-bold); overflow-wrap: anywhere; }
 .mt-showtime { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 7px; color: var(--mt-muted); font-size: .82rem; }
 .mt-showtime strong { color: var(--mt-ink); font-size: .9rem; font-variant-numeric: tabular-nums; }
 .mt-showtime svg { color: #446080; }
 .mt-meta { display: grid; gap: 5px; grid-column: 1 / -1; }
 .mt-meta-row { display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: baseline; column-gap: 6px; font-size: .84rem; }
 .mt-meta-row dt { display: flex; align-items: center; gap: 5px; color: var(--mt-muted); }
-.mt-meta-row dd { margin: 0; overflow-wrap: anywhere; font-weight: 630; }
+.mt-meta-row dd { margin: 0; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
 .mt-seats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .mt-seat { padding: 1px 5px; border-radius: 4px; background: #eff3f8; font-size: .78rem; }
 .mt-checkin-count { color: var(--mt-muted); font-size: .78rem; }
@@ -192,12 +189,12 @@
   gap: 8px;
   padding: clamp(12px, 2vw, 20px);
   border-top: 1px dashed #c5d2e2;
-  border-radius: 0 0 calc(var(--mt-radius) - 1px) calc(var(--mt-radius) - 1px);
+  border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
   background: #fbfaf8;
 }
 .mt-stub-price { display: grid; gap: 1px; }
 .mt-stub-label, .mt-stub-discount, .mt-stub-hint { color: var(--mt-muted); font-size: .8rem; }
-.mt-stub-amount { font-size: clamp(1.13rem, 2.6vw, 1.48rem); font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mt-stub-amount { font-size: clamp(1.13rem, 2.6vw, 1.48rem); font-weight: var(--fw-bold); line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .mt-stub-amount.is-void { color: var(--mt-muted); text-decoration: line-through; }
 .mt-stub-hint { display: flex; flex-wrap: wrap; align-items: center; column-gap: 5px; }
 .mt-text--amber { color: #804209; }
@@ -225,7 +222,7 @@
 .mt-note-heading p { font-size: .8rem; }
 .mt-change-list { display: grid; gap: 7px; margin-top: 8px; }
 .mt-change-list > div { padding-top: 6px; border-top: 1px solid #f2cba9; }
-.mt-change-list dt { font-weight: 750; }
+.mt-change-list dt { font-weight: var(--fw-bold); }
 .mt-change-list dd { display: grid; gap: 2px; margin: 0; }
 
 .mt-page .mt-btn {
@@ -239,16 +236,16 @@
   border-radius: 9px;
   font-family: inherit;
   font-size: .85rem;
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   line-height: 1.25;
   text-align: center;
 }
-.mt-page .mt-btn--primary { color: white; background: var(--mt-accent); }
-.mt-page .mt-btn--primary:hover:not(:disabled) { background: var(--mt-accent-hover); }
+.mt-page .mt-btn--primary { color: white; background: var(--brand); }
+.mt-page .mt-btn--primary:hover:not(:disabled) { background: var(--brand-strong); }
 .mt-page .mt-btn--danger { color: white; background: #a12626; }
 .mt-page .mt-btn--danger:hover:not(:disabled) { background: #811818; }
 .mt-page .mt-btn--outline { color: var(--mt-ink); background: white; border-color: #c6d2e3; }
-.mt-page .mt-btn--outline:hover:not(:disabled, [aria-disabled="true"]) { color: var(--mt-accent-hover); background: #fff3eb; border-color: #df9167; }
+.mt-page .mt-btn--outline:hover:not(:disabled, [aria-disabled="true"]) { color: var(--brand-strong); background: #fff3eb; border-color: #df9167; }
 .mt-page .mt-btn:is(:disabled, [aria-disabled="true"]) { color: #546279; background: #ebeff6; border-color: #d5deea; cursor: not-allowed; }
 .mt-page .mt-btn--light { background: white; color: var(--mt-ink); }
 .mt-page .mt-btn--light:hover:not(:disabled) { background: #eaf1fa; }
@@ -273,7 +270,7 @@
   gap: 8px;
   padding: clamp(22px, 4vw, 44px) 12px;
   border: 1px solid var(--mt-border);
-  border-radius: var(--mt-radius);
+  border-radius: var(--radius-lg);
   background: white;
   text-align: center;
 }
@@ -287,11 +284,11 @@
   height: 48px;
   border-radius: 13px;
   background: #fff0e6;
-  color: var(--mt-accent-hover);
+  color: var(--brand-strong);
 }
 
 .mt-sk {
-  border-radius: var(--mt-radius);
+  border-radius: var(--radius-lg);
   background: linear-gradient(100deg, #e8edf5 25%, #f9fbfd 45%, #e8edf5 65%) 100% 0 / 220%;
   animation: mt-shimmer 1.4s ease-in-out infinite;
 }
@@ -321,7 +318,7 @@
   align-items: center;
   color: #ffc093;
   font-size: .75rem;
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -368,7 +365,7 @@
   .mt-card .mt-stub {
     border-left: 1px dashed #c6bdb4;
     border-top: 0;
-    border-radius: 0 calc(var(--mt-radius) - 1px) calc(var(--mt-radius) - 1px) 0;
+    border-radius: 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0;
   }
   .mt-card--featured .mt-card-main { grid-template-columns: clamp(108px, 13vw, 164px) minmax(0, 1fr); }
   .mt-card--featured .mt-stub { border-color: var(--mt-perforation); }
@@ -429,7 +426,7 @@
 
 .mt-dialog-title {
   font-size: 1.2rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
   padding-right: 36px;
 }
@@ -469,7 +466,7 @@
 
 .mt-refund-movie strong {
   color: var(--text-primary);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -490,7 +487,7 @@
 
 .mt-refund-amount strong {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
@@ -504,7 +501,7 @@
   display: block;
   margin-bottom: 8px;
   font-size: 0.86rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
 }
 
@@ -522,7 +519,7 @@
   border: 1px solid var(--border);
   color: var(--text-secondary);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   transition: all var(--transition);
 }
 
@@ -599,7 +596,7 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   font-size: 1.02rem;
 }
 
@@ -610,7 +607,7 @@
 
 .mt-pass-kind {
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #94a3b8;
@@ -623,7 +620,7 @@
 
 .mt-pass-title {
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   line-height: 1.25;
   color: #0f172a;
 }
@@ -650,21 +647,21 @@
 
 .mt-pass-grid span {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--ink-muted);
 }
 
 .mt-pass-grid strong {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: #0f172a;
 }
 
 .mt-pass-grid strong small {
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: var(--fw-regular);
   color: var(--text-muted);
 }
 
@@ -681,7 +678,7 @@
 
 .mt-pass-foods {
   font-size: 0.88rem !important;
-  font-weight: 500 !important;
+  font-weight: var(--fw-regular) !important;
 }
 
 .mt-pass-cut {
@@ -725,7 +722,7 @@
   margin-top: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: 0.14em;
   color: #0f172a;
 }

@@ -24,7 +24,7 @@ export default function CheckInHistoryLog({
           flexWrap: 'wrap',
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800 }}>
+        <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700 }}>
           Nhật ký soát vé trong phiên ({filteredHistory.length})
         </h3>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -113,7 +113,7 @@ export default function CheckInHistoryLog({
                   <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                     {item.time}
                   </td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 800, color: '#0f172a' }}>
+                  <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
                     {item.code.length > 22 ? `${item.code.slice(0, 20)}...` : item.code}
                   </td>
                   <td>

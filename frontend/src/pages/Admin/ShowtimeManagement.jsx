@@ -382,7 +382,7 @@ const ShowtimeManagement = () => {
     const date = new Date(dateStr);
     return (
       <div>
-        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{formatTime(dateStr)}</div>
+        <div style={{ fontWeight: 400, color: 'var(--text-primary)' }}>{formatTime(dateStr)}</div>
         <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
           {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </div>
