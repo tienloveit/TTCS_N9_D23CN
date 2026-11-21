@@ -204,6 +204,26 @@ class SensitiveApiSecurityTest {
   }
 
   @Test
+  void logoutWorksWithoutBearerSoAnExpiredSessionCanStillBeEnded() {
+    context("default", false)
+        .run(
+            ctx -> {
+              MockMvc mvc =
+                  mockMvc(ctx.getSourceApplicationContext(), ctx.getBean(FilterChainProxy.class));
+              mvc.perform(
+                      request("POST", "/auth/logout", null)
+                          .content(
+                              "{\"accessToken\":\"submitted-access\","
+                                  + "\"refreshToken\":\"submitted-refresh\"}"))
+                  .andExpect(status().isOk());
+              mvc.perform(request("POST", "/auth/logout", null)).andExpect(status().isOk());
+              verify(ctx.getBean(AuthService.class))
+                  .logout("submitted-access", "submitted-refresh");
+              verify(ctx.getBean(AuthService.class)).logout(null, null);
+            });
+  }
+
+  @Test
   void googleAuthorizationAndCallbackStillReachOAuth2Filters() {
     context("default", false)
         .run(

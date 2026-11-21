@@ -12,6 +12,7 @@ import com.ltweb.backend.repository.UserRepository;
 import com.nimbusds.jwt.SignedJWT;
 import java.text.ParseException;
 import java.util.UUID;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,8 +44,27 @@ public class AuthService {
     return getLoginResponse(user);
   }
 
-  public void logout(String token) {
-    jwtService.revokeAccessToken(token);
+  /**
+   * Ends the session identified by the presented tokens. Either token may be missing, expired or
+   * unusable (for example an access token that already expired): there is nothing left to revoke
+   * for it, so logout still succeeds and revokes whatever else was presented.
+   */
+  public void logout(String accessToken, String refreshToken) {
+    revokeIfUsable(refreshToken, jwtService::revokeRefreshToken);
+    revokeIfUsable(accessToken, jwtService::revokeAccessToken);
+  }
+
+  private void revokeIfUsable(String token, Consumer<String> revoke) {
+    if (!StringUtils.hasText(token)) {
+      return;
+    }
+    try {
+      revoke.accept(token);
+    } catch (AppException e) {
+      if (e.getErrorCode() != ErrorCode.TOKEN_INVALID) {
+        throw e;
+      }
+    }
   }
 
   public LoginResponse refresh(String token) {

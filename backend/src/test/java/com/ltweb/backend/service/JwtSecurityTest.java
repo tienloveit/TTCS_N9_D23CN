@@ -122,18 +122,68 @@ class JwtSecurityTest {
   }
 
   @Test
-  void loggedOutAccessCannotAuthenticateOrRefreshAndDoesNotTouchRefreshSessions() {
+  void loggedOutAccessCannotAuthenticateOrRefresh() {
     TokenPayload access = jwt.generateAccessToken(user);
     TokenPayload refresh = registeredRefresh();
     assertInvalid(() -> auth.refresh(access.getToken()));
-    auth.logout(access.getToken());
+    auth.logout(access.getToken(), null);
     assertThat(state).containsKey(REVOKED_PREFIX + access.getJwtId());
     assertThat(ttls.get(REVOKED_PREFIX + access.getJwtId()))
         .isPositive()
         .isLessThanOrEqualTo(Duration.ofMinutes(30));
     assertThatThrownBy(() -> decoder.decode(access.getToken())).isInstanceOf(BadJwtException.class);
     assertInvalid(() -> auth.refresh(access.getToken()));
+    // No refresh token was presented, so no refresh session can be identified.
     assertThat(state).containsKey(REFRESH_PREFIX + refresh.getJwtId());
+  }
+
+  @Test
+  void logoutEndsThePresentedRefreshSession() {
+    TokenPayload access = jwt.generateAccessToken(user);
+    TokenPayload refresh = registeredRefresh();
+    auth.logout(access.getToken(), refresh.getToken());
+    assertThat(state).containsKey(REVOKED_PREFIX + access.getJwtId());
+    assertThat(state).doesNotContainKey(REFRESH_PREFIX + refresh.getJwtId());
+    assertInvalid(() -> auth.refresh(refresh.getToken()));
+  }
+
+  @Test
+  void logoutWithExpiredAccessStillEndsTheRefreshSession() throws Exception {
+    Instant now = Instant.now();
+    String expiredAccess =
+        sign(
+            new JWTClaimsSet.Builder(validClaims("access"))
+                .issueTime(Date.from(now.minus(Duration.ofMinutes(40))))
+                .expirationTime(Date.from(now.minus(Duration.ofMinutes(10))))
+                .build(),
+            JWSAlgorithm.HS512,
+            SECRET);
+    TokenPayload refresh = registeredRefresh();
+    assertThatCode(() -> auth.logout(expiredAccess, refresh.getToken())).doesNotThrowAnyException();
+    assertInvalid(() -> auth.refresh(refresh.getToken()));
+  }
+
+  @Test
+  void logoutSkipsUnusableTokensWithoutFailing() {
+    TokenPayload access = jwt.generateAccessToken(user);
+    TokenPayload refresh = registeredRefresh();
+    assertThatCode(() -> auth.logout(null, null)).doesNotThrowAnyException();
+    assertThatCode(() -> auth.logout("not-a-jwt", "a.b.c")).doesNotThrowAnyException();
+    // A refresh token is not an access token and vice versa; neither may be revoked as the other.
+    assertThatCode(() -> auth.logout(refresh.getToken(), access.getToken()))
+        .doesNotThrowAnyException();
+    assertThat(state).containsKey(REFRESH_PREFIX + refresh.getJwtId());
+    assertThat(state).doesNotContainKey(REVOKED_PREFIX + access.getJwtId());
+    auth.logout(access.getToken(), "garbage");
+    assertThat(state).containsKey(REVOKED_PREFIX + access.getJwtId());
+  }
+
+  @Test
+  void logoutCannotEndASessionStoredForAnotherOwner() {
+    TokenPayload refresh = jwt.generateRefreshToken(user);
+    state.put(REFRESH_PREFIX + refresh.getJwtId(), "another-user");
+    auth.logout(null, refresh.getToken());
+    assertThat(state).containsEntry(REFRESH_PREFIX + refresh.getJwtId(), "another-user");
   }
 
   @Test
