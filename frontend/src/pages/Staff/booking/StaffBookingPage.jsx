@@ -1,4 +1,3 @@
-import { formatScreening } from '../../../utils/cinemaFormats';
 import {
   addDaysToDateKey,
   cinemaTodayKey,
@@ -8,25 +7,24 @@ import {
 } from '../../../utils/cinemaTime';
 import { MAX_FOOD_QUANTITY } from '../../../utils/bookingLimits';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from '../../../context/useAuth';
 import { bookingApi, foodApi, movieApi, showtimeApi, ticketApi, promotionApi, staffApi, vnpayApi } from '../../../api';
 import { API_BASE_URL } from '../../../api/axiosClient';
-import { StaffPageHeading, StaffSkeleton, StaffState } from '../StaffUI';
-import {
-  CheckIcon,
-  TicketIcon,
-} from '../../../components/Common/CinemaIcons';
+import { StaffSkeleton, StaffState } from '../StaffUI';
+import { CheckIcon } from '../../../components/Common/CinemaIcons';
 
 import {
   formatCurrency,
-  formatTime,
+  formatDate,
   toLocalDateKey,
   buildPrintDocument,
   customerContactKey,
   hasCustomerContact,
+  pickAdjacentSeats,
 } from './staffBookingUtils';
 import StaffReceiptSidebar from './StaffReceiptSidebar';
 import StaffCheckoutStep from './StaffCheckoutStep';
@@ -37,23 +35,39 @@ import StaffSaleComplete from './StaffSaleComplete';
 import StaffVnpayPanel from './StaffVnpayPanel';
 import './StaffBooking.css';
 
+// Quầy được bán tới 15 phút sau giờ chiếu, khớp BookingCheckoutService.STAFF_SALE_GRACE_MINUTES.
+function isShowtimeAvailable(showtime) {
+  const now = new Date();
+  const startTime = parseLocalDateTime(showtime.startTime);
+  if (!startTime) return false;
+  const cutoffTime = new Date(startTime.getTime() + 15 * 60 * 1000);
+  const notExpired = now < cutoffTime;
+  const statusOk = !showtime.status || showtime.status === 'OPEN';
+  return notExpired && statusOk;
+}
+
 export default function StaffBookingPage() {
   const { user, isAdmin } = useAuth();
+  // Nút "Bán vé suất này" ở trang tổng quan mở trang với ?showtime=<id>: chọn sẵn suất đó khi danh mục tải xong.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedShowtimeId = useRef(searchParams.get('showtime'));
 
   const [showtimes, setShowtimes] = useState([]);
   const [moviesMap, setMoviesMap] = useState({});
   const [foods, setFoods] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [showtimeId, setShowtimeId] = useState('');
+  // Ba bước: SELECTION (suất chiếu) → SEATS (ghế, tab bắp nước) → CHECKOUT (thu tiền).
   const [currentStep, setCurrentStep] = useState('SELECTION');
+  const [seatTab, setSeatTab] = useState('seats');
+  const [quickCount, setQuickCount] = useState(2);
 
   // Filters
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState(() => cinemaTodayKey());
   const [timeFilter, setTimeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('AVAILABLE');
-  const [roomTypeFilter, setRoomTypeFilter] = useState('ALL');
 
   // Cart & Checkout
   const [selectedSeats, setSelectedSeats] = useState([]);
@@ -69,14 +83,15 @@ export default function StaffBookingPage() {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [cashReceived, setCashReceived] = useState('');
 
-  // Promotions
+  // Promotions: promoCode là ô nhập, appliedPromo là mã backend đã xác nhận cho giỏ hiện tại.
   const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoError, setPromoError] = useState('');
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [availablePromos, setAvailablePromos] = useState([]);
-  const [showPromos, setShowPromos] = useState(false);
   const [loadingPromos, setLoadingPromos] = useState(false);
+  const promosRequested = useRef(false);
 
   // Status
   const [loading, setLoading] = useState(true);
@@ -90,6 +105,10 @@ export default function StaffBookingPage() {
   const [foodError, setFoodError] = useState('');
   const stompClient = useRef(null);
   const submissionPending = useRef(false);
+  const selectedSeatsRef = useRef(selectedSeats);
+  useEffect(() => {
+    selectedSeatsRef.current = selectedSeats;
+  }, [selectedSeats]);
   const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [catalogError, setCatalogError] = useState('');
   const [ticketAttempt, setTicketAttempt] = useState(0);
@@ -105,9 +124,11 @@ export default function StaffBookingPage() {
     setCustomerLookup(null);
     setConfirmedCustomerId(null);
     setPromoCode('');
+    setAppliedPromo('');
     setPromoDiscount(0);
     setPromoError('');
     setCashReceived('');
+    setSeatTab('seats');
   }, []);
 
   // Theo dõi đơn VNPay tại quầy: trang kết quả VNPay (tab khác hoặc điện thoại khách) xác nhận thanh toán.
@@ -153,7 +174,20 @@ export default function StaffBookingPage() {
         if (!mounted) return;
 
         if (showtimeResult.status === 'fulfilled') {
-          setShowtimes(showtimeResult.value.data.result || []);
+          const list = showtimeResult.value.data.result || [];
+          setShowtimes(list);
+
+          const requestedId = requestedShowtimeId.current;
+          if (requestedId) {
+            requestedShowtimeId.current = null;
+            const requested = list.find((item) => String(item.showtimeId) === requestedId);
+            if (requested && isShowtimeAvailable(requested)) {
+              setShowtimeId(String(requested.showtimeId));
+              setCurrentStep('SEATS');
+            } else {
+              toast.info('Suất chiếu này không còn bán tại quầy, vui lòng chọn suất khác.');
+            }
+          }
         } else {
           setCatalogError('Không tải được danh sách suất chiếu.');
         }
@@ -232,6 +266,10 @@ export default function StaffBookingPage() {
           );
 
           if (event.status !== 'AVAILABLE') {
+            // Ghế đang chọn bị đặt ở nơi khác: bỏ khỏi đơn và báo để nhân viên chọn lại, tổng tiền đổi theo.
+            if (selectedSeatsRef.current.includes(event.seatId)) {
+              toast.warning('Một ghế bạn chọn vừa được đặt ở nơi khác và đã bị bỏ khỏi đơn.');
+            }
             setSelectedSeats((prev) => prev.filter((id) => id !== event.seatId));
           }
         });
@@ -247,15 +285,15 @@ export default function StaffBookingPage() {
     };
   }, [showtimeId, ticketAttempt]);
 
-  function isShowtimeAvailable(showtime) {
-    const now = new Date();
-    const startTime = parseLocalDateTime(showtime.startTime);
-    if (!startTime) return false;
-    const cutoffTime = new Date(startTime.getTime() + 15 * 60 * 1000);
-    const notExpired = now < cutoffTime;
-    const statusOk = !showtime.status || showtime.status === 'OPEN';
-    return notExpired && statusOk;
-  }
+  // Đã ghi nhận suất được yêu cầu: bỏ ?showtime khỏi URL để tải lại trang hay bấm "Đổi suất" không chọn lại suất cũ.
+  useEffect(() => {
+    if (!searchParams.has('showtime')) return;
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete('showtime');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const selectedShowtime = useMemo(
     () => showtimes.find((item) => String(item.showtimeId) === String(showtimeId)),
@@ -302,23 +340,12 @@ export default function StaffBookingPage() {
     return [...branchMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [showtimes, isAdmin, user]);
 
-  const roomTypeOptions = useMemo(() => {
-    const types = new Set();
-    showtimes.forEach((showtime) => {
-      if (showtime.roomTechnology) {
-        types.add(formatScreening(showtime.screeningFormat, showtime.roomTechnology).toUpperCase());
-      }
-    });
-    return [...types].sort();
-  }, [showtimes]);
-
-  const filteredShowtimes = useMemo(() => {
+  // Suất thuộc phạm vi bán của quầy: chi nhánh của nhân viên, hoặc chi nhánh ADMIN đang lọc.
+  const scopedShowtimes = useMemo(() => {
     let result = showtimes;
-
     if (!isAdmin && user?.branchId) {
       result = result.filter((showtime) => String(showtime.branchId) === String(user.branchId));
     }
-
     if (branchFilter !== 'ALL') {
       result = result.filter((showtime) => {
         const key =
@@ -326,6 +353,20 @@ export default function StaffBookingPage() {
         return key === branchFilter;
       });
     }
+    return result;
+  }, [showtimes, isAdmin, user, branchFilter]);
+
+  // "Sắp bắt đầu": 4 suất gần nhất còn bán được, kể cả suất vừa chiếu trong thời gian quầy còn bán.
+  const soonShowtimes = useMemo(
+    () => scopedShowtimes
+      .filter((showtime) => isShowtimeAvailable(showtime) && showtime.availableSeats !== 0)
+      .sort((a, b) => (parseLocalDateTime(a.startTime)?.getTime() ?? 0) - (parseLocalDateTime(b.startTime)?.getTime() ?? 0))
+      .slice(0, 4),
+    [scopedShowtimes]
+  );
+
+  const filteredShowtimes = useMemo(() => {
+    let result = scopedShowtimes;
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -379,25 +420,8 @@ export default function StaffBookingPage() {
       });
     }
 
-    if (roomTypeFilter !== 'ALL') {
-      result = result.filter((showtime) => {
-        const roomTechnology = formatScreening(showtime.screeningFormat, showtime.roomTechnology).toUpperCase();
-        return roomTechnology.includes(roomTypeFilter);
-      });
-    }
-
     return result;
-  }, [
-    branchFilter,
-    showtimes,
-    searchQuery,
-    dateFilter,
-    timeFilter,
-    statusFilter,
-    roomTypeFilter,
-    isAdmin,
-    user,
-  ]);
+  }, [scopedShowtimes, searchQuery, dateFilter, timeFilter, statusFilter]);
 
   // Group filtered showtimes by Movie -> then by Branch for fast POS visual scanning
   const movieGroups = useMemo(() => {
@@ -414,7 +438,7 @@ export default function StaffBookingPage() {
           thumbnailUrl: st.thumbnailUrl || meta.thumbnailUrl || meta.posterUrl || '',
           ageRating: st.ageRating || meta.ageRating || 'P',
           duration: meta.duration || meta.durationMinutes || null,
-          language: meta.language || '2D Phụ Đề',
+          language: meta.language || null,
           branches: new Map(),
         });
       }
@@ -528,38 +552,30 @@ export default function StaffBookingPage() {
   const total = seatTotal + foodTotal;
   const finalPrice = Math.max(0, total - promoDiscount);
 
-  // Quick cash presets based on finalPrice
-  const cashPresets = useMemo(() => {
-    if (finalPrice <= 0) return [];
-    const base = new Set([finalPrice]);
-    const roundTargets = [50000, 100000, 200000, 500000];
-    roundTargets.forEach((step) => {
-      const rounded = Math.ceil(finalPrice / step) * step;
-      if (rounded >= finalPrice) base.add(rounded);
-    });
-    [100000, 200000, 500000, 1000000].forEach((bill) => {
-      if (bill >= finalPrice) base.add(bill);
-    });
-    return [...base].sort((a, b) => a - b).slice(0, 5);
-  }, [finalPrice]);
-
+  // cashReceived chỉ giữ chữ số; để trống nghĩa là khách đưa đúng số tiền.
   const numericCashReceived = Number(cashReceived || 0);
   const cashChange = numericCashReceived - finalPrice;
 
-  const detailFilterCount = [
-    Boolean(dateFilter), branchFilter !== 'ALL', timeFilter !== 'ALL',
-    statusFilter !== 'AVAILABLE', roomTypeFilter !== 'ALL',
-  ].filter(Boolean).length;
-  const hasActiveFilters = Boolean(searchQuery || detailFilterCount);
+  // Giá thấp nhất của từng loại ghế trong suất, hiện trong chú thích sơ đồ.
+  const seatPrices = useMemo(() => tickets.reduce((prices, ticket) => {
+    const type = ticket.seatType || 'STANDARD';
+    const price = Number(ticket.price || 0);
+    if (prices[type] == null || price < prices[type]) prices[type] = price;
+    return prices;
+  }, {}), [tickets]);
+
+  const hasActiveFilters = Boolean(
+    searchQuery || dateFilter !== cinemaTodayKey() || branchFilter !== 'ALL'
+    || timeFilter !== 'ALL' || statusFilter !== 'AVAILABLE'
+  );
 
   const canContinueSelection = Boolean(showtimeId);
   const canContinueSeats = selectedSeats.length > 0;
 
   const stepItems = [
-    { key: 'SELECTION', label: 'Suất chiếu', badge: selectedShowtime ? '1' : null },
-    { key: 'SEATS', label: 'Chọn ghế', badge: selectedSeats.length > 0 ? String(selectedSeats.length) : null },
-    { key: 'ADDONS', label: 'Bắp nước', badge: foodQuantity > 0 ? String(foodQuantity) : null },
-    { key: 'CHECKOUT', label: 'Thanh toán & xuất vé', badge: null },
+    { key: 'SELECTION', label: 'Suất chiếu' },
+    { key: 'SEATS', label: 'Ghế và bắp nước' },
+    { key: 'CHECKOUT', label: 'Thu tiền' },
   ];
 
   const siblingShowtimes = useMemo(() => {
@@ -580,6 +596,7 @@ export default function StaffBookingPage() {
   useEffect(() => {
     if (promoDiscount > 0) {
       setPromoDiscount(0);
+      setAppliedPromo('');
       setPromoError('Giỏ hàng thay đổi, vui lòng áp dụng lại mã');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -590,8 +607,29 @@ export default function StaffBookingPage() {
     const nextId = String(st.showtimeId);
     setShowtimeId(nextId);
     if (jumpToSeats) {
+      setSeatTab('seats');
       setCurrentStep('SEATS');
     }
+  };
+
+  // Mã khả dụng hiện sẵn ở bước thu tiền; chỉ tải một lần mỗi phiên quầy (lỗi thì lần sau thử lại).
+  const loadPromos = async () => {
+    if (promosRequested.current) return;
+    promosRequested.current = true;
+    setLoadingPromos(true);
+    try {
+      const res = await promotionApi.getAvailable();
+      setAvailablePromos(res.data.result || []);
+    } catch {
+      promosRequested.current = false;
+    } finally {
+      setLoadingPromos(false);
+    }
+  };
+
+  const goToCheckout = () => {
+    setCurrentStep('CHECKOUT');
+    void loadPromos();
   };
 
   const handleStepNavigation = (targetStep) => {
@@ -612,7 +650,7 @@ export default function StaffBookingPage() {
       setCurrentStep('SEATS');
       return;
     }
-    setCurrentStep(targetStep);
+    goToCheckout();
   };
 
   const handleResetOrder = () => {
@@ -620,10 +658,12 @@ export default function StaffBookingPage() {
     setSelectedSeats([]);
     setSelectedFoods({});
     setPromoCode('');
+    setAppliedPromo('');
     setPromoDiscount(0);
     setPromoError('');
     setCashReceived('');
     resetCustomer();
+    setSeatTab('seats');
     setCurrentStep('SELECTION');
     setShowtimeId('');
   };
@@ -667,10 +707,12 @@ export default function StaffBookingPage() {
     return next;
   };
 
-  const handleValidatePromo = async () => {
-    if (!promoCode.trim()) {
-      setPromoDiscount(0);
-      setPromoError('');
+  // Áp mã từ ô nhập, hoặc từ chip mã khả dụng (truyền code). Giảm giá do backend tính.
+  const handleValidatePromo = async (pickedCode) => {
+    const code = (pickedCode ?? promoCode).trim().toUpperCase();
+    if (pickedCode) setPromoCode(code);
+    if (!code) {
+      clearPromo();
       return;
     }
     if (total === 0) {
@@ -680,29 +722,32 @@ export default function StaffBookingPage() {
     setValidatingPromo(true);
     setPromoError('');
     try {
-      const res = await promotionApi.validate({ code: promoCode, orderAmount: total });
+      const res = await promotionApi.validate({ code, orderAmount: total });
       setPromoDiscount(Number(res.data.result.discountAmount));
+      setAppliedPromo(code);
     } catch (err) {
       setPromoDiscount(0);
+      setAppliedPromo('');
       setPromoError(err.response?.data?.message || 'Mã không hợp lệ');
     } finally {
       setValidatingPromo(false);
     }
   };
 
-  const handleShowPromos = async () => {
-    setShowPromos(!showPromos);
-    if (availablePromos.length === 0 && !showPromos) {
-      setLoadingPromos(true);
-      try {
-        const res = await promotionApi.getAvailable();
-        setAvailablePromos(res.data.result || []);
-      } catch (err) {
-        console.error('Failed to fetch promotions', err);
-      } finally {
-        setLoadingPromos(false);
-      }
+  const clearPromo = () => {
+    setPromoCode('');
+    setAppliedPromo('');
+    setPromoDiscount(0);
+    setPromoError('');
+  };
+
+  const applyQuickPick = () => {
+    const seatIds = pickAdjacentSeats(sortedRows, quickCount);
+    if (seatIds.length === 0) {
+      toast.info(`Không còn ${quickCount} ghế liền nhau cùng loại. Hãy chọn trực tiếp trên sơ đồ.`);
+      return;
     }
+    setSelectedSeats(seatIds);
   };
 
   const toggleSeat = (ticket) => {
@@ -745,11 +790,10 @@ export default function StaffBookingPage() {
 
   const clearFilters = () => {
     setSearchQuery('');
-    setDateFilter('');
+    setDateFilter(cinemaTodayKey());
     setBranchFilter('ALL');
     setTimeFilter('ALL');
     setStatusFilter('AVAILABLE');
-    setRoomTypeFilter('ALL');
   };
 
   const continueFromSelection = () => {
@@ -757,6 +801,7 @@ export default function StaffBookingPage() {
       toast.error('Chọn suất chiếu');
       return;
     }
+    setSeatTab('seats');
     setCurrentStep('SEATS');
   };
 
@@ -770,11 +815,7 @@ export default function StaffBookingPage() {
       toast.error('Chọn ít nhất 1 ghế');
       return;
     }
-    setCurrentStep(foods.length > 0 || foodError ? 'ADDONS' : 'CHECKOUT');
-  };
-
-  const continueToCheckout = () => {
-    setCurrentStep('CHECKOUT');
+    goToCheckout();
   };
 
   const handleSubmit = async (event) => {
@@ -816,7 +857,7 @@ export default function StaffBookingPage() {
         seatIds: selectedSeats,
         foods: selectedFoodItems.map((food) => ({ foodId: food.id, quantity: food.quantity })),
         paymentMethod,
-        promotionCode: promoDiscount > 0 ? promoCode : undefined,
+        promotionCode: promoDiscount > 0 && appliedPromo ? appliedPromo : undefined,
         ...customer,
         confirmedCustomerId: confirmedId,
       });
@@ -915,50 +956,57 @@ export default function StaffBookingPage() {
     selectedMovieMeta?.thumbnailUrl ||
     selectedMovieMeta?.posterUrl ||
     '';
+  const branchLabel = !isAdmin
+    ? branchOptions[0]?.name
+    : branchOptions.find((branch) => branch.id === branchFilter)?.name;
+  const selectedSeatCodes = selectedSeatTickets.map((ticket) => ticket.seatCode || `${ticket.rowLabel || ''}${ticket.seatNumber || ''}`);
+  const matchedCustomer = customerLookup?.status === 'found' && confirmedCustomerId === customerLookup.data.customerId
+    ? customerLookup.data
+    : null;
+  const customerLabel = matchedCustomer
+    ? [matchedCustomer.maskedName || 'Khách hàng', matchedCustomer.membershipTier && `Hạng ${matchedCustomer.membershipTier}`].filter(Boolean).join(' · ')
+    : customer.customerName.trim() || 'Khách vãng lai';
+  const submitLabel = submitting ? 'Đang xử lý…'
+    : paymentMethod === 'CASH' ? `Thu ${formatCurrency(finalPrice)} & xuất vé` : `Tạo mã QR · ${formatCurrency(finalPrice)}`;
+  const retryTickets = () => {
+    setTicketError('');
+    setLoadingTickets(true);
+    setTicketAttempt((attempt) => attempt + 1);
+  };
 
   return (
-    <form onSubmit={(event) => event.preventDefault()} className="pos-page">
-      {/* ===== TOP POS CONTROL BAR ===== */}
+    <form onSubmit={(event) => event.preventDefault()} className="counter-page">
       {!lastBooking && !vnpaySale && (
-        <div className="pos-top-bar">
-          <StaffPageHeading icon={TicketIcon} title="Bán vé tại quầy"
-            description={selectedShowtime
-              ? `${selectedShowtime.movieName} · ${formatTime(selectedShowtime.startTime)} · ${selectedShowtime.roomName || 'Phòng chiếu'}`
-              : 'Chọn phim và suất chiếu để bắt đầu bán vé.'} />
-
-          <div className="pos-stepper" role="group" aria-label="Các bước bán vé">
+        <header className="counter-header">
+          <div>
+            <h1>Bán vé tại quầy</h1>
+            <p>{[branchLabel, formatDate(new Date())].filter(Boolean).join(' · ')}</p>
+          </div>
+          <nav className="counter-steps" aria-label="Các bước bán vé">
             {stepItems.map((step, index) => {
               const isActive = step.key === currentStep;
-              const isDone =
-                (step.key === 'SELECTION' && Boolean(showtimeId) && currentStep !== 'SELECTION') ||
-                (step.key === 'SEATS' && selectedSeats.length > 0 && activeIndex > 1) ||
-                (step.key === 'ADDONS' && activeIndex > 2);
+              const isDone = index < activeIndex;
               const disabled =
                 (step.key === 'SEATS' && !showtimeId) ||
-                ((step.key === 'ADDONS' || step.key === 'CHECKOUT') &&
-                  (!showtimeId || selectedSeats.length === 0));
-
+                (step.key === 'CHECKOUT' && (!showtimeId || selectedSeats.length === 0));
               return (
                 <button
                   key={step.key}
                   type="button"
                   disabled={disabled || submitting}
                   aria-current={isActive ? 'step' : undefined}
+                  className={'counter-step' + (isActive ? ' is-active' : '') + (isDone ? ' is-done' : '')}
                   onClick={() => handleStepNavigation(step.key)}
-                  className={`pos-step-pill ${isActive ? 'pos-step-pill--active' : ''} ${
-                    isDone ? 'pos-step-pill--done' : ''
-                  }`}
                 >
-                  <span className="pos-step-pill-num">
-                    {isDone ? <CheckIcon size={13} strokeWidth={3} /> : index + 1}
+                  <span className="counter-step-dot" aria-hidden="true">
+                    {isDone ? <CheckIcon size={12} strokeWidth={3.5} /> : index + 1}
                   </span>
-                  <span>{step.label}</span>
-                  {step.badge && <span className="pos-step-badge">{step.badge}</span>}
+                  {step.label}
                 </button>
               );
             })}
-          </div>
-        </div>
+          </nav>
+        </header>
       )}
 
       {error && <div className="error-message" role="alert">{error}</div>}
@@ -982,18 +1030,14 @@ export default function StaffBookingPage() {
           sale={vnpaySale}
         />
       ) : (
-        /* ===== 2-COLUMN POS WORKSPACE ===== */
-        <div className="pos-workspace">
-          {/* LEFT WORKSPACE */}
-          <div className="pos-main">
-            {/* STEP 1: SHOWTIME SELECTION */}
+        <div className="counter-workspace">
+          <div className="counter-main">
             {currentStep === 'SELECTION' && (
               <StaffShowtimeStep
                 branchFilter={branchFilter}
                 branchOptions={branchOptions}
                 clearFilters={clearFilters}
                 dateFilter={dateFilter}
-                detailFilterCount={detailFilterCount}
                 filteredShowtimes={filteredShowtimes}
                 handleBranchFilterChange={handleBranchFilterChange}
                 handleSelectShowtime={handleSelectShowtime}
@@ -1001,34 +1045,46 @@ export default function StaffBookingPage() {
                 isShowtimeAvailable={isShowtimeAvailable}
                 movieGroups={movieGroups}
                 quickDates={quickDates}
-                roomTypeFilter={roomTypeFilter}
-                roomTypeOptions={roomTypeOptions}
                 searchQuery={searchQuery}
                 setDateFilter={setDateFilter}
-                setRoomTypeFilter={setRoomTypeFilter}
                 setSearchQuery={setSearchQuery}
                 setStatusFilter={setStatusFilter}
                 setTimeFilter={setTimeFilter}
+                showBranchFilter={isAdmin && branchOptions.length > 1}
                 showtimeId={showtimeId}
+                soonShowtimes={soonShowtimes}
                 statusFilter={statusFilter}
                 timeFilter={timeFilter}
               />
             )}
 
-            {/* STEP 2: SEAT MAP SELECTION */}
             {currentStep === 'SEATS' && (
               <StaffSeatStep
+                addonsProps={{
+                  foodError,
+                  foodQuantity,
+                  foods,
+                  selectedFoods,
+                  setSelectedFoods,
+                  submitting,
+                  updateFoodQuantity,
+                }}
+                foodQuantity={foodQuantity}
                 getSeatClass={getSeatClass}
                 loadingTickets={loadingTickets}
+                onChangeShowtime={() => setCurrentStep('SELECTION')}
+                onQuickPick={applyQuickPick}
+                onRetryTickets={retryTickets}
+                onSwitchShowtime={(showtime) => setShowtimeId(String(showtime.showtimeId))}
+                quickCount={quickCount}
                 seatMapStats={seatMapStats}
+                seatPrices={seatPrices}
+                seatTab={seatTab}
                 selectedSeats={selectedSeats}
-                setCurrentStep={setCurrentStep}
-                setLoadingTickets={setLoadingTickets}
-                setSelectedFoods={setSelectedFoods}
+                selectedShowtime={selectedShowtime}
+                setQuickCount={setQuickCount}
+                setSeatTab={setSeatTab}
                 setSelectedSeats={setSelectedSeats}
-                setShowtimeId={setShowtimeId}
-                setTicketAttempt={setTicketAttempt}
-                setTicketError={setTicketError}
                 showtimeId={showtimeId}
                 siblingShowtimes={siblingShowtimes}
                 sortedRows={sortedRows}
@@ -1037,75 +1093,60 @@ export default function StaffBookingPage() {
               />
             )}
 
-            {/* STEP 3: ADDONS (FOOD & COMBOS) */}
-            {currentStep === 'ADDONS' && (
-              <StaffAddonsStep
-                foodError={foodError}
-                foodQuantity={foodQuantity}
-                foodTotal={foodTotal}
-                foods={foods}
-                selectedFoods={selectedFoods}
-                setSelectedFoods={setSelectedFoods}
-                submitting={submitting}
-                updateFoodQuantity={updateFoodQuantity}
-              />
-            )}
-
-            {/* STEP 4: CHECKOUT & CASH REGISTER */}
             {currentStep === 'CHECKOUT' && (
               <StaffCheckoutStep
-                availablePromos={availablePromos}
                 cashChange={cashChange}
-                cashPresets={cashPresets}
                 cashReceived={cashReceived}
                 confirmedCustomerId={confirmedCustomerId}
                 customer={customer}
                 customerLookup={customerLookup}
-                finalPrice={finalPrice}
                 onConfirmCustomer={setConfirmedCustomerId}
                 onLookupCustomer={() => lookupCustomer(customer)}
-                handleShowPromos={handleShowPromos}
-                handleValidatePromo={handleValidatePromo}
-                loadingPromos={loadingPromos}
                 paymentMethod={paymentMethod}
-                promoCode={promoCode}
-                promoError={promoError}
+                selectedSeatCodes={selectedSeatCodes}
                 setCashReceived={setCashReceived}
                 setCustomer={updateCustomer}
                 setPaymentMethod={setPaymentMethod}
-                setPromoCode={setPromoCode}
-                setShowPromos={setShowPromos}
-                showPromos={showPromos}
-                validatingPromo={validatingPromo}
               />
             )}
           </div>
 
-          {/* RIGHT STICKY POS RECEIPT SIDEBAR */}
           <StaffReceiptSidebar
             canContinueSeats={canContinueSeats}
             canContinueSelection={canContinueSelection}
+            cashChange={cashChange}
+            cashReceived={cashReceived}
             continueFromSeats={continueFromSeats}
             continueFromSelection={continueFromSelection}
-            continueToCheckout={continueToCheckout}
             currentStep={currentStep}
+            customerLabel={customerLabel}
             finalPrice={finalPrice}
             foodQuantity={foodQuantity}
             foodTotal={foodTotal}
-            foods={foods}
             handleResetOrder={handleResetOrder}
             handleSubmit={handleSubmit}
+            onChangeShowtime={() => setCurrentStep('SELECTION')}
+            onEditOrder={() => setCurrentStep('SEATS')}
             paymentMethod={paymentMethod}
             posterUrl={posterUrl}
-            promoCode={promoCode}
-            promoDiscount={promoDiscount}
+            promo={{
+              appliedPromo,
+              availablePromos,
+              loadingPromos,
+              onApply: handleValidatePromo,
+              onClear: clearPromo,
+              promoCode,
+              promoDiscount,
+              promoError,
+              setPromoCode,
+              validatingPromo,
+            }}
             seatGroups={seatGroups}
             seatTotal={seatTotal}
             selectedFoodItems={selectedFoodItems}
             selectedSeatTickets={selectedSeatTickets}
             selectedSeats={selectedSeats}
             selectedShowtime={selectedShowtime}
-            setCurrentStep={setCurrentStep}
             showtimeId={showtimeId}
             submitting={submitting}
             toggleSeat={toggleSeat}
@@ -1113,34 +1154,24 @@ export default function StaffBookingPage() {
         </div>
       )}
 
-      {/* Mobile bottom bar */}
+      {/* Thanh dưới cùng trên màn hẹp, thay cho nút ở chân phiếu bán vé */}
       {!lastBooking && !vnpaySale && (
-        <div className="booking-bar seat-page-mobile-bar">
-          <span>
-            <strong>{selectedSeats.length}</strong> ghế
-          </span>
-          {foodQuantity > 0 && (
-            <span>
-              <strong>{foodQuantity}</strong> món
-            </span>
-          )}
-          <span className="pos-mobile-total">{formatCurrency(finalPrice)}</span>
+        <div className="counter-mobile-bar">
+          <span><strong>{selectedSeats.length}</strong> ghế</span>
+          {foodQuantity > 0 && <span><strong>{foodQuantity}</strong> món</span>}
+          <span className="counter-mobile-total">{formatCurrency(finalPrice)}</span>
           {currentStep === 'CHECKOUT' ? (
             <button type="button" onClick={handleSubmit} className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Đang xử lý…' : paymentMethod === 'CASH' ? 'Thu tiền & xuất vé' : 'Tạo giao dịch VNPay'}
+              {submitLabel}
             </button>
           ) : (
             <button
               type="button"
               className="btn btn-primary"
-              disabled={currentStep === 'SELECTION' ? !canContinueSelection : currentStep === 'SEATS' && !canContinueSeats}
-              onClick={() => {
-                if (currentStep === 'SELECTION') continueFromSelection();
-                else if (currentStep === 'SEATS') continueFromSeats();
-                else if (currentStep === 'ADDONS') continueToCheckout();
-              }}
+              disabled={currentStep === 'SELECTION' ? !canContinueSelection : !canContinueSeats}
+              onClick={currentStep === 'SELECTION' ? continueFromSelection : continueFromSeats}
             >
-              Tiếp tục
+              {currentStep === 'SELECTION' ? 'Chọn ghế' : 'Sang thu tiền'}
             </button>
           )}
         </div>
