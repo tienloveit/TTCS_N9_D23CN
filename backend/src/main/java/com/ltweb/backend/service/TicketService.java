@@ -134,6 +134,8 @@ public class TicketService {
     return ticketMapper.toTicketResponse(ticket);
   }
 
+  // Phản hồi đọc checkedInBy (lazy): map trong transaction vì Open Session in View đã tắt.
+  @Transactional
   public TicketResponse updateTicket(Long ticketId, UpdateTicketRequest request) {
     Ticket ticket = getTicket(ticketId);
 
@@ -226,6 +228,7 @@ public class TicketService {
     return checkIn(request);
   }
 
+  @Transactional
   public void deleteTicket(Long ticketId) {
     Ticket ticket = getTicket(ticketId);
     ticketRepository.delete(ticket);
