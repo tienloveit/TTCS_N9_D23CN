@@ -39,6 +39,7 @@ public class SecurityConfig {
     "/sign-up",
     "/auth/login",
     "/auth/refresh",
+    "/auth/logout",
     "/v1/vnpay/return",
     "/v1/vnpay/ipn",
     "/auth/forgot-password",
