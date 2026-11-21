@@ -127,7 +127,9 @@ export const foodApi = {
 export const bookingApi = {
   create: (data) => axiosClient.post('/booking', data),
   staffCreate: (data) => axiosClient.post('/booking/staff', data),
-  getAll: () => axiosClient.get('/booking'),
+  // Danh sách đơn quản lý theo trang: { q, status, paymentStatus, branchId, from, to,
+  // showtimeDate, checkedInDate, page (từ 0), size } → { content, totalElements, totalPages, summary }.
+  search: (params) => axiosClient.get('/booking/search', { params }),
   getById: (id) => axiosClient.get(`/booking/${id}`),
   getMyBookings: () => axiosClient.get('/booking/my-bookings/list'),
   getMyBookingById: (id) => axiosClient.get(`/booking/my-bookings/${id}`),

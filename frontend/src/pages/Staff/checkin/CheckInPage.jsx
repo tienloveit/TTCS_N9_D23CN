@@ -5,7 +5,6 @@ import { StaffPageHeading } from '../StaffUI';
 import { bookingApi, ticketApi } from '../../../api';
 import { ScanIcon, SearchIcon, TicketIcon } from '../../../components/Common/CinemaIcons';
 import {
-  cinemaTodayKey,
   formatCinema,
   parseLocalDateTime,
   toCinemaDateKey,
@@ -24,6 +23,12 @@ import CheckInVerdictPanel from './CheckInVerdictPanel';
 import CheckInLookupTab from './CheckInLookupTab';
 import CheckInScannerTab from './CheckInScannerTab';
 import './CheckIn.css';
+
+const PAID_BOOKINGS = { status: 'COMPLETED', paymentStatus: 'PAID' };
+// Tab tra cứu hiển thị tối đa 25 đơn; lịch sử phiên giữ tối đa 50 lượt.
+const LOOKUP_LIMIT = 25;
+const HISTORY_LIMIT = 50;
+const LOOKUP_DEBOUNCE_MS = 300;
 
 export default function CheckInPage() {
   const initialSession = useMemo(() => loadPersistedSession(), []);
@@ -76,22 +81,39 @@ export default function CheckInPage() {
     setCameraActive(false);
   };
 
-  // Load bookings & sync already checked-in tickets of today
+  // Tra cứu nhanh: backend lọc đơn đã thanh toán theo từ khóa và ngày chiếu, trả tối đa một trang.
+  const lookupRequest = useRef(0);
   const fetchBookingsForLookup = async () => {
+    const request = ++lookupRequest.current;
     setLoadingBookings(true);
     setLookupError('');
     try {
-      const res = await bookingApi.getAll();
-      const all = (res.data.result || []).filter(
-        (b) => b.status === 'COMPLETED' && b.paymentStatus === 'PAID'
-      );
-      all.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      setBookings(all);
+      const res = await bookingApi.search({
+        ...PAID_BOOKINGS,
+        ...(lookupQuery.trim() ? { q: lookupQuery.trim() } : {}),
+        ...(lookupFilter === 'TODAY' ? { showtimeDate: getTodayDateKey() } : {}),
+        size: LOOKUP_LIMIT,
+      });
+      if (request !== lookupRequest.current) return;
+      setBookings(res.data.result?.content || []);
+    } catch {
+      if (request === lookupRequest.current) setLookupError('Không tải được danh sách đơn đặt vé.');
+    } finally {
+      if (request === lookupRequest.current) setLoadingBookings(false);
+    }
+  };
 
-      // Hydrate today's already checked-in bookings from DB into recentCheckIns if not yet recorded
+  // Đưa các vé đã soát hôm nay (ghi trong DB, có thể từ quầy khác) vào lịch sử phiên nếu chưa có.
+  const syncTodayCheckIns = async () => {
+    try {
       const todayKey = getTodayDateKey();
+      const res = await bookingApi.search({
+        ...PAID_BOOKINGS,
+        checkedInDate: todayKey,
+        size: HISTORY_LIMIT,
+      });
       const dbCheckedToday = [];
-      all.forEach((b) => {
+      (res.data.result?.content || []).forEach((b) => {
         const checkedTickets = (b.tickets || []).filter((t) => {
           if (!t.checkedInAt) return false;
           return toCinemaDateKey(t.checkedInAt) === todayKey;
@@ -139,13 +161,11 @@ export default function CheckInPage() {
           const existingCodes = new Set(prev.map((item) => item.code));
           const missingFromDb = dbCheckedToday.filter((item) => !existingCodes.has(item.code));
           if (missingFromDb.length === 0) return prev;
-          return [...prev, ...missingFromDb].slice(0, 50);
+          return [...prev, ...missingFromDb].slice(0, HISTORY_LIMIT);
         });
       }
     } catch {
-      setLookupError('Không tải được danh sách đơn đặt vé.');
-    } finally {
-      setLoadingBookings(false);
+      // Lịch sử của phiên hiện tại vẫn dùng được; lần soát sau sẽ đồng bộ lại.
     }
   };
 
@@ -168,23 +188,27 @@ export default function CheckInPage() {
     }
   }, [recentCheckIns, verdict, activeTab, lookupFilter, historyFilter]);
 
-  // Fetch bookings on initial mount to restore/sync DB check-in stats
+  // Khi mở trang: khôi phục số liệu soát vé hôm nay từ DB.
   useEffect(() => {
-    fetchBookingsForLookup();
+    syncTodayCheckIns();
     return () => stopCamera();
   }, []);
 
+  // Tra cứu theo từ khóa/bộ lọc khi đang ở tab tra cứu (chờ ngừng gõ rồi mới gọi).
   useEffect(() => {
-    if (activeTab === 'LOOKUP' && bookings.length === 0) {
-      fetchBookingsForLookup();
-    }
+    if (activeTab !== 'LOOKUP') return undefined;
+    const timer = setTimeout(fetchBookingsForLookup, LOOKUP_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ gọi lại khi tab/từ khóa/bộ lọc đổi
+  }, [activeTab, lookupQuery, lookupFilter]);
+
+  useEffect(() => {
     if (activeTab !== 'SCANNER') {
       stopCamera();
     } else {
       const focusTimer = setTimeout(() => codeInputRef.current?.focus(), 80);
       return () => clearTimeout(focusTimer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const recordHistory = (entry) => {
@@ -265,8 +289,8 @@ export default function CheckInPage() {
       const data = res.data.result;
       evaluateCheckInResult(data, trimmed);
       setCode('');
-      // Refresh lookup list if already loaded
-      if (bookings.length > 0) {
+      // Cập nhật số vé đã soát trong danh sách tra cứu đang hiển thị.
+      if (activeTab === 'LOOKUP' || bookings.length > 0) {
         fetchBookingsForLookup();
       }
     } catch (err) {
@@ -428,22 +452,8 @@ export default function CheckInPage() {
     }
   };
 
-  // Filtered bookings for Lookup tab
-  const filteredLookupBookings = useMemo(() => {
-    const todayStr = cinemaTodayKey();
-    return bookings.filter((b) => {
-      if (lookupFilter === 'TODAY' && b.showtimeStart) {
-        if (toCinemaDateKey(b.showtimeStart) !== todayStr) return false;
-      }
-      if (!lookupQuery.trim()) return true;
-      const q = lookupQuery.toLowerCase().trim();
-      const matchCode = (b.bookingCode || '').toLowerCase().includes(q);
-      const matchUser = (b.username || '').toLowerCase().includes(q);
-      const matchMovie = (b.movieName || '').toLowerCase().includes(q);
-      const matchSeats = (b.seatCodes || []).join(' ').toLowerCase().includes(q);
-      return matchCode || matchUser || matchMovie || matchSeats;
-    });
-  }, [bookings, lookupQuery, lookupFilter]);
+  // Danh sách tra cứu đã được backend lọc theo từ khóa và ngày chiếu.
+  const filteredLookupBookings = bookings;
 
   // Session counters
   const stats = useMemo(() => {

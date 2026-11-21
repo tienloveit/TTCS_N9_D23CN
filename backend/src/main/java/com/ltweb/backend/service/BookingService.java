@@ -1,8 +1,10 @@
 package com.ltweb.backend.service;
 
+import com.ltweb.backend.dto.request.BookingSearchRequest;
 import com.ltweb.backend.dto.request.CreateBookingRequest;
 import com.ltweb.backend.dto.request.StaffBookingRequest;
 import com.ltweb.backend.dto.request.UpdateBookingRequest;
+import com.ltweb.backend.dto.response.BookingPageResponse;
 import com.ltweb.backend.dto.response.BookingResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +34,8 @@ public class BookingService {
 
   @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional(readOnly = true)
-  public List<BookingResponse> getAllBookings() {
-    return bookingQueryService.getAllBookings();
+  public BookingPageResponse searchBookings(BookingSearchRequest request) {
+    return bookingQueryService.searchBookings(request);
   }
 
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
