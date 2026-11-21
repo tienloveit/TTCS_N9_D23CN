@@ -31,7 +31,7 @@ export default function CheckInLookupTab({
   return (
     <div className="gate-lookup">
       <div className="gate-lookup-toolbar">
-        <div className="pos-search-box gate-lookup-search">
+        <div className="gate-lookup-search">
           <SearchIcon aria-hidden="true" />
           <input
             type="search"

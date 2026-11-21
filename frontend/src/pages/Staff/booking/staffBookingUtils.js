@@ -117,13 +117,68 @@ export const buildPrintDocument = (booking) => {
 };
 
 export const TIME_FILTERS = [
-  { key: 'ALL', label: 'Tất cả khung giờ' },
-  { key: 'UPCOMING', label: 'Sắp chiếu' },
-  { key: 'MORNING', label: 'Sáng (6h - 12h)' },
-  { key: 'AFTERNOON', label: 'Chiều (12h - 18h)' },
-  { key: 'EVENING', label: 'Tối (18h - 22h)' },
-  { key: 'NIGHT', label: 'Khuya (22h+)' },
+  { key: 'ALL', label: 'Cả ngày' },
+  { key: 'MORNING', label: 'Sáng' },
+  { key: 'AFTERNOON', label: 'Chiều' },
+  { key: 'EVENING', label: 'Tối' },
+  { key: 'NIGHT', label: 'Khuya' },
 ];
+
+/** "còn 13 phút", "còn 1 giờ 28 phút", "Đã chiếu 12 phút" theo mốc bắt đầu (ms) và hiện tại (ms). */
+export const formatStartsIn = (startMs, nowMs) => {
+  const minutes = Math.round((startMs - nowMs) / 60000);
+  if (minutes < 0) return `Đã chiếu ${-minutes} phút`;
+  if (minutes === 0) return 'Đang bắt đầu';
+  if (minutes < 60) return `còn ${minutes} phút`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `còn ${hours} giờ ${rest} phút` : `còn ${hours} giờ`;
+};
+
+/** Mức lấp đầy (%) và tông màu theo số ghế còn trống. Ngưỡng "sắp hết" khớp màn chọn suất. */
+export const LOW_SEAT_THRESHOLD = 15;
+export const seatFill = (availableSeats, totalSeats) => {
+  if (availableSeats == null || !totalSeats) return null;
+  const percent = Math.min(100, Math.max(0, Math.round(((totalSeats - availableSeats) / totalSeats) * 100)));
+  const tone = availableSeats === 0 ? 'full' : availableSeats <= LOW_SEAT_THRESHOLD ? 'low' : 'ok';
+  return { percent, tone };
+};
+
+const ticketStatus = (ticket) => ticket.displayStatus || ticket.ticketStatus;
+
+/**
+ * Gợi ý `count` ghế liền nhau còn trống: cùng hàng, số ghế liên tiếp, cùng loại ghế.
+ * Ưu tiên hàng gần khoảng giữa phòng (hơi lùi về sau), rồi cụm gần trục giữa hàng.
+ * `rows` là [nhãn hàng, vé đã sắp theo số ghế] như sơ đồ ghế. Trả về seatId, rỗng nếu không còn cụm nào đủ.
+ */
+export const pickAdjacentSeats = (rows, count) => {
+  if (!count || count < 1 || rows.length === 0) return [];
+  const targetRow = Math.floor(rows.length * 0.55);
+  let best = null;
+  rows.forEach(([, seats], rowIndex) => {
+    const numbers = seats.map((ticket) => Number(ticket.seatNumber) || 0);
+    const rowCenter = (Math.min(...numbers) + Math.max(...numbers)) / 2;
+    for (let start = 0; start + count <= seats.length; start += 1) {
+      const block = seats.slice(start, start + count);
+      const usable = block.every((ticket, index) =>
+        ticketStatus(ticket) === 'AVAILABLE'
+        && ticket.seatType === block[0].seatType
+        && (index === 0 || Number(ticket.seatNumber) === Number(block[index - 1].seatNumber) + 1));
+      if (!usable) continue;
+      const blockCenter = (Number(block[0].seatNumber) + Number(block[count - 1].seatNumber)) / 2;
+      const score = Math.abs(rowIndex - targetRow) * 1.5 + Math.abs(blockCenter - rowCenter);
+      if (!best || score < best.score) best = { score, seatIds: block.map((ticket) => ticket.seatId) };
+    }
+  });
+  return best ? best.seatIds : [];
+};
+
+/** Hai chữ cái đầu của tên đã che ("Ng*** Văn A*" → "NA") cho ô đại diện khách. */
+export const maskedInitials = (name) => {
+  const letters = String(name || '').split(/\s+/).map((word) => word.replace(/[^\p{L}]/gu, '').charAt(0)).filter(Boolean);
+  if (letters.length === 0) return '?';
+  return (letters[0] + (letters.length > 1 ? letters[letters.length - 1] : '')).toUpperCase();
+};
 
 /** Có SĐT hoặc email để tra cứu khách hay chưa. */
 export const hasCustomerContact = (customer) =>

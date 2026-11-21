@@ -1,18 +1,74 @@
 import { formatScreening } from '../../../utils/cinemaFormats';
-import { formatDayMonth, parseLocalDateTime } from '../../../utils/cinemaTime';
+import { parseLocalDateTime } from '../../../utils/cinemaTime';
 import Button from '../../../components/Common/Button';
 import SafeImage from '../../../components/Common/SafeImage';
-import { ClockIcon, SearchIcon, SlidersIcon } from '../../../components/Common/CinemaIcons';
+import { SearchIcon } from '../../../components/Common/CinemaIcons';
 import { StaffChips } from '../StaffUI';
-import { formatTime, TIME_FILTERS } from './staffBookingUtils';
+import useNow from '../useNow';
+import { formatStartsIn, formatTime, seatFill, TIME_FILTERS } from './staffBookingUtils';
 
-/** Bước 1: lọc và chọn suất chiếu. */
+// Quầy được bán tới 15 phút sau giờ chiếu (BookingCheckoutService.STAFF_SALE_GRACE_MINUTES).
+const STAFF_SALE_GRACE_MS = 15 * 60 * 1000;
+
+function FillBar({ fill }) {
+  if (!fill) return null;
+  return (
+    <span className={`counter-fill counter-fill--${fill.tone}`} aria-hidden="true">
+      <span style={{ width: `${fill.percent}%` }} />
+    </span>
+  );
+}
+
+/** Trạng thái hiển thị của một suất trên nút chọn suất. */
+function slotState(showtime, available, now) {
+  const { availableSeats, totalSeats } = showtime;
+  const fill = seatFill(availableSeats, totalSeats);
+  const start = parseLocalDateTime(showtime.startTime);
+  const started = Boolean(start) && start.getTime() <= now;
+  if (!available) return { closed: true, fill, note: started ? 'Ngừng bán' : 'Đã đóng' };
+  if (fill?.tone === 'full') return { closed: true, fill, note: 'Hết ghế' };
+  if (!fill) return { closed: false, fill, note: started ? 'Đã chiếu' : 'Đang mở bán', started };
+  if (started) return { closed: false, fill, note: `Đã chiếu · còn ${availableSeats}`, started };
+  if (fill.tone === 'low') return { closed: false, fill, note: `Sắp hết · ${availableSeats}/${totalSeats}` };
+  return { closed: false, fill, note: `Còn ${availableSeats}/${totalSeats}` };
+}
+
+/** Suất sắp bắt đầu: bấm một lần là sang sơ đồ ghế. */
+function SoonCard({ showtime, now, onSelect }) {
+  const start = parseLocalDateTime(showtime.startTime);
+  const started = Boolean(start) && start.getTime() <= now;
+  const fill = seatFill(showtime.availableSeats, showtime.totalSeats);
+  const room = [
+    showtime.roomName || 'Phòng chiếu',
+    formatScreening(showtime.screeningFormat, showtime.roomTechnology),
+    started && start ? `bán đến ${formatTime(new Date(start.getTime() + STAFF_SALE_GRACE_MS))}` : null,
+  ].filter(Boolean).join(' · ');
+  return (
+    <button type="button" className={'counter-soon' + (started ? ' counter-soon--late' : '')} onClick={() => onSelect(showtime, true)}>
+      <span className="counter-soon-head">
+        <strong>{formatTime(showtime.startTime)}</strong>
+        {start && <span>{formatStartsIn(start.getTime(), now)}</span>}
+      </span>
+      <strong className="counter-soon-movie">{showtime.movieName}</strong>
+      <small>{room}</small>
+      {fill && (
+        <span className="counter-soon-seats">
+          <FillBar fill={fill} />
+          <small className={`counter-seats-note counter-seats-note--${fill.tone}`}>
+            {fill.tone === 'low' ? 'Sắp hết · ' : 'Còn '}{showtime.availableSeats} ghế
+          </small>
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Bước 1: lọc và chọn suất chiếu. Bấm một lần vào suất là sang sơ đồ ghế. */
 export default function StaffShowtimeStep({
   branchFilter,
   branchOptions,
   clearFilters,
   dateFilter,
-  detailFilterCount,
   filteredShowtimes,
   handleBranchFilterChange,
   handleSelectShowtime,
@@ -20,230 +76,133 @@ export default function StaffShowtimeStep({
   isShowtimeAvailable,
   movieGroups,
   quickDates,
-  roomTypeFilter,
-  roomTypeOptions,
   searchQuery,
   setDateFilter,
-  setRoomTypeFilter,
   setSearchQuery,
   setStatusFilter,
   setTimeFilter,
+  showBranchFilter,
   showtimeId,
+  soonShowtimes,
   statusFilter,
   timeFilter,
 }) {
+  const now = useNow(30_000);
+  const activeDate = quickDates.find((day) => day.key === dateFilter);
+  const scheduleTitle = !activeDate ? 'Lịch chiếu'
+    : activeDate.label === 'Hôm nay' ? 'Lịch chiếu hôm nay' : `Lịch chiếu ${activeDate.label.toLowerCase()} ${activeDate.display}`;
+
   return (
     <>
-      <div className="pos-filter-card">
-        <div className="staff-section-line">
-          <h2>Lịch chiếu</h2>
-          <span role="status">{filteredShowtimes.length} suất chiếu</span>
-        </div>
-        {/* Quick Date Strip */}
-        <div className="pos-date-ribbon">
-          <button
-            type="button"
-            aria-pressed={!dateFilter}
-            className={`pos-date-chip ${dateFilter === '' ? 'pos-date-chip--active' : ''}`}
-            onClick={() => setDateFilter('')}
-          >
-            <span>Tất cả</span>
-            <strong>Mọi ngày</strong>
-          </button>
-          {quickDates.map((d) => (
-            <button
-              key={d.key}
-              type="button"
-              aria-pressed={dateFilter === d.key}
-              className={`pos-date-chip ${
-                dateFilter === d.key ? 'pos-date-chip--active' : ''
-              }`}
-              onClick={() => setDateFilter(d.key === dateFilter ? '' : d.key)}
-            >
-              <span>{d.label}</span>
-              <strong>{d.display}</strong>
+      <section className="counter-card counter-filters" aria-label="Lọc lịch chiếu">
+        <div className="counter-dates" role="group" aria-label="Ngày chiếu">
+          {quickDates.map((day) => (
+            <button key={day.key} type="button" aria-pressed={dateFilter === day.key} onClick={() => setDateFilter(day.key)}>
+              <span>{day.label}</span>
+              <strong>{day.display}</strong>
             </button>
           ))}
         </div>
-
-        {/* Search & Dropdown Filters */}
-        <div className="pos-search-box">
-          <SearchIcon aria-hidden="true" />
-          <input
-            type="search"
-            className="input"
-            aria-label="Tìm phim, phòng chiếu hoặc rạp"
-            placeholder="Tìm nhanh tên phim, phòng chiếu, rạp..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <details className="pos-more-filters">
-          <summary><SlidersIcon size={16} /> Bộ lọc lịch chiếu{detailFilterCount > 0 && ` (${detailFilterCount})`}</summary>
-          <div className="pos-filter-row">
+        <div className="counter-filter-row">
+          <div className="counter-search">
+            <SearchIcon size={17} aria-hidden="true" />
             <input
-              type="date"
-              className="pos-filter-select"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              aria-label="Ngày chiếu"
+              type="search"
+              className="input"
+              aria-label="Tìm phim hoặc phòng chiếu"
+              placeholder="Tìm phim hoặc phòng chiếu"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
             />
-
-            <select
-              className="pos-filter-select"
-              aria-label="Chi nhánh"
-              value={branchFilter}
-              onChange={handleBranchFilterChange}
-            >
+          </div>
+          <StaffChips label="Khung giờ chiếu" options={TIME_FILTERS} value={timeFilter} onChange={setTimeFilter} />
+          {showBranchFilter && (
+            <select className="input counter-branch" aria-label="Chi nhánh" value={branchFilter} onChange={handleBranchFilterChange}>
               <option value="ALL">Tất cả chi nhánh</option>
-              {branchOptions.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
+              {branchOptions.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
             </select>
-
-            <select
-              className="pos-filter-select"
-              aria-label="Định dạng chiếu"
-              value={roomTypeFilter}
-              onChange={(e) => setRoomTypeFilter(e.target.value)}
-            >
-              <option value="ALL">Mọi định dạng phòng</option>
-              {roomTypeOptions.map((rt) => (
-                <option key={rt} value={rt}>
-                  Phòng {rt}
-                </option>
-              ))}
-            </select>
-
-            {hasActiveFilters && <Button size="sm" onClick={clearFilters}>Đặt lại</Button>}
-          </div>
-
-          <div className="pos-time-pills">
-            <StaffChips label="Khung giờ chiếu" options={TIME_FILTERS} value={timeFilter} onChange={setTimeFilter} />
-            <label className="pos-open-only">
-              <input
-                type="checkbox"
-                checked={statusFilter === 'AVAILABLE'}
-                onChange={(e) => setStatusFilter(e.target.checked ? 'AVAILABLE' : 'ALL')}
-              />
-              Chỉ hiện suất còn mở bán
-            </label>
-          </div>
-        </details>
-      </div>
-
-      {movieGroups.length === 0 ? (
-        <div className="card pos-empty" role="status">
-          <p>Không tìm thấy suất chiếu phù hợp với bộ lọc hiện tại.</p>
-          {hasActiveFilters && <Button onClick={clearFilters}>Xóa toàn bộ bộ lọc</Button>}
+          )}
+          <label className="counter-check">
+            <input
+              type="checkbox"
+              checked={statusFilter === 'AVAILABLE'}
+              onChange={(event) => setStatusFilter(event.target.checked ? 'AVAILABLE' : 'ALL')}
+            />
+            Chỉ suất còn bán
+          </label>
         </div>
-      ) : (
-        <div className="pos-movie-list">
-          {movieGroups.map((movie) => {
-            const hasSelectedInMovie = movie.branches.some((b) =>
-              b.items.some((s) => String(s.showtimeId) === String(showtimeId))
-            );
+      </section>
 
-            return (
-              <div
-                key={movie.movieKey}
-                className={`pos-movie-card ${
-                  hasSelectedInMovie ? 'pos-movie-card--selected' : ''
-                }`}
-              >
-                <SafeImage
-                  src={movie.thumbnailUrl}
-                  alt={movie.movieName}
-                  className="pos-movie-poster"
-                />
+      {soonShowtimes.length > 0 && (
+        <section className="counter-section" aria-labelledby="counter-soon-title">
+          <div className="counter-section-head">
+            <h2 id="counter-soon-title">Sắp bắt đầu</h2>
+            <span>Bấm để mở sơ đồ ghế</span>
+          </div>
+          <div className="counter-soon-grid">
+            {soonShowtimes.map((showtime) => (
+              <SoonCard key={showtime.showtimeId} showtime={showtime} now={now} onSelect={handleSelectShowtime} />
+            ))}
+          </div>
+        </section>
+      )}
 
-                <div className="pos-movie-body">
-                  <div className="pos-movie-header">
-                    <div>
-                      <h2 className="pos-movie-title">{movie.movieName}</h2>
-                      <div className="pos-movie-badges">
-                        <span className="pos-meta-tag pos-meta-tag--age">
-                          {movie.ageRating}
-                        </span>
-                        <span className="pos-meta-tag pos-meta-tag--format">
-                          {movie.language}
-                        </span>
-                        {movie.duration && (
-                          <span className="pos-meta-tag">
-                            <ClockIcon size={12} aria-hidden="true" /> {movie.duration} phút
-                          </span>
-                        )}
-                      </div>
-                    </div>
+      <section className="counter-section" aria-labelledby="counter-schedule-title">
+        <div className="counter-section-head">
+          <h2 id="counter-schedule-title">{scheduleTitle}</h2>
+          <span role="status">{movieGroups.length} phim · {filteredShowtimes.length} suất</span>
+        </div>
+
+        {movieGroups.length === 0 ? (
+          <div className="counter-card counter-empty" role="status">
+            <p>Không có suất chiếu phù hợp với bộ lọc hiện tại.</p>
+            {hasActiveFilters && <Button onClick={clearFilters}>Xóa bộ lọc</Button>}
+          </div>
+        ) : (
+          <div className="counter-movies">
+            {movieGroups.map((movie) => (
+              <article key={movie.movieKey} className="counter-card counter-movie">
+                <SafeImage src={movie.thumbnailUrl} alt={movie.movieName} className="counter-movie-poster" />
+                <div className="counter-movie-body">
+                  <div className="counter-movie-head">
+                    <h3>{movie.movieName}</h3>
+                    {movie.ageRating && <span className="counter-age">{movie.ageRating}</span>}
+                    <span className="counter-movie-meta">
+                      {[movie.duration && `${movie.duration} phút`, movie.language].filter(Boolean).join(' · ')}
+                    </span>
                   </div>
-
                   {movie.branches.map((branch) => (
-                    <div key={branch.branchName} className="pos-branch-group">
-                      <div className="pos-branch-label">{branch.branchName}</div>
-                      <div className="pos-slot-grid">
-                        {branch.items.map((st) => {
-                          const available = isShowtimeAvailable(st);
-                          const selected = String(st.showtimeId) === String(showtimeId);
-                          const availSeats = st.availableSeats;
-                          const totalSeats = st.totalSeats;
-                          const hasSeatCount =
-                            availSeats != null && totalSeats != null && totalSeats > 0;
-                          const isLow = hasSeatCount && availSeats > 0 && availSeats <= 15;
-                          const isFull = hasSeatCount && availSeats === 0;
-                          const startAt = parseLocalDateTime(st.startTime);
-                          const started = Boolean(startAt) && startAt <= new Date();
-
+                    <div key={branch.branchName} className="counter-branch-group">
+                      {movie.branches.length > 1 && <p className="counter-branch-label">{branch.branchName}</p>}
+                      <div className="counter-slots">
+                        {branch.items.map((showtime) => {
+                          const state = slotState(showtime, isShowtimeAvailable(showtime), now);
+                          const selected = String(showtime.showtimeId) === String(showtimeId);
+                          const format = formatScreening(showtime.screeningFormat, showtime.roomTechnology);
+                          const room = showtime.roomName || 'Phòng chiếu';
                           return (
                             <button
-                              key={st.showtimeId}
+                              key={showtime.showtimeId}
                               type="button"
-                              disabled={!available || isFull}
+                              disabled={state.closed}
                               aria-pressed={selected}
-                              onClick={() => handleSelectShowtime(st, false)}
-                              onDoubleClick={() => handleSelectShowtime(st, true)}
-                              className={`pos-slot-btn ${
-                                selected ? 'pos-slot-btn--selected' : ''
-                              }`}
-                              title="Nhấp để chọn suất, nhấp đúp để chuyển thẳng sang sơ đồ ghế"
+                              aria-label={`Suất ${formatTime(showtime.startTime)}, ${room}, ${format}, ${state.note}`}
+                              className={[
+                                'counter-slot',
+                                state.fill?.tone === 'low' && 'counter-slot--low',
+                                state.started && 'counter-slot--late',
+                              ].filter(Boolean).join(' ')}
+                              onClick={() => handleSelectShowtime(showtime, true)}
                             >
-                              <div className="pos-slot-top">
-                                <span className="pos-slot-time">
-                                  {formatTime(st.startTime)}
-                                </span>
-                                {st.roomTechnology && (
-                                  <span className="pos-slot-type">{formatScreening(st.screeningFormat, st.roomTechnology)}</span>
-                                )}
-                              </div>
-                              <div className="pos-slot-room">
-                                {st.roomName || 'Phòng chiếu'}
-                              </div>
-                              {!dateFilter && st.startTime && <span className="pos-slot-date">
-                                {formatDayMonth(st.startTime)}
-                              </span>}
-                              {started && <span className="pos-slot-date">Đã bắt đầu</span>}
-                              {!available && !isFull ? (
-                                !started && <div className="pos-slot-date">Ngừng bán</div>
-                              ) : hasSeatCount ? (
-                                <div
-                                  className={`pos-slot-seats ${
-                                    isFull
-                                      ? 'pos-slot-seats--full'
-                                      : isLow
-                                      ? 'pos-slot-seats--low'
-                                      : ''
-                                  }`}
-                                >
-                                  {isFull
-                                    ? 'Hết ghế'
-                                    : `${isLow ? 'Sắp hết · ' : ''}${availSeats}/${totalSeats} ghế`}
-                                </div>
-                              ) : (
-                                <div className="pos-slot-seats">
-                                  {available ? 'Đang mở bán' : 'Đã đóng'}
-                                </div>
-                              )}
+                              <span className="counter-slot-top">
+                                <strong>{formatTime(showtime.startTime)}</strong>
+                                <small>{format}</small>
+                              </span>
+                              <small className="counter-slot-room">{room}</small>
+                              {!state.closed && <FillBar fill={state.fill} />}
+                              <small className={'counter-slot-note' + (state.fill ? ` counter-seats-note--${state.started ? 'low' : state.fill.tone}` : '')}>
+                                {state.note}
+                              </small>
                             </button>
                           );
                         })}
@@ -251,11 +210,11 @@ export default function StaffShowtimeStep({
                     </div>
                   ))}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </>
   );
 }
