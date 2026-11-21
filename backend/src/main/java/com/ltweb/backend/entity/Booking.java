@@ -24,6 +24,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -130,7 +131,10 @@ public class Booking {
   @Builder.Default
   private List<Ticket> tickets = new ArrayList<>();
 
+  // Không fetch cùng tickets được (hai List trong một truy vấn); tải theo lô khi duyệt nhiều đơn
+  // (báo cáo, danh sách) thay vì một truy vấn cho mỗi đơn.
   @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+  @BatchSize(size = 100)
   @Builder.Default
   private List<BookingFood> bookingFoods = new ArrayList<>();
 }
