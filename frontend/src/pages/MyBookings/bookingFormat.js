@@ -1,43 +1,13 @@
-// LocalDateTime của booking theo giờ Việt Nam (UTC+07:00).
-const CINEMA_OFFSET_MS = 7 * 60 * 60 * 1000;
+// Thời gian theo giờ rạp nằm trong utils/cinemaTime.js; re-export để giữ API cũ.
+import { parseLocalDateTime } from '../../utils/cinemaTime.js';
 
-export const parseLocalDateTime = (value) => {
-  if (!value) return null;
-  if (Array.isArray(value)) {
-    const [y, m, d, h = 0, mi = 0, s = 0, nanos = 0] = value;
-    const ms = Date.UTC(y, m - 1, d, h, mi, s, Math.floor(nanos / 1e6)) - CINEMA_OFFSET_MS;
-    return Number.isFinite(ms) ? new Date(ms) : null;
-  }
-  const [day, time = '00:00'] = String(value).split('T');
-  const date = new Date(`${day}T${time}+07:00`);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const pad = (n) => String(n).padStart(2, '0');
-const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-const cinemaDate = (value) => {
-  const date = parseLocalDateTime(value);
-  return date && new Date(date.getTime() + CINEMA_OFFSET_MS);
-};
-
-export const formatShowDate = (value) => {
-  const d = cinemaDate(value);
-  if (!d) return '—';
-  return `${WEEKDAYS[d.getUTCDay()]}, ${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
-};
-
-export const formatTime = (value) => {
-  const d = cinemaDate(value);
-  if (!d) return '—';
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-};
-
-export const formatDateTime = (value) => {
-  const d = cinemaDate(value);
-  if (!d) return '—';
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} ${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
-};
+export {
+  parseLocalDateTime,
+  formatShowDate,
+  formatTime,
+  formatDateTime,
+  formatCountdown,
+} from '../../utils/cinemaTime.js';
 
 export const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')} đ`;
 
@@ -52,11 +22,6 @@ export const formatDuration = (ms) => {
   return `${Math.max(minutes, 1)} phút`;
 };
 
-/** "08:21" */
-export const formatCountdown = (ms) => {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  return `${pad(Math.floor(totalSeconds / 60))}:${pad(totalSeconds % 60)}`;
-};
 
 const FALLBACK_SHOW_LENGTH_MS = 3 * 60 * 60 * 1000;
 

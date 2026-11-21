@@ -127,10 +127,9 @@ class VnpayPaymentTest {
   }
 
   @Test
-  void callbacksNeverReviveCancelledOrRefundedBooking() {
+  void callbacksNeverReviveRefundedBooking() {
     Booking booking = pendingBooking();
-    for (BookingStatus status :
-        List.of(BookingStatus.CANCELLED, BookingStatus.REFUNDED, BookingStatus.REFUND_REQUESTED)) {
+    for (BookingStatus status : List.of(BookingStatus.REFUNDED, BookingStatus.REFUND_REQUESTED)) {
       booking.setStatus(status);
       assertThat(service.processIpn(callback("00", "10000000"))).containsEntry("RspCode", "02");
       assertThat(service.processReturnUrl(callback("00", "10000000")).getCode()).isNotEqualTo(200);
@@ -140,12 +139,82 @@ class VnpayPaymentTest {
   }
 
   @Test
-  void expiredOrderCannotBePaid() {
+  void successAfterExpiryStillIssuesTicketsWhileSeatsAreHeld() {
+    Booking booking = pendingBooking();
+    booking.setExpiresAt(LocalDateTime.now().minusSeconds(30));
+
+    assertThat(service.processIpn(callback("00", "10000000"))).containsEntry("RspCode", "00");
+
+    assertThat(booking.getStatus()).isEqualTo(BookingStatus.COMPLETED);
+    assertThat(booking.getPayment().getPaymentStatus()).isEqualTo(PaymentStatus.PAID);
+    assertThat(booking.getTickets().get(0).getTicketStatus()).isEqualTo(TicketStatus.BOOKED);
+    verify(eventPublisher).publishEvent(org.mockito.ArgumentMatchers.any(BookingPaidEvent.class));
+  }
+
+  @Test
+  void paymentForCancelledBookingIsQueuedForRefundWithoutIssuingTickets() {
+    Booking booking = pendingBooking();
+    // Job dọn dẹp đã hủy đơn và trả ghế trước khi IPN thành công tới.
+    booking.setStatus(BookingStatus.CANCELLED);
+    booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
+    releaseTickets(booking);
+
+    assertThat(service.processIpn(callback("00", "10000000"))).containsEntry("RspCode", "00");
+
+    assertLateRefundQueued(booking);
+    verify(foodStockService, never()).release(booking);
+
+    // VNPay gửi lại IPN hoặc khách mở trang kết quả: không ghi nhận lần nữa, không báo đã có vé.
+    assertThat(service.processIpn(callback("00", "10000000"))).containsEntry("RspCode", "02");
+    var returned = service.processReturnUrl(callback("00", "10000000"));
+    assertThat(returned.getCode()).isNotEqualTo(200);
+    assertThat(returned.getMessage()).isEqualTo(VnpayService.LATE_PAYMENT_MESSAGE);
+    verify(bookingRepository, times(1)).save(booking);
+  }
+
+  @Test
+  void paymentForExpiredUncleanedBookingReleasesResourcesAndQueuesRefund() {
+    Booking booking = pendingBooking();
+    booking.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+    // Ghế không còn giữ cho đơn (khóa Redis/DB đã mất) nhưng job chưa kịp hủy đơn.
+    releaseTickets(booking);
+
+    assertThat(service.processIpn(callback("00", "10000000"))).containsEntry("RspCode", "00");
+
+    assertLateRefundQueued(booking);
+    verify(foodStockService).release(booking);
+  }
+
+  @Test
+  void failedCallbackAfterExpiryLeavesCleanupToTheJob() {
     Booking booking = pendingBooking();
     booking.setExpiresAt(LocalDateTime.now().minusSeconds(1));
-    assertThat(service.processIpn(callback("00", "10000000"))).containsEntry("RspCode", "02");
-    assertThat(booking.getPayment().getPaidAt()).isNull();
+    assertThat(service.processIpn(callback("24", "10000000"))).containsEntry("RspCode", "02");
+    assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING);
     verify(bookingRepository, never()).save(booking);
+  }
+
+  private void assertLateRefundQueued(Booking booking) {
+    assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUND_REQUESTED);
+    assertThat(booking.getPayment().getPaymentStatus()).isEqualTo(PaymentStatus.PAID);
+    assertThat(booking.getPayment().getPaymentMethod()).isEqualTo(PaymentMethod.VNPAY);
+    assertThat(booking.getPayment().getProviderTxnId()).isEqualTo("VNP-TEST");
+    assertThat(booking.getPayment().getRefundReason())
+        .isEqualTo(VnpayService.LATE_PAYMENT_REFUND_REASON);
+    assertThat(booking.getPayment().getRefundAmount()).isEqualByComparingTo("100000");
+    assertThat(booking.getSpendingRecorded()).isFalse();
+    verify(eventPublisher, never())
+        .publishEvent(org.mockito.ArgumentMatchers.any(BookingPaidEvent.class));
+  }
+
+  private static void releaseTickets(Booking booking) {
+    booking
+        .getTickets()
+        .forEach(
+            ticket -> {
+              ticket.setBooking(null);
+              ticket.setTicketStatus(TicketStatus.AVAILABLE);
+            });
   }
 
   @Test

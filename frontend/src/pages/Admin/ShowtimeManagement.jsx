@@ -4,6 +4,7 @@ import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import {
   CalendarIcon as LucideCalendarIcon,
   ChevronLeftIcon,
@@ -204,6 +205,7 @@ const ShowtimeManagement = () => {
   const [deleting, setDeleting] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
+  const dialog = useModalDialog(showModal, () => setShowModal(false));
   const [isEditing, setIsEditing] = useState(false);
   const [movies, setMovies] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -380,7 +382,7 @@ const ShowtimeManagement = () => {
     const date = new Date(dateStr);
     return (
       <div>
-        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{formatTime(dateStr)}</div>
+        <div style={{ fontWeight: 400, color: 'var(--text-primary)' }}>{formatTime(dateStr)}</div>
         <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
           {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </div>
@@ -394,7 +396,7 @@ const ShowtimeManagement = () => {
     <div className="showtime-management">
       <header className="schedule-page-heading">
         <div>
-          <h1>Quản lý Suất chiếu</h1>
+          <h1>Quản lý suất chiếu</h1>
           {viewMode === 'list' && <p>{listShowtimes.length} suất chiếu</p>}
         </div>
         {canEditShowtime && (
@@ -563,10 +565,10 @@ const ShowtimeManagement = () => {
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" {...dialog.overlayProps}>
           <div
             className="modal-content"
-            onClick={(e) => e.stopPropagation()}
+            {...dialog.contentProps}
             style={{
               maxWidth: 650,
               height: 'auto',
@@ -579,13 +581,12 @@ const ShowtimeManagement = () => {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
+              <h2 id={dialog.titleId} style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
                 {isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}
               </h2>
               <button
                 type="button"
-                className="modal-close"
-                style={{ position: 'static', width: 34, height: 34 }}
+                className="modal-close modal-close--inline modal-close--lg"
                 onClick={() => setShowModal(false)}
                 aria-label="Đóng"
               >

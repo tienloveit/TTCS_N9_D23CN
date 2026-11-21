@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
+import Badge from '../../components/Common/Badge';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import {
   BellIcon,
@@ -70,6 +71,13 @@ const formatDateTime = (value) => {
 const bookingCode = (booking) => booking.bookingCode || '#' + booking.bookingId;
 const customerName = (booking) => booking.username || 'Khách tại quầy';
 const seats = (booking) => (booking.seatCodes || []).filter(Boolean).join(', ');
+// Khớp RefundPolicy/BookingAccessPolicy ở backend: đơn bán tại quầy, đã thanh toán, chưa check-in.
+// Thời hạn và phạm vi chi nhánh vẫn do backend quyết định.
+const canRequestRefundForCustomer = (booking) => Boolean(booking)
+  && booking.staffUserId != null
+  && booking.status === 'COMPLETED'
+  && booking.paymentStatus === 'PAID'
+  && !(booking.tickets || []).some((ticket) => ticket.checkedInAt);
 const branchKey = (booking) => booking.branchId != null ? 'id:' + booking.branchId : 'name:' + (booking.branchName || '');
 
 function StatusBadge({ statuses, value }) {
@@ -142,6 +150,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [exporting, setExporting] = useState(false);
   const [refundError, setRefundError] = useState('');
+  const [refundReason, setRefundReason] = useState('');
   const [loadError, setLoadError] = useState('');
   const [lookupNotice, setLookupNotice] = useState('');
   const openedRequest = useRef(null);
@@ -187,8 +196,51 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
     });
   };
 
+  // Đơn bán tại quầy: nhân viên gửi yêu cầu hoàn thay khách vãng lai (không có tài khoản đăng nhập).
+  const requestCustomerRefund = (booking) => {
+    setRefundError('');
+    setRefundReason('');
+    setConfirmState({
+      kind: 'request',
+      bookingId: booking.bookingId,
+      bookingCode: booking.bookingCode || `#${booking.bookingId}`,
+      cash: booking.paymentMethod === 'CASH',
+    });
+  };
+
+  const mergeUpdatedBooking = (bookingId, updated) => {
+    setBookings((prev) => prev.map((b) => (b.bookingId === bookingId ? { ...b, ...updated } : b)));
+    setDetailBooking((previous) => previous?.bookingId === bookingId ? { ...previous, ...updated } : previous);
+  };
+
+  const executeRequestRefund = async () => {
+    const { bookingId } = confirmState;
+    const reason = refundReason.trim();
+    if (!reason) {
+      setRefundError('Nhập lý do hoàn tiền');
+      return;
+    }
+    setRefundError('');
+    setProcessingRefund(bookingId);
+    try {
+      const res = await bookingApi.requestRefund(bookingId, reason);
+      mergeUpdatedBooking(bookingId, res.data.result);
+      toast.success('Đã gửi yêu cầu hoàn tiền. Quản lý chi nhánh sẽ duyệt.');
+      setConfirmState(null);
+      setRefundReason('');
+    } catch (err) {
+      setRefundError(err.response?.data?.message || err.message);
+    } finally {
+      setProcessingRefund(null);
+    }
+  };
+
   const executeProcessRefund = async () => {
     if (!confirmState) return;
+    if (confirmState.kind === 'request') {
+      await executeRequestRefund();
+      return;
+    }
     const { bookingId, approved } = confirmState;
     setRefundError('');
     setProcessingRefund(bookingId);
@@ -342,7 +394,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         <div className={staff ? 'staff-heading-copy' : undefined}>
           {staff && <span className="staff-heading-icon"><ListIcon size={24} /></span>}
           <div>
-            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý Đơn đặt vé'}</h1>
+            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý đơn đặt vé'}</h1>
             <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
           </div>
         </div>
@@ -547,13 +599,13 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                     {detailBooking.tickets.map((ticket) => (
                       <li key={ticket.id ?? ticket.seatId}>
                         <span>{ticket.seatCode || DASH}{ticket.id != null ? ' · Vé #' + ticket.id : ''}</span>
-                        <span className={'staff-status' + (ticket.checkedInAt ? ' staff-status--success' : '')}>
+                        <Badge tone={ticket.checkedInAt ? 'success' : 'neutral'}>
                           {ticket.checkedInAt ? 'Đã check-in · ' + formatDateTime(ticket.checkedInAt)
                             : detailBooking.status === 'REFUNDED' ? 'Đơn đã hoàn tiền'
                             : detailBooking.status === 'CANCELLED' ? 'Đơn đã hủy'
                             : ticket.ticketStatus === 'BOOKED' ? 'Chưa check-in'
                             : ticket.ticketStatus === 'HOLDING' ? 'Đang giữ' : 'Chưa xác nhận'}
-                        </span>
+                        </Badge>
                       </li>
                     ))}
                   </ul>
@@ -596,6 +648,14 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                 </section>
               )}
             </div>
+            {canRequestRefundForCustomer(detailBooking) && (
+              <footer className="booking-drawer-footer">
+                <button type="button" className="btn btn-secondary" disabled={Boolean(processingRefund)}
+                  onClick={() => requestCustomerRefund(detailBooking)}>
+                  <CreditCardIcon size={16} /><span>Yêu cầu hoàn thay khách</span>
+                </button>
+              </footer>
+            )}
             {canProcessRefund && detailBooking.status === 'REFUND_REQUESTED' && (
               <footer className="booking-drawer-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => requestProcessRefund(detailBooking, false)}
@@ -615,13 +675,28 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
 
         <ConfirmDialog
           open={confirming}
-          title={confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
-          message={(confirmState?.approved
+          title={confirmState?.kind === 'request' ? 'Yêu cầu hoàn tiền thay khách'
+            : confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
+          message={confirmState?.kind === 'request' ? (
+            <>
+              <span>
+                Đơn {confirmState.bookingCode} bán tại quầy. Quản lý chi nhánh sẽ duyệt yêu cầu
+                {confirmState.cash ? '; tiền mặt hoàn tại quầy sau khi được duyệt.' : '.'}
+              </span>
+              <label className="booking-refund-reason">
+                <span>Lý do hoàn tiền</span>
+                <textarea className="input" rows={3} maxLength={500} value={refundReason}
+                  placeholder="Ví dụ: bán nhầm suất chiếu, khách đổi ý trước giờ chiếu"
+                  disabled={Boolean(processingRefund)} onChange={(event) => setRefundReason(event.target.value)} />
+              </label>
+              {refundError && <span className="booking-refund-error" role="alert">Lỗi: {refundError}</span>}
+            </>
+          ) : (confirmState?.approved
             ? 'Xác nhận xử lý hoàn tiền cho đơn ' + confirmState.bookingCode + '?'
             : 'Xác nhận từ chối yêu cầu hoàn tiền của đơn ' + confirmState?.bookingCode + '?') +
             (refundError ? '\n\nLỗi: ' + refundError : '')}
-          confirmText={confirmState?.approved ? 'Xác nhận' : 'Từ chối'}
-          variant={confirmState?.approved ? 'primary' : 'danger'}
+          confirmText={confirmState?.kind === 'request' ? 'Gửi yêu cầu' : confirmState?.approved ? 'Xác nhận' : 'Từ chối'}
+          variant={confirmState?.kind === 'request' || confirmState?.approved ? 'primary' : 'danger'}
           loading={Boolean(processingRefund)}
           onConfirm={executeProcessRefund}
           onCancel={() => setConfirmState(null)}

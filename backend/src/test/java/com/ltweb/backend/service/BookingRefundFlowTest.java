@@ -65,6 +65,7 @@ class BookingRefundFlowTest {
             .build();
     when(users.findByUsername("admin")).thenReturn(Optional.of(admin));
     customer = User.builder().id(1L).totalSpending(new BigDecimal("300000")).build();
+    lenient().when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(customer));
     booking =
         Booking.builder()
             .id(5L)
@@ -247,6 +248,7 @@ class BookingRefundFlowTest {
     booking.getPayment().setRefundGatewayStatus(RefundGatewayStatus.PROCESSING);
     booking.getPayment().setRefundRequestedAt(LocalDateTime.now().minusMinutes(2));
     booking.getPayment().setRefundedAt(null);
+    booking.setSpendingRecorded(null);
     ticket.setBooking(booking);
     ticket.setTicketStatus(TicketStatus.BOOKED);
     customer.setTotalSpending(new BigDecimal("300000"));
@@ -267,6 +269,20 @@ class BookingRefundFlowTest {
     service.processRefund(5L, true, "cash returned at counter");
     assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
     verifyNoInteractions(gateway);
+  }
+
+  @Test
+  void refundingAPaymentThatArrivedTooLateLeavesSpendingUntouched() {
+    // VnpayService ghi nhận thanh toán trễ với spendingRecorded = FALSE: chưa từng cộng chi tiêu.
+    booking.getPayment().setPaymentMethod(PaymentMethod.CASH);
+    booking.setStatus(BookingStatus.REFUND_REQUESTED);
+    booking.setSpendingRecorded(false);
+
+    service.processRefund(5L, true, "late VNPay payment");
+
+    assertThat(booking.getStatus()).isEqualTo(BookingStatus.REFUNDED);
+    assertThat(customer.getTotalSpending()).isEqualByComparingTo("300000");
+    verify(users, never()).save(customer);
   }
 
   @Test

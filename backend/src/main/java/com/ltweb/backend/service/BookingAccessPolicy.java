@@ -54,6 +54,25 @@ public class BookingAccessPolicy {
         ErrorCode.UNAUTHORIZED);
   }
 
+  /**
+   * Chủ đơn tự gửi yêu cầu hoàn. Với đơn bán tại quầy, ADMIN hoặc STAFF/MANAGER của đúng chi nhánh
+   * được gửi thay khách, vì khách vãng lai không có tài khoản đăng nhập.
+   */
+  public void requireCanRequestRefund(Booking booking, User user) {
+    require(
+        isOwner(booking, user) || canRequestRefundForCustomer(booking, user),
+        ErrorCode.UNAUTHORIZED);
+  }
+
+  /** Người đang thao tác gửi yêu cầu hoàn thay khách (không phải chủ đơn). */
+  public boolean isRequestingRefundForCustomer(Booking booking, User user) {
+    return !isOwner(booking, user) && canRequestRefundForCustomer(booking, user);
+  }
+
+  private boolean canRequestRefundForCustomer(Booking booking, User user) {
+    return booking.getStaffUser() != null && canManage(booking, user);
+  }
+
   public void requireCanCreateAtCounter(Showtime showtime, User user) {
     require(
         user.getRole() == UserRole.ADMIN

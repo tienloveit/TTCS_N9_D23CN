@@ -31,6 +31,7 @@ export async function loadPage(path, initialState, services = {}) {
     'react-toastify': { toast },
     '../../api': { bookingApi: {}, userApi: {}, authApi: {}, promotionApi: {}, ...services },
     '../../context/useAuth': { useAuth: () => ({ isAdmin: true, isManager: false }) },
+    '../../components/Common/Badge': { default: 'Badge' },
     '../../components/Common/ConfirmDialog': { default: 'ConfirmDialog' },
     '../../components/Common/Skeleton': { SkeletonBox: 'SkeletonBox' },
     './BookingManagement.css': {},

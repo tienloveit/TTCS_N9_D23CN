@@ -46,7 +46,7 @@ import org.springframework.test.util.ReflectionTestUtils;
     matches = "cinema_payment_test_\\d{14}")
 @TestPropertySource(
     properties = {
-      "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/${PAYMENT_TEST_DATABASE}",
+      "spring.datasource.url=jdbc:mysql://127.0.0.1:${PAYMENT_TEST_PORT:3306}/${PAYMENT_TEST_DATABASE}",
       "spring.datasource.username=${PAYMENT_TEST_USER}",
       "spring.datasource.password=${PAYMENT_TEST_PASSWORD}",
       "spring.jpa.hibernate.ddl-auto=validate"
@@ -149,6 +149,7 @@ class PaymentPersistenceIntegrationTest {
     request.setShowtimeId(ticket.getShowtime().getId());
     request.setSeatIds(List.of(ticket.getSeat().getId()));
     request.setCustomerEmail(customer.getEmail());
+    request.setConfirmedCustomerId(customer.getId());
     request.setPaymentMethod(PaymentMethod.VNPAY);
     var result = bookingService().createStaffBooking(request);
     entityManager.flush();
@@ -177,6 +178,7 @@ class PaymentPersistenceIntegrationTest {
     request.setShowtimeId(ticket.getShowtime().getId());
     request.setSeatIds(List.of(ticket.getSeat().getId()));
     request.setCustomerEmail(customer.getEmail());
+    request.setConfirmedCustomerId(customer.getId());
     request.setPaymentMethod(PaymentMethod.CASH);
     BookingService service = bookingService();
     var sale = service.createStaffBooking(request);
@@ -193,6 +195,10 @@ class PaymentPersistenceIntegrationTest {
             Mappers.getMapper(TicketMapper.class),
             mock(QRCodeReaderService.class),
             mock(AuditLogService.class));
+    // Soát vé chỉ mở từ 60 phút trước giờ chiếu: dời suất về sát giờ trước khi quét.
+    ticket.getShowtime().setStartTime(LocalDateTime.now().plusMinutes(30));
+    ticket.getShowtime().setEndTime(LocalDateTime.now().plusMinutes(150));
+    entityManager.flush();
     CheckInTicketRequest scan = new CheckInTicketRequest();
     scan.setCode(ticket.getQrCode());
     checkIn.checkIn(scan);

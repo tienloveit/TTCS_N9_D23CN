@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { foodApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
 
 const formatCurrency = (amount) =>
@@ -22,6 +25,7 @@ const FoodManagement = () => {
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const dialog = useModalDialog(isModalOpen, () => handleCloseModal());
   const [editingFood, setEditingFood] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -127,7 +131,7 @@ const FoodManagement = () => {
     setDeleting(true);
     try {
       await foodApi.delete(deleteTarget.id);
-      toast.success(`Đã vô hiệu hoá "${deleteTarget.name}"!`);
+      toast.success(`Đã vô hiệu hóa "${deleteTarget.name}"!`);
       setDeleteTarget(null);
       fetchFoods();
     } catch (err) {
@@ -155,20 +159,16 @@ const FoodManagement = () => {
 
   return (
     <div className="admin-foods">
-      <div
-        className="page-header"
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
-      >
+      <div className="page-header page-header--split">
         <div>
-          <h1 className="page-title">Quản lý Bắp & Nước</h1>
+          <h1 className="page-title">Quản lý bắp nước</h1>
           <p className="page-subtitle">
             Tổng cộng <strong>{foods.length}</strong> sản phẩm trong hệ thống.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          <PlusIcon size={18} />
+        <Button variant="primary" icon={<PlusIcon size={18} />} onClick={() => handleOpenModal()}>
           Thêm sản phẩm
-        </button>
+        </Button>
       </div>
 
       <div className="admin-table-card">
@@ -191,135 +191,98 @@ const FoodManagement = () => {
             ))}
           </div>
 
-          <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 300px' }}>
-            <SearchIcon
-              size={16}
-              style={{
-                position: 'absolute',
-                left: '14px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                pointerEvents: 'none',
-              }}
-            />
+          <div className="admin-search">
+            <SearchIcon size={16} className="input-leading-icon" aria-hidden="true" />
             <input
-              type="text"
-              className="input"
+              type="search"
+              className="input input-sm"
               placeholder="Tìm tên sản phẩm..."
+              aria-label="Tìm sản phẩm theo tên"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
             />
           </div>
         </div>
         <table className="admin-table">
           <thead>
             <tr>
-              <th style={{ width: '40px' }}>#</th>
+              <th className="col-index">#</th>
               <th>Sản phẩm</th>
               <th>Mô tả</th>
               <th>Giá</th>
               <th>Tồn kho</th>
               <th>Trạng thái</th>
-              <th style={{ width: '120px' }}>Hành động</th>
+              <th className="col-actions">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {filteredFoods.length === 0 ? (
               <tr>
-                <td
-                  colSpan="7"
-                  style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}
-                >
+                <td colSpan="7" className="admin-table-empty">
                   {searchTerm
-                    ? 'Không tìm thấy sản phẩm nào'
-                    : 'Chưa có sản phẩm nào trong hệ thống'}
+                    ? 'Không tìm thấy sản phẩm nào. Thử từ khóa khác.'
+                    : 'Chưa có sản phẩm nào. Bấm “Thêm sản phẩm” để tạo món đầu tiên.'}
                 </td>
               </tr>
             ) : (
               filteredFoods.map((food, idx) => (
                 <tr key={food.id || idx}>
-                  <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                  <td className="cell-index">{idx + 1}</td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="admin-media-cell">
                       <SafeImage
                         src={food.imageUrl}
                         alt={food.name}
-                        style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '8px',
-                          objectFit: 'cover',
-                          background: 'var(--bg-secondary)',
-                        }}
-                        fallback="https://via.placeholder.com/48x48?text=No+Img"
+                        className="admin-thumb"
                       />
-                      <strong style={{ color: 'var(--text-primary)' }}>{food.name}</strong>
+                      <strong>{food.name}</strong>
                     </div>
                   </td>
                   <td>
-                    <span
-                      style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        maxWidth: '280px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '0.85rem',
-                      }}
-                    >
+                    <span className="cell-clamp" title={food.description || undefined}>
                       {food.description || '—'}
                     </span>
                   </td>
-                  <td style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                    {formatCurrency(food.price)}
-                  </td>
+                  <td className="cell-strong cell-nowrap">{formatCurrency(food.price)}</td>
 
-                  <td style={{ whiteSpace: 'nowrap' }}>
+                  <td className="cell-nowrap">
                     {food.stockQuantity == null ? (
-                      <span style={{ color: 'var(--text-muted)' }}>Không giới hạn</span>
+                      <span className="cell-muted">Không giới hạn</span>
                     ) : (
-                      <>
-                        <strong style={{ color: 'var(--text-primary)' }}>{food.stockQuantity}</strong>
+                      <span className="admin-inline">
+                        <strong>{food.stockQuantity}</strong>
                         {food.stockQuantity <= 0 ? (
-                          <span className="status-badge status--inactive" style={{ marginLeft: 8 }}>
-                            Hết hàng
-                          </span>
+                          <Badge tone="danger">Hết hàng</Badge>
                         ) : food.stockQuantity <= (food.lowStockThreshold ?? 10) ? (
-                          <span className="status-badge status--inactive" style={{ marginLeft: 8 }}>
-                            Sắp hết
-                          </span>
+                          <Badge tone="warning">Sắp hết</Badge>
                         ) : null}
-                      </>
+                      </span>
                     )}
                   </td>
 
                   <td>
-                    <span
-                      className={`status-badge ${food.active !== false ? 'status--active' : 'status--inactive'}`}
-                    >
+                    <Badge tone={food.active !== false ? 'success' : 'neutral'} dot>
                       {food.active !== false ? 'Đang bán' : 'Ngừng bán'}
-                    </span>
+                    </Badge>
                   </td>
                   <td>
                     <div className="action-btns">
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        title="Sửa"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Sửa sản phẩm"
+                        aria-label={`Sửa ${food.name}`}
+                        icon={<EditIcon size={15} />}
                         onClick={() => handleOpenModal(food)}
-                      >
-                        <EditIcon size={15} />
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        title="Vô hiệu hoá"
-                        style={{ color: '#ef4444' }}
+                      />
+                      <Button
+                        variant="ghost-danger"
+                        size="sm"
+                        title="Ngừng bán"
+                        aria-label={`Ngừng bán ${food.name}`}
+                        icon={<TrashIcon size={15} />}
                         onClick={() => handleDelete(food.id, food.name)}
-                      >
-                        <TrashIcon size={15} />
-                      </button>
+                      />
                     </div>
                   </td>
                 </tr>
@@ -331,47 +294,27 @@ const FoodManagement = () => {
 
       {/* Food Modal */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div
-            className="modal-content admin-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '600px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              padding: '32px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '24px',
-              }}
-            >
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+        <div className="modal-overlay" {...dialog.overlayProps}>
+          <div className="modal-content admin-modal" {...dialog.contentProps}>
+            <div className="admin-modal-header">
+              <h2 id={dialog.titleId}>
                 {editingFood ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="modal-close"
-                style={{ position: 'static', width: 34, height: 34 }}
+                className="modal-close modal-close--inline modal-close--lg"
                 aria-label="Đóng"
               >
                 <XIcon size={18} />
               </button>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="auth-form"
-              style={{ display: 'grid', gap: '20px' }}
-            >
+            <form onSubmit={handleSubmit} className="admin-form">
               <div className="form-group">
-                <label className="form-label">Tên sản phẩm</label>
+                <label className="form-label" htmlFor="food-name">Tên sản phẩm</label>
                 <input
+                  id="food-name"
                   type="text"
                   name="name"
                   className="input"
@@ -383,20 +326,21 @@ const FoodManagement = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Mô tả</label>
+                <label className="form-label" htmlFor="food-description">Mô tả</label>
                 <textarea
+                  id="food-description"
                   name="description"
                   className="input"
                   value={formData.description}
                   onChange={handleInputChange}
-                  style={{ minHeight: '80px', resize: 'vertical' }}
                   placeholder="Mô tả ngắn về sản phẩm..."
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Giá (VNĐ)</label>
+                <label className="form-label" htmlFor="food-price">Giá (VNĐ)</label>
                 <input
+                  id="food-price"
                   type="number"
                   name="price"
                   className="input"
@@ -409,8 +353,9 @@ const FoodManagement = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">URL Hình ảnh</label>
+                <label className="form-label" htmlFor="food-image">URL hình ảnh</label>
                 <input
+                  id="food-image"
                   type="text"
                   name="imageUrl"
                   className="input"
@@ -419,25 +364,18 @@ const FoodManagement = () => {
                   placeholder="https://..."
                 />
                 {formData.imageUrl && (
-                  <div style={{ marginTop: '8px' }}>
-                    <SafeImage
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                        border: '1px solid var(--border)',
-                      }}
-                    />
-                  </div>
+                  <SafeImage
+                    src={formData.imageUrl}
+                    alt="Ảnh xem trước"
+                    className="admin-thumb admin-thumb--preview"
+                  />
                 )}
               </div>
 
               <div className="form-group">
-                <label className="form-label">Số lượng tồn kho</label>
+                <label className="form-label" htmlFor="food-stock">Số lượng tồn kho</label>
                 <input
+                  id="food-stock"
                   type="number"
                   name="stockQuantity"
                   className="input"
@@ -449,9 +387,7 @@ const FoodManagement = () => {
                   step="1"
                   placeholder={formData.unlimitedStock ? 'Không giới hạn' : 'VD: 100'}
                 />
-                <label
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', cursor: 'pointer' }}
-                >
+                <label className="admin-check">
                   <input
                     type="checkbox"
                     name="unlimitedStock"
@@ -463,8 +399,9 @@ const FoodManagement = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Ngưỡng cảnh báo sắp hết (mặc định 10)</label>
+                <label className="form-label" htmlFor="food-low-stock">Ngưỡng cảnh báo sắp hết (mặc định 10)</label>
                 <input
+                  id="food-low-stock"
                   type="number"
                   name="lowStockThreshold"
                   className="input"
@@ -478,39 +415,22 @@ const FoodManagement = () => {
               </div>
 
               <div className="form-group">
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                  }}
-                >
+                <label className="admin-check admin-check--strong">
                   <input
                     type="checkbox"
                     name="active"
                     checked={formData.active}
                     onChange={handleInputChange}
-                    style={{ cursor: 'pointer', width: '18px', height: '18px' }}
                   />
                   Đang bán (hiển thị cho khách hàng)
                 </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                  {editingFood ? 'Lưu thay đổi' : 'Thêm sản phẩm'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="btn btn-secondary"
-                  style={{ flex: 1 }}
-                >
-                  Huỷ bỏ
-                </button>
+              <div className="admin-form-actions">
+                <Button onClick={handleCloseModal}>Hủy</Button>
+                <Button type="submit" variant="primary">
+                  {editingFood ? 'Lưu sản phẩm' : 'Thêm sản phẩm'}
+                </Button>
               </div>
             </form>
           </div>
@@ -519,8 +439,8 @@ const FoodManagement = () => {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Vô hiệu hoá sản phẩm"
-        message={`Bạn có chắc chắn muốn ngừng bán sản phẩm "${deleteTarget?.name}"?`}
+        title="Ngừng bán sản phẩm"
+        message={`Ngừng bán "${deleteTarget?.name}"? Khách sẽ không thấy món này khi đặt vé.`}
         confirmText="Ngừng bán"
         loading={deleting}
         onConfirm={confirmDelete}

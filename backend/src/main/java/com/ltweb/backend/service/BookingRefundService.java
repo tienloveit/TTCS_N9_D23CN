@@ -2,23 +2,21 @@ package com.ltweb.backend.service;
 
 import com.ltweb.backend.dto.request.RefundRequest;
 import com.ltweb.backend.dto.response.BookingResponse;
-import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Payment;
+import com.ltweb.backend.entity.PaymentEvent;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.*;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
 import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
-import com.ltweb.backend.repository.TicketRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -40,11 +38,11 @@ public class BookingRefundService {
   private final java.time.Clock clock;
   private static final long GATEWAY_CLAIM_SECONDS = 60;
   private final BookingRepository bookings;
-  private final TicketRepository tickets;
   private final UserRepository users;
   private final BookingMapper mapper;
   private final AuditLogService audit;
-  private final SimpMessagingTemplate messaging;
+  private final BookingReleaseService releaser;
+  private final PaymentEventService paymentEvents;
   private final VnpayRefundGateway gateway;
   private final PlatformTransactionManager transactionManager;
   private final jakarta.persistence.EntityManager entityManager;
@@ -100,7 +98,11 @@ public class BookingRefundService {
     }
     VnpayRefundGateway.Result outcome =
         result == null ? VnpayRefundGateway.Result.unknown() : result;
-    return transaction().execute(status -> finish(decision.order(), outcome));
+    PaymentEvent.Type eventType =
+        decision.action() == GatewayAction.SUBMIT
+            ? PaymentEvent.Type.REFUND_SUBMIT
+            : PaymentEvent.Type.REFUND_QUERY;
+    return transaction().execute(status -> finish(decision.order(), outcome, eventType));
   }
 
   private Decision prepare(
@@ -194,9 +196,22 @@ public class BookingRefundService {
         null);
   }
 
-  private BookingResponse finish(VnpayRefundGateway.Order order, VnpayRefundGateway.Result result) {
+  private BookingResponse finish(
+      VnpayRefundGateway.Order order,
+      VnpayRefundGateway.Result result,
+      PaymentEvent.Type eventType) {
     entityManager.clear(); // Re-read the durable attempt under lock, including concurrent updates.
     Booking booking = locked(order.bookingId());
+    // Ghi mọi phản hồi của cổng, kể cả phản hồi đến muộn của lần thử cũ, để đối soát.
+    paymentEvents.recordRefund(
+        eventType,
+        order.bookingId(),
+        order.requestId(),
+        order.paymentTransactionNo(),
+        order.amount(),
+        result.code(),
+        result.status() == null ? null : result.status().name(),
+        result.message());
     Payment payment = booking.getPayment();
     if (booking.getStatus() == BookingStatus.REFUNDED) return mapper.toBookingResponse(booking);
     if (!Objects.equals(order.requestId(), payment.getRefundRequestId()))
@@ -221,32 +236,22 @@ public class BookingRefundService {
     payment.setPaymentStatus(PaymentStatus.REFUNDED);
     payment.setRefundedAt(LocalDateTime.now(clock));
     payment.setRefundAmount(booking.getTotalAmount());
-    booking
-        .getTickets()
-        .forEach(
-            ticket -> {
-              ticket.setBooking(null);
-              ticket.setTicketStatus(TicketStatus.AVAILABLE);
-              ticket.setQrCode(null);
-              ticket.setCheckedInAt(null);
-              ticket.setCheckedInBy(null);
-              tickets.save(ticket);
-              BookingTransactionEffects.afterCommit(
-                  () ->
-                      messaging.convertAndSend(
-                          "/topic/showtime/" + booking.getShowtime().getId() + "/seats",
-                          SeatStatusEvent.builder()
-                              .seatId(ticket.getSeat().getId())
-                              .status("AVAILABLE")
-                              .build()));
-            });
-    User customer = booking.getUser();
-    if (customer != null && customer.getTotalSpending() != null) {
+    // Hoàn tiền trả ghế nhưng không coi bắp nước đã trả lại và giữ nguyên lượt khuyến mãi đã dùng.
+    releaser.releaseSeats(booking);
+    // Thanh toán đến trễ (spendingRecorded = FALSE) chưa từng được cộng vào chi tiêu.
+    User customer =
+        booking.getUser() == null
+            ? null
+            : users.findByIdForUpdate(booking.getUser().getId()).orElse(null);
+    if (customer != null
+        && customer.getTotalSpending() != null
+        && !Boolean.FALSE.equals(booking.getSpendingRecorded())) {
       customer.setTotalSpending(
           customer.getTotalSpending().subtract(booking.getTotalAmount()).max(BigDecimal.ZERO));
       customer.setMembershipTier(MembershipTier.fromSpending(customer.getTotalSpending()));
       users.save(customer);
     }
+    booking.setSpendingRecorded(false);
     audit.record(
         AuditAction.REFUND_APPROVED,
         "Booking",

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { bookingApi } from '../../api';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
+import useModalDialog from '../../components/Common/useModalDialog';
 import {
   CheckIcon,
   EyeIcon,
@@ -8,12 +11,13 @@ import {
   SearchIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
     .format(Number(amount || 0));
 
-const formatDateTime = (value) => value ? new Date(value).toLocaleString('vi-VN') : '-';
+const formatDateTime = (value) => formatCinema(value, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' }, '-');
 
 const STATUS_TABS = [
   { key: 'REFUND_REQUESTED', label: 'Chờ xử lý' },
@@ -29,6 +33,7 @@ const RefundManagementPage = () => {
   const [status, setStatus] = useState('REFUND_REQUESTED');
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const dialog = useModalDialog(Boolean(selected), () => setSelected(null), { disabled: submitting });
 
   const fetchRefunds = async () => {
     setLoading(true);
@@ -92,10 +97,9 @@ const RefundManagementPage = () => {
           <h1 className="page-title">Xử lý hoàn tiền</h1>
           <p className="page-subtitle">Duyệt, từ chối và lưu ghi chú xử lý cho các yêu cầu hoàn tiền.</p>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={fetchRefunds} disabled={loading}>
-          <RefreshIcon size={16} />
-          <span>Làm mới</span>
-        </button>
+        <Button icon={<RefreshIcon size={16} />} onClick={fetchRefunds} disabled={loading}>
+          Làm mới
+        </Button>
       </div>
 
       <div className="admin-table-card">
@@ -120,25 +124,15 @@ const RefundManagementPage = () => {
             })}
           </div>
 
-          <div style={{ position: 'relative', minWidth: 250 }}>
-            <SearchIcon
-              size={16}
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                pointerEvents: 'none',
-              }}
-            />
+          <div className="admin-search">
+            <SearchIcon size={16} className="input-leading-icon" aria-hidden="true" />
             <input
-              type="text"
-              className="input"
+              type="search"
+              className="input input-sm"
               placeholder="Tìm mã đơn, khách, phim, lý do..."
+              aria-label="Tìm yêu cầu hoàn tiền"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: 36, height: 38, fontSize: '0.85rem' }}
             />
           </div>
         </div>
@@ -158,36 +152,37 @@ const RefundManagementPage = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center', padding: 32 }}>Đang tải...</td></tr>
+              <tr><td colSpan="8" className="admin-table-empty" role="status">Đang tải...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Không có yêu cầu hoàn tiền phù hợp</td></tr>
+              <tr><td colSpan="8" className="admin-table-empty">Không có yêu cầu hoàn tiền phù hợp.</td></tr>
             ) : filtered.map((booking) => (
               <tr key={booking.bookingId}>
-                <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{booking.bookingCode}</td>
+                <td className="cell-code">{booking.bookingCode}</td>
                 <td>{booking.username || '-'}</td>
-                <td style={{ fontWeight: 600 }}>{booking.movieName || '-'}</td>
+                <td className="cell-strong">{booking.movieName || '-'}</td>
                 <td>{booking.branchName || '-'}</td>
-                <td style={{ fontWeight: 700, color: '#dc2626' }}>
+                <td className="cell-amount-out">
                   {formatCurrency(booking.refundAmount || booking.totalAmount)}
                 </td>
-                <td style={{ maxWidth: 240 }}>{booking.refundReason || '-'}</td>
+                <td className="cell-wrap">{booking.refundReason || '-'}</td>
                 <td>
-                  <span className={`status-badge ${booking.status === 'REFUND_REQUESTED' ? 'status--pending' : 'status--inactive'}`}>
+                  <Badge tone={booking.status === 'REFUND_REQUESTED' ? 'warning' : 'success'} dot>
                     {booking.status === 'REFUND_REQUESTED' ? 'Chờ xử lý' : 'Đã hoàn tiền'}
-                  </span>
+                  </Badge>
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
+                  <Button
+                    variant={booking.status === 'REFUND_REQUESTED' ? 'primary' : 'secondary'}
+                    size="sm"
+                    icon={<EyeIcon size={14} />}
+                    aria-label={`Xem yêu cầu ${booking.bookingCode}`}
                     onClick={() => {
                       setSelected(booking);
                       setNote(booking.refundProcessNote || '');
                     }}
                   >
-                    <EyeIcon size={14} />
-                    <span>Chi tiết</span>
-                  </button>
+                    {booking.status === 'REFUND_REQUESTED' ? 'Xử lý' : 'Chi tiết'}
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -196,70 +191,64 @@ const RefundManagementPage = () => {
       </div>
 
       {selected && (
-        <div className="modal-overlay" onClick={() => setSelected(null)}>
-          <div
-            className="modal-content admin-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 680, height: 'auto', aspectRatio: 'unset', padding: 28, background: 'var(--bg-card)' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>Yêu cầu {selected.bookingCode}</h2>
+        <div className="modal-overlay" {...dialog.overlayProps}>
+          <div className="modal-content admin-modal admin-modal--lg" {...dialog.contentProps}>
+            <div className="admin-modal-header">
+              <h2 id={dialog.titleId}>Yêu cầu {selected.bookingCode}</h2>
               <button
                 type="button"
-                className="modal-close"
-                style={{ position: 'static', width: 32, height: 32 }}
+                className="modal-close modal-close--inline"
                 onClick={() => setSelected(null)}
                 aria-label="Đóng"
               >
                 <XIcon size={16} />
               </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16 }}>
+            <div className="admin-detail-grid">
               <div><strong>Khách hàng:</strong> {selected.username || '-'}</div>
               <div><strong>Phim:</strong> {selected.movieName || '-'} - {selected.roomName || '-'}</div>
               <div><strong>Suất chiếu:</strong> {formatDateTime(selected.showtimeStart)}</div>
               <div><strong>Thanh toán:</strong> {selected.paymentMethod || '-'} - {formatCurrency(selected.totalAmount)}</div>
-              <div style={{ gridColumn: 'span 2' }}><strong>Lý do khách gửi:</strong> {selected.refundReason || '-'}</div>
+              <div className="span-full"><strong>Lý do khách gửi:</strong> {selected.refundReason || '-'}</div>
               {selected.refundProcessedAt && (
-                <div style={{ gridColumn: 'span 2' }}>
+                <div className="span-full">
                   <strong>Lần xử lý gần nhất:</strong> {formatDateTime(selected.refundProcessedAt)} bởi {selected.refundProcessedByUsername || '-'}
                 </div>
               )}
             </div>
 
             {selected.refundGatewayMessage && selected.status === 'REFUND_REQUESTED' && (
-              <p role="status">{selected.refundGatewayMessage}</p>
+              <p className="admin-notice" role="status">{selected.refundGatewayMessage}</p>
             )}
-            <label className="form-label">Ghi chú xử lý</label>
-            <textarea
-              className="input"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Nhập ghi chú đối soát hoặc lý do từ chối..."
-              style={{ minHeight: 90, marginBottom: 18 }}
-            />
+            <div className="form-group">
+              <label className="form-label" htmlFor="refund-note">Ghi chú xử lý</label>
+              <textarea
+                id="refund-note"
+                className="input admin-textarea"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Nhập ghi chú đối soát hoặc lý do từ chối..."
+              />
+            </div>
             {selected.status === 'REFUND_REQUESTED' && (
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
+              <div className="admin-modal-actions">
+                <Button
+                  icon={<XIcon size={16} />}
                   disabled={submitting || ['PROCESSING', 'UNKNOWN'].includes(selected.refundGatewayStatus)}
                   onClick={() => handleDecision(false)}
                 >
-                  <XIcon size={16} />
-                  <span>Từ chối</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
+                  Từ chối
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={<CheckIcon size={16} />}
                   disabled={submitting}
                   onClick={() => handleDecision(true)}
                 >
-                  <CheckIcon size={16} />
-                  <span>{submitting ? 'Đang xử lý...'
+                  {submitting ? 'Đang xử lý...'
                     : ['PROCESSING', 'UNKNOWN'].includes(selected.refundGatewayStatus) ? 'Kiểm tra kết quả'
-                      : selected.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt hoàn tiền'}</span>
-                </button>
+                      : selected.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt hoàn tiền'}
+                </Button>
               </div>
             )}
           </div>

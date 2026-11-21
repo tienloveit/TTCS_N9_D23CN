@@ -37,7 +37,7 @@ export default function MovieCard({ movie, status = movie.status }) {
           {movie.ratingCount > 0 && <span className="catalog-card-rating" title={movie.ratingCount + ' lượt đánh giá'}><StarIcon size={15} /> {rating}</span>}
           {status === 'UPCOMING' && releaseLabel && <span><CalendarIcon size={15} /> {releaseLabel}</span>}
         </div>
-        <Link className={'catalog-button catalog-card-action ' + (bookable ? 'catalog-button--primary' : 'catalog-button--secondary')}
+        <Link className={'catalog-button catalog-card-action ' + (bookable ? 'catalog-button--soft' : 'catalog-button--secondary')}
           to={bookable ? path + '#movie-schedule' : path}
           aria-label={(bookable ? 'Đặt vé ' : 'Xem chi tiết ') + movie.movieName}>
           {bookable ? <TicketIcon size={17} /> : <ChevronRightIcon size={17} />}

@@ -9,7 +9,7 @@ MoviePTIT phục vụ đặt vé online, bán vé tại quầy và quản trị 
 | [Context toàn dự án](CLAUDE.md) | Kiến trúc, vai trò, luồng liên tầng và các hợp đồng dữ liệu |
 | [Backend](backend/CLAUDE.md) | Java 21, Spring Boot 3.4.0, REST API, MySQL, Redis, WebSocket, OAuth2, VNPay, SMTP và migration |
 | [Frontend](frontend/CLAUDE.md) | React 19, Vite 8, React Router 7, Axios, route theo vai trò và các màn hình |
-| [Hướng dẫn AI](AGENTS.md) | Quy tắc GitNexus và các hướng dẫn theo phạm vi |
+| [Hướng dẫn AI](AGENTS.md) | Quy tắc làm việc trong repo và hướng dẫn riêng cho backend, frontend |
 
 `backend/src/main/` chứa mã Java và cấu hình runtime, `backend/src/test/` chứa kiểm thử. `frontend/src/` chứa ứng dụng React, `frontend/tests/` chứa kiểm thử Node. Mở gốc `TTCS_N9_D23CN` trong IDE để làm việc với cả hai phần.
 
@@ -56,7 +56,7 @@ Trong MySQL client, tạo database mới.
 CREATE DATABASE IF NOT EXISTS cinema CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Mặc định Hibernate dùng `ddl-auto: update`. [movie.sql](backend/movie.sql) là schema khởi tạo tùy chọn cho các bảng chính. Dữ liệu mẫu được tạo qua chế độ demo. Nếu dùng database cũ, xem [migration cho database cũ](#migration-cho-database-cũ) trước khi khởi động backend.
+Không cần tạo bảng: khi backend khởi động, Flyway chạy các migration trong [db/migration](backend/src/main/resources/db/migration) để tạo hoặc nâng cấp schema, sau đó Hibernate kiểm tra entity khớp schema (`ddl-auto: validate`). Dữ liệu mẫu được tạo qua chế độ demo. Nếu dùng database có từ trước, xem [migration cho database cũ](#migration-cho-database-cũ) trước khi khởi động backend.
 
 Kiểm tra Redis bằng `redis-cli ping`. Nếu dùng Docker và chưa có Redis nghe ở cổng 6379, có thể chạy:
 
@@ -151,11 +151,13 @@ npm run build
 node --experimental-vm-modules --test tests/*.test.mjs
 ```
 
-Build frontend tạo `frontend/dist/`. Kiểm thử persistence backend cần MySQL bản sao đã chạy migration. Xem [điều kiện kiểm thử](backend/CLAUDE.md#migration-và-kiểm-tra).
+Build frontend tạo `frontend/dist/`. Kiểm thử persistence backend cần MySQL bản sao có dữ liệu; Flyway tự migrate bản sao khi test chạy. Xem [điều kiện kiểm thử](backend/CLAUDE.md#migration-và-kiểm-tra).
 
 ## Migration cho database cũ
 
-Dừng backend, sao lưu database và đối chiếu schema đang dùng với [bảng migration và thứ tự phụ thuộc](backend/CLAUDE.md#thứ-tự-theo-schema-đang-dùng). Các script trong [backend/migrations](backend/migrations) được chạy thủ công theo trạng thái schema. Ví dụ database còn khóa chính `branch_id`, `movie_id`, `booking_id` cần script đổi PK sang `id` trước các migration tham chiếu tên mới. Hibernate `ddl-auto: update` không tự chuyển đổi dữ liệu và quan hệ theo các script đó.
+Sao lưu database trước lần đầu khởi động phiên bản có Flyway. Với database đã có bảng, Flyway ghi mốc V1 rồi chạy [V2](backend/src/main/resources/db/migration/V2__legacy_catch_up.sql) để bổ sung cột, index, NOT NULL, CHECK và khóa ngoại. Nếu dữ liệu vi phạm ràng buộc, backend dừng với thông báo cụ thể: sửa dữ liệu, chạy `DELETE FROM flyway_schema_history WHERE success = 0;` rồi khởi động lại. Chi tiết ở [Flyway](backend/CLAUDE.md#flyway).
+
+Database rất cũ (còn khóa chính `branch_id`, `movie_id`, `booking_id`, chưa tách bảng `payments`) cần chạy thủ công các script `20261111_*` trong [backend/migrations](backend/migrations) theo [thứ tự phụ thuộc](backend/CLAUDE.md#script-chạy-tay-cho-database-rất-cũ) trước khi khởi động backend.
 
 ## Xử lý lỗi khi chạy local
 
@@ -163,8 +165,10 @@ Dừng backend, sao lưu database và đối chiếu schema đang dùng với [b
 | --- | --- |
 | MySQL từ chối xác thực | Schema `cinema`, username và `SPRING_DATASOURCE_PASSWORD`. |
 | `invalid target release: 21` | `java -version` và `JAVA_HOME` trỏ tới JDK 21. |
-| VS Code báo lỗi Java trong `.gitnexus` hoặc `.tmp` | Đóng các tab từ thư mục lưu tạm, thêm `**/.gitnexus/**` và `**/.tmp/**` vào `java.import.exclusions`, rồi tải lại cửa sổ. Project Maven của ứng dụng nằm ở `backend/pom.xml`. |
+| VS Code báo lỗi Java trong `.tmp` | Đóng các tab từ thư mục lưu tạm, thêm `**/.tmp/**` vào `java.import.exclusions`, rồi tải lại cửa sổ. Project Maven của ứng dụng nằm ở `backend/pom.xml`. |
 | Kiểm tra định dạng Java | Chạy `mvnw` với JDK 21 trong `backend/`. Maven chạy Spotless ở bước `validate`, còn bộ import Maven trong VS Code bỏ qua riêng bước này. |
+| Backend dừng với lỗi Flyway `V2__legacy_catch_up` | Thông báo cho biết dữ liệu vi phạm ràng buộc (ví dụ mã QR trùng, chi nhánh không tồn tại). Sửa dữ liệu, chạy `DELETE FROM flyway_schema_history WHERE success = 0;` rồi khởi động lại. |
+| `Schema-validation` khi khởi động | Entity và schema lệch nhau: thêm migration `V{n}__...sql` thay vì sửa bảng thủ công hay bật `ddl-auto: update`. |
 | Redis connection refused | Kiểm tra dịch vụ cổng 6379 và `redis-cli ping`. |
 | Cổng 8081 đã dùng | Kiểm tra tiến trình hiện tại hoặc đổi `SERVER_PORT` cùng `VITE_API_BASE_URL`. |
 | API 404 hoặc lỗi CORS | Kiểm tra hậu tố `/api`, origin frontend trong `SecurityConfig` và khởi động lại Vite sau khi sửa `.env`. |

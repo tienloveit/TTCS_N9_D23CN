@@ -4,6 +4,14 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { branchApi, movieApi, roomApi, showtimeApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { useAuth } from '../../context/useAuth';
+import useModalDialog from '../../components/Common/useModalDialog';
+import {
+  addDaysToDateKey,
+  cinemaTodayKey,
+  formatDate as formatCinemaDate,
+  parseLocalDateTime,
+  toCinemaDateKey,
+} from '../../utils/cinemaTime';
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -18,12 +26,8 @@ import {
 
 const DATE_WINDOW_SIZE = 5;
 
-const toLocalDateKey = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+// Ngày theo giờ rạp để "Hôm nay" và dải ngày khớp lịch chiếu, bất kể múi giờ của máy.
+const toLocalDateKey = (date = new Date()) => toCinemaDateKey(date);
 
 const getDateFromKey = (dateKey) => new Date(`${dateKey}T00:00:00`);
 
@@ -53,6 +57,7 @@ export default function MovieDetailPage() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
+  const trailerDialog = useModalDialog(showTrailer, () => setShowTrailer(false));
   const [userRating, setUserRating] = useState(null);
   const [userComment, setUserComment] = useState('');
   const [hoverRating, setHoverRating] = useState(0);
@@ -146,11 +151,9 @@ export default function MovieDetailPage() {
 
   const scheduleDates = useMemo(
     () =>
-      Array.from({ length: DATE_WINDOW_SIZE }, (_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() + dateWindowOffset + index);
-        return toLocalDateKey(date);
-      }),
+      Array.from({ length: DATE_WINDOW_SIZE }, (_, index) =>
+        addDaysToDateKey(cinemaTodayKey(), dateWindowOffset + index)
+      ),
     [dateWindowOffset]
   );
 
@@ -162,7 +165,8 @@ export default function MovieDetailPage() {
       .filter((showtime) => {
         // Chỉ hiện suất OPEN và chưa bắt đầu
         if (showtime.status && showtime.status !== 'OPEN') return false;
-        if (showtime.startTime && new Date(showtime.startTime) <= now) return false;
+        const startAt = parseLocalDateTime(showtime.startTime);
+        if (startAt && startAt <= now) return false;
         return true;
       })
       .map((showtime) => {
@@ -382,7 +386,8 @@ export default function MovieDetailPage() {
   const formatRelativeTime = (dateStr) => {
     if (!dateStr) return '';
     const now = new Date();
-    const date = new Date(dateStr);
+    const date = parseLocalDateTime(dateStr);
+    if (!date) return '';
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return 'Vừa xong';
@@ -391,7 +396,7 @@ export default function MovieDetailPage() {
     if (diffHours < 24) return `${diffHours} giờ trước`;
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 30) return `${diffDays} ngày trước`;
-    return date.toLocaleDateString('vi-VN');
+    return formatCinemaDate(date);
   };
 
   const handleCityChange = (event) => {
@@ -401,10 +406,8 @@ export default function MovieDetailPage() {
 
   const moveDateWindow = (direction) => {
     const nextOffset = Math.max(0, dateWindowOffset + direction * DATE_WINDOW_SIZE);
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + nextOffset);
     setDateWindowOffset(nextOffset);
-    setSelectedDate(toLocalDateKey(nextDate));
+    setSelectedDate(addDaysToDateKey(cinemaTodayKey(), nextOffset));
   };
 
   if (loading) {
@@ -439,7 +442,7 @@ export default function MovieDetailPage() {
             const isFilled = star <= Math.round(averageRating);
             return (
               <span key={star} className={isFilled ? 'is-active' : ''}>
-                <StarIcon size={16} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                <StarIcon size={16} style={isFilled ? { fill: 'var(--rating)', color: 'var(--rating)' } : undefined} />
               </span>
             );
           })}
@@ -466,7 +469,7 @@ export default function MovieDetailPage() {
                 aria-label={`Chọn ${star} sao`}
                 aria-pressed={userRating === star}
               >
-                <StarIcon size={22} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                <StarIcon size={22} style={isFilled ? { fill: 'var(--rating)', color: 'var(--rating)' } : undefined} />
               </button>
             );
           })}
@@ -539,7 +542,7 @@ export default function MovieDetailPage() {
                 )}
                 {ratingCount > 0 && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    <StarIcon size={16} style={{ fill: 'var(--gold)', color: 'var(--gold)' }} />
+                    <StarIcon size={16} style={{ fill: 'var(--rating)', color: 'var(--rating)' }} />
                     {averageRating.toFixed(1)} ({ratingCount})
                   </span>
                 )}
@@ -758,7 +761,7 @@ export default function MovieDetailPage() {
                           const isFilled = s <= review.score;
                           return (
                             <span key={s} className={isFilled ? 'is-active' : ''}>
-                              <StarIcon size={13} style={isFilled ? { fill: 'var(--gold)', color: 'var(--gold)' } : undefined} />
+                              <StarIcon size={13} style={isFilled ? { fill: 'var(--rating)', color: 'var(--rating)' } : undefined} />
                             </span>
                           );
                         })}
@@ -775,8 +778,8 @@ export default function MovieDetailPage() {
       </div>
 
       {showTrailer && movie.trailerUrl && (
-        <div className="modal-overlay" onClick={() => setShowTrailer(false)} role="dialog" aria-modal="true" aria-label="Trailer phim">
-          <div className="modal-content modal-video" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-overlay" {...trailerDialog.overlayProps}>
+          <div className="modal-content modal-video" {...trailerDialog.contentProps} aria-labelledby={undefined} aria-label="Trailer phim">
             <button type="button" className="modal-close" aria-label="Đóng trailer" onClick={() => setShowTrailer(false)}>
               <XIcon size={20} />
             </button>

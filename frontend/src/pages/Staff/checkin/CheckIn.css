@@ -1,0 +1,615 @@
+/* ============================================================
+   Soát vé vào rạp (/staff/check-in)
+   Máy quét/nhập mã, tra cứu đơn, kết quả soát và nhật ký trong phiên.
+   ============================================================ */
+
+.gate-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 48px;
+}
+
+.gate-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  flex-wrap: wrap;
+}
+
+.gate-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gate-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface-hover);
+  border: 1px solid var(--line);
+}
+
+.gate-stat-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gate-stat-chip div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.gate-stat-chip dt {
+  font-size: 0.7rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink-muted);
+}
+
+.gate-stat-chip dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+}
+
+.gate-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.gate-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.gate-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+}
+
+.gate-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 5px;
+  background: var(--surface-sunken);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+
+.gate-mode-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 0.85rem;
+  font-weight: var(--fw-bold);
+  border: none;
+  transition: all 0.18s ease;
+}
+
+.gate-mode-tab:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.gate-mode-tab--active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+}
+
+.gate-mode-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Scanner Input Box */
+
+.gate-scanner-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gate-scanner-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  border: 1px solid var(--line-strong);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: var(--fw-semibold);
+}
+
+.gate-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.gate-code-input {
+  width: 100%;
+  height: 58px;
+  padding: 0 130px 0 18px;
+  border-radius: 12px;
+  border: 2px solid var(--line-strong);
+  background: var(--surface-hover);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.08rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.gate-code-input:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(185, 56, 12, 0.14);
+}
+
+.gate-code-submit {
+  position: absolute;
+  right: 6px;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent));
+  color: var(--ink-inverse);
+  font-weight: var(--fw-bold);
+  font-size: 0.88rem;
+}
+
+.gate-code-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+/* Live Camera Viewport */
+
+.gate-camera-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 320px;
+  background: var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gate-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gate-camera-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gate-camera-frame {
+  width: 200px;
+  height: 200px;
+  border: 2px solid rgba(185, 56, 12, 0.85);
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.42);
+  position: relative;
+}
+
+.gate-camera-laser {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--success), transparent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: gateLaser 2.2s ease-in-out infinite;
+}
+
+/* Search / Lookup List */
+
+.gate-lookup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.gate-lookup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-hover);
+  transition: all 0.16s ease;
+}
+
+.gate-lookup-item:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.gate-lookup-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.gate-lookup-code {
+  font-family: monospace;
+  font-size: 0.88rem;
+  font-weight: var(--fw-bold);
+  color: var(--accent);
+  margin-right: 8px;
+}
+
+.gate-lookup-movie {
+  font-size: 0.92rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+  margin: 2px 0;
+}
+
+.gate-lookup-meta {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Pass Verdict Card (Right Side) */
+
+.gate-verdict {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
+}
+
+.gate-verdict--valid {
+  border-color: var(--success);
+}
+
+.gate-verdict--warning {
+  border-color: var(--warning);
+}
+
+.gate-verdict--error {
+  border-color: var(--danger);
+}
+
+.gate-verdict-banner {
+  padding: 18px 22px;
+  color: var(--ink-inverse);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gate-verdict--valid .gate-verdict-banner {
+  background: linear-gradient(135deg, var(--success) 0%, var(--success) 100%);
+}
+
+.gate-verdict--warning .gate-verdict-banner {
+  background: linear-gradient(135deg, var(--warning) 0%, var(--warning) 100%);
+}
+
+.gate-verdict--error .gate-verdict-banner {
+  background: linear-gradient(135deg, var(--danger) 0%, var(--danger) 100%);
+}
+
+.gate-verdict-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: var(--fw-bold);
+  flex-shrink: 0;
+}
+
+.gate-verdict-banner h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.gate-verdict-banner p {
+  margin: 2px 0 0;
+  font-size: 0.83rem;
+  opacity: 0.92;
+}
+
+.gate-verdict-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gate-pass-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface-hover);
+  border: 1px solid var(--line);
+}
+
+.gate-pass-field dt {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink-muted);
+}
+
+.gate-pass-field dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+}
+
+.gate-seat-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.gate-seat-badge {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--success-line);
+  background: var(--success-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gate-seat-badge--already {
+  border-color: var(--warning-line);
+  background: var(--warning-soft);
+}
+
+.gate-seat-badge-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.gate-seat-badge-code {
+  font-size: 1.05rem;
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+}
+
+@media (max-width: 1100px) {
+  .gate-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .gate-mode-tabs,
+  .gate-pass-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Trong cổng nhân viên ---------- */
+
+.staff-portal .gate-page { gap: 16px; padding-bottom: 0; }
+.staff-portal .gate-top-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  gap: 12px;
+}
+/* Gate */
+.staff-portal .gate-stats-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.staff-portal .gate-stat-chip { min-width: 0; min-height: 66px; border-radius: 10px; background: var(--surface); border-color: var(--staff-border); padding: 14px; }
+.staff-portal .gate-stat-chip dt { color: var(--staff-muted); text-transform: none; font-size: 12px; }
+.staff-portal .gate-stat-chip dd { margin-top: 4px; font-size: 24px; }
+.staff-portal .gate-workspace { gap: 16px; }
+.staff-portal .gate-history { grid-column: 1 / -1; }
+.staff-portal .gate-mode-tab { min-height: 44px; }
+.staff-portal .gate-mode-tab--active { background: var(--surface); box-shadow: none; border-color: var(--staff-border-strong); }
+.staff-portal .gate-camera-status { font-size: 13px; color: var(--staff-muted); margin: 0; }
+.staff-gate-pass { border: 1px solid var(--staff-border); background: var(--surface); border-radius: var(--staff-radius); overflow: hidden; }
+.staff-gate-pass-head { display: flex; align-items: center; gap: 9px; background: var(--staff-sidebar); color: var(--staff-on-dark); padding: 12px 18px; font-weight: var(--fw-bold); }
+.staff-gate-pass-head svg { color: var(--staff-amber); }
+.staff-gate-pass-body { display: grid; justify-items: center; align-content: center; gap: 8px; min-height: 192px; padding: 22px; text-align: center; border-bottom: 3px dashed var(--staff-border-strong); background: var(--staff-surface-muted); }
+.staff-gate-pass-body > svg { color: var(--brand); }
+.staff-gate-pass-body h2, .staff-gate-pass-body p { margin: 0; }
+.staff-gate-pass-body h2 { font-size: 20px; }
+.staff-gate-pass-body p { max-width: 320px; color: var(--staff-muted); }
+.staff-portal .gate-mode-tabs { background: var(--staff-surface-sunken); border-color: var(--staff-border); }
+.staff-portal .gate-mode-tab--active { color: var(--brand-strong); }
+.staff-portal .gate-scanner-hint { background: var(--staff-surface-muted); border-color: var(--staff-border); color: var(--warning-strong); flex-wrap: wrap; }
+.staff-portal .gate-code-input { width: 100%; }
+.staff-portal .gate-code-submit { background: var(--brand); box-shadow: none; }
+.staff-portal .gate-code-submit:not(:disabled):hover { background: var(--brand-strong); }
+.staff-portal .gate-result { overflow-wrap: anywhere; }
+.staff-portal .gate-verdict--valid { border-color: var(--success-line); }
+.staff-portal .gate-verdict--warning { border-color: var(--warning-line); }
+.staff-portal .gate-verdict--error { border-color: var(--danger-line); }
+.staff-portal .gate-verdict--valid .gate-verdict-banner { background: var(--success); }
+.staff-portal .gate-verdict--warning .gate-verdict-banner { background: var(--warning-strong); }
+.staff-portal .gate-verdict--error .gate-verdict-banner { background: var(--danger); }
+.staff-portal .gate-pass-grid, .staff-portal .gate-seat-grid { grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); }
+.staff-portal .gate-history .admin-table { min-width: 650px; }
+@media (max-width: 960px) {
+  .staff-portal .gate-workspace { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .staff-portal .gate-workspace { grid-template-columns: minmax(0, 1fr); }
+  .staff-portal .gate-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .staff-portal .gate-card { padding: 12px; }
+  .staff-portal .gate-mode-tabs { gap: 4px; }
+  .staff-portal .gate-lookup-item { flex-wrap: wrap; }
+}
+.staff-portal .gate-code-submit:disabled {
+  background: var(--staff-border);
+  color: var(--staff-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ---------- Kết quả soát vé ---------- */
+
+.gate-verdict-icon svg { width: 26px; height: 26px; }
+.gate-reason {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--danger-line);
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+  font-size: 0.95rem;
+  font-weight: var(--fw-bold);
+}
+.gate-reason svg { flex: none; }
+.gate-hint { margin: 0; color: var(--ink-muted); font-size: 0.85rem; }
+.gate-verdict-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.gate-verdict-code { margin-bottom: 6px; font-family: var(--font-mono); }
+.gate-verdict-movie { margin: 0; color: var(--ink); font-size: 1.3rem; font-weight: var(--fw-bold); }
+.gate-pass-field .gate-pass-room { color: var(--brand); font-size: 1.08rem; }
+.gate-section-label {
+  margin: 0 0 10px;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  font-weight: var(--fw-bold);
+}
+.gate-seat-meta { color: var(--ink-muted); font-size: 0.74rem; }
+.gate-verdict-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+}
+
+/* ---------- Máy quét và nhập mã ---------- */
+
+.gate-scanner-hint-text { display: inline-flex; align-items: center; gap: 8px; }
+.gate-camera { display: grid; gap: 10px; }
+.gate-camera-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.gate-camera-live { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-size: 0.82rem; font-weight: var(--fw-bold); }
+.gate-camera-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px var(--success-soft); }
+.gate-code-label { display: block; margin-bottom: 8px; color: var(--ink-secondary); font-size: 0.8rem; font-weight: var(--fw-bold); }
+.gate-code-clear { display: flex; justify-content: flex-end; }
+
+/* ---------- Tra cứu đơn ---------- */
+
+.gate-lookup { display: grid; gap: 14px; }
+.gate-lookup-toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
+.gate-lookup-search { flex: 1; min-width: 220px; }
+.gate-lookup-filters { display: flex; align-items: center; gap: 6px; }
+.gate-lookup-list { margin: 0; padding-left: 0; list-style: none; }
+.gate-lookup-customer { color: var(--ink-secondary); font-size: 0.8rem; font-weight: var(--fw-semibold); }
+.gate-lookup-meta > span { display: inline-flex; align-items: center; gap: 4px; }
+.gate-lookup-meta strong { color: var(--ink); }
+.gate-lookup-code { color: var(--brand-strong); }
+.staff-portal .gate-lookup-item { background: var(--staff-surface-muted); border-color: var(--staff-border); }
+.staff-portal .gate-lookup-item:hover { background: var(--surface); border-color: var(--staff-border-strong); }
+.gate-empty {
+  margin: 0;
+  padding: 28px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--staff-surface-muted);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+/* ---------- Nhật ký trong phiên ---------- */
+
+.gate-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.gate-history-head h2 { margin: 0; font-size: 1.02rem; font-weight: var(--fw-bold); }
+.gate-history-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.staff-portal .gate-history-search { width: 170px; min-height: 44px; font-size: 0.82rem; }
+.gate-history-table { border-radius: 12px; }
+.gate-history-table tr.is-clickable { cursor: pointer; }
+.gate-history-time { font-family: var(--font-mono); font-size: 0.82rem; white-space: nowrap; }
+.gate-history-code { font-family: var(--font-mono); font-weight: var(--fw-bold); color: var(--ink); }
+.gate-history-movie { color: var(--ink); font-size: 0.86rem; font-weight: var(--fw-bold); }
+.gate-history-seats { color: var(--ink-muted); font-size: 0.76rem; }
+
+/* Ô thống kê: màu chấm và số theo kết quả */
+.gate-stats-row { margin: 0; }
+.gate-stat-chip--neutral .gate-stat-chip-dot { background: var(--ink-muted); }
+.gate-stat-chip--success .gate-stat-chip-dot { background: var(--success); }
+.gate-stat-chip--success dd { color: var(--success); }
+.gate-stat-chip--warning .gate-stat-chip-dot { background: var(--warning); }
+.gate-stat-chip--warning dd { color: var(--warning); }
+.gate-stat-chip--danger .gate-stat-chip-dot { background: var(--danger); }
+.gate-stat-chip--danger dd { color: var(--danger); }

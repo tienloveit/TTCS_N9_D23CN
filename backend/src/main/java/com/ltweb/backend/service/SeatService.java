@@ -36,6 +36,7 @@ public class SeatService {
   private final UserRepository userRepository;
   private final SeatMapper seatMapper;
 
+  @Transactional
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public SeatResponse createSeat(CreateSeatRequest request) {
     requireRoomAccess(request.getRoomId());
@@ -49,7 +50,9 @@ public class SeatService {
     Room room = getRoom(request.getRoomId());
     seat.setRoom(room);
 
-    return seatMapper.toSeatResponse(seatRepository.save(seat));
+    SeatResponse response = seatMapper.toSeatResponse(seatRepository.save(seat));
+    syncSeatCapacity(room);
+    return response;
   }
 
   @Transactional
@@ -61,13 +64,19 @@ public class SeatService {
 
     seatMapper.updateSeat(seat, request);
 
+    Room previousRoom = seat.getRoom();
     if (request.getRoomId() != null) {
       requireRoomAccess(request.getRoomId());
       Room room = getRoom(request.getRoomId());
       seat.setRoom(room);
     }
 
-    return seatMapper.toSeatResponse(seatRepository.save(seat));
+    SeatResponse response = seatMapper.toSeatResponse(seatRepository.save(seat));
+    if (previousRoom != seat.getRoom()) {
+      syncSeatCapacity(previousRoom);
+      syncSeatCapacity(seat.getRoom());
+    }
+    return response;
   }
 
   @Transactional
@@ -76,6 +85,17 @@ public class SeatService {
     Seat seat = getSeat(seatId);
     requireRoomAccess(seat.getRoom().getId());
     seatRepository.delete(seat);
+    syncSeatCapacity(seat.getRoom());
+  }
+
+  /**
+   * seat_capacity là số ghế thật của phòng (báo cáo tỷ lệ lấp đầy dùng giá trị này). Cập nhật sau
+   * mỗi thao tác làm thay đổi số ghế.
+   */
+  private void syncSeatCapacity(Room room) {
+    seatRepository.flush();
+    room.setSeatCapacity((int) seatRepository.countByRoomId(room.getId()));
+    roomRepository.save(room);
   }
 
   @Transactional

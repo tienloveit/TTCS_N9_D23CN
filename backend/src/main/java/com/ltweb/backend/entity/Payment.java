@@ -23,9 +23,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "payments")
@@ -44,7 +46,7 @@ public class Payment {
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Booking booking;
 
-  @Column(nullable = false, precision = 38, scale = 2)
+  @Column(nullable = false, precision = 15, scale = 2)
   @Builder.Default
   private BigDecimal amount = BigDecimal.ZERO;
 
@@ -75,6 +77,7 @@ public class Payment {
   private String refundRequestId;
 
   @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.VARCHAR)
   @Column(length = 20)
   private RefundGatewayStatus refundGatewayStatus;
 
@@ -86,7 +89,9 @@ public class Payment {
   @Column(length = 500)
   private String refundGatewayMessage;
 
-  @Builder.Default private BigDecimal refundAmount = BigDecimal.ZERO;
+  @Column(precision = 15, scale = 2)
+  @Builder.Default
+  private BigDecimal refundAmount = BigDecimal.ZERO;
 
   @CreationTimestamp
   @Column(

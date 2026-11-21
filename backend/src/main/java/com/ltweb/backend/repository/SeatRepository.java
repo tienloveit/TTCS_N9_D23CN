@@ -17,4 +17,6 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
   boolean existsByRoomIdAndSeatCode(Long roomId, String seatCode);
 
   void deleteByRoomId(Long roomId);
+
+  long countByRoomId(Long roomId);
 }

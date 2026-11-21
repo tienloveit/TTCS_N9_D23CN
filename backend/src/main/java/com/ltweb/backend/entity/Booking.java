@@ -28,7 +28,18 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
-@Table(name = "bookings")
+@Table(
+    name = "bookings",
+    indexes = {
+      // Đếm đơn chờ thanh toán của khách (giới hạn đơn PENDING).
+      @jakarta.persistence.Index(
+          name = "idx_bookings_user_status_expires",
+          columnList = "user_id, status, expires_at"),
+      // Job dọn đơn hết hạn.
+      @jakarta.persistence.Index(
+          name = "idx_bookings_status_expires",
+          columnList = "status, expires_at")
+    })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -55,16 +66,36 @@ public class Booking {
   @JoinColumn(name = "showtime_id", nullable = false)
   private Showtime showtime;
 
-  @Builder.Default private BigDecimal totalAmount = BigDecimal.ZERO;
+  @Column(nullable = false, precision = 15, scale = 2)
+  @Builder.Default
+  private BigDecimal totalAmount = BigDecimal.ZERO;
 
   private String promotionCode;
 
-  @Builder.Default private BigDecimal discountAmount = BigDecimal.ZERO;
+  @Column(nullable = false, precision = 15, scale = 2)
+  @Builder.Default
+  private BigDecimal discountAmount = BigDecimal.ZERO;
 
   @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
   private BookingStatus status;
 
   private LocalDateTime expiresAt;
+
+  /**
+   * TRUE khi lượt dùng khuyến mãi đã được giữ lúc tạo/áp mã và phải trả lại nếu đơn không được
+   * thanh toán. NULL với đơn tạo trước cơ chế giữ lượt (lượt được tính khi thanh toán).
+   */
+  @Column(name = "promotion_usage_reserved")
+  private Boolean promotionUsageReserved;
+
+  /**
+   * TRUE khi số tiền đơn đã được cộng vào tổng chi tiêu của khách. FALSE với thanh toán đến sau khi
+   * đơn đã hủy (không xuất vé, chỉ chờ hoàn tiền). NULL với đơn cũ: coi như đã cộng nếu đã thanh
+   * toán.
+   */
+  @Column(name = "spending_recorded")
+  private Boolean spendingRecorded;
 
   @Column(name = "created_at", updatable = false)
   @CreationTimestamp

@@ -71,6 +71,34 @@ public class StaffOperationsService {
         sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.CARD)
             .add(sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.VNPAY));
     BigDecimal foodRevenue = sumFoodRevenue(paidStaffBookingsToday);
+
+    // Két tiền mặt: thu gộp theo ngày thanh toán, trừ tiền trả lại theo ngày hoàn. Đơn bán rồi hoàn
+    // trong cùng ngày được tính cả hai phía nên két vẫn khớp.
+    List<Booking> myCashBookings =
+        branchBookings.stream()
+            .filter(booking -> isStaffBooking(booking, staff))
+            .filter(booking -> booking.getPayment().getPaymentMethod() == PaymentMethod.CASH)
+            .toList();
+    List<Booking> cashSalesToday =
+        myCashBookings.stream()
+            .filter(booking -> isInRange(booking.getPayment().getPaidAt(), startOfDay, endOfDay))
+            .toList();
+    List<Booking> cashRefundsToday =
+        myCashBookings.stream()
+            .filter(booking -> booking.getPayment().getPaymentStatus() == PaymentStatus.REFUNDED)
+            .filter(
+                booking -> isInRange(booking.getPayment().getRefundedAt(), startOfDay, endOfDay))
+            .toList();
+    BigDecimal cashCollected = sumBookingRevenue(cashSalesToday);
+    BigDecimal cashRefunded =
+        cashRefundsToday.stream()
+            .map(
+                booking ->
+                    booking.getPayment().getRefundAmount() != null
+                        ? booking.getPayment().getRefundAmount()
+                        : booking.getTotalAmount())
+            .map(this::safeAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     long ticketsSold = paidStaffBookingsToday.stream().mapToLong(this::ticketCount).sum();
     long pendingBookings =
         staffBookingsToday.stream()
@@ -120,6 +148,11 @@ public class StaffOperationsService {
                 .ticketsSold(ticketsSold)
                 .checkedInTickets(checkedInTickets)
                 .refundRequests(refundRequests)
+                .cashCollected(cashCollected)
+                .cashSales(cashSalesToday.size())
+                .cashRefunded(cashRefunded)
+                .cashRefunds(cashRefundsToday.size())
+                .cashExpected(cashCollected.subtract(cashRefunded))
                 .build())
         .upcomingShowtimes(upcomingShowtimes)
         .recentBookings(recentBookings)
