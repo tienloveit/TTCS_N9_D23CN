@@ -24,7 +24,9 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
   @EntityGraph(attributePaths = {"genres", "director"})
   List<Movie> findByMovieNameContainingIgnoreCase(String movieName);
 
-  @EntityGraph(attributePaths = {"genres", "director"})
+  // Không fetch genres: giới hạn 1 dòng cùng fetch collection khiến Hibernate tải hết rồi cắt
+  // trong bộ nhớ (HHH90003004). Seeder đọc genres trong transaction của nó.
+  @EntityGraph(attributePaths = {"director"})
   Optional<Movie> findFirstByMovieNameIgnoreCase(String movieName);
 
   /** Phim sắp chiếu đã tới ngày công chiếu (và chưa qua ngày kết thúc) chuyển sang đang chiếu. */
