@@ -1,10 +1,12 @@
 package com.ltweb.backend.controller;
 
+import com.ltweb.backend.dto.request.BookingSearchRequest;
 import com.ltweb.backend.dto.request.CreateBookingRequest;
 import com.ltweb.backend.dto.request.ProcessRefundRequest;
 import com.ltweb.backend.dto.request.StaffBookingRequest;
 import com.ltweb.backend.dto.request.UpdateBookingRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
+import com.ltweb.backend.dto.response.BookingPageResponse;
 import com.ltweb.backend.dto.response.BookingResponse;
 import com.ltweb.backend.service.BookingService;
 import jakarta.validation.Valid;
@@ -48,11 +50,12 @@ public class BookingController {
     return apiResponse;
   }
 
-  @GetMapping
+  /** Danh sách đơn quản lý theo trang; tham số xem {@link BookingSearchRequest}. */
+  @GetMapping("/search")
   @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
-  public ApiResponse<List<BookingResponse>> getAllBookings() {
-    ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(bookingService.getAllBookings());
+  public ApiResponse<BookingPageResponse> searchBookings(BookingSearchRequest request) {
+    ApiResponse<BookingPageResponse> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(bookingService.searchBookings(request));
     return apiResponse;
   }
 

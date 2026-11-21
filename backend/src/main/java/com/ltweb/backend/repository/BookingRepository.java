@@ -23,7 +23,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface BookingRepository extends JpaRepository<Booking, Long> {
+public interface BookingRepository extends JpaRepository<Booking, Long>, BookingSearchRepository {
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select b from Booking b where b.id = :id")
@@ -77,23 +77,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         "tickets.seat"
       })
   List<Booking> findByUserId(Long userId);
-
-  /** Đơn thuộc một chi nhánh, lọc ở DB thay vì tải toàn bộ rồi lọc trong bộ nhớ. */
-  @EntityGraph(
-      attributePaths = {
-        "user",
-        "staffUser",
-        "payment",
-        "payment.refundProcessedBy",
-        "showtime",
-        "showtime.movie",
-        "showtime.room",
-        "showtime.room.branch",
-        "tickets",
-        "tickets.seat"
-      })
-  @Query("select b from Booking b where b.showtime.room.branch.branchId = :branchId")
-  List<Booking> findByBranchId(@Param("branchId") Long branchId);
 
   @EntityGraph(
       attributePaths = {

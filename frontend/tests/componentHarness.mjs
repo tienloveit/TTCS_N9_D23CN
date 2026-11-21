@@ -29,7 +29,7 @@ export async function loadPage(path, initialState, services = {}) {
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-router-dom': { Link: 'Link', useLocation: () => ({ hash: '#info' }), useNavigate: () => () => {} },
     'react-toastify': { toast },
-    '../../api': { bookingApi: {}, userApi: {}, authApi: {}, promotionApi: {}, ...services },
+    '../../api': { bookingApi: {}, branchApi: {}, userApi: {}, authApi: {}, promotionApi: {}, ...services },
     '../../context/useAuth': { useAuth: () => ({ isAdmin: true, isManager: false }) },
     '../../components/Common/Badge': { default: 'Badge' },
     '../../components/Common/ConfirmDialog': { default: 'ConfirmDialog' },
