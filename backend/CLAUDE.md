@@ -192,6 +192,8 @@ Check-in nhận chuỗi QR đầy đủ (phải khớp QR đã cấp cho vé) ho
 
 Tất cả đường dẫn sau tương đối với `http://localhost:8081/api`; controller không thêm lại `/api`.
 
+Báo cáo và dashboard (`AdminAnalyticsService`, `RevenueReportService`, `OperationsReportService`, `StaffOperationsService`) lọc ngày, chi nhánh, phim, nhân viên và phương thức ngay trong truy vấn của `BookingRepository`/`ShowtimeRepository`/`TicketRepository`, không tải toàn bộ bảng rồi lọc trong Java. Quy ước dùng chung nằm trong JPQL: đơn đã thanh toán là COMPLETED hoặc payment PAID; ngày thanh toán là `coalesce(paidAt, updatedAt, createdAt, now)`; ngày nghiệp vụ của staff dashboard là `coalesce(paidAt, createdAt, đầu ngày)`. Khi đổi quy ước này, sửa cả truy vấn lẫn `getPaymentDate` của service. "Đơn gần đây" dùng `BookingRepository.findRecent` (lấy ID có giới hạn rồi tải chi tiết, vì giới hạn dòng cùng fetch collection khiến Hibernate cắt trong bộ nhớ). `Booking.bookingFoods` tải theo lô (`@BatchSize`). `RepositoryQueryValidationTest` dựng Hibernate không cần MySQL để kiểm tra mọi JPQL trong `@Query`.
+
 | Nhóm | Endpoint tiêu biểu |
 | --- | --- |
 | Auth/user | `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/change-password`, `/sign-up`, `/users`, `/my-info` |

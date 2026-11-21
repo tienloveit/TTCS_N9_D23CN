@@ -5,9 +5,7 @@ import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
-import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
-import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
@@ -57,18 +55,16 @@ public class RevenueReportService {
     Long scopedBranchId = resolveScopedBranchId(user, branchId);
 
     List<Booking> bookings =
-        bookingRepository.findAll().stream()
-            .filter(this::isPaidBooking)
-            .filter(booking -> isInRange(getPaymentDate(booking), start, end))
-            .filter(
-                booking ->
-                    scopedBranchId == null || Objects.equals(getBranchId(booking), scopedBranchId))
-            .filter(booking -> movieId == null || Objects.equals(getMovieId(booking), movieId))
-            .filter(booking -> staffId == null || Objects.equals(getStaffId(booking), staffId))
-            .filter(
-                booking ->
-                    paymentMethod == null
-                        || booking.getPayment().getPaymentMethod() == paymentMethod)
+        bookingRepository
+            .findPaidByPaymentDate(
+                start,
+                end,
+                LocalDateTime.now(clock),
+                scopedBranchId,
+                movieId,
+                staffId,
+                paymentMethod)
+            .stream()
             .sorted(Comparator.comparing(this::getPaymentDate).reversed())
             .toList();
 
@@ -170,19 +166,10 @@ public class RevenueReportService {
     throw new AccessDeniedException("Revenue report access denied");
   }
 
-  private boolean isPaidBooking(Booking booking) {
-    return booking.getStatus() == BookingStatus.COMPLETED
-        || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
-  }
-
-  private boolean isInRange(LocalDateTime value, LocalDateTime start, LocalDateTime end) {
-    return value != null && !value.isBefore(start) && value.isBefore(end);
-  }
-
   private LocalDateTime getPaymentDate(Booking booking) {
     if (booking.getPayment().getPaidAt() != null) return booking.getPayment().getPaidAt();
     if (booking.getUpdatedAt() != null) return booking.getUpdatedAt();
-    return Objects.requireNonNullElseGet(booking.getCreatedAt(), LocalDateTime::now);
+    return Objects.requireNonNullElseGet(booking.getCreatedAt(), () -> LocalDateTime.now(clock));
   }
 
   private BigDecimal sumBookingRevenue(List<Booking> bookings) {

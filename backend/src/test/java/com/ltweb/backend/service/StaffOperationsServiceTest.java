@@ -33,17 +33,20 @@ class StaffOperationsServiceTest {
     var mapper = mock(BookingMapper.class);
     User staff = User.builder().id(1L).username("staff").role(UserRole.STAFF).branchId(1L).build();
     when(users.findByUsername("staff")).thenReturn(Optional.of(staff));
-    when(showtimes.findAll()).thenReturn(List.of());
-    LocalDateTime today = LocalDate.now().atStartOfDay();
-    when(bookings.findAll())
+    LocalDateTime today = LocalDate.now(BackendServiceFixtures.CLOCK).atStartOfDay();
+    // Lọc nhân viên/chi nhánh/ngày nằm trong truy vấn: chỉ trả dữ liệu khi service hỏi đúng phạm
+    // vi.
+    Booking cashSale = sale(staff, 1L, today, PaymentMethod.CASH);
+    when(bookings.findStaffBookingsByBusinessDate(1L, 1L, today, today.plusDays(1)))
         .thenReturn(
             List.of(
-                sale(staff, 1L, today, PaymentMethod.CASH),
+                cashSale,
                 sale(staff, 1L, today, PaymentMethod.CARD),
-                sale(staff, 1L, today, PaymentMethod.VNPAY),
-                sale(staff, 1L, today.minusDays(1), PaymentMethod.CASH),
-                sale(staff, 2L, today, PaymentMethod.CASH),
-                sale(User.builder().id(2L).build(), 1L, today, PaymentMethod.CASH)));
+                sale(staff, 1L, today, PaymentMethod.VNPAY)));
+    when(bookings.findStaffCashMovements(1L, 1L, today, today.plusDays(1)))
+        .thenReturn(List.of(cashSale));
+    when(tickets.countCheckedInBetween(1L, today, today.plusDays(1))).thenReturn(4L);
+    when(bookings.countByStatusInBranch(BookingStatus.REFUND_REQUESTED, 1L)).thenReturn(2L);
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken("staff", "unused", java.util.List.of()));
@@ -58,6 +61,9 @@ class StaffOperationsServiceTest {
     assertThat(result.getCashRevenue()).isEqualByComparingTo("100000");
     assertThat(result.getCardRevenue()).isEqualByComparingTo("200000");
     assertThat(result.getTicketsSold()).isEqualTo(3);
+    assertThat(result.getCashCollected()).isEqualByComparingTo("100000");
+    assertThat(result.getCheckedInTickets()).isEqualTo(4);
+    assertThat(result.getRefundRequests()).isEqualTo(2);
   }
 
   @Test
@@ -67,7 +73,6 @@ class StaffOperationsServiceTest {
     var users = mock(UserRepository.class);
     User staff = User.builder().id(1L).username("staff").role(UserRole.STAFF).branchId(1L).build();
     when(users.findByUsername("staff")).thenReturn(Optional.of(staff));
-    when(showtimes.findAll()).thenReturn(List.of());
     LocalDateTime now = LocalDateTime.now(BackendServiceFixtures.CLOCK);
     LocalDateTime today = now.toLocalDate().atStartOfDay();
     Booking keptToday = sale(staff, 1L, today.plusMinutes(1), PaymentMethod.CASH);
@@ -75,15 +80,10 @@ class StaffOperationsServiceTest {
         refunded(sale(staff, 1L, today.plusMinutes(2), PaymentMethod.CASH), today.plusMinutes(3));
     Booking refundedFromYesterday =
         refunded(sale(staff, 1L, today.minusHours(5), PaymentMethod.CASH), today.plusMinutes(4));
-    Booking vnpayToday = sale(staff, 1L, today.plusMinutes(5), PaymentMethod.VNPAY);
-    Booking otherSellersCash =
-        refunded(
-            sale(User.builder().id(2L).build(), 1L, today.plusMinutes(6), PaymentMethod.CASH),
-            today.plusMinutes(7));
-    when(bookings.findAll())
-        .thenReturn(
-            List.of(
-                keptToday, refundedSameDay, refundedFromYesterday, vnpayToday, otherSellersCash));
+    // Đơn VNPay và đơn của nhân viên khác bị truy vấn loại; service chỉ nhận đơn tiền mặt của
+    // mình có thu hoặc hoàn trong ngày.
+    when(bookings.findStaffCashMovements(1L, 1L, today, today.plusDays(1)))
+        .thenReturn(List.of(keptToday, refundedSameDay, refundedFromYesterday));
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken("staff", "unused", java.util.List.of()));
