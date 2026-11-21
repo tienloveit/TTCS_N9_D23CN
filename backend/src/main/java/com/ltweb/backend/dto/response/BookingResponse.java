@@ -81,4 +81,9 @@ public class BookingResponse {
 
   private com.ltweb.backend.enums.RefundGatewayStatus refundGatewayStatus;
   private String refundGatewayMessage;
+
+  /** Nhân viên bán tại quầy; null với đơn khách tự đặt online. */
+  private Long staffUserId;
+
+  private String staffUsername;
 }

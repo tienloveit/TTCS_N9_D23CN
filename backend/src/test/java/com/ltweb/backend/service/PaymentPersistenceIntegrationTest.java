@@ -149,6 +149,7 @@ class PaymentPersistenceIntegrationTest {
     request.setShowtimeId(ticket.getShowtime().getId());
     request.setSeatIds(List.of(ticket.getSeat().getId()));
     request.setCustomerEmail(customer.getEmail());
+    request.setConfirmedCustomerId(customer.getId());
     request.setPaymentMethod(PaymentMethod.VNPAY);
     var result = bookingService().createStaffBooking(request);
     entityManager.flush();
@@ -177,6 +178,7 @@ class PaymentPersistenceIntegrationTest {
     request.setShowtimeId(ticket.getShowtime().getId());
     request.setSeatIds(List.of(ticket.getSeat().getId()));
     request.setCustomerEmail(customer.getEmail());
+    request.setConfirmedCustomerId(customer.getId());
     request.setPaymentMethod(PaymentMethod.CASH);
     BookingService service = bookingService();
     var sale = service.createStaffBooking(request);
@@ -193,6 +195,10 @@ class PaymentPersistenceIntegrationTest {
             Mappers.getMapper(TicketMapper.class),
             mock(QRCodeReaderService.class),
             mock(AuditLogService.class));
+    // Soát vé chỉ mở từ 60 phút trước giờ chiếu: dời suất về sát giờ trước khi quét.
+    ticket.getShowtime().setStartTime(LocalDateTime.now().plusMinutes(30));
+    ticket.getShowtime().setEndTime(LocalDateTime.now().plusMinutes(150));
+    entityManager.flush();
     CheckInTicketRequest scan = new CheckInTicketRequest();
     scan.setCode(ticket.getQrCode());
     checkIn.checkIn(scan);

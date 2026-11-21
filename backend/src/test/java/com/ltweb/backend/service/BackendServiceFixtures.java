@@ -103,7 +103,8 @@ final class BackendServiceFixtures {
             mapper,
             notifications,
             releaser,
-            promotions),
+            promotions,
+            audit),
         new BookingQueryService(bookings, mapper, current, access, policy),
         new BookingMembershipService(bookings, users, promotions),
         refunds);

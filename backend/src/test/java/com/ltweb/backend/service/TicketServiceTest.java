@@ -17,6 +17,7 @@ import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
+import com.ltweb.backend.enums.ShowtimeStatus;
 import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
@@ -40,6 +41,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
+  private static final String QR = "CINEMAHUB|BOOKING=BK-TEST|TICKET=10|SEAT=A1";
+
   @Mock private TicketRepository ticketRepository;
   @Mock private BookingRepository bookingRepository;
   @Mock private ShowtimeRepository showtimeRepository;
@@ -92,7 +95,7 @@ class TicketServiceTest {
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
 
     CheckInTicketRequest request = new CheckInTicketRequest();
-    request.setCode("10");
+    request.setCode(QR);
     var response = ticketService.checkIn(request);
 
     assertThat(ticket.getCheckedInAt()).isNotNull();
@@ -113,7 +116,7 @@ class TicketServiceTest {
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
 
     CheckInTicketRequest request = new CheckInTicketRequest();
-    request.setCode("10");
+    request.setCode(QR);
 
     assertThatThrownBy(() -> ticketService.checkIn(request))
         .isInstanceOf(AppException.class)
@@ -134,7 +137,7 @@ class TicketServiceTest {
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
     var request = new CheckInTicketRequest();
-    request.setCode("10");
+    request.setCode(QR);
     var response = ticketService.checkIn(request);
     assertThat(ticket.getCheckedInBy()).isSameAs(original);
     assertThat(ticket.getCheckedInAt()).isEqualTo(originalTime);
@@ -148,7 +151,7 @@ class TicketServiceTest {
     User staff = User.builder().id(7L).role(UserRole.STAFF).branchId(1L).build();
     Ticket ticket = paidTicketInBranch(1L);
     var file = new org.springframework.mock.web.MockMultipartFile("file", new byte[] {1});
-    when(qrCodeReaderService.decodeQRCode(file)).thenReturn("10");
+    when(qrCodeReaderService.decodeQRCode(file)).thenReturn(QR);
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
     var response = ticketService.checkInByQRImage(file);
@@ -189,11 +192,98 @@ class TicketServiceTest {
     when(userRepository.findByUsername("staff")).thenReturn(Optional.of(staff));
     when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
     var request = new CheckInTicketRequest();
-    request.setCode("10");
+    request.setCode(QR);
     assertThatThrownBy(() -> ticketService.checkIn(request)).isInstanceOf(AppException.class);
     assertThat(ticket.getCheckedInBy()).isNull();
     assertThat(ticket.getCheckedInAt()).isNull();
     org.mockito.Mockito.verify(ticketRepository, org.mockito.Mockito.never()).save(any());
+  }
+
+  @Test
+  void bareTicketIdIsNotAcceptedForCheckIn() {
+    Ticket ticket = paidTicketInBranch(1L);
+
+    assertThatThrownBy(() -> ticketService.checkIn(code("10")))
+        .isInstanceOf(AppException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.CHECKIN_CODE_NOT_ACCEPTED);
+    assertThat(ticket.getCheckedInAt()).isNull();
+    org.mockito.Mockito.verifyNoInteractions(ticketRepository, bookingRepository);
+  }
+
+  @Test
+  void checkInOpensSixtyMinutesBeforeShowtime() {
+    Ticket ticket = scheduledTicket(now().plusMinutes(75), now().plusMinutes(195));
+
+    assertCheckInError(ticket, ErrorCode.CHECKIN_TOO_EARLY);
+
+    ticket.getShowtime().setStartTime(now().plusMinutes(55));
+    ticket.getShowtime().setEndTime(now().plusMinutes(175));
+    ticketService.checkIn(code(QR));
+    assertThat(ticket.getCheckedInAt()).isNotNull();
+  }
+
+  @Test
+  void checkInIsAllowedDuringShowtimeButNotAfterItEnds() {
+    Ticket late = scheduledTicket(now().minusMinutes(20), now().plusMinutes(100));
+    ticketService.checkIn(code(QR));
+    assertThat(late.getCheckedInAt()).isNotNull();
+
+    Ticket ended = scheduledTicket(now().minusMinutes(150), now().minusMinutes(5));
+    assertCheckInError(ended, ErrorCode.CHECKIN_SHOWTIME_ENDED);
+  }
+
+  @Test
+  void cancelledShowtimeCannotBeCheckedIn() {
+    Ticket ticket = scheduledTicket(now().plusMinutes(10), now().plusMinutes(130));
+    ticket.getShowtime().setStatus(ShowtimeStatus.CANCELLED);
+
+    assertCheckInError(ticket, ErrorCode.CHECKIN_SHOWTIME_CANCELLED);
+  }
+
+  @Test
+  void rescanAfterShowtimeEndedStillShowsFirstCheckIn() {
+    Ticket ticket = scheduledTicket(now().minusMinutes(150), now().minusMinutes(5));
+    var firstScan = now().minusMinutes(140);
+    ticket.setCheckedInAt(firstScan);
+
+    var response = ticketService.checkIn(code(QR));
+
+    assertThat(response.getTickets().getFirst().isAlreadyCheckedIn()).isTrue();
+    assertThat(ticket.getCheckedInAt()).isEqualTo(firstScan);
+  }
+
+  private Ticket scheduledTicket(java.time.LocalDateTime start, java.time.LocalDateTime end) {
+    authenticate("staff");
+    User staff = User.builder().id(7L).username("staff").role(UserRole.STAFF).branchId(1L).build();
+    Ticket ticket = paidTicketInBranch(1L);
+    ticket.getShowtime().setStartTime(start);
+    ticket.getShowtime().setEndTime(end);
+    ticket.getShowtime().setStatus(ShowtimeStatus.OPEN);
+    org.mockito.Mockito.lenient()
+        .when(userRepository.findByUsername("staff"))
+        .thenReturn(Optional.of(staff));
+    when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+    return ticket;
+  }
+
+  private void assertCheckInError(Ticket ticket, ErrorCode expected) {
+    assertThatThrownBy(() -> ticketService.checkIn(code(QR)))
+        .isInstanceOf(AppException.class)
+        .extracting("errorCode")
+        .isEqualTo(expected);
+    assertThat(ticket.getCheckedInAt()).isNull();
+    org.mockito.Mockito.verify(ticketRepository, org.mockito.Mockito.never()).save(ticket);
+  }
+
+  private static CheckInTicketRequest code(String value) {
+    CheckInTicketRequest request = new CheckInTicketRequest();
+    request.setCode(value);
+    return request;
+  }
+
+  private static java.time.LocalDateTime now() {
+    return java.time.LocalDateTime.now(BackendServiceFixtures.CLOCK);
   }
 
   private void authenticate(String username) {
@@ -222,6 +312,7 @@ class TicketServiceTest {
             .showtime(showtime)
             .seat(seat)
             .ticketStatus(TicketStatus.BOOKED)
+            .qrCode(QR)
             .build();
     booking.setTickets(List.of(ticket));
     return ticket;
