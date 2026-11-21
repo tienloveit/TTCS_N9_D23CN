@@ -9,20 +9,6 @@
 
 .app-layout:has(.br-page) > .app-main { flex: 1; }
 
-.app-layout:has(.br-page) > .cinema-navbar {
-  padding-inline: var(--br-gutter);
-  box-shadow: 0 2px 14px #1720330a;
-}
-
-.app-layout:has(.br-page) .cinema-navbar .navbar-inner { max-width: var(--br-width); }
-
-.app-layout:has(.br-page) .cinema-navbar a[href="/branches"][aria-current="page"] {
-  --accent: var(--brand-strong);
-  color: var(--brand-strong);
-  background: var(--brand-soft);
-  border-radius: 8px;
-}
-
 .br-page.page {
   padding: clamp(24px, 4vw, 52px) 0 clamp(32px, 5vw, 64px);
   min-height: 0;
@@ -30,8 +16,7 @@
   color: var(--ink);
 }
 
-.br-wrap,
-.app-layout:has(.br-page) > .footer-professional > .container {
+.br-wrap {
   max-width: calc(var(--br-width) + 2 * var(--br-gutter));
   padding-inline: var(--br-gutter);
   margin-inline: auto;
@@ -39,8 +24,7 @@
 
 .br-page :is(h1, h2, h3, h4, p, ul) { margin: 0; }
 .br-page :is(button, input, select) { font: inherit; }
-.br-page :is(a, button, input, select):focus-visible,
-.app-layout:has(.br-page) > :is(.cinema-navbar, .footer-professional) :focus-visible {
+.br-page :is(a, button, input, select):focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
@@ -301,6 +285,7 @@
 }
 .br-summary { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; font-size: .85rem; }
 .br-summary span { color: var(--ink-muted); }
+.br-summary .br-summary-note { flex-basis: 100%; font-size: .8rem; }
 .br-movie-search { flex: 1 1 100%; }
 
 .br-movie-card {
@@ -401,22 +386,6 @@
 }
 @keyframes br-shimmer { to { background-position: -100% 0; } }
 
-.app-layout:has(.br-page) > .footer-professional {
-  margin-top: 0;
-  padding-block: 28px 18px;
-  box-shadow: none;
-}
-.app-layout:has(.br-page) .footer-grid { gap: 20px 16px; margin-bottom: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.app-layout:has(.br-page) .footer-col--brand,
-.app-layout:has(.br-page) .footer-col:last-child { grid-column: 1 / -1; }
-.app-layout:has(.br-page) :is(.footer-logo, .footer-tagline, .footer-title, .footer-contact li) { margin-bottom: 8px; }
-.app-layout:has(.br-page) .footer-col--brand .footer-logo { font-size: 1.4rem; }
-.app-layout:has(.br-page) .footer-title { font-size: .95rem; text-transform: none; }
-.app-layout:has(.br-page) :is(.footer-links li, .footer-contact, .footer-tagline) { font-size: .85rem; }
-.app-layout:has(.br-page) .footer-bottom { padding-top: 14px; gap: 14px; align-items: flex-start; }
-.app-layout:has(.br-page) :is(.partners, .partner-logos) { justify-content: flex-start; }
-.app-layout:has(.br-page) .partner-logo { padding: 4px 8px; }
-.app-layout:has(.br-page) .footer-links a:hover { padding-left: 0; text-decoration: underline; }
 
 @media (min-width: 520px) {
   .br-date-short { display: none; }
@@ -446,10 +415,6 @@
   }
   .br-branch-list li { flex: none; }
   .br-page .br-spotlight { grid-template-columns: minmax(0, 1fr) auto; }
-  .app-layout:has(.br-page) > .footer-professional { padding-block: 34px 18px; }
-  .app-layout:has(.br-page) .footer-grid { grid-template-columns: 1.35fr 1fr 1fr 1.25fr; }
-  .app-layout:has(.br-page) .footer-col { grid-column: auto; }
-  .app-layout:has(.br-page) .footer-bottom { flex-direction: row; justify-content: space-between; align-items: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {

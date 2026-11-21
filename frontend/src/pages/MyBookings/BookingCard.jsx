@@ -37,22 +37,39 @@ function StubHint({ phase, booking, now, refundLeft }) {
     const left = expiresAt.getTime() - now;
     return (
       <p className="mt-stub-hint mt-text--amber">
-        <ClockIcon size={15} />
-        {left > 0 ? <>Giữ ghế còn <strong className="mt-mono">{formatCountdown(left)}</strong></> : 'Đã hết giờ giữ ghế'}
+        <ClockIcon size={15} aria-hidden="true" />
+        {left > 0
+          ? <>Thanh toán trong <strong className="mt-mono">{formatCountdown(left)}</strong> để giữ ghế</>
+          : 'Đã hết giờ giữ ghế'}
       </p>
     );
   }
 
-  if (refundLeft >= 0) {
-    return <p className="mt-stub-hint">Hạn yêu cầu hoàn tiền còn {formatDuration(refundLeft)}</p>;
-  }
-
-  if (phase === 'upcoming') {
-    return <p className="mt-stub-hint"><ClockIcon size={15} />Chiếu sau {formatDuration(getShowStart(booking).getTime() - now)}</p>;
-  }
-
-  return null;
+  // Giờ chiếu là thông tin khách cần nhất; hạn hoàn tiền là phụ, ghi mốc giờ cụ thể thay vì đếm ngược.
+  return (
+    <>
+      {phase === 'upcoming' && (
+        <p className="mt-stub-hint">
+          <ClockIcon size={15} aria-hidden="true" />Chiếu sau {formatDuration(getShowStart(booking).getTime() - now)}
+        </p>
+      )}
+      {refundLeft >= 0 && (
+        <p className="mt-stub-hint mt-stub-hint--muted">
+          Được yêu cầu hoàn tiền đến {formatDateTime(booking.refundDeadline)}
+        </p>
+      )}
+    </>
+  );
 }
+
+// Nhãn số tiền theo tình trạng thanh toán thật của đơn.
+const PAYMENT_LABEL = {
+  PAID: 'Đã thanh toán',
+  REFUNDED: 'Đã thanh toán',
+  PENDING: 'Cần thanh toán',
+  CANCELLED: 'Không thu tiền',
+  EXPIRED: 'Không thu tiền',
+};
 
 function BookingNote({ booking, changeNotice, onDismissChange }) {
   const schedule = changeNotice?.schedule;
@@ -66,8 +83,8 @@ function BookingNote({ booking, changeNotice, onDismissChange }) {
           <div className="mt-note-heading">
             <AlertCircleIcon size={19} />
             <div>
-              <strong>Đơn có thông tin cập nhật</strong>
-              <p>So với thông tin đã xem trước đó trên tab này.</p>
+              <strong>Đơn này vừa thay đổi</strong>
+              <p>So với lần trước bạn mở trang này.</p>
             </div>
             <button type="button" className="mt-btn mt-btn--outline" onClick={() => onDismissChange(booking)}>Đã xem</button>
           </div>
@@ -89,21 +106,29 @@ function BookingNote({ booking, changeNotice, onDismissChange }) {
       )}
       {booking.status === 'COMPLETED' && booking.refundProcessedAt && (
         <div className="mt-note mt-note--red">
-          <strong>Yêu cầu hoàn tiền bị từ chối.</strong>
-          {booking.refundProcessNote && <p>{booking.refundProcessNote}</p>}
+          <strong>Yêu cầu hoàn tiền bị từ chối. Vé vẫn dùng được bình thường.</strong>
+          {booking.refundProcessNote && <p>Phản hồi của rạp: {booking.refundProcessNote}</p>}
         </div>
       )}
-      {booking.status === 'REFUND_REQUESTED' && (booking.refundReason || (refundProgress && booking.refundGatewayMessage)) && (
+      {booking.status === 'REFUND_REQUESTED' && (
         <div className="mt-note">
+          <p>
+            <strong>
+              {refundProgress
+                ? `${refundProgress}: ${formatCurrency(booking.refundAmount ?? booking.totalAmount)}.`
+                : `Rạp đang xem xét yêu cầu hoàn ${formatCurrency(booking.refundAmount ?? booking.totalAmount)}.`}
+            </strong>{' '}
+            Kết quả sẽ được cập nhật tại đây.
+          </p>
           {refundProgress && booking.refundGatewayMessage && <p>{booking.refundGatewayMessage}</p>}
-          {booking.refundReason && <p>Lý do yêu cầu: {booking.refundReason}</p>}
+          {booking.refundReason && <p>Lý do bạn gửi: {booking.refundReason}</p>}
         </div>
       )}
       {booking.status === 'REFUNDED' && (
         <div className="mt-note mt-note--violet">
           <strong>Đã hoàn {formatCurrency(booking.refundAmount ?? booking.totalAmount)}</strong>
-          {booking.refundedAt && <p>Hoàn tiền lúc {formatDateTime(booking.refundedAt)}</p>}
-          {booking.refundProcessNote && <p>{booking.refundProcessNote}</p>}
+          {booking.refundedAt && <p>Hoàn tiền lúc {formatDateTime(booking.refundedAt)}. Ghế đã được trả lại cho rạp.</p>}
+          {booking.refundProcessNote && <p>Ghi chú của rạp: {booking.refundProcessNote}</p>}
         </div>
       )}
     </>
@@ -168,7 +193,7 @@ export default function BookingCard({
             <dd className="mt-seats">
               {seats.length > 0 ? seats.map((seat, index) => (
                 <span className="mt-seat" key={`${seat}-${index}`}>{seat}</span>
-              )) : '—'}
+              )) : <span className="mt-muted">{isVoid ? 'Ghế đã được trả lại' : '—'}</span>}
               {checkedInCount > 0 && checkedInCount < tickets.length && (
                 <span className="mt-checkin-count">Đã check-in {checkedInCount}/{tickets.length} ghế</span>
               )}
@@ -186,7 +211,7 @@ export default function BookingCard({
       <div className="mt-stub">
         {booking.bookingCode && <span className="mt-code">Mã đơn <b>{booking.bookingCode}</b></span>}
         <div className="mt-stub-price">
-          <span className="mt-stub-label">{booking.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Tổng tiền đơn'}</span>
+          <span className="mt-stub-label">{PAYMENT_LABEL[booking.paymentStatus] || 'Tổng tiền đơn'}</span>
           <strong className={`mt-stub-amount ${isVoid ? 'is-void' : ''}`}>{formatCurrency(booking.totalAmount)}</strong>
           {discount > 0 && <span className="mt-stub-discount">Đã giảm {formatCurrency(discount)}</span>}
         </div>

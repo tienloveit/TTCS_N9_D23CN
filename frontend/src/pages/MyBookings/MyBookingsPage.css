@@ -45,7 +45,6 @@
 }
 
 .mt-field-control { min-width: 0; }
-.mt-field-control:first-child { grid-column: 1 / -1; }
 .mt-field-control label {
   position: absolute;
   width: 1px;
@@ -90,7 +89,46 @@
   color: var(--mt-muted);
 }
 .mt-search button:hover { background: #fff0e6; color: var(--brand-strong); }
-.mt-tools .mt-refresh { justify-self: start; }
+.mt-tools .mt-refresh { min-height: 44px; }
+
+/* Tab lọc theo tình trạng vé */
+.mt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.mt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--mt-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--mt-ink);
+  font: inherit;
+  font-size: .88rem;
+  font-weight: var(--fw-semibold);
+}
+.mt-tab:hover { border-color: var(--brand); }
+.mt-tab[aria-pressed='true'] { border-color: var(--brand); background: var(--brand); color: var(--ink-inverse); }
+.mt-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.mt-tab-count {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: .78rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.mt-tab[aria-pressed='true'] .mt-tab-count { background: rgba(255, 255, 255, .22); color: var(--ink-inverse); }
+
+.mt-muted { color: var(--mt-muted); font-weight: var(--fw-regular); }
+.mt-stub-hint--muted { font-size: .78rem; }
 
 .mt-section { margin-top: clamp(28px, 4vw, 48px); }
 .mt-section-header {
@@ -175,8 +213,8 @@
 .mt-showtime strong { color: var(--mt-ink); font-size: .9rem; font-variant-numeric: tabular-nums; }
 .mt-showtime svg { color: #446080; }
 .mt-meta { display: grid; gap: 5px; grid-column: 1 / -1; }
-.mt-meta-row { display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: baseline; column-gap: 6px; font-size: .84rem; }
-.mt-meta-row dt { display: flex; align-items: center; gap: 5px; color: var(--mt-muted); }
+.mt-meta-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: baseline; column-gap: 6px; font-size: .84rem; }
+.mt-meta-row dt { display: flex; align-items: center; gap: 5px; color: var(--mt-muted); white-space: nowrap; }
 .mt-meta-row dd { margin: 0; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
 .mt-seats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .mt-seat { padding: 1px 5px; border-radius: 4px; background: #eff3f8; font-size: .78rem; }
@@ -354,8 +392,6 @@
 .mt-card--featured .mt-stub-actions { flex-direction: column; }
 
 @media (min-width: 620px) {
-  .mt-tools { grid-template-columns: minmax(0, 1fr) minmax(170px, 240px) auto; }
-  .mt-field-control:first-child { grid-column: auto; }
   .mt-card { grid-template-columns: minmax(0, 1fr) clamp(184px, 23vw, 254px); }
   .mt-card-main { grid-template-columns: 80px minmax(0, 1fr); gap: 8px 20px; }
   .mt-poster { grid-row: span 2; align-self: center; }
