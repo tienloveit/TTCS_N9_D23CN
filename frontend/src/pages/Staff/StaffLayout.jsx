@@ -8,7 +8,6 @@ import {
 } from '../../components/Common/CinemaIcons';
 import '../Admin/Admin.css';
 import './StaffPortal.css';
-import './StaffWorkspaces.css';
 
 const NAV_SECTIONS = [
   { label: 'Theo dõi', items: [

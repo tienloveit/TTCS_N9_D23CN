@@ -542,3 +542,27 @@
     transition: none;
   }
 }
+
+/* Nhân viên gửi yêu cầu hoàn thay khách: ô lý do trong hộp xác nhận */
+.booking-refund-reason {
+  margin-top: 14px;
+  display: grid;
+  gap: 6px;
+  white-space: normal;
+}
+
+.booking-refund-reason > span {
+  color: var(--ink);
+  font-weight: var(--fw-semibold);
+}
+
+.booking-refund-reason textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.booking-refund-error {
+  margin-top: 10px;
+  display: block;
+  color: var(--danger);
+}

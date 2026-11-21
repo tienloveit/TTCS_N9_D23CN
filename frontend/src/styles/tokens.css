@@ -42,6 +42,12 @@
   --info: #0756a6;
   --info-soft: #eff6ff;
 
+  /* Viền cho khối trạng thái nền nhạt, và chữ cảnh báo đậm hơn khi nằm trên nền vàng */
+  --success-line: #9acdb2;
+  --warning-strong: #824800;    /* 6.3:1 trên --warning-soft */
+  --warning-line: #e5c385;
+  --danger-line: #e7a6a2;
+
   /* Hạng ghế (là thuộc tính, không phải trạng thái) */
   --tier-vip: #b45309;
   --tier-vip-soft: #fffbeb;
@@ -66,6 +72,34 @@
   --seat-booked-bg: #e2e8f0;
   --seat-booked-line: #cbd5e1;
   --seat-booked-ink: #64748b;
+
+  /* ---------- Cổng nhân viên (/staff) ----------
+     Tông ấm riêng cho quầy vé và soát vé; màu nhấn vẫn là --brand. */
+  --staff-bg: #f6f5f1;
+  --staff-surface: var(--surface);
+  --staff-surface-muted: #faf7f0;
+  --staff-surface-sunken: #f0ede7;
+  --staff-tint: #fbefdf;
+  --staff-border: #e2dfd9;
+  --staff-border-strong: #dab89c;
+  --staff-ink: #242124;              /* 15.2:1 trên --staff-bg */
+  --staff-ink-secondary: #56504c;
+  --staff-muted: #65605d;            /* 5.9:1 trên --staff-bg */
+  --staff-sidebar: #211f20;
+  --staff-sidebar-raised: #353031;
+  --staff-on-dark: #fff6e9;
+  --staff-on-dark-muted: #e5d9ca;
+  --staff-on-dark-line: rgba(255, 255, 255, 0.13);
+  --staff-on-dark-border: rgba(255, 255, 255, 0.35);
+  --staff-amber: #ffc07a;
+  --staff-glass: rgba(37, 34, 36, 0.85);
+  --staff-overlay: rgba(8, 19, 35, 0.67);
+  --staff-shadow-sm: 0 1px 2px rgba(33, 31, 32, 0.04);
+  --staff-shadow: 0 8px 24px rgba(33, 31, 32, 0.09);
+  --staff-shadow-up: 0 -2px 12px rgba(20, 43, 80, 0.07);
+  --staff-marquee-fade: linear-gradient(90deg, #222023 15%, rgba(34, 32, 35, 0.96) 39%, rgba(34, 32, 35, 0.58) 64%, rgba(23, 21, 26, 0.13));
+  --staff-screen: linear-gradient(#746358, rgba(217, 198, 175, 0.4));
+  --staff-screen-glow: 0 6px 16px rgba(116, 89, 61, 0.13);
 
   /* ---------- Chữ ---------- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

@@ -7,21 +7,16 @@ import {
   parseLocalDateTime,
 } from '../../../utils/cinemaTime';
 import { MAX_FOOD_QUANTITY } from '../../../utils/bookingLimits';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from '../../../context/useAuth';
-import { bookingApi, foodApi, movieApi, showtimeApi, ticketApi, promotionApi } from '../../../api';
+import { bookingApi, foodApi, movieApi, showtimeApi, ticketApi, promotionApi, staffApi, vnpayApi } from '../../../api';
 import { API_BASE_URL } from '../../../api/axiosClient';
-import DigitalTicket from '../../../components/Ticket/DigitalTicket';
 import { StaffPageHeading, StaffSkeleton, StaffState } from '../StaffUI';
 import {
   CheckIcon,
-  PlusIcon,
-  PopcornIcon,
-  PrinterIcon,
   TicketIcon,
 } from '../../../components/Common/CinemaIcons';
 
@@ -30,16 +25,20 @@ import {
   formatTime,
   toLocalDateKey,
   buildPrintDocument,
+  customerContactKey,
+  hasCustomerContact,
 } from './staffBookingUtils';
 import StaffReceiptSidebar from './StaffReceiptSidebar';
 import StaffCheckoutStep from './StaffCheckoutStep';
 import StaffAddonsStep from './StaffAddonsStep';
 import StaffSeatStep from './StaffSeatStep';
 import StaffShowtimeStep from './StaffShowtimeStep';
+import StaffSaleComplete from './StaffSaleComplete';
+import StaffVnpayPanel from './StaffVnpayPanel';
+import './StaffBooking.css';
 
 export default function StaffBookingPage() {
   const { user, isAdmin } = useAuth();
-  const navigate = useNavigate();
 
   const [showtimes, setShowtimes] = useState([]);
   const [moviesMap, setMoviesMap] = useState({});
@@ -64,6 +63,9 @@ export default function StaffBookingPage() {
     customerEmail: '',
     customerPhone: '',
   });
+  // Tra cứu khách theo SĐT/email: { key, status: 'checking'|'none'|'found'|'error', data, message }.
+  const [customerLookup, setCustomerLookup] = useState(null);
+  const [confirmedCustomerId, setConfirmedCustomerId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [cashReceived, setCashReceived] = useState('');
 
@@ -81,6 +83,9 @@ export default function StaffBookingPage() {
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lastBooking, setLastBooking] = useState(null);
+  // Đơn VNPay tại quầy đang chờ khách trả: { booking, paymentUrl, status: 'WAITING'|'FAILED', message }.
+  const [vnpaySale, setVnpaySale] = useState(null);
+  const [vnpayBusy, setVnpayBusy] = useState(false);
   const [error, setError] = useState('');
   const [foodError, setFoodError] = useState('');
   const stompClient = useRef(null);
@@ -89,6 +94,56 @@ export default function StaffBookingPage() {
   const [catalogError, setCatalogError] = useState('');
   const [ticketAttempt, setTicketAttempt] = useState(0);
   const [ticketError, setTicketError] = useState('');
+
+  // Xuất vé và xóa đơn đang soạn; chỉ dùng hàm setState nên ổn định giữa các lần render.
+  const completeSale = useCallback((booking) => {
+    setLastBooking(booking);
+    setVnpaySale(null);
+    setSelectedSeats([]);
+    setSelectedFoods({});
+    setCustomer({ customerName: '', customerEmail: '', customerPhone: '' });
+    setCustomerLookup(null);
+    setConfirmedCustomerId(null);
+    setPromoCode('');
+    setPromoDiscount(0);
+    setPromoError('');
+    setCashReceived('');
+  }, []);
+
+  // Theo dõi đơn VNPay tại quầy: trang kết quả VNPay (tab khác hoặc điện thoại khách) xác nhận thanh toán.
+  const vnpayBookingId = vnpaySale?.booking.bookingId;
+  const vnpayWaiting = vnpaySale?.status === 'WAITING';
+  useEffect(() => {
+    if (!vnpayWaiting || vnpayBookingId == null) return undefined;
+    let stopped = false;
+    const check = async () => {
+      try {
+        const res = await bookingApi.getById(vnpayBookingId);
+        const latest = res.data.result;
+        if (stopped || !latest) return;
+        if (latest.status === 'COMPLETED' && latest.paymentStatus === 'PAID') {
+          completeSale(latest);
+          toast.success('Khách đã thanh toán VNPay, vé đã được xuất');
+        } else if (['CANCELLED', 'EXPIRED', 'REFUND_REQUESTED'].includes(latest.status)) {
+          setVnpaySale((sale) => sale && {
+            ...sale,
+            booking: { ...sale.booking, ...latest },
+            status: 'FAILED',
+            message: latest.status === 'REFUND_REQUESTED'
+              ? 'VNPay báo thanh toán sau khi hết thời gian giữ ghế. Đơn đã chuyển sang chờ hoàn tiền, báo quản lý chi nhánh xử lý.'
+              : 'Giao dịch đã bị hủy hoặc hết thời gian giữ ghế. Ghế đã được trả lại, có thể bán lại cho khách.',
+          });
+        }
+      } catch {
+        // Lỗi mạng tạm thời: lần kiểm tra sau sẽ thử lại.
+      }
+    };
+    const timer = setInterval(check, 3000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [completeSale, vnpayBookingId, vnpayWaiting]);
 
   useEffect(() => {
     let mounted = true;
@@ -568,9 +623,48 @@ export default function StaffBookingPage() {
     setPromoDiscount(0);
     setPromoError('');
     setCashReceived('');
-    setCustomer({ customerName: '', customerEmail: '', customerPhone: '' });
+    resetCustomer();
     setCurrentStep('SELECTION');
     setShowtimeId('');
+  };
+
+  const resetCustomer = () => {
+    setCustomer({ customerName: '', customerEmail: '', customerPhone: '' });
+    setCustomerLookup(null);
+    setConfirmedCustomerId(null);
+  };
+
+  // Đổi SĐT/email thì kết quả tra cứu và xác nhận cũ không còn giá trị.
+  const updateCustomer = (next) => {
+    setCustomer(next);
+    if (customerContactKey(next) !== customerContactKey(customer)) {
+      setCustomerLookup(null);
+      setConfirmedCustomerId(null);
+    }
+  };
+
+  const lookupCustomer = async (target = customer) => {
+    if (!hasCustomerContact(target)) {
+      setCustomerLookup(null);
+      return null;
+    }
+    const key = customerContactKey(target);
+    if (customerLookup?.key === key && ['found', 'none'].includes(customerLookup.status)) return customerLookup;
+    setCustomerLookup({ key, status: 'checking' });
+    let next;
+    try {
+      const res = await staffApi.lookupCustomer({
+        email: target.customerEmail.trim(),
+        phone: target.customerPhone.trim(),
+      });
+      const data = res.data.result;
+      next = { key, status: data?.matched ? 'found' : 'none', data };
+    } catch (err) {
+      next = { key, status: 'error', message: err.response?.data?.message || 'Không kiểm tra được thông tin khách' };
+    }
+    // Nhân viên đã sửa SĐT/email trong lúc chờ thì bỏ kết quả cũ.
+    setCustomerLookup((previous) => (previous?.key === key ? next : previous));
+    return next;
   };
 
   const handleValidatePromo = async () => {
@@ -697,6 +791,22 @@ export default function StaffBookingPage() {
     }
 
     submissionPending.current = true;
+    // SĐT/email trùng tài khoản có sẵn: phải xác nhận đúng khách, tránh gắn vé và email QR cho người khác.
+    let confirmedId;
+    if (hasCustomerContact(customer)) {
+      const lookup = await lookupCustomer(customer);
+      let blocker = null;
+      if (!lookup || lookup.status === 'error') blocker = lookup?.message || 'Không kiểm tra được thông tin khách';
+      else if (lookup.status === 'found' && confirmedCustomerId !== lookup.data.customerId) {
+        blocker = 'Thông tin liên hệ trùng một tài khoản. Hỏi lại khách và bấm "Đúng khách này" trước khi thu tiền.';
+      }
+      if (blocker) {
+        submissionPending.current = false;
+        toast.info(blocker);
+        return;
+      }
+      if (lookup.status === 'found') confirmedId = lookup.data.customerId;
+    }
     let bookingConfirmed = false;
     setSubmitting(true);
     setError('');
@@ -708,6 +818,7 @@ export default function StaffBookingPage() {
         paymentMethod,
         promotionCode: promoDiscount > 0 ? promoCode : undefined,
         ...customer,
+        confirmedCustomerId: confirmedId,
       });
       const booking = res.data.result;
       if (booking?.bookingId == null) {
@@ -715,20 +826,12 @@ export default function StaffBookingPage() {
         return;
       }
       bookingConfirmed = true;
-      if (paymentMethod === 'CARD') {
-        toast.info('Đang chuyển hướng đến cổng thanh toán VNPay...');
-        navigate(`/booking/${booking.bookingId}/payment`);
+      if (paymentMethod === 'VNPAY') {
+        // Ở lại màn quầy: hiện QR/cổng VNPay và tự chuyển sang xuất vé khi khách thanh toán xong.
+        setVnpaySale({ booking, paymentUrl: await requestPaymentUrl(booking), status: 'WAITING' });
         return;
       }
-      setLastBooking(booking);
-      setSelectedSeats([]);
-      setSelectedFoods({});
-      setCustomer({ customerName: '', customerEmail: '', customerPhone: '' });
-      setPromoCode('');
-      setPromoDiscount(0);
-      setPromoError('');
-      setCashReceived('');
-
+      completeSale(booking);
       toast.success('Đặt vé tại quầy thành công');
     } catch (err) {
       const message = err.response?.data?.message || (!err.response
@@ -740,6 +843,51 @@ export default function StaffBookingPage() {
       if (!bookingConfirmed) submissionPending.current = false;
       setSubmitting(false);
     }
+  };
+
+  const requestPaymentUrl = async (booking) => {
+    try {
+      const res = await vnpayApi.createPaymentUrl({ bookingId: booking.bookingId, amount: booking.totalAmount, bankCode: '' });
+      return res.data.result?.paymentUrl || null;
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không tạo được liên kết thanh toán VNPay');
+      return null;
+    }
+  };
+
+  const retryPaymentLink = async () => {
+    if (!vnpaySale) return;
+    setVnpayBusy(true);
+    const paymentUrl = await requestPaymentUrl(vnpaySale.booking);
+    setVnpaySale((sale) => (sale ? { ...sale, paymentUrl } : sale));
+    setVnpayBusy(false);
+  };
+
+  const openVnpayGateway = () => {
+    if (!vnpaySale?.paymentUrl) return;
+    const opened = window.open(vnpaySale.paymentUrl, '_blank', 'noopener');
+    if (!opened) toast.info('Trình duyệt chặn cửa sổ mới. Cho phép popup hoặc để khách quét mã QR.');
+  };
+
+  // Hủy đơn chờ để trả ghế ngay; giữ nguyên ghế/món đã chọn để nhân viên đổi sang tiền mặt nếu cần.
+  const cancelVnpaySale = async () => {
+    if (!vnpaySale) return;
+    setVnpayBusy(true);
+    try {
+      await bookingApi.cancel(vnpaySale.booking.bookingId);
+      toast.info('Đã hủy giao dịch VNPay, ghế đã được trả lại');
+      setVnpaySale(null);
+      submissionPending.current = false;
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không hủy được giao dịch. Kiểm tra lại trạng thái đơn.');
+    } finally {
+      setVnpayBusy(false);
+    }
+  };
+
+  const backFromVnpay = () => {
+    setVnpaySale(null);
+    submissionPending.current = false;
   };
 
   const handlePrintLastBooking = () => {
@@ -771,7 +919,7 @@ export default function StaffBookingPage() {
   return (
     <form onSubmit={(event) => event.preventDefault()} className="pos-page">
       {/* ===== TOP POS CONTROL BAR ===== */}
-      {!lastBooking && (
+      {!lastBooking && !vnpaySale && (
         <div className="pos-top-bar">
           <StaffPageHeading icon={TicketIcon} title="Bán vé tại quầy"
             description={selectedShowtime
@@ -816,72 +964,23 @@ export default function StaffBookingPage() {
       {error && <div className="error-message" role="alert">{error}</div>}
 
       {lastBooking ? (
-        /* ===== SUCCESS RECEIPT PAGE ===== */
-        <section className="staff-sale-complete">
-          <StaffPageHeading icon={CheckIcon} title="Đã xuất vé tại quầy"
-            description={lastBooking.bookingCode ? `Mã đơn ${lastBooking.bookingCode}` : undefined} />
-          <DigitalTicket
-            booking={{
-              ...lastBooking,
-              startTime: lastBooking.showtimeStart,
-              seatCodes:
-                lastBooking.seatCodes || (lastBooking.tickets || []).map((t) => t.seatCode),
-              status: 'COMPLETED',
-            }}
-          />
-          {lastBooking.foods && lastBooking.foods.length > 0 && (
-            <div
-              style={{
-                marginTop: 20,
-                paddingTop: 18,
-                borderTop: '2px dashed var(--border)',
-                textAlign: 'left',
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <PopcornIcon size={18} />
-                <span>Bắp nước cần giao</span>
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {lastBooking.foods.map((bf) => (
-                  <div
-                    key={bf.id}
-                    style={{
-                      background: '#f8fafc',
-                      padding: '8px 14px',
-                      borderRadius: 10,
-                      border: '1px solid var(--border)',
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <strong style={{ color: 'var(--accent)', marginRight: 6 }}>
-                      {bf.quantity}x
-                    </strong>
-                    {bf.foodName}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="staff-sale-actions">
-            <button type="button" className="btn btn-secondary" onClick={handlePrintLastBooking}>
-              <PrinterIcon size={18} />
-              <span>In vé / Hóa đơn nhiệt (80mm)</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setLastBooking(null);
-                handleResetOrder();
-              }}
-            >
-              <PlusIcon size={17} /> Bán vé tiếp
-            </button>
-          </div>
-        </section>
+        <StaffSaleComplete
+          booking={lastBooking}
+          onPrint={handlePrintLastBooking}
+          onNewSale={() => {
+            setLastBooking(null);
+            handleResetOrder();
+          }}
+        />
+      ) : vnpaySale ? (
+        <StaffVnpayPanel
+          busy={vnpayBusy}
+          onBack={backFromVnpay}
+          onCancel={cancelVnpaySale}
+          onOpenGateway={openVnpayGateway}
+          onRetryLink={retryPaymentLink}
+          sale={vnpaySale}
+        />
       ) : (
         /* ===== 2-COLUMN POS WORKSPACE ===== */
         <div className="pos-workspace">
@@ -959,8 +1058,12 @@ export default function StaffBookingPage() {
                 cashChange={cashChange}
                 cashPresets={cashPresets}
                 cashReceived={cashReceived}
+                confirmedCustomerId={confirmedCustomerId}
                 customer={customer}
+                customerLookup={customerLookup}
                 finalPrice={finalPrice}
+                onConfirmCustomer={setConfirmedCustomerId}
+                onLookupCustomer={() => lookupCustomer(customer)}
                 handleShowPromos={handleShowPromos}
                 handleValidatePromo={handleValidatePromo}
                 loadingPromos={loadingPromos}
@@ -968,7 +1071,7 @@ export default function StaffBookingPage() {
                 promoCode={promoCode}
                 promoError={promoError}
                 setCashReceived={setCashReceived}
-                setCustomer={setCustomer}
+                setCustomer={updateCustomer}
                 setPaymentMethod={setPaymentMethod}
                 setPromoCode={setPromoCode}
                 setShowPromos={setShowPromos}
@@ -1011,7 +1114,7 @@ export default function StaffBookingPage() {
       )}
 
       {/* Mobile bottom bar */}
-      {!lastBooking && (
+      {!lastBooking && !vnpaySale && (
         <div className="booking-bar seat-page-mobile-bar">
           <span>
             <strong>{selectedSeats.length}</strong> ghế
@@ -1024,7 +1127,7 @@ export default function StaffBookingPage() {
           <span className="pos-mobile-total">{formatCurrency(finalPrice)}</span>
           {currentStep === 'CHECKOUT' ? (
             <button type="button" onClick={handleSubmit} className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Đang xử lý…' : paymentMethod === 'CASH' ? 'Thu tiền & xuất vé' : 'Sang VNPay'}
+              {submitting ? 'Đang xử lý…' : paymentMethod === 'CASH' ? 'Thu tiền & xuất vé' : 'Tạo giao dịch VNPay'}
             </button>
           ) : (
             <button

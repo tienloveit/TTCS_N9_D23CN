@@ -1,7 +1,9 @@
 import { formatScreening } from '../../../utils/cinemaFormats';
 import { formatDayMonth, parseLocalDateTime } from '../../../utils/cinemaTime';
+import Button from '../../../components/Common/Button';
 import SafeImage from '../../../components/Common/SafeImage';
 import { ClockIcon, SearchIcon, SlidersIcon } from '../../../components/Common/CinemaIcons';
+import { StaffChips } from '../StaffUI';
 import { formatTime, TIME_FILTERS } from './staffBookingUtils';
 
 /** Bước 1: lọc và chọn suất chiếu. */
@@ -66,7 +68,7 @@ export default function StaffShowtimeStep({
 
         {/* Search & Dropdown Filters */}
         <div className="pos-search-box">
-          <SearchIcon />
+          <SearchIcon aria-hidden="true" />
           <input
             type="search"
             className="input"
@@ -115,76 +117,27 @@ export default function StaffShowtimeStep({
               ))}
             </select>
 
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ height: 42, padding: '0 14px', fontSize: '0.82rem' }}
-                onClick={clearFilters}
-              >
-                Đặt lại
-              </button>
-            )}
+            {hasActiveFilters && <Button size="sm" onClick={clearFilters}>Đặt lại</Button>}
           </div>
 
-          {/* Time of day pills + Status toggle */}
           <div className="pos-time-pills">
-            <div className="pos-time-pill-group">
-              {TIME_FILTERS.map((tf) => (
-                <button
-                  key={tf.key}
-                  type="button"
-                  aria-pressed={timeFilter === tf.key}
-                  className={`pos-time-pill ${
-                    timeFilter === tf.key ? 'pos-time-pill--active' : ''
-                  }`}
-                  onClick={() => setTimeFilter(tf.key)}
-                >
-                  {tf.label}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#475569',
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={statusFilter === 'AVAILABLE'}
-                  onChange={(e) =>
-                    setStatusFilter(e.target.checked ? 'AVAILABLE' : 'ALL')
-                  }
-                />
-                Chỉ hiện suất còn mở bán
-              </label>
-            </div>
+            <StaffChips label="Khung giờ chiếu" options={TIME_FILTERS} value={timeFilter} onChange={setTimeFilter} />
+            <label className="pos-open-only">
+              <input
+                type="checkbox"
+                checked={statusFilter === 'AVAILABLE'}
+                onChange={(e) => setStatusFilter(e.target.checked ? 'AVAILABLE' : 'ALL')}
+              />
+              Chỉ hiện suất còn mở bán
+            </label>
           </div>
         </details>
       </div>
 
-      {/* Movie Grouped Showtime Cards */}
       {movieGroups.length === 0 ? (
-        <div
-          className="card"
-          style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}
-        >
-          <p style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>
-            Không tìm thấy suất chiếu phù hợp với bộ lọc hiện tại.
-          </p>
-          {hasActiveFilters && (
-            <button type="button" className="btn btn-secondary" onClick={clearFilters}>
-              Xóa toàn bộ bộ lọc
-            </button>
-          )}
+        <div className="card pos-empty" role="status">
+          <p>Không tìm thấy suất chiếu phù hợp với bộ lọc hiện tại.</p>
+          {hasActiveFilters && <Button onClick={clearFilters}>Xóa toàn bộ bộ lọc</Button>}
         </div>
       ) : (
         <div className="pos-movie-list">
@@ -219,7 +172,7 @@ export default function StaffShowtimeStep({
                         </span>
                         {movie.duration && (
                           <span className="pos-meta-tag">
-                            <ClockIcon size={12} /> {movie.duration} phút
+                            <ClockIcon size={12} aria-hidden="true" /> {movie.duration} phút
                           </span>
                         )}
                       </div>
