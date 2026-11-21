@@ -1,10 +1,14 @@
 package com.ltweb.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.ltweb.backend.entity.Booking;
@@ -37,8 +41,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.MediaType;
 import org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,6 +52,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -91,6 +98,11 @@ class ReadEndpointsSmokeTest {
 
   @MockitoBean StringRedisTemplate redis;
 
+  // Bean riêng của RedisConfig dùng để giữ/nhả ghế (cùng kiểu cha với StringRedisTemplate nên chọn
+  // theo tên). Dùng spy vì repository Redis cũ cần connection factory thật lúc khởi động.
+  @MockitoSpyBean(name = "redisTemplate")
+  RedisTemplate<String, String> seatHolds;
+
   // Một ApplicationContext (và một database H2) cho cả lớp: chỉ nạp dữ liệu một lần.
   private static Ids ids;
 
@@ -101,6 +113,8 @@ class ReadEndpointsSmokeTest {
     when(redis.opsForValue()).thenReturn(values);
     when(values.multiGet(anyCollection()))
         .thenAnswer(call -> Arrays.asList(new String[call.<Collection<?>>getArgument(0).size()]));
+    // Script Lua nhả khóa ghế: coi như đã nhả, không cần Redis thật.
+    doReturn(1L).when(seatHolds).execute(any(RedisScript.class), anyList(), any());
     if (ids == null) {
       ids = tx.execute(status -> seedData());
     }
@@ -153,6 +167,40 @@ class ReadEndpointsSmokeTest {
     assertThat(result.getResponse().getStatus())
         .as(describe("ADMIN", "PUT /ticket/" + ids.ticketId(), result))
         .isEqualTo(200);
+  }
+
+  @Test
+  void staffCheckInLoadsTicketsSeatsAndShowtimeInsideTheTransaction() throws Exception {
+    assertWriteOk(
+        "STAFF",
+        post("/ticket/check-in")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"code\":\"BK-SMOKE-ONLINE\"}"),
+        "POST /ticket/check-in");
+  }
+
+  @Test
+  void approvingACashRefundReleasesSeatsAndReturnsTheRefundedBooking() throws Exception {
+    MvcResult result =
+        assertWriteOk(
+            "ADMIN",
+            post("/booking/" + ids.counterBookingId() + "/refund-process")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"approved\":true,\"note\":\"Hoan tai quay\"}"),
+            "POST /booking/{id}/refund-process");
+    assertThat(result.getResponse().getContentAsString()).contains("\"REFUNDED\"");
+  }
+
+  private MvcResult assertWriteOk(
+      String role,
+      org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request,
+      String label)
+      throws Exception {
+    MvcResult result = mvc.perform(request.with(as(role))).andReturn();
+    assertThat(result.getResponse().getStatus())
+        .as(describe(role, label, result) + " " + result.getResponse().getContentAsString())
+        .isEqualTo(200);
+    return result;
   }
 
   private void assertOk(String role, String path) throws Exception {
@@ -224,6 +272,10 @@ class ReadEndpointsSmokeTest {
             .filter(s -> s.getStartTime().isAfter(LocalDateTime.now(clock)))
             .findFirst()
             .orElseThrow();
+    // Đưa suất vào khung soát vé (mở 60 phút trước giờ chiếu).
+    LocalDateTime start = LocalDateTime.now(clock).plusMinutes(30);
+    showtime.setStartTime(start);
+    showtime.setEndTime(start.plusHours(2));
     Long branchId = showtime.getRoom().getBranch().getBranchId();
     for (String name : List.of("manager", "staff")) {
       User operator = users.findByUsername(name).orElseThrow();
@@ -246,6 +298,7 @@ class ReadEndpointsSmokeTest {
 
     return new Ids(
         online.getId(),
+        counter.getId(),
         branchId,
         showtime.getMovie().getDirector() == null ? 1L : showtime.getMovie().getDirector().getId(),
         food.getId(),
@@ -328,6 +381,7 @@ class ReadEndpointsSmokeTest {
 
   private record Ids(
       Long bookingId,
+      Long counterBookingId,
       Long branchId,
       Long directorId,
       Long foodId,

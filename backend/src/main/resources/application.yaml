@@ -34,6 +34,11 @@ spring:
     # Không giữ EntityManager mở tới hết request: mọi truy cập quan hệ lazy phải nằm trong
     # transaction của service. ReadEndpointsSmokeTest gọi các API đọc để bắt lỗi lazy loading.
     open-in-view: false
+    properties:
+      hibernate:
+        # Quan hệ lazy được tải theo lô (tối đa 50 khóa mỗi truy vấn) khi duyệt danh sách,
+        # thay vì một truy vấn cho mỗi phần tử.
+        default_batch_fetch_size: 50
 
   data:
     redis:
