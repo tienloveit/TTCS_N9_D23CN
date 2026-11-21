@@ -23,7 +23,11 @@ import lombok.Setter;
 @Entity
 @Table(
     name = "tickets",
-    uniqueConstraints = {@UniqueConstraint(columnNames = {"showtime_id", "seat_id"})})
+    uniqueConstraints = {
+      @UniqueConstraint(columnNames = {"showtime_id", "seat_id"}),
+      // Check-in tra theo mã QR.
+      @UniqueConstraint(name = "uk_tickets_qr_code", columnNames = "qr_code")
+    })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -47,7 +51,7 @@ public class Ticket {
   @JoinColumn(name = "seat_id", nullable = false)
   private Seat seat;
 
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 15, scale = 2)
   private BigDecimal price;
 
   @Enumerated(EnumType.STRING)

@@ -2,16 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api';
 import {
-  ArrowRightIcon, CalendarIcon, CreditCardIcon, FilmIcon, ListIcon, MapPinIcon,
+  ArrowRightIcon, BanknoteIcon, CalendarIcon, CreditCardIcon, FilmIcon, ListIcon, MapPinIcon,
   RefreshIcon, ScanIcon, TicketIcon, TimerIcon,
 } from '../../components/Common/CinemaIcons';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
+import { cinemaTodayKey, formatDateTime, formatDayMonth, formatTime } from '../../utils/cinemaTime';
 import { StaffSkeleton, StaffState } from './StaffUI';
 
 const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 const number = new Intl.NumberFormat('vi-VN');
-const shortTime = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
-const shortDate = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' });
-const dateTime = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
 const todayLabel = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full', timeZone: 'Asia/Ho_Chi_Minh' });
 const format = (formatter, value) => value == null ? '—' : formatter.format(value);
 const bookingStatuses = {
@@ -51,6 +51,75 @@ function OverviewMetrics({ summary }) {
   );
 }
 
+const CASH_COUNT_KEY = 'movieptit_cash_count_v1';
+const parseMoney = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits ? Number(digits) : null;
+};
+
+// Số tiền nhân viên tự nhập (tiền lẻ đầu ca, tiền đếm được) chỉ lưu trên máy, theo ngày rạp.
+function loadCashCount() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CASH_COUNT_KEY) || 'null');
+    return saved?.dateKey === cinemaTodayKey() ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Đối soát két cuối ngày: tiền mặt đã thu − đã hoàn (theo đơn của nhân viên) so với tiền đếm được. */
+function CashDrawer({ summary }) {
+  const [opening, setOpening] = useState(() => loadCashCount()?.opening ?? '');
+  const [counted, setCounted] = useState(() => loadCashCount()?.counted ?? '');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CASH_COUNT_KEY, JSON.stringify({ dateKey: cinemaTodayKey(), opening, counted }));
+    } catch {
+      // Trình duyệt chặn lưu trữ: vẫn đối soát được trong phiên hiện tại.
+    }
+  }, [opening, counted]);
+
+  const expected = Number(summary.cashExpected ?? 0) + (parseMoney(opening) ?? 0);
+  const countedAmount = parseMoney(counted);
+  const difference = countedAmount == null ? null : countedAmount - expected;
+  const verdict = difference == null ? null
+    : difference === 0 ? ['Khớp két', 'success']
+      : difference > 0 ? [`Thừa ${format(currency, difference)}`, 'warning']
+        : [`Thiếu ${format(currency, -difference)}`, 'danger'];
+
+  return (
+    <section className="staff-panel staff-cash-drawer" aria-labelledby="staff-cash-title">
+      <div className="staff-panel-heading">
+        <h2 id="staff-cash-title"><BanknoteIcon size={19} /> Đối soát két tiền mặt</h2>
+        <small>Theo các đơn bạn bán hôm nay</small>
+      </div>
+      <div className="staff-cash-body">
+        <dl className="staff-cash-lines">
+          <div><dt>Tiền mặt đã thu</dt><dd>{format(currency, summary.cashCollected)}<small>{format(number, summary.cashSales)} đơn</small></dd></div>
+          <div><dt>Đã hoàn tiền mặt</dt><dd>− {format(currency, summary.cashRefunded)}<small>{format(number, summary.cashRefunds)} đơn</small></dd></div>
+          <div className="staff-cash-total"><dt>Tiền bán vé trong két</dt><dd>{format(currency, summary.cashExpected)}</dd></div>
+          <div><dt>VNPay / thẻ (không qua két)</dt><dd>{format(currency, summary.cardRevenue)}</dd></div>
+        </dl>
+        <div className="staff-cash-count">
+          <label>
+            <span>Tiền lẻ đầu ca</span>
+            <input className="input" inputMode="numeric" placeholder="0" value={opening}
+              onChange={(event) => setOpening(event.target.value)} />
+          </label>
+          <label>
+            <span>Tiền đếm được trong két</span>
+            <input className="input" inputMode="numeric" placeholder="Nhập khi chốt két" value={counted}
+              onChange={(event) => setCounted(event.target.value)} />
+          </label>
+          <p className="staff-cash-expected">Cần có: <strong>{format(currency, expected)}</strong></p>
+          {verdict && <Badge tone={verdict[1]} className="staff-cash-verdict" role="status">{verdict[0]}</Badge>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function UpcomingShowtimes({ showtimes }) {
   return (
     <section className="staff-panel" aria-labelledby="staff-upcoming-title">
@@ -66,17 +135,17 @@ function UpcomingShowtimes({ showtimes }) {
             return (
               <li key={showtime.showtimeId}>
                 <time className="staff-showtime-time" dateTime={showtime.startTime}>
-                  {format(shortTime, showtime.startTime && new Date(showtime.startTime))}
-                  <small>{format(shortDate, showtime.startTime && new Date(showtime.startTime))}</small>
+                  {formatTime(showtime.startTime) || '—'}
+                  <small>{formatDayMonth(showtime.startTime) || '—'}</small>
                 </time>
                 <div className="staff-showtime-movie">
                   <strong>{showtime.movieName}</strong>
                   <small><MapPinIcon size={13} /> {[showtime.branchName, showtime.roomName].filter(Boolean).join(' · ')}</small>
                 </div>
                 {availableSeats != null && (
-                  <span className={`staff-status staff-status--${tone}`}>
+                  <Badge tone={tone}>
                     {availableSeats === 0 ? 'Hết ghế' : `Còn ${availableSeats}${totalSeats ? `/${totalSeats}` : ''} ghế`}
-                  </span>
+                  </Badge>
                 )}
               </li>
             );
@@ -105,9 +174,9 @@ function RecentBookings({ bookings }) {
                 return (
                   <tr key={booking.bookingId}>
                     <td><strong>{code}</strong><small>{booking.username || 'Khách tại quầy'}</small></td>
-                    <td><strong>{booking.movieName || '—'}</strong><small>{format(dateTime, booking.showtimeStart && new Date(booking.showtimeStart))}</small></td>
+                    <td><strong>{booking.movieName || '—'}</strong><small>{formatDateTime(booking.showtimeStart) || '—'}</small></td>
                     <td>{format(currency, booking.totalAmount)}</td>
-                    <td><span className={`staff-status staff-status--${tone}`}>{label}</span></td>
+                    <td><Badge tone={tone}>{label}</Badge></td>
                     <td><Link className="staff-icon-button" aria-label={`Xem đơn ${code}`} to={`/staff/bookings?booking=${booking.bookingId}`}><ArrowRightIcon size={17} /></Link></td>
                   </tr>
                 );
@@ -159,9 +228,7 @@ export default function StaffDashboardPage() {
       </header>
       <div className="staff-section-line">
         <h2>Hoạt động hôm nay</h2>
-        <button type="button" className="btn btn-secondary" onClick={refresh} disabled={loading}>
-          <RefreshIcon size={17} /> Làm mới
-        </button>
+        <Button icon={<RefreshIcon size={17} />} onClick={refresh} disabled={loading}>Làm mới</Button>
       </div>
 
       {loading && !dashboard && <StaffSkeleton label="Đang tải tổng quan" />}
@@ -170,6 +237,7 @@ export default function StaffDashboardPage() {
       {dashboard && (
         <>
           {dashboard.summary && <OverviewMetrics summary={dashboard.summary} />}
+          {dashboard.summary && <CashDrawer summary={dashboard.summary} />}
           <UpcomingShowtimes showtimes={[...(dashboard.upcomingShowtimes || [])].sort((a, b) => a.startTime.localeCompare(b.startTime))} />
           <RecentBookings bookings={dashboard.recentBookings || []} />
         </>

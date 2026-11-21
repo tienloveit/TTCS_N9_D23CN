@@ -2,37 +2,11 @@ import { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
 import { DownloadIcon, MoviePTITLogoIcon } from '../Common/CinemaIcons';
+import { formatDate, formatTime } from '../../utils/cinemaTime';
 import './DigitalTicket.css';
 
 const DigitalTicket = ({ booking }) => {
   const ticketRef = useRef(null);
-
-  const parseLocalDateTime = (dateStr) => {
-    if (!dateStr) return null;
-    // Backend trả về LocalDateTime không có timezone (vd: "2026-04-14T16:30:00")
-    // Thêm Z sẽ bị lệch múi giờ, nên parse thủ công
-    const [datePart, timePart] = dateStr.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hour, minute);
-  };
-
-  const formatDate = (dateStr) => {
-    const d = parseLocalDateTime(dateStr);
-    if (!d) return '—';
-    const dd = d.getDate().toString().padStart(2, '0');
-    const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
-  const formatTime = (dateStr) => {
-    const d = parseLocalDateTime(dateStr);
-    if (!d) return '—';
-    const hh = d.getHours().toString().padStart(2, '0');
-    const min = d.getMinutes().toString().padStart(2, '0');
-    return `${hh}:${min}`;
-  };
 
   const handleDownload = () => {
     if (ticketRef.current === null) return;
@@ -112,7 +86,7 @@ const DigitalTicket = ({ booking }) => {
             </div>
             <div className="info-item" style={{ textAlign: 'right' }}>
               <label>Mã đơn hàng</label>
-              <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>{booking.bookingCode || 'BK-XXXXXX'}</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{booking.bookingCode || 'BK-XXXXXX'}</span>
             </div>
           </div>
         </div>

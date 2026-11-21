@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { promotionApi, branchApi } from '../../api';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
+import { formatDateTime as formatCinemaDateTime } from '../../utils/cinemaTime';
 
 const TIER_OPTIONS = [
   { value: '', label: 'Tất cả hạng' },
@@ -19,8 +23,7 @@ const formatCurrency = (amount) =>
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  return formatCinemaDateTime(dateStr);
 };
 
 const toDateTimeLocal = (dateStr) => {
@@ -37,6 +40,7 @@ const PromotionManagement = () => {
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, code }
   const [deleting, setDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const dialog = useModalDialog(isModalOpen, () => handleCloseModal());
   const [editingPromo, setEditingPromo] = useState(null);
   const [formData, setFormData] = useState({
     code: '', description: '', discountPercent: '', maxDiscount: '', minOrderAmount: '',
@@ -138,7 +142,7 @@ const PromotionManagement = () => {
     setDeleting(true);
     try {
       await promotionApi.delete(deleteTarget.id);
-      toast.success(`Đã vô hiệu hoá "${deleteTarget.code}"!`);
+      toast.success(`Đã vô hiệu hóa "${deleteTarget.code}"!`);
       setDeleteTarget(null);
       fetchPromotions();
     } catch (err) {
@@ -166,15 +170,14 @@ const PromotionManagement = () => {
 
   return (
     <div className="admin-promotions">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header page-header--split">
         <div>
-          <h1 className="page-title">Quản lý Khuyến mãi</h1>
+          <h1 className="page-title">Quản lý khuyến mãi</h1>
           <p className="page-subtitle">Tổng cộng <strong>{promotions.length}</strong> mã khuyến mãi.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          <PlusIcon size={18} />
+        <Button variant="primary" icon={<PlusIcon size={18} />} onClick={() => handleOpenModal()}>
           Thêm khuyến mãi
-        </button>
+        </Button>
       </div>
 
       <div className="admin-table-card">
@@ -198,25 +201,22 @@ const PromotionManagement = () => {
             ))}
           </div>
 
-          <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 300px' }}>
-            <SearchIcon
-              size={16}
-              style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
-            />
+          <div className="admin-search">
+            <SearchIcon size={16} className="input-leading-icon" aria-hidden="true" />
             <input
-              type="text"
-              className="input"
+              type="search"
+              className="input input-sm"
               placeholder="Tìm mã khuyến mãi, mô tả..."
+              aria-label="Tìm khuyến mãi"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
             />
           </div>
         </div>
         <table className="admin-table">
           <thead>
             <tr>
-              <th style={{ width: '40px' }}>#</th>
+              <th className="col-index">#</th>
               <th>Mã</th>
               <th>Giảm</th>
               <th>Giảm tối đa</th>
@@ -225,35 +225,35 @@ const PromotionManagement = () => {
               <th>Đã dùng</th>
               <th>Hiệu lực</th>
               <th>Trạng thái</th>
-              <th style={{ width: '120px' }}>Hành động</th>
+              <th className="col-actions">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {filteredPromotions.length === 0 ? (
-              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                {searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có mã khuyến mãi'}
+              <tr><td colSpan="10" className="admin-table-empty">
+                {searchTerm ? 'Không tìm thấy mã phù hợp. Thử từ khóa khác.' : 'Chưa có mã khuyến mãi. Bấm “Thêm khuyến mãi” để tạo mã đầu tiên.'}
               </td></tr>
             ) : (
               filteredPromotions.map((p, idx) => (
                 <tr key={p.id || idx}>
-                  <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                  <td className="cell-index">{idx + 1}</td>
                   <td>
                     <div>
-                      <strong style={{ color: 'var(--accent)', letterSpacing: '0.5px' }}>{p.code}</strong>
-                      {p.description && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{p.description}</div>}
+                      <strong className="promo-code">{p.code}</strong>
+                      {p.description && <div className="cell-subtext">{p.description}</div>}
                     </div>
                   </td>
-                  <td style={{ fontWeight: 700 }}>{p.discountPercent}%</td>
+                  <td className="cell-strong">{p.discountPercent}%</td>
                   <td>{formatCurrency(p.maxDiscount)}</td>
                   <td>{p.minMembershipTier ? TIER_OPTIONS.find(t => t.value === p.minMembershipTier)?.label || p.minMembershipTier : 'Tất cả'}</td>
                   <td>{p.branchName || 'Toàn hệ thống'}</td>
                   <td>
                     <div>
-                      <strong style={{ fontSize: '0.85rem' }}>
+                      <strong className="cell-small">
                         {p.usedCount || 0}{p.usageLimit ? ` / ${p.usageLimit}` : ''}
                       </strong>
                       {p.usageLimit > 0 && (
-                        <div className="mini-progress-wrap" style={{ minWidth: 80, marginTop: 4 }}>
+                        <div className="mini-progress-wrap">
                           <div className="mini-progress-track">
                             <div
                               className={`mini-progress-fill ${
@@ -266,23 +266,33 @@ const PromotionManagement = () => {
                       )}
                     </div>
                   </td>
-                  <td style={{ fontSize: '0.8rem' }}>
+                  <td className="cell-small cell-nowrap">
                     <div>{formatDate(p.startDate)}</div>
                     <div>→ {formatDate(p.endDate)}</div>
                   </td>
                   <td>
-                    <span className={`status-badge ${!p.active ? 'status--inactive' : isExpired(p) ? 'status--pending' : 'status--active'}`}>
+                    <Badge tone={!p.active ? 'neutral' : isExpired(p) ? 'warning' : 'success'} dot>
                       {!p.active ? 'Đã tắt' : isExpired(p) ? 'Hết hạn' : 'Hoạt động'}
-                    </span>
+                    </Badge>
                   </td>
                   <td>
                     <div className="action-btns">
-                      <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(p)}>
-                        <EditIcon size={15} />
-                      </button>
-                      <button className="btn btn-ghost btn-sm" title="Vô hiệu hoá" style={{ color: '#ef4444' }} onClick={() => handleDelete(p.id, p.code)}>
-                        <TrashIcon size={15} />
-                      </button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Sửa khuyến mãi"
+                        aria-label={`Sửa mã ${p.code}`}
+                        icon={<EditIcon size={15} />}
+                        onClick={() => handleOpenModal(p)}
+                      />
+                      <Button
+                        variant="ghost-danger"
+                        size="sm"
+                        title="Tắt khuyến mãi"
+                        aria-label={`Tắt mã ${p.code}`}
+                        icon={<TrashIcon size={15} />}
+                        onClick={() => handleDelete(p.id, p.code)}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -293,91 +303,89 @@ const PromotionManagement = () => {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-content admin-modal" onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{editingPromo ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h2>
-              <button type="button" onClick={handleCloseModal} className="modal-close" style={{ position: 'static', width: 34, height: 34 }} aria-label="Đóng">
+        <div className="modal-overlay" {...dialog.overlayProps}>
+          <div className="modal-content admin-modal admin-modal--lg" {...dialog.contentProps}>
+            <div className="admin-modal-header">
+              <h2 id={dialog.titleId}>{editingPromo ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h2>
+              <button type="button" onClick={handleCloseModal} className="modal-close modal-close--inline modal-close--lg" aria-label="Đóng">
                 <XIcon size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="auth-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div className="form-group" style={{ gridColumn: editingPromo ? 'span 2' : 'span 1' }}>
-                <label className="form-label">Mã khuyến mãi</label>
-                <input type="text" name="code" className="input" value={formData.code} onChange={handleInputChange}
-                  required disabled={!!editingPromo} placeholder="VD: SUMMER2026" style={{ textTransform: 'uppercase' }} />
+            <form onSubmit={handleSubmit} className="admin-form admin-form--grid">
+              <div className={`form-group${editingPromo ? ' span-full' : ''}`}>
+                <label className="form-label" htmlFor="promo-code">Mã khuyến mãi</label>
+                <input id="promo-code" type="text" name="code" className="input promo-code-input" value={formData.code} onChange={handleInputChange}
+                  required disabled={!!editingPromo} placeholder="VD: SUMMER2026" />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Giảm giá (%)</label>
-                <input type="number" name="discountPercent" className="input" value={formData.discountPercent}
+                <label className="form-label" htmlFor="promo-percent">Giảm giá (%)</label>
+                <input id="promo-percent" type="number" name="discountPercent" className="input" value={formData.discountPercent}
                   onChange={handleInputChange} required min="1" max="100" placeholder="VD: 10" />
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Mô tả</label>
-                <input type="text" name="description" className="input" value={formData.description}
+              <div className="form-group span-full">
+                <label className="form-label" htmlFor="promo-description">Mô tả</label>
+                <input id="promo-description" type="text" name="description" className="input" value={formData.description}
                   onChange={handleInputChange} placeholder="Mô tả ngắn cho khuyến mãi..." />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Giảm tối đa (VNĐ)</label>
-                <input type="number" name="maxDiscount" className="input" value={formData.maxDiscount}
+                <label className="form-label" htmlFor="promo-max">Giảm tối đa (VNĐ)</label>
+                <input id="promo-max" type="number" name="maxDiscount" className="input" value={formData.maxDiscount}
                   onChange={handleInputChange} min="0" placeholder="VD: 50000 (để trống = không giới hạn)" />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Đơn tối thiểu (VNĐ)</label>
-                <input type="number" name="minOrderAmount" className="input" value={formData.minOrderAmount}
+                <label className="form-label" htmlFor="promo-min-order">Đơn tối thiểu (VNĐ)</label>
+                <input id="promo-min-order" type="number" name="minOrderAmount" className="input" value={formData.minOrderAmount}
                   onChange={handleInputChange} min="0" placeholder="VD: 100000" />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Hạng thành viên tối thiểu</label>
-                <select name="minMembershipTier" className="input" value={formData.minMembershipTier} onChange={handleInputChange}>
+                <label className="form-label" htmlFor="promo-tier">Hạng thành viên tối thiểu</label>
+                <select id="promo-tier" name="minMembershipTier" className="input" value={formData.minMembershipTier} onChange={handleInputChange}>
                   {TIER_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Chi nhánh áp dụng</label>
-                <select name="branchId" className="input" value={formData.branchId} onChange={handleInputChange}>
+                <label className="form-label" htmlFor="promo-branch">Chi nhánh áp dụng</label>
+                <select id="promo-branch" name="branchId" className="input" value={formData.branchId} onChange={handleInputChange}>
                   <option value="">Toàn hệ thống</option>
                   {branches.map(b => <option key={b.branchId} value={b.branchId}>{b.name}</option>)}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Ngày bắt đầu</label>
-                <input type="datetime-local" name="startDate" className="input" value={formData.startDate} onChange={handleInputChange} />
+                <label className="form-label" htmlFor="promo-start">Ngày bắt đầu</label>
+                <input id="promo-start" type="datetime-local" name="startDate" className="input" value={formData.startDate} onChange={handleInputChange} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Ngày kết thúc</label>
-                <input type="datetime-local" name="endDate" className="input" value={formData.endDate} onChange={handleInputChange} />
+                <label className="form-label" htmlFor="promo-end">Ngày kết thúc</label>
+                <input id="promo-end" type="datetime-local" name="endDate" className="input" value={formData.endDate} onChange={handleInputChange} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Giới hạn lượt dùng</label>
-                <input type="number" name="usageLimit" className="input" value={formData.usageLimit}
+                <label className="form-label" htmlFor="promo-limit">Giới hạn lượt dùng</label>
+                <input id="promo-limit" type="number" name="usageLimit" className="input" value={formData.usageLimit}
                   onChange={handleInputChange} min="0" placeholder="Để trống = không giới hạn" />
               </div>
 
-              <div className="form-group" style={{ display: 'flex', alignItems: 'end' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
-                  <input type="checkbox" name="active" checked={formData.active} onChange={handleInputChange}
-                    style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
+              <div className="form-group form-group--align-end">
+                <label className="admin-check admin-check--strong">
+                  <input type="checkbox" name="active" checked={formData.active} onChange={handleInputChange} />
                   Đang hoạt động
                 </label>
               </div>
 
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '12px' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                  {editingPromo ? 'Lưu thay đổi' : 'Thêm khuyến mãi'}
-                </button>
-                <button type="button" onClick={handleCloseModal} className="btn btn-secondary" style={{ flex: 1 }}>Huỷ bỏ</button>
+              <div className="admin-form-actions span-full">
+                <Button onClick={handleCloseModal}>Hủy</Button>
+                <Button type="submit" variant="primary">
+                  {editingPromo ? 'Lưu khuyến mãi' : 'Thêm khuyến mãi'}
+                </Button>
               </div>
             </form>
           </div>
@@ -386,9 +394,9 @@ const PromotionManagement = () => {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Vô hiệu hoá khuyến mãi"
-        message={`Bạn có chắc chắn muốn vô hiệu hoá mã khuyến mãi "${deleteTarget?.code}"?`}
-        confirmText="Vô hiệu hoá"
+        title="Tắt khuyến mãi"
+        message={`Tắt mã "${deleteTarget?.code}"? Khách sẽ không dùng được mã này nữa.`}
+        confirmText="Tắt mã"
         loading={deleting}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}

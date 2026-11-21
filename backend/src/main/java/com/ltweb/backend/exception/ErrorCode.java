@@ -77,6 +77,10 @@ public enum ErrorCode {
   // Booking Management
   BOOKING_NOT_FOUND(400, "Booking does not exist", HttpStatus.BAD_REQUEST),
   BOOKING_CANNOT_CANCEL(400, "Only pending bookings can be cancelled", HttpStatus.BAD_REQUEST),
+  BOOKING_PENDING_LIMIT(
+      400,
+      "You have too many bookings awaiting payment. Pay or cancel them before booking again",
+      HttpStatus.BAD_REQUEST),
   MAX_TICKET_PER_TRANSACTION(
       400, "Cannot book more than 8 tickets in a single transaction", HttpStatus.BAD_REQUEST),
 
@@ -88,6 +92,18 @@ public enum ErrorCode {
       400, "One or more selected tickets are not available", HttpStatus.BAD_REQUEST),
   INVALID_TICKET_CHECKIN(400, "Ticket is not valid for check-in", HttpStatus.BAD_REQUEST),
   TICKET_WRONG_BRANCH(403, "Vé không thuộc chi nhánh này", HttpStatus.FORBIDDEN),
+  CHECKIN_TOO_EARLY(
+      400,
+      "Chưa tới giờ soát vé. Vé chỉ được soát từ 60 phút trước giờ chiếu",
+      HttpStatus.BAD_REQUEST),
+  CHECKIN_SHOWTIME_ENDED(
+      400, "Suất chiếu đã kết thúc, vé không còn dùng để vào phòng", HttpStatus.BAD_REQUEST),
+  CHECKIN_CODE_NOT_ACCEPTED(
+      400,
+      "Không soát vé bằng số vé. Hãy quét mã QR hoặc nhập mã đơn (BK-...)",
+      HttpStatus.BAD_REQUEST),
+  CHECKIN_SHOWTIME_CANCELLED(
+      400, "Suất chiếu đã bị hủy, không thể soát vé", HttpStatus.BAD_REQUEST),
   INVALID_QR_IMAGE(400, "Invalid QR code image file", HttpStatus.BAD_REQUEST),
   QR_CODE_NOT_FOUND(400, "QR code not found in image", HttpStatus.BAD_REQUEST),
 
@@ -111,9 +127,33 @@ public enum ErrorCode {
   BOOKING_ALREADY_REFUNDED(400, "This booking has already been refunded", HttpStatus.BAD_REQUEST),
   REFUND_WINDOW_EXPIRED(
       400, "Refund request window has expired (24 hours after payment)", HttpStatus.BAD_REQUEST),
+  REFUND_REASON_REQUIRED(
+      400, "Cần nhập lý do khi gửi yêu cầu hoàn tiền thay khách", HttpStatus.BAD_REQUEST),
+
+  // Khách tại quầy
+  CUSTOMER_PHONE_INVALID(
+      400, "Số điện thoại khách phải gồm 10 chữ số và bắt đầu bằng 0", HttpStatus.BAD_REQUEST),
+  CUSTOMER_EMAIL_INVALID(400, "Email khách không hợp lệ", HttpStatus.BAD_REQUEST),
+  CUSTOMER_CONTACT_CONFLICT(
+      409, "Số điện thoại và email thuộc hai tài khoản khác nhau", HttpStatus.CONFLICT),
+  CUSTOMER_NOT_ELIGIBLE(
+      400,
+      "Thông tin liên hệ thuộc một tài khoản không thể nhận vé (không phải khách hàng hoặc đã bị"
+          + " khóa)",
+      HttpStatus.BAD_REQUEST),
+  CUSTOMER_CONFIRMATION_REQUIRED(
+      409,
+      "Thông tin liên hệ trùng với một tài khoản khách hàng. Kiểm tra và xác nhận đúng khách"
+          + " trước khi bán vé",
+      HttpStatus.CONFLICT),
 
   // Database
-  DATA_INTEGRITY_VIOLATION(400, "Database constraint violated", HttpStatus.BAD_REQUEST);
+  DATA_INTEGRITY_VIOLATION(400, "Database constraint violated", HttpStatus.BAD_REQUEST),
+  RESOURCE_IN_USE(
+      409,
+      "This record is still used by other data and cannot be deleted. Deactivate it instead",
+      HttpStatus.CONFLICT),
+  DUPLICATE_VALUE(409, "A record with the same unique value already exists", HttpStatus.CONFLICT);
 
   private final int code;
   private final String message;

@@ -2,17 +2,22 @@ package com.ltweb.backend.service;
 
 import com.ltweb.backend.dto.response.NotificationResponse;
 import com.ltweb.backend.entity.Notification;
+import com.ltweb.backend.entity.NotificationRead;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.NotificationType;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
+import com.ltweb.backend.repository.NotificationReadRepository;
 import com.ltweb.backend.repository.NotificationRepository;
 import com.ltweb.backend.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -22,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationService {
   private final java.time.Clock clock;
+  private static final int VISIBLE_LIMIT = 100;
+
   private final NotificationRepository notificationRepository;
+  private final NotificationReadRepository notificationReadRepository;
   private final UserRepository userRepository;
 
   @Transactional
@@ -61,18 +69,20 @@ public class NotificationService {
   @Transactional(readOnly = true)
   public List<NotificationResponse> getMyNotifications() {
     User user = getCurrentUser();
-    return notificationRepository.findTop100ByOrderByCreatedAtDesc().stream()
-        .filter(notification -> canView(user, notification))
-        .map(this::toResponse)
+    List<Notification> visible = visibleNotifications(user);
+    Map<Long, LocalDateTime> reads = readTimes(user, visible);
+    return visible.stream()
+        .map(notification -> toResponse(notification, reads.get(notification.getId())))
         .toList();
   }
 
   @Transactional(readOnly = true)
   public long countUnread() {
     User user = getCurrentUser();
-    return notificationRepository.findTop100ByOrderByCreatedAtDesc().stream()
-        .filter(notification -> canView(user, notification))
-        .filter(notification -> notification.getReadAt() == null)
+    List<Notification> visible = visibleNotifications(user);
+    Map<Long, LocalDateTime> reads = readTimes(user, visible);
+    return visible.stream()
+        .filter(notification -> !reads.containsKey(notification.getId()))
         .count();
   }
 
@@ -86,8 +96,38 @@ public class NotificationService {
     if (!canView(user, notification)) {
       throw new AccessDeniedException("Notification access denied");
     }
-    notification.setReadAt(LocalDateTime.now(clock));
-    return toResponse(notificationRepository.save(notification));
+    // Đánh dấu cho riêng người này; người khác cùng role/chi nhánh vẫn thấy chưa đọc.
+    NotificationRead read =
+        notificationReadRepository
+            .findByUserIdAndNotificationId(user.getId(), notificationId)
+            .orElseGet(
+                () ->
+                    notificationReadRepository.save(
+                        NotificationRead.builder()
+                            .notificationId(notificationId)
+                            .userId(user.getId())
+                            .readAt(LocalDateTime.now(clock))
+                            .build()));
+    return toResponse(notification, read.getReadAt());
+  }
+
+  /** 100 thông báo mới nhất mà người dùng được xem. */
+  private List<Notification> visibleNotifications(User user) {
+    return notificationRepository
+        .findVisibleCandidates(
+            user.getId(), user.getRole(), user.getBranchId(), PageRequest.of(0, VISIBLE_LIMIT))
+        .stream()
+        .filter(notification -> canView(user, notification))
+        .toList();
+  }
+
+  private Map<Long, LocalDateTime> readTimes(User user, List<Notification> notifications) {
+    if (notifications.isEmpty()) return Map.of();
+    List<Long> ids = notifications.stream().map(Notification::getId).toList();
+    return notificationReadRepository.findByUserIdAndNotificationIdIn(user.getId(), ids).stream()
+        .collect(
+            Collectors.toMap(
+                NotificationRead::getNotificationId, NotificationRead::getReadAt, (a, b) -> a));
   }
 
   private void createForRole(
@@ -139,7 +179,7 @@ public class NotificationService {
         && Objects.equals(notification.getRecipientUserId(), user.getId());
   }
 
-  private NotificationResponse toResponse(Notification notification) {
+  private NotificationResponse toResponse(Notification notification, LocalDateTime readAt) {
     return NotificationResponse.builder()
         .notificationId(notification.getId())
         .recipientUserId(notification.getRecipientUserId())
@@ -150,8 +190,8 @@ public class NotificationService {
         .message(notification.getMessage())
         .targetType(notification.getTargetType())
         .targetId(notification.getTargetId())
-        .read(notification.getReadAt() != null)
-        .readAt(notification.getReadAt())
+        .read(readAt != null)
+        .readAt(readAt)
         .createdAt(notification.getCreatedAt())
         .build();
   }

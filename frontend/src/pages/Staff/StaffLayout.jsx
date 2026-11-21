@@ -8,10 +8,9 @@ import {
 } from '../../components/Common/CinemaIcons';
 import '../Admin/Admin.css';
 import './StaffPortal.css';
-import './StaffWorkspaces.css';
 
 const NAV_SECTIONS = [
-  { label: 'Ca làm việc', items: [
+  { label: 'Theo dõi', items: [
     ['/staff/dashboard', 'Tổng quan', DashboardIcon],
     ['/staff/notifications', 'Thông báo', BellIcon],
   ] },

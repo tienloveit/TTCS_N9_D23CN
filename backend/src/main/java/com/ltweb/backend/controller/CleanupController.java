@@ -27,6 +27,9 @@ public class CleanupController {
     jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
 
     String[] tables = {
+      "payment_events",
+      "notification_reads",
+      "payments",
       "booking_foods",
       "tickets",
       "bookings",

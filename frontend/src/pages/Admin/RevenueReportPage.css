@@ -54,7 +54,7 @@
   justify-content: center;
   gap: 6px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 
@@ -130,13 +130,13 @@
 .revenue-filters label {
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .revenue-filters :is(input, select) {
   width: 100%;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: var(--fw-regular);
 }
 
 .revenue-presets,
@@ -160,7 +160,7 @@
   background: transparent;
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .revenue-report :is(.revenue-presets, .revenue-groups) button:hover {
@@ -196,13 +196,13 @@
   margin-bottom: 7px;
   color: var(--text-secondary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .revenue-stat-value {
   overflow-wrap: anywhere;
   font-size: clamp(20px, 2.5cqi, 28px);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
@@ -267,7 +267,7 @@
   background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .revenue-transactions-table thead th {
@@ -281,7 +281,7 @@
 
 .revenue-table tbody th,
 .revenue-total {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .revenue-table .revenue-number {
@@ -328,7 +328,7 @@
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--fw-regular);
 }
 
 .revenue-error {

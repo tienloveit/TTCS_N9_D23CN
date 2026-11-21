@@ -5,9 +5,7 @@ import { movieApi } from '../../api';
 import SafeImage from '../Common/SafeImage';
 import '../MovieCard/MovieBrowse.css';
 import {
-  BuildingIcon,
   CalendarIcon,
-  ChevronDownIcon,
   FilmIcon,
   KeyIcon,
   LogoutIcon,
@@ -24,14 +22,12 @@ export default function Navbar() {
   const { user, logout, isAuthenticated, isAdmin, isManager, isStaff } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showScheduleMenu, setShowScheduleMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState(null);
   const [highlighted, setHighlighted] = useState(-1);
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const searchInput = useRef(null);
   const userMenuRef = useRef(null);
@@ -39,7 +35,6 @@ export default function Navbar() {
   const searchOpen = showSearch && query.length >= 2;
   const searchResults = suggestions?.query === query ? suggestions.movies : [];
   const searchPath = '/movies?movieName=' + encodeURIComponent(query);
-  const moviesActive = /^\/movies?(\/|$)/.test(location.pathname);
   const status = new URLSearchParams(location.search).get('status');
 
   const handleLogout = async () => {
@@ -57,9 +52,6 @@ export default function Navbar() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowScheduleMenu(false);
-      }
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowSearch(false);
       }
@@ -93,7 +85,6 @@ export default function Navbar() {
   // Close menus on route change
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setShowScheduleMenu(false);
       setShowSearch(false);
       setShowUserMenu(false);
       setMobileMenuOpen(false);
@@ -105,6 +96,7 @@ export default function Navbar() {
   }, [location.pathname, location.search]);
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const scheduleActive = ['/branches', '/branch'].some((path) => isActive(path));
   const goToProfileSection = (hash) => {
     setShowUserMenu(false);
     setMobileMenuOpen(false);
@@ -209,37 +201,8 @@ export default function Navbar() {
 
         <div className="navbar-links">
           <NavLink to="/" end className="navbar-link">Trang chủ</NavLink>
-          <div className="navbar-dropdown" ref={dropdownRef}>
-            <button
-              type="button"
-              aria-expanded={showScheduleMenu}
-              aria-current={moviesActive ? 'true' : undefined}
-              className={`navbar-link-btn ${moviesActive ? 'navbar-link--active' : ''}`}
-              onClick={() => setShowScheduleMenu((open) => !open)}
-            >
-              Lịch chiếu
-              <ChevronDownIcon size={14} className={`navbar-chevron ${showScheduleMenu ? 'navbar-chevron--open' : ''}`} />
-            </button>
-            {showScheduleMenu && (
-              <div className="navbar-dropdown-menu">
-                <Link to="/movies?status=NOW_SHOWING" className="navbar-dropdown-item" aria-current={isActive('/movies') && status === 'NOW_SHOWING' ? 'page' : undefined} onClick={() => setShowScheduleMenu(false)}>
-                  <SparkIcon className="navbar-dropdown-icon" />
-                  Phim đang chiếu
-                </Link>
-                <Link to="/movies?status=UPCOMING" className="navbar-dropdown-item" aria-current={isActive('/movies') && status === 'UPCOMING' ? 'page' : undefined} onClick={() => setShowScheduleMenu(false)}>
-                  <CalendarIcon className="navbar-dropdown-icon" />
-                  Phim sắp chiếu
-                </Link>
-                <Link to="/movies" className="navbar-dropdown-item" aria-current={isActive('/movies') && !status ? 'page' : undefined} onClick={() => setShowScheduleMenu(false)}>
-                  <FilmIcon className="navbar-dropdown-icon" />
-                  Tất cả phim
-                </Link>
-              </div>
-            )}
-          </div>
-
-          <Link to="/branches" aria-current={isActive('/branches') || isActive('/branch') ? 'page' : undefined} className={`navbar-link ${isActive('/branches') || isActive('/branch') ? 'navbar-link--active' : ''}`}>
-            Rạp chiếu
+          <Link to="/branches" aria-current={scheduleActive ? 'page' : undefined} className={`navbar-link ${scheduleActive ? 'navbar-link--active' : ''}`}>
+            Lịch chiếu
           </Link>
 
           {isAuthenticated && (
@@ -303,6 +266,9 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className="navbar-mobile-drawer">
           <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}>Trang chủ</NavLink>
+          <Link to="/branches" aria-current={scheduleActive ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)}>
+            <CalendarIcon size={16} /> Lịch chiếu
+          </Link>
           <Link to="/movies?status=NOW_SHOWING" aria-current={isActive('/movies') && status === 'NOW_SHOWING' ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)}>
             <SparkIcon size={16} /> Phim đang chiếu
           </Link>
@@ -311,9 +277,6 @@ export default function Navbar() {
           </Link>
           <Link to="/movies" aria-current={isActive('/movies') && !status ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)}>
             <FilmIcon size={16} /> Tất cả phim
-          </Link>
-          <Link to="/branches" aria-current={isActive('/branches') || isActive('/branch') ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)}>
-            <BuildingIcon size={16} /> Rạp chiếu & Lịch chiếu
           </Link>
           {isAuthenticated ? (
             <>

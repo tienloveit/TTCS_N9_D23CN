@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { bookingApi, vnpayApi, promotionApi } from '../../api';
 import BookingReceipt from '../../components/Common/BookingReceipt';
+import Button from '../../components/Common/Button';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import {
-  AlertTriangleIcon,
   CheckIcon,
   CreditCardIcon,
   GiftIcon,
@@ -12,6 +13,9 @@ import {
   TimerIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { formatDate, formatTime, parseLocalDateTime } from '../../utils/cinemaTime';
+
+const secondsUntil = (timestampMs) => Math.max(0, Math.floor((timestampMs - Date.now()) / 1000));
 
 export default function PaymentPage() {
   const { bookingId } = useParams();
@@ -23,6 +27,8 @@ export default function PaymentPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(null);
+  // undefined = đang tải, null = backend không trả hạn giữ ghế.
+  const [expiresAtMs, setExpiresAtMs] = useState(undefined);
   const [promoCode, setPromoCode] = useState('');
   const [promoError, setPromoError] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
@@ -36,9 +42,9 @@ export default function PaymentPage() {
       try {
         await bookingApi.cancel(bookingId);
         if (auto) {
-          toast.error('Hết thời gian giữ ghế. Đơn hàng của bạn đã bị huỷ.');
+          toast.error('Hết thời gian giữ ghế. Đơn hàng của bạn đã bị hủy.');
         } else {
-          toast.info('Đã huỷ đơn đặt vé.');
+          toast.info('Đã hủy đơn đặt vé.');
         }
         navigate('/movies');
       } catch {
@@ -64,15 +70,18 @@ export default function PaymentPage() {
           return;
         }
 
-        const expiry = data.expiresAt
-          ? new Date(data.expiresAt).getTime()
-          : new Date(data.createdAt).getTime() + 6 * 60 * 1000;
-        const now = new Date().getTime();
-        const initialTime = Math.max(0, Math.floor((expiry - now) / 1000));
+        // Hạn giữ ghế do backend quyết định (booking.holdMinutes); không tự ước tính.
+        const expiry = parseLocalDateTime(data.expiresAt);
+        if (!expiry) {
+          setExpiresAtMs(null);
+          return;
+        }
 
+        const initialTime = secondsUntil(expiry.getTime());
         if (initialTime <= 0) {
           handleCancel(true);
         } else {
+          setExpiresAtMs(expiry.getTime());
           setTimeLeft(initialTime);
         }
       })
@@ -81,38 +90,23 @@ export default function PaymentPage() {
   }, [bookingId, handleCancel, navigate]);
 
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) {
-      if (timeLeft === 0) handleCancel(true);
-      return undefined;
-    }
+    if (expiresAtMs === null) return undefined;
 
+    // Tính lại từ mốc hết hạn mỗi lần để không bị lệch khi tab bị trình duyệt tạm dừng.
     const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
+      const remaining = secondsUntil(expiresAtMs);
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        handleCancel(true);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, handleCancel]);
+  }, [expiresAtMs, handleCancel]);
 
-  const parseLocalDateTime = (dateStr) => {
-    if (!dateStr) return null;
-    const [datePart, timePart] = dateStr.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hour, minute);
-  };
-
-  const formatShowtime = (dateStr) => {
-    const date = parseLocalDateTime(dateStr);
-    if (!date) return '-';
-
-    const dd = date.getDate().toString().padStart(2, '0');
-    const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-    const yyyy = date.getFullYear();
-    const hh = date.getHours().toString().padStart(2, '0');
-    const min = date.getMinutes().toString().padStart(2, '0');
-
-    return `${hh}:${min} - ${dd}/${mm}/${yyyy}`;
-  };
+  const formatShowtime = (dateStr) =>
+    parseLocalDateTime(dateStr) ? `${formatTime(dateStr)} - ${formatDate(dateStr)}` : '-';
 
   const formatTimeLimit = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -200,8 +194,9 @@ export default function PaymentPage() {
 
   if (error) {
     return (
-      <div className="container" style={{ padding: 40 }}>
-        <div className="error-message">{error}</div>
+      <div className="container page-error">
+        <div className="error-message" role="alert">{error}</div>
+        <Button to="/my-bookings">Xem vé của tôi</Button>
       </div>
     );
   }
@@ -216,7 +211,7 @@ export default function PaymentPage() {
     { label: 'Suất chiếu', done: true },
     { label: 'Chọn ghế', done: true },
     { label: 'Bắp nước', done: true },
-    { label: 'Thu tiền & Xuất vé', active: true },
+    { label: 'Thanh toán', active: true },
   ];
 
   const isUrgent = timeLeft !== null && timeLeft < 60;
@@ -234,17 +229,30 @@ export default function PaymentPage() {
           ))}
         </div>
 
-        <div className="pay-layout" style={{ marginTop: 12 }}>
+        <div className="pay-layout">
           {/* ===== LEFT COLUMN: Timer + Promotions + Payment Method ===== */}
           <div className="pay-main">
-            {timeLeft !== null && (
+            {expiresAtMs === null && (
+              <div className="pay-timer-banner" role="status">
+                <div>
+                  <strong className="pay-timer-title">
+                    Chưa xác định được hạn giữ ghế
+                  </strong>
+                  <span className="pay-timer-note">
+                    Hệ thống sẽ kiểm tra lại khi bạn thanh toán. Hãy hoàn tất sớm để giữ ghế.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {expiresAtMs !== null && timeLeft !== null && (
               <div className={`pay-timer-banner ${isUrgent ? 'is-urgent' : ''}`} role="timer" aria-live="polite">
                 <div>
-                  <strong style={{ display: 'block', fontSize: '0.95rem' }}>
+                  <strong className="pay-timer-title">
                     Thời gian giữ ghế còn lại
                   </strong>
-                  <span style={{ fontSize: '0.82rem', opacity: 0.9 }}>
-                    Vui lòng hoàn tất thanh toán trước khi hết giờ
+                  <span className="pay-timer-note">
+                    Hết giờ, ghế sẽ được mở lại cho khách khác.
                   </span>
                 </div>
                 <div className="pay-timer-clock">
@@ -256,78 +264,75 @@ export default function PaymentPage() {
 
             {/* Mã khuyến mãi */}
             <div className="pay-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <h2 className="pay-section-title" style={{ margin: 0 }}>
-                  <GiftIcon size={18} style={{ color: 'var(--accent)' }} />
-                  Ưu đãi & Mã giảm giá
+              <div className="pay-card-header">
+                <h2 className="pay-section-title">
+                  <GiftIcon size={18} aria-hidden="true" />
+                  Mã giảm giá
                 </h2>
                 {!booking.promotionCode && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="pay-link-button"
+                    aria-expanded={showPromos}
                     onClick={handleShowPromos}
-                    style={{ fontSize: '0.85rem', color: 'var(--blue)' }}
                   >
                     {showPromos ? 'Ẩn danh sách mã' : 'Xem mã khả dụng'}
-                  </button>
+                  </Button>
                 )}
               </div>
 
               {booking.promotionCode ? (
                 <div className="pay-promo-applied">
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--seat-available)', letterSpacing: 0.8 }}>
-                      {booking.promotionCode}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                    <div className="pay-promo-code">{booking.promotionCode}</div>
+                    <div className="pay-promo-saving">
                       Đã giảm: <strong>-{formatCurrency(booking.discountAmount)}</strong>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
+                  <Button
+                    variant="ghost-danger"
+                    size="sm"
                     onClick={handleRemovePromo}
                     disabled={applyingPromo || paying || booking.paymentMethod === 'VNPAY'}
-                    aria-label="Gỡ mã giảm giá"
-                    style={{ color: '#ef4444', padding: 6 }}
-                  >
-                    <XIcon size={18} />
-                  </button>
+                    aria-label={`Gỡ mã ${booking.promotionCode}`}
+                    title="Gỡ mã giảm giá"
+                    icon={<XIcon size={18} />}
+                  />
                 </div>
               ) : (
                 <div>
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <div className="pay-promo-form">
                     <input
                       type="text"
                       className="input"
                       aria-label="Nhập mã giảm giá"
-                      placeholder="Nhập mã khuyến mãi (VD: MOVIEPTIT)..."
+                      aria-invalid={Boolean(promoError)}
+                      aria-describedby={promoError ? 'pay-promo-error' : undefined}
+                      placeholder="Nhập mã, ví dụ MOVIEPTIT"
                       value={promoCode}
                       onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      style={{ textTransform: 'uppercase', flex: 1 }}
                       onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
                     />
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
+                    <Button
                       onClick={() => handleApplyPromo()}
                       disabled={applyingPromo || paying || booking.paymentMethod === 'VNPAY' || !promoCode.trim()}
                     >
                       {applyingPromo ? 'Đang áp dụng...' : 'Áp dụng'}
-                    </button>
+                    </Button>
                   </div>
                   {promoError && (
-                    <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 8 }}>{promoError}</div>
+                    <div id="pay-promo-error" className="pay-field-error" role="alert">{promoError}</div>
                   )}
                   {showPromos && (
                     <div className="pay-promo-list">
                       {loadingPromos ? (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: 8 }}>
+                        <div className="pay-promo-state" role="status">
                           Đang tải danh sách mã...
                         </div>
                       ) : availablePromos.length === 0 ? (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: 8 }}>
-                          Hiện chưa có mã giảm giá khả dụng
+                        <div className="pay-promo-state">
+                          Hiện chưa có mã giảm giá nào dùng được cho đơn này.
                         </div>
                       ) : (
                         availablePromos.map((promo) => (
@@ -339,17 +344,13 @@ export default function PaymentPage() {
                             onClick={() => handleApplyPromo(promo.code)}
                           >
                             <div>
-                              <strong style={{ color: 'var(--seat-available)', fontSize: '0.92rem' }}>
-                                {promo.code}
-                              </strong>
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                              <strong>{promo.code}</strong>
+                              <div className="pay-promo-desc">
                                 {promo.description ||
                                   `Giảm ${promo.discountPercent}% (tối đa ${formatCurrency(promo.maxDiscount)})`}
                               </div>
                             </div>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--blue)' }}>
-                              Dùng ngay
-                            </span>
+                            <span className="pay-promo-cta">Dùng mã</span>
                           </button>
                         ))
                       )}
@@ -362,24 +363,20 @@ export default function PaymentPage() {
             {/* Phương thức thanh toán */}
             <div className="pay-card">
               <h2 className="pay-section-title">
-                <CreditCardIcon size={18} style={{ color: 'var(--blue)' }} />
+                <CreditCardIcon size={18} aria-hidden="true" />
                 Phương thức thanh toán
               </h2>
               <div className="pay-method-box">
                 <span className="pay-method-badge">VNPAY</span>
-                <div style={{ flex: 1 }}>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                    Cổng thanh toán VNPay QR / Thẻ ATM / Quốc tế
-                  </strong>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    Xác nhận vé tự động ngay sau khi giao dịch thành công
-                  </span>
+                <div className="pay-method-text">
+                  <strong>VNPay: QR, thẻ ATM hoặc thẻ quốc tế</strong>
+                  <span>Vé được xác nhận ngay khi VNPay báo giao dịch thành công.</span>
                 </div>
-                <CheckIcon size={18} style={{ color: 'var(--blue)' }} />
+                <CheckIcon size={18} aria-label="Đã chọn" />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <ShieldIcon size={15} style={{ color: 'var(--green)' }} />
-                <span>Giao dịch được bảo mật 100% qua cổng VNPay chuẩn PCI-DSS.</span>
+              <div className="pay-secure-note">
+                <ShieldIcon size={15} aria-hidden="true" />
+                <span>Bạn nhập thông tin thẻ trên trang của VNPay. MoviePTIT không nhận và không lưu số thẻ.</span>
               </div>
             </div>
           </div>
@@ -410,74 +407,48 @@ export default function PaymentPage() {
             discount={booking.discountAmount || 0}
             promotionCode={booking.promotionCode}
           >
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ width: '100%', height: 52, fontSize: '1.02rem' }}
+            <Button
+              variant="primary"
+              block
+              className="pay-submit"
+              icon={<CreditCardIcon size={18} aria-hidden="true" />}
               onClick={handleVNPayPayment}
-              disabled={paying || cancelling || applyingPromo || timeLeft === null || timeLeft <= 0}
+              disabled={
+                paying ||
+                cancelling ||
+                applyingPromo ||
+                expiresAtMs === undefined ||
+                (expiresAtMs !== null && (timeLeft === null || timeLeft <= 0))
+              }
             >
-              <CreditCardIcon size={18} />
-              {paying ? 'Đang chuyển hướng VNPay...' : 'Thanh toán qua VNPay'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: '100%' }}
+              {paying ? 'Đang chuyển sang VNPay...' : 'Thanh toán qua VNPay'}
+            </Button>
+            <Button
+              block
               onClick={() => setShowCancelConfirm(true)}
               disabled={paying || cancelling}
             >
-              Huỷ đặt vé
-            </button>
+              Hủy đơn đặt vé
+            </Button>
           </BookingReceipt>
         </div>
       </div>
 
-      {/* Confirm Cancel Modal */}
-      {showCancelConfirm && (
-        <div
-          className="modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Xác nhận huỷ đặt vé"
-          onClick={() => !cancelling && setShowCancelConfirm(false)}
-        >
-          <div
-            className="card"
-            style={{ maxWidth: 440, width: '92%', padding: '28px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: '#dc2626' }}>
-              <AlertTriangleIcon size={22} />
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Xác nhận huỷ đơn đặt vé?
-              </h3>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: 22 }}>
-              Ghế <strong>{seatCodes}</strong> của phim <strong>{booking.movieName}</strong> sẽ được mở lại ngay cho khán giả khác.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setShowCancelConfirm(false)}
-                disabled={cancelling}
-              >
-                Tiếp tục thanh toán
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                style={{ background: '#dc2626' }}
-                onClick={() => handleCancel(false)}
-                disabled={cancelling}
-              >
-                {cancelling ? 'Đang huỷ...' : 'Đồng ý huỷ'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Hủy đơn đặt vé?"
+        message={
+          <>
+            Ghế <strong>{seatCodes}</strong> của phim <strong>{booking.movieName}</strong> sẽ được mở lại
+            ngay cho khách khác.
+          </>
+        }
+        cancelText="Tiếp tục thanh toán"
+        confirmText="Hủy đơn"
+        loading={cancelling}
+        onConfirm={() => handleCancel(false)}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </div>
   );
 }

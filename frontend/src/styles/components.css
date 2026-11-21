@@ -1,0 +1,167 @@
+/* ============================================================
+   Component dùng chung: Button, Badge
+   React: components/Common/Button.jsx, components/Common/Badge.jsx
+   .btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-sm, .btn-lg nằm ở index.css;
+   file này bổ sung biến thể còn thiếu và trạng thái chung.
+   ============================================================ */
+
+/* ---------- Button ---------- */
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: var(--ink-inverse);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-strong);
+  color: var(--ink-inverse);
+}
+
+/* Nút chỉ có icon trong bảng: chữ đỏ, nền nhạt khi hover */
+.btn-ghost-danger {
+  background: transparent;
+  color: var(--danger);
+}
+
+.btn-ghost-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+}
+
+.btn-xs {
+  padding: 5px 8px;
+  font-size: var(--fs-xs);
+  gap: var(--space-1);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Nút chỉ có icon (Button tự thêm class khi không có chữ): vuông, không padding ngang thừa */
+.btn.btn-icon-only {
+  padding: 8px;
+}
+
+.btn.btn-sm.btn-icon-only {
+  padding: 7px;
+}
+
+/* ---------- Badge ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-body);
+  white-space: nowrap;
+}
+
+.badge--dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Mọi tone đạt ≥ 4.5:1 giữa chữ và nền */
+.badge--success { background: var(--success-soft); color: var(--success); }
+.badge--warning { background: var(--warning-soft); color: var(--warning); }
+.badge--danger { background: var(--danger-soft); color: var(--danger); }
+.badge--info { background: var(--info-soft); color: var(--info); }
+.badge--brand { background: var(--brand-soft); color: var(--brand); }
+
+/* ---------- ConfirmDialog ---------- */
+.modal-content.confirm-dialog {
+  width: min(460px, 100%);
+  padding: 28px;
+}
+
+.confirm-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: 14px;
+}
+
+.confirm-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.confirm-dialog-title h3 {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.confirm-dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.confirm-dialog-icon--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.confirm-dialog-icon--primary {
+  background: var(--brand-soft);
+  color: var(--accent);
+}
+
+.confirm-dialog-message {
+  margin: 0 0 22px;
+  color: var(--ink-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ---------- Tiện ích ---------- */
+/* Chữ chỉ dành cho trình đọc màn hình */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

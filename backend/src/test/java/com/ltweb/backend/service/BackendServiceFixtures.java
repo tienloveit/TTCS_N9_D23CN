@@ -73,6 +73,8 @@ final class BackendServiceFixtures {
     BookingAccessPolicy access = new BookingAccessPolicy();
     RefundPolicy policy = new RefundPolicy(settings, CLOCK);
     BookingPricingService pricing = new BookingPricingService(foods, promotions);
+    BookingReleaseService releaser =
+        new BookingReleaseService(tickets, messaging, redis, stock, promotions);
     return new BookingService(
         new BookingCheckoutService(
             current,
@@ -89,7 +91,8 @@ final class BackendServiceFixtures {
             events,
             audit,
             settings,
-            stock),
+            stock,
+            promotions),
         new BookingCommandService(
             current,
             access,
@@ -97,12 +100,11 @@ final class BackendServiceFixtures {
             pricing,
             CLOCK,
             bookings,
-            tickets,
-            redis,
-            messaging,
             mapper,
             notifications,
-            stock),
+            releaser,
+            promotions,
+            audit),
         new BookingQueryService(bookings, mapper, current, access, policy),
         new BookingMembershipService(bookings, users, promotions),
         refunds);
@@ -124,11 +126,16 @@ final class BackendServiceFixtures {
         new RefundPolicy(settings(), CLOCK),
         CLOCK,
         bookings,
-        tickets,
         users,
         mapper,
         audit,
-        messaging,
+        new BookingReleaseService(
+            tickets,
+            messaging,
+            mock(StringRedisTemplate.class),
+            mock(FoodStockService.class),
+            mock(PromotionService.class)),
+        mock(PaymentEventService.class),
         gateway,
         transactions,
         entityManager);
@@ -156,7 +163,9 @@ final class BackendServiceFixtures {
         redis,
         messaging,
         events,
-        stock,
+        new BookingReleaseService(tickets, messaging, redis, stock, mock(PromotionService.class)),
+        mock(NotificationService.class),
+        mock(PaymentEventService.class),
         refunds);
   }
 

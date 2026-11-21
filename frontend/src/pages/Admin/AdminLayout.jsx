@@ -47,27 +47,27 @@ const Icons = {
 
 /* ── Route title mapping ── */
 const TITLE_MAP = {
-  '/admin': 'Dashboard',
-  '/admin/movies': 'Quản lý Phim',
-  '/admin/showtimes': 'Quản lý Suất chiếu',
-  '/admin/branches': 'Quản lý Rạp & Phòng',
-  '/admin/users': 'Quản lý Người dùng',
-  '/admin/bookings': 'Quản lý Đơn đặt vé',
-  '/admin/foods': 'Quản lý Bắp & Nước',
-  '/admin/promotions': 'Quản lý Khuyến mãi',
+  '/admin': 'Tổng quan',
+  '/admin/movies': 'Quản lý phim',
+  '/admin/showtimes': 'Quản lý suất chiếu',
+  '/admin/branches': 'Quản lý rạp & phòng',
+  '/admin/users': 'Quản lý người dùng',
+  '/admin/bookings': 'Quản lý đơn đặt vé',
+  '/admin/foods': 'Quản lý bắp nước',
+  '/admin/promotions': 'Quản lý khuyến mãi',
   '/admin/operations': 'Báo cáo vận hành',
   '/admin/refunds': 'Xử lý hoàn tiền',
   '/admin/revenue': 'Doanh thu chi tiết',
   '/admin/notifications': 'Thông báo',
   '/admin/audit-logs': 'Nhật ký hệ thống',
   '/admin/settings': 'Cấu hình hệ thống',
-  '/manager': 'Dashboard',
-  '/manager/showtimes': 'Quản lý Suất chiếu',
-  '/manager/branches': 'Quản lý Rạp & Phòng',
-  '/manager/users': 'Quản lý Nhân viên',
-  '/manager/bookings': 'Quản lý Đơn đặt vé',
-  '/manager/foods': 'Quản lý Bắp & Nước',
-  '/manager/promotions': 'Quản lý Khuyến mãi',
+  '/manager': 'Tổng quan',
+  '/manager/showtimes': 'Quản lý suất chiếu',
+  '/manager/branches': 'Quản lý rạp & phòng',
+  '/manager/users': 'Quản lý nhân viên',
+  '/manager/bookings': 'Quản lý đơn đặt vé',
+  '/manager/foods': 'Quản lý bắp nước',
+  '/manager/promotions': 'Quản lý khuyến mãi',
   '/manager/operations': 'Báo cáo vận hành',
   '/manager/refunds': 'Xử lý hoàn tiền',
   '/manager/revenue': 'Doanh thu chi tiết',
@@ -78,34 +78,34 @@ const TITLE_MAP = {
 /* ── Navigation definition ── */
 const NAV_SECTIONS = [
   {
-    label: 'Bàn làm việc & Báo cáo',
+    label: 'Bàn làm việc & báo cáo',
     items: [
-      { path: '/admin', label: 'Dashboard', Icon: Icons.Dashboard, end: true },
+      { path: '/admin', label: 'Tổng quan', Icon: Icons.Dashboard, end: true },
       { path: '/admin/operations', label: 'Báo cáo vận hành', Icon: Icons.Report },
       { path: '/admin/revenue', label: 'Doanh thu chi tiết', Icon: Icons.Report },
     ],
   },
   {
-    label: 'Vận hành Rạp & Vé',
+    label: 'Vận hành rạp & vé',
     items: [
       { path: '/admin/movies', label: 'Phim', Icon: Icons.Movie },
       { path: '/admin/showtimes', label: 'Suất chiếu', Icon: Icons.Calendar },
-      { path: '/admin/branches', label: 'Rạp & Phòng', Icon: Icons.Building },
+      { path: '/admin/branches', label: 'Rạp & phòng', Icon: Icons.Building },
       { path: '/admin/bookings', label: 'Đơn đặt vé', Icon: Icons.Ticket },
       { path: '/admin/refunds', label: 'Hoàn tiền', Icon: Icons.Refund },
     ],
   },
   {
-    label: 'Quầy F&B & Khuyến mãi',
+    label: 'Bắp nước & khuyến mãi',
     items: [
-      { path: '/admin/foods', label: 'Bắp & Nước', Icon: Icons.Food },
+      { path: '/admin/foods', label: 'Bắp nước', Icon: Icons.Food },
       { path: '/admin/promotions', label: 'Khuyến mãi', Icon: Icons.Gift },
     ],
   },
   {
-    label: 'Hệ thống & Nhân sự',
+    label: 'Hệ thống & nhân sự',
     items: [
-      { path: '/admin/users', label: 'Người dùng & Ca trực', Icon: Icons.Users },
+      { path: '/admin/users', label: 'Người dùng', Icon: Icons.Users },
       { path: '/admin/notifications', label: 'Thông báo', Icon: Icons.Bell, isNotification: true },
       { path: '/admin/audit-logs', label: 'Nhật ký hệ thống', Icon: Icons.Shield },
       { path: '/admin/settings', label: 'Cấu hình', Icon: Icons.Settings },
@@ -170,7 +170,7 @@ const AdminLayout = () => {
     }))
     .filter((section) => section.items.length > 0);
   const displayRoleLabel = isManagerRole ? 'Manager' : 'Admin';
-  const portalSubtitle = isManagerRole ? 'Manager Portal' : 'Admin Panel';
+  const portalSubtitle = isManagerRole ? 'Khu quản lý' : 'Quản trị hệ thống';
 
   return (
     <div className="admin-layout">
@@ -204,7 +204,7 @@ const AdminLayout = () => {
                   }
                 >
                   <span className="nav-icon"><item.Icon /></span>
-                  <span>{isManagerRole && item.path === '/admin/users' ? 'Nhân viên & Ca trực' : item.label}</span>
+                  <span>{isManagerRole && item.path === '/admin/users' ? 'Nhân viên' : item.label}</span>
                   {item.isNotification && unreadCount > 0 && (
                     <span className="nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
                   )}

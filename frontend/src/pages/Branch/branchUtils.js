@@ -72,12 +72,18 @@ export const buildUpcomingDays = (count = 7, offset = 0, today = getCinemaLocalN
   });
 };
 
-export const formatRoomType = (roomTechnology) => {
-  if (!roomTechnology) return '2D Phụ đề';
-  const normalized = String(roomTechnology).toUpperCase().replace(/_/g, ' ').trim();
-  if (normalized === '2D') return '2D Standard';
-  if (normalized === '3D') return '3D Digital';
-  return normalized;
+// Phân loại phim theo quy định phổ biến phim tại Việt Nam.
+const AGE_RATING_LABELS = {
+  P: 'Phim dành cho mọi lứa tuổi',
+  K: 'Khán giả dưới 13 tuổi cần xem cùng cha mẹ hoặc người giám hộ',
+  T13: 'Phim dành cho khán giả từ đủ 13 tuổi',
+  T16: 'Phim dành cho khán giả từ đủ 16 tuổi',
+  T18: 'Phim dành cho khán giả từ đủ 18 tuổi',
+};
+
+export const getAgeRatingLabel = (ageRating) => {
+  const code = String(ageRating || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return AGE_RATING_LABELS[code] || `Phân loại ${ageRating}`;
 };
 
 export const getAgeBadgeTone = (ageRating) => {

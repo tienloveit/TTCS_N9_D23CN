@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DialogShell } from './Dialogs';
-import { formatCurrency, formatShowDate, formatTime } from './bookingFormat';
+import { formatCurrency, formatDateTime, formatShowDate, formatTime } from './bookingFormat';
 
 const QUICK_REASONS = [
   'Bận việc đột xuất',
@@ -19,7 +19,8 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
       <h3 id="mt-refund-title" className="mt-dialog-title">Yêu cầu hoàn tiền</h3>
       <p className="mt-dialog-text">
         Rạp sẽ xem xét yêu cầu của bạn. Khi được duyệt, bạn được hoàn toàn bộ số tiền đã thanh toán
-        và ghế sẽ được mở bán lại.
+        (gồm vé và bắp nước) qua phương thức bạn đã dùng để thanh toán, và ghế sẽ được mở bán lại.
+        Sau khi gửi, vé không dùng để vào rạp được nữa trừ khi yêu cầu bị từ chối.
       </p>
 
       <div className="mt-refund-summary">
@@ -34,6 +35,9 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
           <strong>{formatCurrency(booking.totalAmount)}</strong>
         </div>
       </div>
+      {booking.refundDeadline && (
+        <p className="mt-dialog-text">Hạn gửi yêu cầu: {formatDateTime(booking.refundDeadline)}.</p>
+      )}
 
       <div className="mt-field">
         <label className="mt-field-label" htmlFor="mt-refund-reason">Lý do hoàn tiền</label>
@@ -56,7 +60,7 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
           id="mt-refund-reason"
           rows={3}
           maxLength={500}
-          placeholder="Hoặc nhập lý do của bạn..."
+          placeholder="Chọn một lý do ở trên hoặc tự nhập"
           value={reason}
           disabled={submitting}
           onChange={(event) => setReason(event.target.value)}
@@ -73,7 +77,7 @@ export default function RefundDialog({ booking, submitting, onSubmit, onClose })
           onClick={() => onSubmit(trimmed)}
           disabled={submitting || !trimmed}
         >
-          {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
+          {submitting ? 'Đang gửi...' : 'Gửi yêu cầu hoàn tiền'}
         </button>
       </div>
     </DialogShell>

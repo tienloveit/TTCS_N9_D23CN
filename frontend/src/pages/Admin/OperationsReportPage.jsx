@@ -14,6 +14,7 @@ import {
 } from '../../components/Common/CinemaIcons';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import './OperationsReportPage.css';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const businessDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
 const today = () => businessDate.format(new Date());
@@ -28,7 +29,7 @@ const formatCurrency = (amount) =>
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 
 const formatDateTime = (value) =>
-  value ? new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '–';
+  formatCinema(value, { hour: '2-digit', minute: '2-digit', hour12: false }, '–');
 
 const percentFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'percent',

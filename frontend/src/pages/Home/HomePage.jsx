@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useReducedMotion } from 'framer-motion';
 import { movieApi } from '../../api';
 import MovieCard, { CatalogEmpty } from '../../components/MovieCard/MovieCard';
 import SafeImage from '../../components/Common/SafeImage';
@@ -16,7 +15,6 @@ import {
   TicketIcon,
 } from '../../components/Common/CinemaIcons';
 
-const HERO_SLIDE_INTERVAL_MS = 6500;
 const FEED_TABS = [
   { key: 'ALL', label: 'Tất cả' },
   { key: 'NOW_SHOWING', label: 'Đang chiếu' },
@@ -30,10 +28,6 @@ export default function HomePage() {
   const [search, setSearch] = useState('');
   const [activeFeedTab, setActiveFeedTab] = useState('ALL');
   const [bannerIndex, setBannerIndex] = useState(0);
-  const [bannerHovered, setBannerHovered] = useState(false);
-  const [bannerFocused, setBannerFocused] = useState(false);
-  const [autoSlide, setAutoSlide] = useState(true);
-  const prefersReducedMotion = useReducedMotion();
   const searchField = useRef(null);
 
   useEffect(() => {
@@ -49,13 +43,6 @@ export default function HomePage() {
 
   const bannerMovies = nowShowing.slice(0, 5);
   const currentBanner = bannerMovies[bannerIndex];
-  useEffect(() => {
-    if (bannerMovies.length <= 1 || !autoSlide || bannerHovered || bannerFocused || prefersReducedMotion) return;
-    const timer = window.setTimeout(() => {
-      setBannerIndex((index) => (index + 1) % bannerMovies.length);
-    }, HERO_SLIDE_INTERVAL_MS);
-    return () => window.clearTimeout(timer);
-  }, [bannerIndex, bannerMovies.length, autoSlide, bannerHovered, bannerFocused, prefersReducedMotion]);
 
   const query = search.trim().toLocaleLowerCase('vi');
   const filteredNow = nowShowing.filter((movie) => movie.movieName?.toLocaleLowerCase('vi').includes(query));
@@ -83,12 +70,7 @@ export default function HomePage() {
     <div className="page catalog-page">
       <div className="container catalog-container">
         {currentBanner && (
-          <section className="catalog-hero" aria-labelledby="catalog-hero-title"
-            onMouseEnter={() => setBannerHovered(true)} onMouseLeave={() => setBannerHovered(false)}
-            onFocus={() => setBannerFocused(true)}
-            onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget)) setBannerFocused(false);
-            }}>
+          <section className="catalog-hero" aria-labelledby="catalog-hero-title">
             <div className="catalog-hero-backdrop">
               <SafeImage key={'backdrop-' + currentBanner.movieId} className="catalog-hero-image"
                 src={currentBanner.bannerUrl || currentBanner.thumbnailUrl}
@@ -125,11 +107,6 @@ export default function HomePage() {
                   ))}
                 </div>
                 <button type="button" aria-label="Phim tiếp theo" onClick={() => moveBanner(1)}><ChevronRightIcon size={20} /></button>
-                {!prefersReducedMotion && (
-                  <button type="button" className="catalog-hero-toggle" onClick={() => setAutoSlide((enabled) => !enabled)}>
-                    {autoSlide ? 'Tạm dừng' : 'Phát tiếp'}
-                  </button>
-                )}
               </div>
             )}
           </section>
