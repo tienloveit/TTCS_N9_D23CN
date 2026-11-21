@@ -221,7 +221,13 @@ class BookingCheckoutRulesTest {
   private void build(boolean atCounter, LocalDateTime startTime) {
     reset(bookings, promotions, events, redisValues);
     saved.set(null);
-    User customer = User.builder().id(1L).username("customer").role(UserRole.USER).build();
+    User customer =
+        User.builder()
+            .id(1L)
+            .username("customer")
+            .role(UserRole.USER)
+            .status(com.ltweb.backend.enums.UserStatus.ACTIVE)
+            .build();
     User operator =
         atCounter
             ? User.builder().id(2L).username("staff").role(UserRole.STAFF).branchId(1L).build()
@@ -328,6 +334,7 @@ class BookingCheckoutRulesTest {
     request.setShowtimeId(1L);
     request.setSeatIds(List.of(1L));
     request.setCustomerEmail("customer@example.test");
+    request.setConfirmedCustomerId(1L);
     request.setPaymentMethod(method);
     return request;
   }

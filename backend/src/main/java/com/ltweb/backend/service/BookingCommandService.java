@@ -4,6 +4,7 @@ import com.ltweb.backend.dto.request.UpdateBookingRequest;
 import com.ltweb.backend.dto.response.BookingResponse;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.User;
+import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
 import com.ltweb.backend.enums.PaymentStatus;
@@ -34,6 +35,7 @@ public class BookingCommandService {
   private final NotificationService notificationService;
   private final BookingReleaseService bookingReleaseService;
   private final PromotionService promotionService;
+  private final AuditLogService auditLogService;
 
   @Transactional
   public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
@@ -125,17 +127,29 @@ public class BookingCommandService {
     Booking booking = getBookingForUpdate(bookingId);
     User user = getUserCurrent();
 
-    // Chỉ chủ booking mới được yêu cầu hoàn tiền
-    bookingAccessPolicy.requireOwner(booking, user);
+    // Chủ đơn tự gửi; đơn bán tại quầy thì nhân viên đúng chi nhánh được gửi thay khách.
+    bookingAccessPolicy.requireCanRequestRefund(booking, user);
+    boolean onBehalf = bookingAccessPolicy.isRequestingRefundForCustomer(booking, user);
+    String trimmedReason = reason == null ? "" : reason.trim();
+    if (onBehalf && trimmedReason.isEmpty()) {
+      throw new AppException(ErrorCode.REFUND_REASON_REQUIRED);
+    }
 
     refundPolicy.requireCanRequest(booking);
 
     booking.setStatus(BookingStatus.REFUND_REQUESTED);
-    booking.getPayment().setRefundReason(reason);
+    booking.getPayment().setRefundReason(onBehalf ? trimmedReason : reason);
     booking.getPayment().setRefundAmount(booking.getTotalAmount());
     bookingRepository.save(booking);
     notificationService.notifyRefundRequest(
         getBookingBranchId(booking), booking.getId(), booking.getBookingCode());
+    if (onBehalf) {
+      auditLogService.record(
+          AuditAction.REFUND_REQUESTED,
+          "Booking",
+          booking.getId(),
+          "Refund requested at counter for " + booking.getBookingCode() + ": " + trimmedReason);
+    }
 
     log.info("Refund requested for booking {}: reason={}", bookingId, reason);
     return bookingMapper.toBookingResponse(booking);

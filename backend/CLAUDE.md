@@ -142,7 +142,7 @@ Mã đơn có dạng `BK-YYYYMMDD-XXXXXXXX`, 8 ký tự Crockford base32 sinh t�
 
 ### Nhân viên tại quầy
 
-`POST /booking/staff`: ADMIN/STAFF, xác thực chi nhánh, kiểm tra ghế/Redis, giới hạn vé và tồn bắp nước. Tìm hoặc tạo khách bằng thông tin liên hệ. `staffUser` ghi nhận người bán. Quầy được bán tới `BookingCheckoutService.STAFF_SALE_GRACE_MINUTES` (15) phút sau giờ chiếu, khớp với `isShowtimeAvailable` trong màn bán vé; khi đổi phải sửa cả hai nơi.
+`POST /booking/staff`: ADMIN/STAFF, xác thực chi nhánh, kiểm tra ghế/Redis, giới hạn vé và tồn bắp nước. `StaffCustomerService` chuẩn hóa SĐT (10 số, bắt đầu bằng 0, nhận `+84`) và email rồi tìm hoặc tạo khách. Nếu SĐT/email trùng tài khoản có sẵn, request phải gửi `confirmedCustomerId` đúng ID trả về từ `GET /staff/customers/lookup` (thông tin đã che bớt), nếu không thì trả `CUSTOMER_CONFIRMATION_REQUIRED`. Chỉ gắn đơn vào tài khoản USER còn ACTIVE (`CUSTOMER_NOT_ELIGIBLE`). Email và SĐT thuộc hai tài khoản khác nhau trả `CUSTOMER_CONTACT_CONFLICT`. Mục đích là tránh gắn đơn, chi tiêu và email vé có QR vào tài khoản người khác. `staffUser` ghi nhận người bán, `BookingResponse.staffUserId/staffUsername` cho biết đơn bán tại quầy. Quầy được bán tới `BookingCheckoutService.STAFF_SALE_GRACE_MINUTES` (15) phút sau giờ chiếu, khớp với `isShowtimeAvailable` trong màn bán vé; khi đổi phải sửa cả hai nơi.
 
 CASH hoặc phương thức null: Booking COMPLETED, Payment PAID, ticket BOOKED, tạo QR và publish `BookingPaidEvent`, không lấy khóa Redis. Phương thức khác CASH: PENDING/HOLDING và giữ ghế ở Redis như đơn online, chờ xử lý thanh toán tiếp. Không có nghiệp vụ bắt buộc mở ca trước bán vé.
 
@@ -170,7 +170,7 @@ Hủy booking chỉ cho đơn PENDING theo quyền truy cập. `BookingCleanupJo
 
 `BookingReleaseService` là nơi duy nhất trả tài nguyên của đơn: `releaseSeats` (ticket AVAILABLE, xóa QR/check-in, broadcast và nhả Redis sau commit), `releaseUnpaid` (thêm hoàn tồn bắp nước và trả lượt khuyến mãi) và `releasePromotionUsage`. Hủy đơn, job hết hạn, VNPay thất bại/thanh toán trễ dùng `releaseUnpaid`; hoàn tiền chỉ dùng `releaseSeats`.
 
-Khách gửi yêu cầu hoàn tiền; ADMIN/MANAGER duyệt/từ chối theo chi nhánh. `BookingService.processRefund` và API VNPay refund cùng đi qua `BookingRefundService`. Với VNPAY, service khóa booking và commit mã lần thử/trạng thái PROCESSING vào Payment trước khi gọi mạng; không giữ transaction DB trong lúc chờ VNPay. Chỉ phản hồi có chữ ký hợp lệ, đúng merchant/đơn/số tiền, loại hoàn toàn phần `02`, response code `00`, transaction status `00` và mã giao dịch mới cho phép hoàn tất. `VnpayRefundGateway` kiểm tra chữ ký theo đặc tả [querydr/refund VNPay](https://sandbox.vnpayment.vn/apis/docs/truy-van-hoan-tien/querydr%26refund.html); HTTP thành công hoặc response code `00` riêng lẻ chưa đủ.
+Khách gửi yêu cầu hoàn tiền; ADMIN/MANAGER duyệt/từ chối theo chi nhánh. Với đơn bán tại quầy (`staffUser` khác null), ADMIN hoặc STAFF/MANAGER đúng chi nhánh được gửi thay khách vì khách vãng lai không đăng nhập được. Khi gửi thay phải có lý do (`REFUND_REASON_REQUIRED`), vẫn theo cùng thời hạn và điều kiện chưa check-in, và được ghi nhật ký `REFUND_REQUESTED`. `BookingService.processRefund` và API VNPay refund cùng đi qua `BookingRefundService`. Với VNPAY, service khóa booking và commit mã lần thử/trạng thái PROCESSING vào Payment trước khi gọi mạng; không giữ transaction DB trong lúc chờ VNPay. Chỉ phản hồi có chữ ký hợp lệ, đúng merchant/đơn/số tiền, loại hoàn toàn phần `02`, response code `00`, transaction status `00` và mã giao dịch mới cho phép hoàn tất. `VnpayRefundGateway` kiểm tra chữ ký theo đặc tả [querydr/refund VNPay](https://sandbox.vnpayment.vn/apis/docs/truy-van-hoan-tien/querydr%26refund.html); HTTP thành công hoặc response code `00` riêng lẻ chưa đủ.
 
 Payment lưu `refundRequestId`, `refundGatewayStatus`, `refundRequestedAt`, `refundGatewayCode`, `refundGatewayMessage`. Timeout, phản hồi không xác thực, mã trùng/chưa rõ kết quả hoặc trạng thái đang xử lý giữ UNKNOWN; booking vẫn REFUND_REQUESTED và payment vẫn PAID. Bấm duyệt lại ở UNKNOWN chỉ query kết quả, không gửi thêm lệnh refund. PROCESSING trong 60 giây trả trạng thái đang chờ; quá thời gian đó cũng query để phục hồi sau crash. Kết quả query chỉ nói về thanh toán gốc (type `01`) không được xem là xác nhận hoàn tiền; nếu cổng không cung cấp xác nhận refund thì tiếp tục chờ và cần đối soát với VNPay, không tự sửa marker để gửi lại. Chỉ từ chối rõ ràng, có xác thực, mới đặt FAILED để cho phép thử mới. HTTP connect timeout 5 giây, read timeout 15 giây.
 
@@ -186,7 +186,7 @@ Tồn kho vẫn được sử dụng: `FoodStockService.reserve` trừ tồn khi
 
 SockJS endpoint mặc định `http://localhost:8081/api/ws`; broker `/topic`, application prefix `/app`; topic ghế `/topic/showtime/{showtimeId}/seats`. Payload `SeatStatusEvent` chứa `seatId`, `status`. `TicketService` kết hợp DB với Redis để trả `displayStatus`.
 
-Check-in nhận ID vé, mã QR lưu trong DB hoặc booking code. Booking code xử lý các vé của đơn. Ảnh QR gửi multipart field `qrImage` đến `/ticket/check-in/qr-image`. Vé hợp lệ có booking COMPLETED, payment PAID và trạng thái BOOKED. Backend ghi `checkedInAt` và `checkedInBy`, giữ thông tin lần check-in đầu và trả `alreadyCheckedIn` khi quét lại.
+Check-in nhận chuỗi QR đầy đủ (phải khớp QR đã cấp cho vé) hoặc booking code. Số ID vé trơn bị từ chối (`CHECKIN_CODE_NOT_ACCEPTED`) vì ID tăng dần, gõ nhầm sẽ soát mất vé của khách khác. Booking code xử lý các vé của đơn. Ảnh QR gửi multipart field `qrImage` đến `/ticket/check-in/qr-image`. Vé hợp lệ có booking COMPLETED, payment PAID và trạng thái BOOKED. Lần soát mới chỉ được mở từ `TicketService.CHECK_IN_OPENS_MINUTES_BEFORE` (60) phút trước giờ chiếu đến khi suất kết thúc, và không áp dụng cho suất CANCELLED (`CHECKIN_TOO_EARLY`, `CHECKIN_SHOWTIME_ENDED`, `CHECKIN_SHOWTIME_CANCELLED`). Đổi số phút thì sửa cả thông báo lỗi. Backend ghi `checkedInAt` và `checkedInBy`, giữ thông tin lần check-in đầu và trả `alreadyCheckedIn` khi quét lại, kể cả sau khi suất đã kết thúc.
 
 ## Vận hành và API chính
 
@@ -203,10 +203,11 @@ Tất cả đường dẫn sau tương đối với `http://localhost:8081/api`;
 | Bắp nước/khuyến mãi | `/food`, `/food/all`, `/promotion`, `/promotion/available`, `/promotion/validate` |
 | VNPay | `/v1/vnpay/payment-url`, `/v1/vnpay/return`, `/v1/vnpay/ipn`, `/v1/vnpay/querydr`, `/v1/vnpay/refund` |
 | Dashboard | `/staff/dashboard`, `/admin/analytics/dashboard` |
+| Quầy | `/staff/customers/lookup?phone=&email=` (ADMIN/STAFF, tra cứu khách trước khi bán) |
 | Báo cáo | `/admin/operations/daily-report`, `/admin/reports/revenue`, `/admin/reports/export/revenue.xlsx`, `/admin/reports/export/operations.xlsx` |
 | Hệ thống | `/notifications`, `/notifications/unread-count`, `POST /notifications/{id}/read`, `/admin/audit-logs`, `/admin/settings` |
 
-Staff dashboard hiện tính doanh thu/đơn/vé bán của chính nhân viên trong ngày; check-in và yêu cầu hoàn tiền theo chi nhánh, kèm đơn gần đây và suất chiếu sắp tới. Không còn StaffShift, StaffSchedule, mở/chốt ca, bàn giao hay lịch trực.
+Staff dashboard hiện tính doanh thu/đơn/vé bán của chính nhân viên trong ngày, cùng số liệu đối soát két: `cashCollected` (đơn tiền mặt thanh toán hôm nay, kể cả đơn hoàn sau đó), `cashRefunded` (đơn tiền mặt của nhân viên đó được hoàn hôm nay, kể cả đơn bán ngày trước) và `cashExpected` = thu − hoàn. Tiền hoàn được tính cho người bán vì hệ thống không ghi ai đưa tiền mặt cho khách; check-in và yêu cầu hoàn tiền theo chi nhánh, kèm đơn gần đây và suất chiếu sắp tới. Không còn StaffShift, StaffSchedule, mở/chốt ca, bàn giao hay lịch trực.
 
 `DataConsistencyJob` giữ dữ liệu dẫn xuất: mỗi giờ chuyển trạng thái phim theo ngày (UPCOMING → NOW_SHOWING khi tới `releaseDate`, → ENDED khi qua `endDate`; chỉ đi tới và chỉ với phim có ngày, nên không lật ngược quyết định thủ công); 03:00 hằng đêm đối soát `users.total_spending` với tổng các đơn đã cộng (`spending_recorded`) và hạng thành viên, chỉ ghi log WARN các tài khoản lệch, không tự sửa. `SeatService` cập nhật `rooms.seat_capacity` bằng số ghế thật sau khi thêm, xóa hoặc chuyển ghế; báo cáo tỷ lệ lấp đầy dùng giá trị này.
 
@@ -236,6 +237,7 @@ Schema do Flyway quản lý trong [src/main/resources/db/migration](src/main/res
 | [V4__notification_reads](src/main/resources/db/migration/V4__notification_reads.sql) | Bảng `notification_reads` (đã đọc theo từng người). Chép trạng thái cũ cho mọi người nhận hợp lệ để giữ nguyên những gì họ đang thấy, rồi bỏ cột `notifications.read_at`. |
 | [V5__payment_events](src/main/resources/db/migration/V5__payment_events.sql) | Nhật ký chỉ ghi thêm `payment_events`: mỗi callback VNPay (return/IPN, kể cả sai chữ ký hoặc không khớp đơn) và mỗi lần gửi/truy vấn hoàn tiền với mã phản hồi. Không lưu chữ ký. FK tới bookings chặn xóa đơn đã có giao dịch. |
 | [V6__room_seat_capacity](src/main/resources/db/migration/V6__room_seat_capacity.sql) | Tính lại `seat_capacity` bằng số ghế thật; CHECK không âm. |
+| [V7__audit_refund_requested](src/main/resources/db/migration/V7__audit_refund_requested.sql) | Thêm `REFUND_REQUESTED` vào ENUM `audit_logs.action` cho yêu cầu hoàn do nhân viên gửi thay khách. |
 
 Database rỗng: tạo `cinema` (utf8mb4) rồi khởi động backend, Flyway chạy V1 và V2. Database đã có bảng nhưng chưa có `flyway_schema_history`: `baseline-on-migrate` đánh dấu V1 rồi chạy V2. Điều kiện là database đã ở trạng thái sau các script `20261111_*` (PK `id`, bảng `payments` tách riêng…); nếu chưa, chạy các script đó trước theo bảng bên dưới.
 

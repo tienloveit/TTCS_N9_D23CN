@@ -31,6 +31,12 @@ public class StaffBookingRequest {
 
   private String customerPhone;
 
+  /**
+   * ID tài khoản khách mà nhân viên đã xác nhận qua {@code GET /staff/customers/lookup}. Bắt buộc
+   * khi email/SĐT trùng một tài khoản có sẵn, để đơn và vé không gắn nhầm người.
+   */
+  private Long confirmedCustomerId;
+
   private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
   private String promotionCode;
