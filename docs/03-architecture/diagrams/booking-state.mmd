@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> PENDING: Tạo đơn online, hoặc đơn quầy chọn VNPay
+    [*] --> COMPLETED: Đơn quầy thu tiền mặt
+    PENDING --> COMPLETED: VNPay thành công, ghế còn giữ cho đơn
+    PENDING --> CANCELLED: Hủy, hết hạn, hoặc VNPay báo thất bại
+    PENDING --> REFUND_REQUESTED: VNPay thành công nhưng ghế đã mất
+    CANCELLED --> REFUND_REQUESTED: VNPay thành công sau khi đơn đã hủy
+    COMPLETED --> REFUND_REQUESTED: Gửi yêu cầu hoàn trong thời hạn
+    REFUND_REQUESTED --> COMPLETED: Từ chối hoàn
+    REFUND_REQUESTED --> REFUNDED: Hoàn tiền được xác nhận
+    CANCELLED --> [*]
+    REFUNDED --> [*]

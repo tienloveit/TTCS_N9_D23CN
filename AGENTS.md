@@ -1,11 +1,56 @@
-# Hướng dẫn AI cho MoviePTIT
+# Hướng dẫn cho AI — MoviePTIT
 
-Áp dụng cho toàn repository. Đọc [context dự án](CLAUDE.md) để nắm kiến trúc và hợp đồng liên tầng. Khi làm trong một khu vực, đọc thêm [hướng dẫn backend](backend/AGENTS.md) hoặc [hướng dẫn frontend](frontend/AGENTS.md). [README](README.md) chứa cách thiết lập và chạy ứng dụng.
+> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+
+MoviePTIT là hệ thống đặt vé cho chuỗi rạp nhiều chi nhánh: website khách hàng, quầy bán vé và khu quản trị. File này chỉ giữ lệnh, quy tắc bắt buộc và bản đồ điểm vào. Nghiệp vụ nằm trong [docs/02-domain](docs/02-domain/), cách làm việc với code nằm trong [docs/07-development](docs/07-development/), mục lục ở [docs/README.md](docs/README.md). Khi làm trong `backend/` hoặc `frontend/`, đọc thêm [backend/AGENTS.md](backend/AGENTS.md) hoặc [frontend/AGENTS.md](frontend/AGENTS.md).
+
+## Lệnh
+
+| Việc | Backend (chạy trong `backend/`) | Frontend (chạy trong `frontend/`) |
+| --- | --- | --- |
+| Chạy | `.\mvnw.cmd spring-boot:run` (cần MySQL, Redis) | `npm ci`, `npm run dev` |
+| Test | `.\mvnw.cmd test` | `node --experimental-vm-modules --test tests/*.test.mjs` |
+| Lint, định dạng | `.\mvnw.cmd spotless:apply` (Spotless cũng chạy trong `test`) | `npm run lint` |
+| Build | `.\mvnw.cmd -DskipTests package` | `npm run build` |
+
+Trên Linux/macOS thay `.\mvnw.cmd` bằng `sh ./mvnw`. Cài đặt và biến môi trường: [docs/01-getting-started](docs/01-getting-started/run-local.md).
+
+## Quy tắc bắt buộc
 
 - Giữ thay đổi trong phạm vi yêu cầu và bảo toàn thay đổi đang có trong working tree.
-- Khi thay đổi API, đối chiếu controller, DTO, mapper, client Axios và các màn hình tiêu thụ dữ liệu. Kiểm tra đường chạy và quyền theo role/chi nhánh liên quan.
-- Khi đổi setup, schema hoặc hành vi nghiệp vụ, cập nhật phần tương ứng trong README hoặc `CLAUDE.md` đúng phạm vi. Ghi quy tắc dành cho AI trong `AGENTS.md`.
-- Dùng cấu hình mẫu để mô tả tên biến. Giữ thông tin bí mật ở môi trường cục bộ và kiểm tra phạm vi trước khi chạy thao tác xóa dữ liệu.
+- Quyền luôn được kiểm ở backend: role bằng `SecurityConfig` và `@PreAuthorize`, chủ sở hữu và chi nhánh trong service. Route guard ở frontend chỉ để điều hướng. Xem [roles-permissions.md](docs/02-domain/roles-permissions.md).
+- Backend quyết định giá, hạn giữ ghế, tồn bắp nước và thời hạn hoàn. Frontend hiển thị giá trị backend trả về, không tự tính lại.
+- Schema chỉ đổi bằng một file Flyway mới `V{n}__mo_ta.sql`. Không sửa migration đã phát hành, không bật `ddl-auto: update`. Xem [add-migration.md](docs/07-development/how-to/add-migration.md).
+- Giữ hợp đồng JSON: frontend đọc `data.result`, các trường thanh toán vẫn phẳng trong `BookingResponse`. Đổi API thì đối chiếu controller, DTO, mapper, client Axios và mọi màn hình dùng dữ liệu đó. Xem [add-endpoint.md](docs/07-development/how-to/add-endpoint.md).
+- Thời gian nghiệp vụ dùng giờ rạp `Asia/Ho_Chi_Minh`: `Clock` được inject ở backend, `src/utils/cinemaTime.js` ở frontend.
+- Đổi setup, schema, API hay nghiệp vụ thì cập nhật file tương ứng trong `docs/` cùng commit và sửa dòng "Đối chiếu mã nguồn" của file đó. Mỗi chủ đề chỉ có một file nguồn, nơi khác chỉ link tới.
+- Giữ bí mật trong `.env` cục bộ, tài liệu chỉ dùng tên biến. Seed, cleanup và script reset chỉ chạy trên database demo, sau khi người dùng cho phép.
+
+## Bản đồ điểm vào
+
+| Cần tìm | Bắt đầu ở |
+| --- | --- |
+| Route và guard | [frontend/src/AnimatedRoutes.jsx](frontend/src/AnimatedRoutes.jsx) |
+| Hàm gọi API | [frontend/src/api/index.js](frontend/src/api/index.js), token và refresh ở [axiosClient.js](frontend/src/api/axiosClient.js) |
+| Đăng nhập phía client | [frontend/src/context/AuthContext.jsx](frontend/src/context/AuthContext.jsx) |
+| Ứng dụng backend, cấu hình | [BackendApplication.java](backend/src/main/java/com/ltweb/backend/BackendApplication.java), [application.yaml](backend/src/main/resources/application.yaml) |
+| Bảo mật, JWT | `config/SecurityConfig.java`, `config/JwtAuthenticationFilter.java`, `service/JwtService.java` |
+| Đặt vé, hủy, hoàn | `service/BookingService.java` → `BookingCheckoutService`, `BookingCommandService`, `BookingQueryService`, `BookingRefundService` |
+| VNPay | `service/VnpayService.java`, `service/VnpayRefundGateway.java` |
+| Ghế realtime | `config/WebSocketConfig.java`, `BookingTransactionEffects`, `frontend/src/pages/SeatSelect/SeatSelectPage.jsx` |
+| Schema | [backend/src/main/resources/db/migration](backend/src/main/resources/db/migration) |
+
+Lần theo một luồng: route trong `AnimatedRoutes.jsx` → component trang → hàm trong `api/index.js` → controller → service. Ví dụ `/my-bookings` → `MyBookingsPage` → `bookingApi.getMyBookings()` → `GET /booking/my-bookings/list` → `BookingController` → `BookingService` → `BookingQueryService.getMyBookingsList()`. Danh sách endpoint và quyền: [endpoints.md](docs/04-api/endpoints.md).
+
+## Đọc thêm theo việc
+
+| Việc | Đọc |
+| --- | --- |
+| Sửa đặt vé, giữ ghế, check-in | [booking-lifecycle.md](docs/02-domain/booking-lifecycle.md) |
+| Sửa thanh toán, hoàn tiền | [payment-refund.md](docs/02-domain/payment-refund.md), [vnpay.md](docs/06-integrations/vnpay.md) |
+| Sửa khuyến mãi, hạng thành viên | [promotion-membership.md](docs/02-domain/promotion-membership.md) |
+| Sửa schema | [migrations.md](docs/05-database/migrations.md), [data-dictionary.md](docs/05-database/data-dictionary.md) |
+| Quy ước code, Git, kiểm thử | [coding-conventions.md](docs/07-development/coding-conventions.md), [git-workflow.md](docs/07-development/git-workflow.md), [testing.md](docs/07-development/testing.md) |
 
 # Frontend UI & Icon System Rules (`frontend`)
 

@@ -1,0 +1,16 @@
+sequenceDiagram
+    actor M as ADMIN/MANAGER
+    participant BE as BookingRefundService
+    participant DB as MySQL
+    participant V as VNPay
+    M->>BE: Duyệt hoàn tiền
+    BE->>DB: Tx 1: khóa đơn, tạo refundRequestId, PROCESSING, commit
+    BE->>V: Gửi refund (hoặc querydr), timeout 5s/15s
+    V-->>BE: Phản hồi có chữ ký
+    BE->>DB: Tx 2: khóa đơn, ghi payment_events, so refundRequestId
+    alt Cổng xác nhận thành công
+        BE->>DB: REFUNDED, trả ghế, trừ chi tiêu
+    else Chưa rõ hoặc bị từ chối
+        BE->>DB: UNKNOWN hoặc FAILED, đơn vẫn REFUND_REQUESTED
+    end
+    BE-->>M: BookingResponse với trạng thái thật
