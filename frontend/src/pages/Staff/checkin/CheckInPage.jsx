@@ -23,6 +23,7 @@ import CheckInHistoryLog from './CheckInHistoryLog';
 import CheckInVerdictPanel from './CheckInVerdictPanel';
 import CheckInLookupTab from './CheckInLookupTab';
 import CheckInScannerTab from './CheckInScannerTab';
+import './CheckIn.css';
 
 export default function CheckInPage() {
   const initialSession = useMemo(() => loadPersistedSession(), []);
@@ -252,7 +253,7 @@ export default function CheckInPage() {
     if (checkInPending.current) return;
     const trimmed = String(rawCode || '').trim();
     if (!trimmed) {
-      toast.error('Vui lòng nhập mã vé, mã đơn hoặc quét QR');
+      toast.error('Vui lòng nhập mã đơn (BK-...) hoặc quét QR');
       return;
     }
 
@@ -468,42 +469,25 @@ export default function CheckInPage() {
   return (
     <div className="gate-page">
       {/* ===== TOP GATE CONTROL BAR ===== */}
-      <StaffPageHeading icon={ScanIcon} title="Soát vé vào rạp" description="Quét mã QR, nhập mã vé hoặc tìm đơn của khách." />
+      <StaffPageHeading icon={ScanIcon} title="Soát vé vào rạp" description="Quét mã QR, nhập mã đơn hoặc tìm đơn của khách." />
       <div className="gate-top-bar">
 
-        <div className="gate-stats-row">
-          <div className="gate-stat-chip">
-            <span className="gate-stat-chip-dot" style={{ background: '#0756a6' }} />
-            <div>
-              <small>Lượt trong nhật ký</small>
-              <strong>{stats.total}</strong>
+        <dl className="gate-stats-row" aria-label="Thống kê soát vé trong phiên">
+          {[
+            ['Lượt trong nhật ký', stats.total, 'neutral'],
+            ['Hợp lệ', stats.valid, 'success'],
+            ['Đã quét trùng', stats.duplicate, 'warning'],
+            ['Từ chối', stats.failed, 'danger'],
+          ].map(([label, value, tone]) => (
+            <div className={`gate-stat-chip gate-stat-chip--${tone}`} key={label}>
+              <span className="gate-stat-chip-dot" aria-hidden="true" />
+              <div>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
             </div>
-          </div>
-
-          <div className="gate-stat-chip">
-            <span className="gate-stat-chip-dot" style={{ background: '#16a34a' }} />
-            <div>
-              <small>Hợp lệ</small>
-              <strong style={{ color: '#16a34a' }}>{stats.valid}</strong>
-            </div>
-          </div>
-
-          <div className="gate-stat-chip">
-            <span className="gate-stat-chip-dot" style={{ background: '#f59e0b' }} />
-            <div>
-              <small>Đã quét trùng</small>
-              <strong style={{ color: '#d97706' }}>{stats.duplicate}</strong>
-            </div>
-          </div>
-
-          <div className="gate-stat-chip">
-            <span className="gate-stat-chip-dot" style={{ background: '#dc2626' }} />
-            <div>
-              <small>Từ chối</small>
-              <strong style={{ color: '#dc2626' }}>{stats.failed}</strong>
-            </div>
-          </div>
-        </div>
+          ))}
+        </dl>
       </div>
 
       {/* ===== 2-COLUMN GATE WORKSPACE ===== */}
@@ -520,7 +504,7 @@ export default function CheckInPage() {
                 onClick={() => setActiveTab('SCANNER')}
               >
                 <TicketIcon />
-                <span>Máy quét / Mã vé</span>
+                <span>Máy quét / mã đơn</span>
               </button>
 
               <button

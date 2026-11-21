@@ -177,6 +177,9 @@ export const systemSettingsApi = {
 // ==================== STAFF OPERATIONS ====================
 export const staffApi = {
   getDashboard: () => axiosClient.get('/staff/dashboard'),
+  /** Tra cứu khách tại quầy theo email/SĐT; trả thông tin đã che bớt để nhân viên xác nhận. */
+  lookupCustomer: ({ email, phone }) =>
+    axiosClient.get('/staff/customers/lookup', { params: { email: email || undefined, phone: phone || undefined } }),
 };
 
 // ==================== PROMOTION ====================

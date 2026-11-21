@@ -1,4 +1,6 @@
 import { BellIcon, CheckIcon, CreditCardIcon, GiftIcon, BoxIcon, ListIcon, MailIcon, RefreshIcon, SearchIcon, TicketIcon } from '../../components/Common/CinemaIcons';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
 import { StaffPageHeading, StaffSkeleton, StaffState } from './StaffUI';
 import { formatCinema } from '../../utils/cinemaTime';
 
@@ -21,12 +23,13 @@ export default function StaffInbox({
   return (
     <div className="staff-page">
       <StaffPageHeading icon={BellIcon} title="Thông báo vận hành" description={loading || error ? undefined : `${unreadCount} thông báo chưa đọc`}>
-        <button type="button" className="btn btn-secondary" onClick={onRefresh} disabled={loading || markingAll || pending.size > 0}>
-          <RefreshIcon size={16} /> Làm mới
-        </button>
-        <button type="button" className="btn btn-primary" onClick={onMarkAll} disabled={loading || !unreadCount || markingAll || pending.size > 0}>
-          <CheckIcon size={16} /> {markingAll ? 'Đang cập nhật…' : 'Đánh dấu tất cả đã đọc'}
-        </button>
+        <Button icon={<RefreshIcon size={16} />} onClick={onRefresh} disabled={loading || markingAll || pending.size > 0}>
+          Làm mới
+        </Button>
+        <Button variant="primary" icon={<CheckIcon size={16} />} onClick={onMarkAll}
+          disabled={loading || !unreadCount || markingAll || pending.size > 0}>
+          {markingAll ? 'Đang cập nhật…' : 'Đánh dấu tất cả đã đọc'}
+        </Button>
       </StaffPageHeading>
       <div className="staff-inbox-workspace">
         <div className="staff-inbox-filters staff-panel" role="group" aria-label="Lọc theo loại thông báo">
@@ -60,16 +63,16 @@ export default function StaffInbox({
                       <div className="staff-inbox-meta">
                         <span>{type}</span>
                         {item.createdAt && <time dateTime={item.createdAt}>{formatCinema(item.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' })}</time>}
-                        {!item.read && <span className="staff-status staff-unread-label">Chưa đọc</span>}
+                        {!item.read && <Badge tone="brand" dot className="staff-unread-label">Chưa đọc</Badge>}
                       </div>
                       <h2>{item.title}</h2>
                       <p>{item.message}</p>
                     </div>
                     {!item.read && (
-                      <button type="button" className="btn btn-secondary" disabled={markingAll || pending.has(item.notificationId)}
+                      <Button icon={<CheckIcon size={16} />} disabled={markingAll || pending.has(item.notificationId)}
                         aria-label={`Đánh dấu đã đọc: ${item.title}`} onClick={() => onMarkRead(item)}>
-                        <CheckIcon size={16} /> Đánh dấu đã đọc
-                      </button>
+                        Đánh dấu đã đọc
+                      </Button>
                     )}
                   </li>
                 );

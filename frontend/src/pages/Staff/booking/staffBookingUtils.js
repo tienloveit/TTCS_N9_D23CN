@@ -124,3 +124,11 @@ export const TIME_FILTERS = [
   { key: 'EVENING', label: 'Tối (18h - 22h)' },
   { key: 'NIGHT', label: 'Khuya (22h+)' },
 ];
+
+/** Có SĐT hoặc email để tra cứu khách hay chưa. */
+export const hasCustomerContact = (customer) =>
+  Boolean(customer?.customerPhone?.trim() || customer?.customerEmail?.trim());
+
+/** Khóa so sánh liên hệ: đổi SĐT/email thì phải tra cứu và xác nhận lại. */
+export const customerContactKey = (customer) =>
+  [customer?.customerPhone?.trim() || '', (customer?.customerEmail?.trim() || '').toLowerCase()].join('|');
