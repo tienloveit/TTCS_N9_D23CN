@@ -22,11 +22,9 @@ import com.ltweb.backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -53,15 +51,9 @@ public class StaffOperationsService {
     LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
     LocalDateTime now = LocalDateTime.now(clock);
 
-    List<Booking> branchBookings =
-        bookingRepository.findAll().stream()
-            .filter(booking -> branchId == null || isBookingInBranch(booking, branchId))
-            .toList();
     List<Booking> staffBookingsToday =
-        branchBookings.stream()
-            .filter(booking -> isStaffBooking(booking, staff))
-            .filter(booking -> isInRange(getBusinessDate(booking), startOfDay, endOfDay))
-            .toList();
+        bookingRepository.findStaffBookingsByBusinessDate(
+            staff.getId(), branchId, startOfDay, endOfDay);
     List<Booking> paidStaffBookingsToday =
         staffBookingsToday.stream().filter(this::isPaidBooking).toList();
 
@@ -71,40 +63,47 @@ public class StaffOperationsService {
         sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.CARD)
             .add(sumRevenueByMethod(paidStaffBookingsToday, PaymentMethod.VNPAY));
     BigDecimal foodRevenue = sumFoodRevenue(paidStaffBookingsToday);
+
+    // Két tiền mặt: thu gộp theo ngày thanh toán, trừ tiền trả lại theo ngày hoàn. Đơn bán rồi hoàn
+    // trong cùng ngày được tính cả hai phía nên két vẫn khớp.
+    List<Booking> myCashBookings =
+        bookingRepository.findStaffCashMovements(staff.getId(), branchId, startOfDay, endOfDay);
+    List<Booking> cashSalesToday =
+        myCashBookings.stream()
+            .filter(booking -> isInRange(booking.getPayment().getPaidAt(), startOfDay, endOfDay))
+            .toList();
+    List<Booking> cashRefundsToday =
+        myCashBookings.stream()
+            .filter(booking -> booking.getPayment().getPaymentStatus() == PaymentStatus.REFUNDED)
+            .filter(
+                booking -> isInRange(booking.getPayment().getRefundedAt(), startOfDay, endOfDay))
+            .toList();
+    BigDecimal cashCollected = sumBookingRevenue(cashSalesToday);
+    BigDecimal cashRefunded =
+        cashRefundsToday.stream()
+            .map(
+                booking ->
+                    booking.getPayment().getRefundAmount() != null
+                        ? booking.getPayment().getRefundAmount()
+                        : booking.getTotalAmount())
+            .map(this::safeAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     long ticketsSold = paidStaffBookingsToday.stream().mapToLong(this::ticketCount).sum();
     long pendingBookings =
         staffBookingsToday.stream()
             .filter(booking -> booking.getStatus() == BookingStatus.PENDING)
             .count();
-    long checkedInTickets =
-        branchBookings.stream()
-            .flatMap(booking -> getTickets(booking).stream())
-            .filter(ticket -> isInRange(ticket.getCheckedInAt(), startOfDay, endOfDay))
-            .count();
+    long checkedInTickets = ticketRepository.countCheckedInBetween(branchId, startOfDay, endOfDay);
     long refundRequests =
-        branchBookings.stream()
-            .filter(booking -> booking.getStatus() == BookingStatus.REFUND_REQUESTED)
-            .count();
+        bookingRepository.countByStatusInBranch(BookingStatus.REFUND_REQUESTED, branchId);
 
     List<StaffDashboardResponse.UpcomingShowtime> upcomingShowtimes =
-        showtimeRepository.findAll().stream()
-            .filter(showtime -> branchId == null || isShowtimeInBranch(showtime, branchId))
-            .filter(
-                showtime ->
-                    showtime.getStartTime() != null && !showtime.getStartTime().isBefore(now))
-            .sorted(Comparator.comparing(Showtime::getStartTime))
-            .limit(DASHBOARD_LIMIT)
+        showtimeRepository.findUpcoming(branchId, now, PageRequest.of(0, DASHBOARD_LIMIT)).stream()
             .map(this::toUpcomingShowtime)
             .toList();
 
     List<BookingResponse> recentBookings =
-        branchBookings.stream()
-            .filter(booking -> isStaffBooking(booking, staff))
-            .sorted(
-                Comparator.comparing(
-                        Booking::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
-                    .reversed())
-            .limit(DASHBOARD_LIMIT)
+        bookingRepository.findRecent(branchId, staff.getId(), DASHBOARD_LIMIT).stream()
             .map(bookingMapper::toBookingResponse)
             .toList();
 
@@ -120,6 +119,11 @@ public class StaffOperationsService {
                 .ticketsSold(ticketsSold)
                 .checkedInTickets(checkedInTickets)
                 .refundRequests(refundRequests)
+                .cashCollected(cashCollected)
+                .cashSales(cashSalesToday.size())
+                .cashRefunded(cashRefunded)
+                .cashRefunds(cashRefundsToday.size())
+                .cashExpected(cashCollected.subtract(cashRefunded))
                 .build())
         .upcomingShowtimes(upcomingShowtimes)
         .recentBookings(recentBookings)
@@ -167,44 +171,9 @@ public class StaffOperationsService {
         || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
   }
 
-  private boolean isStaffBooking(Booking booking, User staff) {
-    return booking.getStaffUser() != null
-        && staff != null
-        && Objects.equals(booking.getStaffUser().getId(), staff.getId());
-  }
-
-  private boolean isBookingInBranch(Booking booking, Long branchId) {
-    return Objects.equals(getBookingBranchId(booking), branchId);
-  }
-
-  private Long getBookingBranchId(Booking booking) {
-    if (booking.getShowtime() == null
-        || booking.getShowtime().getRoom() == null
-        || booking.getShowtime().getRoom().getBranch() == null) {
-      return null;
-    }
-    return booking.getShowtime().getRoom().getBranch().getBranchId();
-  }
-
-  private boolean isShowtimeInBranch(Showtime showtime, Long branchId) {
-    return showtime.getRoom() != null
-        && showtime.getRoom().getBranch() != null
-        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
-  }
-
   private boolean isInRange(
       LocalDateTime value, LocalDateTime startInclusive, LocalDateTime endExclusive) {
     return value != null && !value.isBefore(startInclusive) && value.isBefore(endExclusive);
-  }
-
-  private LocalDateTime getBusinessDate(Booking booking) {
-    if (booking.getPayment().getPaidAt() != null) {
-      return booking.getPayment().getPaidAt();
-    }
-    if (booking.getCreatedAt() != null) {
-      return booking.getCreatedAt();
-    }
-    return LocalDateTime.of(LocalDate.now(clock), LocalTime.MIN);
   }
 
   private BigDecimal sumBookingRevenue(List<Booking> bookings) {

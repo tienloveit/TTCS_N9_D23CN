@@ -19,7 +19,10 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Table(name = "promotions")
+@Table(
+    name = "promotions",
+    indexes =
+        @jakarta.persistence.Index(name = "idx_promotions_branch_id", columnList = "branch_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -57,9 +60,13 @@ public class Promotion {
 
   private Integer usageLimit;
 
-  @Builder.Default private Integer usedCount = 0;
+  @Column(nullable = false)
+  @Builder.Default
+  private Integer usedCount = 0;
 
-  @Builder.Default private Boolean active = true;
+  @Column(nullable = false)
+  @Builder.Default
+  private Boolean active = true;
 
   @Column(name = "created_at", updatable = false)
   @CreationTimestamp

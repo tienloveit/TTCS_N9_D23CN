@@ -54,7 +54,7 @@ const Footer = () => {
               MoviePTIT
             </Link>
             <p className="footer-tagline">
-              Trải nghiệm điện ảnh đỉnh cao với công nghệ chiếu phim hiện đại nhất Việt Nam.
+              Xem lịch chiếu, chọn ghế và thanh toán vé xem phim trực tuyến tại các rạp MoviePTIT.
             </p>
             <div className="social-links">
               <Link to="/" className="social-link" title="Trang chủ MoviePTIT" aria-label="Trang chủ MoviePTIT">
@@ -125,16 +125,13 @@ const Footer = () => {
         {/* Partners & Bottom */}
         <div className="footer-bottom">
           <div className="partners">
-            <span className="partners-label">Đối tác thanh toán:</span>
+            <span className="partners-label">Thanh toán trực tuyến qua</span>
             <div className="partner-logos">
               <span className="partner-logo partner-vnpay">VNPAY</span>
-              <span className="partner-logo partner-momo">MOMO</span>
-              <span className="partner-logo partner-visa">VISA</span>
-              <span className="partner-logo partner-mastercard">Mastercard</span>
             </div>
           </div>
           <p className="copyright">
-            © 2026 MoviePTIT. All rights reserved.
+            © 2026 MoviePTIT. Bảo lưu mọi quyền.
           </p>
         </div>
       </div>
@@ -147,7 +144,7 @@ const Footer = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.15rem', fontWeight: 800 }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.15rem', fontWeight: 700 }}>
                 <ShieldIcon size={20} style={{ color: 'var(--blue)' }} />
                 {policyData.title}
               </h3>

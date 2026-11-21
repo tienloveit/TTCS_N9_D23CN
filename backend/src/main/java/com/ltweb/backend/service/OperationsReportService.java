@@ -8,7 +8,6 @@ import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentMethod;
-import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
 import com.ltweb.backend.exception.ErrorCode;
@@ -49,39 +48,30 @@ public class OperationsReportService {
     User currentUser = getCurrentUser();
     Long scopedBranchId = resolveScopedBranchId(currentUser, requestedBranchId);
 
-    List<Booking> branchBookings =
-        bookingRepository.findAll().stream()
-            .filter(booking -> scopedBranchId == null || isBookingInBranch(booking, scopedBranchId))
-            .toList();
     List<Booking> paidToday =
-        branchBookings.stream()
-            .filter(this::isPaidBooking)
-            .filter(booking -> isInRange(getPaymentDate(booking), start, end))
-            .toList();
-    List<Booking> pendingToday =
-        branchBookings.stream()
-            .filter(booking -> booking.getStatus() == BookingStatus.PENDING)
-            .filter(booking -> isInRange(booking.getCreatedAt(), start, end))
-            .toList();
+        bookingRepository.findPaidByPaymentDate(
+            start, end, LocalDateTime.now(clock), scopedBranchId, null, null, null);
+    long pendingToday =
+        bookingRepository.countByStatusCreatedBetween(
+            BookingStatus.PENDING, start, end, scopedBranchId);
     List<Booking> refundRequests =
-        branchBookings.stream()
-            .filter(booking -> booking.getStatus() == BookingStatus.REFUND_REQUESTED)
+        findByStatusInScope(BookingStatus.REFUND_REQUESTED, scopedBranchId).stream()
             .sorted(Comparator.comparing(this::getPaymentDate).reversed())
             .toList();
-    List<Booking> refundedToday =
-        branchBookings.stream()
-            .filter(booking -> booking.getStatus() == BookingStatus.REFUNDED)
-            .filter(booking -> isInRange(booking.getPayment().getRefundedAt(), start, end))
-            .toList();
+    BigDecimal refundedAmount = bookingRepository.sumRefundedAmount(start, end, scopedBranchId);
 
     List<Showtime> showtimesToday =
-        showtimeRepository.findAll().stream()
-            .filter(
-                showtime -> scopedBranchId == null || isShowtimeInBranch(showtime, scopedBranchId))
-            .filter(showtime -> isInRange(showtime.getStartTime(), start, end))
-            .toList();
-    long capacity = showtimesToday.stream().mapToLong(this::getShowtimeCapacity).sum();
-    long ticketsSoldByShowtimeDate = countTicketsForShowtimes(showtimesToday, branchBookings);
+        showtimeRepository.findStartingBetween(start, end, scopedBranchId);
+    Map<Long, Long> capacityByShowtime = countTicketsByShowtime(showtimesToday);
+    Map<Long, Long> soldByShowtime =
+        bookingRepository.findPaidByShowtimeStart(start, end, scopedBranchId).stream()
+            .collect(
+                Collectors.groupingBy(
+                    booking -> booking.getShowtime().getId(),
+                    Collectors.summingLong(this::getTicketCount)));
+    long capacity = capacityByShowtime.values().stream().mapToLong(Long::longValue).sum();
+    long ticketsSoldByShowtimeDate =
+        soldByShowtime.values().stream().mapToLong(Long::longValue).sum();
     return OperationsReportResponse.builder()
         .reportDate(date)
         .branchId(scopedBranchId)
@@ -91,9 +81,9 @@ public class OperationsReportService {
                 .revenue(sumBookingRevenue(paidToday))
                 .ticketRevenue(sumTicketRevenue(paidToday))
                 .foodRevenue(sumFoodRevenue(paidToday))
-                .refundedAmount(sumRefundAmount(refundedToday))
+                .refundedAmount(safeAmount(refundedAmount))
                 .completedBookings(paidToday.size())
-                .pendingBookings(pendingToday.size())
+                .pendingBookings(pendingToday)
                 .refundRequests(refundRequests.size())
                 .ticketsSold(countTickets(paidToday))
                 .showtimes(showtimesToday.size())
@@ -104,9 +94,31 @@ public class OperationsReportService {
         .refundQueue(refundRequests.stream().limit(20).map(this::toRefundQueueItem).toList())
         .showtimeLoads(
             showtimesToday.stream()
-                .map(showtime -> toShowtimeLoad(showtime, branchBookings))
+                .map(
+                    showtime ->
+                        toShowtimeLoad(
+                            showtime,
+                            capacityByShowtime.getOrDefault(showtime.getId(), 0L),
+                            soldByShowtime.getOrDefault(showtime.getId(), 0L)))
                 .toList())
         .build();
+  }
+
+  private List<Booking> findByStatusInScope(BookingStatus status, Long branchId) {
+    return branchId == null
+        ? bookingRepository.findByStatusIn(List.of(status))
+        : bookingRepository.findByBranchIdAndStatusIn(branchId, List.of(status));
+  }
+
+  /** Sức chứa của mỗi suất = số vé đã tạo cho suất, đếm gộp trong một truy vấn. */
+  private Map<Long, Long> countTicketsByShowtime(List<Showtime> showtimes) {
+    List<Long> showtimeIds =
+        showtimes.stream().map(Showtime::getId).filter(Objects::nonNull).toList();
+    if (showtimeIds.isEmpty()) {
+      return Map.of();
+    }
+    return ticketRepository.countGroupedByShowtimeIds(showtimeIds).stream()
+        .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
   }
 
   private List<OperationsReportResponse.PaymentBreakdown> buildPaymentBreakdown(
@@ -145,17 +157,7 @@ public class OperationsReportService {
   }
 
   private OperationsReportResponse.ShowtimeLoad toShowtimeLoad(
-      Showtime showtime, List<Booking> bookings) {
-    long capacity = getShowtimeCapacity(showtime);
-    long sold =
-        bookings.stream()
-            .filter(this::isPaidBooking)
-            .filter(
-                booking ->
-                    booking.getShowtime() != null
-                        && Objects.equals(booking.getShowtime().getId(), showtime.getId()))
-            .mapToLong(this::getTicketCount)
-            .sum();
+      Showtime showtime, long capacity, long sold) {
     return OperationsReportResponse.ShowtimeLoad.builder()
         .showtimeId(showtime.getId())
         .movieName(showtime.getMovie() == null ? "-" : showtime.getMovie().getMovieName())
@@ -190,25 +192,6 @@ public class OperationsReportService {
     return branchRepository.findById(branchId).map(branch -> branch.getName()).orElse(null);
   }
 
-  private boolean isPaidBooking(Booking booking) {
-    return booking.getStatus() == BookingStatus.COMPLETED
-        || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
-  }
-
-  private boolean isBookingInBranch(Booking booking, Long branchId) {
-    return booking.getShowtime() != null && isShowtimeInBranch(booking.getShowtime(), branchId);
-  }
-
-  private boolean isShowtimeInBranch(Showtime showtime, Long branchId) {
-    return showtime.getRoom() != null
-        && showtime.getRoom().getBranch() != null
-        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
-  }
-
-  private boolean isInRange(LocalDateTime value, LocalDateTime start, LocalDateTime end) {
-    return value != null && !value.isBefore(start) && value.isBefore(end);
-  }
-
   private LocalDateTime getPaymentDate(Booking booking) {
     if (booking.getPayment().getPaidAt() != null) {
       return booking.getPayment().getPaidAt();
@@ -216,19 +199,12 @@ public class OperationsReportService {
     if (booking.getUpdatedAt() != null) {
       return booking.getUpdatedAt();
     }
-    return Objects.requireNonNullElseGet(booking.getCreatedAt(), LocalDateTime::now);
+    return Objects.requireNonNullElseGet(booking.getCreatedAt(), () -> LocalDateTime.now(clock));
   }
 
   private BigDecimal sumBookingRevenue(List<Booking> bookings) {
     return bookings.stream()
         .map(Booking::getTotalAmount)
-        .map(this::safeAmount)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-  }
-
-  private BigDecimal sumRefundAmount(List<Booking> bookings) {
-    return bookings.stream()
-        .map(booking -> booking.getPayment().getRefundAmount())
         .map(this::safeAmount)
         .reduce(BigDecimal.ZERO, BigDecimal::add);
   }
@@ -249,26 +225,6 @@ public class OperationsReportService {
 
   private long countTickets(List<Booking> bookings) {
     return bookings.stream().mapToLong(this::getTicketCount).sum();
-  }
-
-  private long countTicketsForShowtimes(List<Showtime> showtimes, List<Booking> bookings) {
-    java.util.Set<Long> showtimeIds =
-        showtimes.stream().map(Showtime::getId).collect(Collectors.toSet());
-    return bookings.stream()
-        .filter(this::isPaidBooking)
-        .filter(
-            booking ->
-                booking.getShowtime() != null
-                    && showtimeIds.contains(booking.getShowtime().getId()))
-        .mapToLong(this::getTicketCount)
-        .sum();
-  }
-
-  private int getShowtimeCapacity(Showtime showtime) {
-    if (showtime == null || showtime.getId() == null) {
-      return 0;
-    }
-    return ticketRepository.countByShowtimeId(showtime.getId());
   }
 
   private long getTicketCount(Booking booking) {

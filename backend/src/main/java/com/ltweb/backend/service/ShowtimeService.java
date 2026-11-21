@@ -289,13 +289,8 @@ public class ShowtimeService {
   @Transactional
   public void autoCloseExpiredShowtimes() {
     List<Showtime> expired =
-        showtimeRepository.findAll().stream()
-            .filter(
-                s ->
-                    s.getStatus() == ShowtimeStatus.OPEN
-                        && s.getEndTime() != null
-                        && s.getEndTime().isBefore(LocalDateTime.now(clock)))
-            .toList();
+        showtimeRepository.findByStatusAndEndTimeBefore(
+            ShowtimeStatus.OPEN, LocalDateTime.now(clock));
     if (!expired.isEmpty()) {
       expired.forEach(s -> s.setStatus(ShowtimeStatus.CLOSED));
       showtimeRepository.saveAll(expired);

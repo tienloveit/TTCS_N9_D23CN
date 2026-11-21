@@ -1,0 +1,32 @@
+flowchart LR
+    subgraph Client["Trình duyệt"]
+        SPA["SPA React 19<br/>Vite, React Router"]
+    end
+
+    subgraph Server["Backend Spring Boot 3.4 (:8081/api)"]
+        REST["REST controller"]
+        WS["STOMP broker<br/>/ws, /topic"]
+        SVC["Service, policy,<br/>transaction"]
+        JOB["Scheduled job"]
+    end
+
+    DB[("MySQL 8<br/>schema cinema")]
+    R[("Redis<br/>JWT, OTP, giữ ghế")]
+    VNP["VNPay sandbox"]
+    GG["Google OAuth2"]
+    SMTP["Gmail SMTP"]
+
+    SPA -- "HTTPS JSON, Bearer JWT" --> REST
+    SPA <-- "SockJS + STOMP" --> WS
+    REST --> SVC
+    JOB --> SVC
+    SVC -- "JPA, JDBC" --> DB
+    SVC -- "Lua, SET NX" --> R
+    SVC -- "Phát trạng thái ghế" --> WS
+    SPA -- "Chuyển trang thanh toán" --> VNP
+    VNP -- "IPN" --> REST
+    VNP -- "Return URL" --> SPA
+    SVC -- "querydr, refund" --> VNP
+    SPA -- "Đăng nhập Google" --> GG
+    GG -- "Callback code" --> REST
+    SVC -- "OTP, vé QR" --> SMTP

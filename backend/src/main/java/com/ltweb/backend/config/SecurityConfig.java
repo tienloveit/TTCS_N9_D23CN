@@ -14,11 +14,16 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -34,6 +39,7 @@ public class SecurityConfig {
     "/sign-up",
     "/auth/login",
     "/auth/refresh",
+    "/auth/logout",
     "/v1/vnpay/return",
     "/v1/vnpay/ipn",
     "/auth/forgot-password",
@@ -50,6 +56,9 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    JwtAuthenticationProvider jwtProvider = new JwtAuthenticationProvider(jwtDecoderConfig);
+    jwtProvider.setJwtAuthenticationConverter(jwtAuthenticationConverter());
+
     http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(
@@ -89,16 +98,17 @@ public class SecurityConfig {
                     .successHandler(oAuth2LoginSuccessHandler)
                     .failureHandler(oAuth2LoginFailureHandler))
         .exceptionHandling(
-            (exception) -> exception.authenticationEntryPoint(authenticationEntryPoint))
-        .oauth2ResourceServer(
-            (oauth2) ->
-                oauth2
+            (exception) ->
+                exception
                     .authenticationEntryPoint(authenticationEntryPoint)
-                    .jwt(
-                        jwtConfigurer ->
-                            jwtConfigurer
-                                .decoder(jwtDecoderConfig)
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                    .defaultAccessDeniedHandlerFor(
+                        new BearerTokenAccessDeniedHandler(),
+                        request ->
+                            SecurityContextHolder.getContext().getAuthentication()
+                                instanceof JwtAuthenticationToken))
+        .addFilterAt(
+            new JwtAuthenticationFilter(jwtProvider, authenticationEntryPoint),
+            BearerTokenAuthenticationFilter.class);
     return http.build();
   }
 

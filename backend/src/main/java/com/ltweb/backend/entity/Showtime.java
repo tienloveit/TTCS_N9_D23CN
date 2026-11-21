@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,7 +22,16 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "showtimes")
+@Table(
+    name = "showtimes",
+    indexes = {
+      @jakarta.persistence.Index(
+          name = "idx_showtimes_room_start",
+          columnList = "room_id, start_time"),
+      @jakarta.persistence.Index(
+          name = "idx_showtimes_movie_start",
+          columnList = "movie_id, start_time")
+    })
 @org.hibernate.annotations.Check(constraints = "end_time > start_time")
 @Getter
 @Setter
@@ -34,15 +44,15 @@ public class Showtime {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "ticket_price", nullable = false, precision = 38, scale = 2)
+  @Column(name = "ticket_price", nullable = false, precision = 15, scale = 2)
   @Builder.Default
   private BigDecimal ticketPrice = new BigDecimal("75000");
 
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "room_id", nullable = false)
   private Room room;
 
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "movie_id", nullable = false)
   private Movie movie;
 

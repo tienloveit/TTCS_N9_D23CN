@@ -70,7 +70,13 @@ class BookingTicketLimitTest {
     @SuppressWarnings("unchecked")
     Fixture(boolean atCounter) {
       this.atCounter = atCounter;
-      User customer = User.builder().id(1L).username("customer").role(UserRole.USER).build();
+      User customer =
+          User.builder()
+              .id(1L)
+              .username("customer")
+              .role(UserRole.USER)
+              .status(com.ltweb.backend.enums.UserStatus.ACTIVE)
+              .build();
       User operator =
           atCounter
               ? User.builder().id(2L).username("staff").role(UserRole.STAFF).branchId(1L).build()
@@ -170,6 +176,7 @@ class BookingTicketLimitTest {
         request.setShowtimeId(1L);
         request.setSeatIds(seatIds);
         request.setCustomerEmail("customer@example.test");
+        request.setConfirmedCustomerId(1L);
         return service.createStaffBooking(request);
       }
       CreateBookingRequest request = new CreateBookingRequest();

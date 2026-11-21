@@ -1,0 +1,7 @@
+stateDiagram-v2
+    [*] --> PENDING: Tạo đơn
+    [*] --> PAID: Đơn quầy tiền mặt
+    PENDING --> PAID: VNPay thành công
+    PENDING --> CANCELLED: Đơn bị hủy hoặc hết hạn
+    CANCELLED --> PAID: VNPay thành công sau khi đơn đã hủy
+    PAID --> REFUNDED: Hoàn tiền xác nhận

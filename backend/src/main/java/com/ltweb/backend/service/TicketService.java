@@ -13,6 +13,7 @@ import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.AuditAction;
 import com.ltweb.backend.enums.BookingStatus;
 import com.ltweb.backend.enums.PaymentStatus;
+import com.ltweb.backend.enums.ShowtimeStatus;
 import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.exception.AppException;
@@ -38,6 +39,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class TicketService {
+  /** Mở soát vé trước giờ chiếu bao nhiêu phút. */
+  public static final int CHECK_IN_OPENS_MINUTES_BEFORE = 60;
+
   private final CurrentUserProvider currentUserProvider;
   private final java.time.Clock clock;
 
@@ -130,6 +134,8 @@ public class TicketService {
     return ticketMapper.toTicketResponse(ticket);
   }
 
+  // Phản hồi đọc checkedInBy (lazy): map trong transaction vì Open Session in View đã tắt.
+  @Transactional
   public TicketResponse updateTicket(Long ticketId, UpdateTicketRequest request) {
     Ticket ticket = getTicket(ticketId);
 
@@ -222,6 +228,7 @@ public class TicketService {
     return checkIn(request);
   }
 
+  @Transactional
   public void deleteTicket(Long ticketId) {
     Ticket ticket = getTicket(ticketId);
     ticketRepository.delete(ticket);
@@ -327,21 +334,22 @@ public class TicketService {
     return currentUserProvider.getOrNull();
   }
 
+  /**
+   * Chỉ nhận chuỗi QR đầy đủ (khớp đúng QR đã cấp) hoặc mã đơn. Không nhận số ID vé trơn: ID tăng
+   * dần nên gõ nhầm một chữ số sẽ soát mất vé của khách khác cùng chi nhánh.
+   */
   private Optional<Ticket> findTicketByCheckInCode(String code) {
+    if (code.matches("\\d+")) {
+      throw new AppException(ErrorCode.CHECKIN_CODE_NOT_ACCEPTED);
+    }
     Long ticketId = extractTicketId(code);
     if (ticketId != null) {
-      return ticketRepository
-          .findById(ticketId)
-          .filter(ticket -> code.matches("\\d+") || code.equals(ticket.getQrCode()));
+      return ticketRepository.findById(ticketId).filter(ticket -> code.equals(ticket.getQrCode()));
     }
     return ticketRepository.findByQrCode(code);
   }
 
   private Long extractTicketId(String code) {
-    if (code.matches("\\d+")) {
-      return Long.valueOf(code);
-    }
-
     String[] parts = code.split("\\|");
     for (String part : parts) {
       if (part.startsWith("TICKET=")) {
@@ -365,9 +373,34 @@ public class TicketService {
     }
 
     if (ticket.getCheckedInAt() == null) {
+      // Quét lại vé đã soát vẫn trả thông tin lần đầu; chỉ lần soát mới phải đúng khung giờ.
+      requireCheckInWindow(
+          ticket.getShowtime() != null ? ticket.getShowtime() : booking.getShowtime());
       ticket.setCheckedInBy(getUserCurrent());
       ticket.setCheckedInAt(LocalDateTime.now(clock));
       ticketRepository.save(ticket);
+    }
+  }
+
+  /**
+   * Vé chỉ dùng được cho đúng suất: mở soát {@link #CHECK_IN_OPENS_MINUTES_BEFORE} phút trước giờ
+   * chiếu, đóng khi suất kết thúc, và không soát cho suất đã hủy. Khi đổi số phút, sửa cả thông báo
+   * của {@link ErrorCode#CHECKIN_TOO_EARLY}.
+   */
+  private void requireCheckInWindow(Showtime showtime) {
+    if (showtime == null) {
+      throw new AppException(ErrorCode.INVALID_TICKET_CHECKIN);
+    }
+    if (showtime.getStatus() == ShowtimeStatus.CANCELLED) {
+      throw new AppException(ErrorCode.CHECKIN_SHOWTIME_CANCELLED);
+    }
+    LocalDateTime now = LocalDateTime.now(clock);
+    if (showtime.getStartTime() != null
+        && now.isBefore(showtime.getStartTime().minusMinutes(CHECK_IN_OPENS_MINUTES_BEFORE))) {
+      throw new AppException(ErrorCode.CHECKIN_TOO_EARLY);
+    }
+    if (showtime.getEndTime() != null && now.isAfter(showtime.getEndTime())) {
+      throw new AppException(ErrorCode.CHECKIN_SHOWTIME_ENDED);
     }
   }
 

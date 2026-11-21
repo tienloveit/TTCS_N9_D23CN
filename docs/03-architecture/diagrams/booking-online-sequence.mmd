@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor K as Khách
+    participant FE as Frontend
+    participant BE as Backend
+    participant DB as MySQL
+    participant R as Redis
+    participant V as VNPay
+    K->>FE: Chọn ghế, bắp nước
+    FE->>BE: POST /booking
+    BE->>DB: SELECT ... FOR UPDATE các ticket
+    BE->>R: SET NX seat_hold:{suất}:{ghế} = mã đơn, TTL 6 phút
+    BE->>DB: Lưu Booking PENDING, Payment PENDING, ticket HOLDING
+    BE-->>FE: BookingResponse (expiresAt)
+    BE-)FE: Sau commit, STOMP: ghế HOLDING
+    FE->>BE: POST /v1/vnpay/payment-url
+    BE-->>FE: paymentUrl có chữ ký
+    FE->>V: Chuyển trang thanh toán
+    V-)BE: GET /v1/vnpay/ipn
+    V->>FE: Chuyển về /payment/vnpay-return
+    FE->>BE: GET /v1/vnpay/return
+    BE->>DB: Booking COMPLETED, Payment PAID, ticket BOOKED + QR
+    BE-)FE: Sau commit, STOMP: ghế BOOKED, gửi email vé

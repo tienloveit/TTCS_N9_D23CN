@@ -7,8 +7,6 @@ import com.ltweb.backend.entity.BookingFood;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
-import com.ltweb.backend.enums.BookingStatus;
-import com.ltweb.backend.enums.PaymentStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
@@ -61,32 +59,19 @@ public class AdminAnalyticsService {
     User currentUser = getCurrentUser();
     Long scopedBranchId =
         currentUser.getRole() == UserRole.MANAGER ? requireManagedBranch(currentUser) : null;
-    List<Booking> bookings =
-        bookingRepository.findAll().stream()
-            .filter(booking -> scopedBranchId == null || isBookingInBranch(booking, scopedBranchId))
-            .toList();
-    List<Showtime> showtimes =
-        showtimeRepository.findAll().stream()
-            .filter(
-                showtime -> scopedBranchId == null || isShowtimeInBranch(showtime, scopedBranchId))
-            .toList();
-    List<Booking> paidBookings = bookings.stream().filter(this::isPaidBooking).toList();
     List<Booking> paidBookingsByPaymentDate =
-        paidBookings.stream()
-            .filter(booking -> isInRange(getPaymentDate(booking), startInclusive, endExclusive))
-            .toList();
+        bookingRepository.findPaidByPaymentDate(
+            startInclusive,
+            endExclusive,
+            LocalDateTime.now(clock),
+            scopedBranchId,
+            null,
+            null,
+            null);
     List<Booking> paidBookingsByShowtimeDate =
-        paidBookings.stream()
-            .filter(
-                booking ->
-                    booking.getShowtime() != null
-                        && isInRange(
-                            booking.getShowtime().getStartTime(), startInclusive, endExclusive))
-            .toList();
+        bookingRepository.findPaidByShowtimeStart(startInclusive, endExclusive, scopedBranchId);
     List<Showtime> showtimesInRange =
-        showtimes.stream()
-            .filter(showtime -> isInRange(showtime.getStartTime(), startInclusive, endExclusive))
-            .toList();
+        showtimeRepository.findStartingBetween(startInclusive, endExclusive, scopedBranchId);
 
     BigDecimal ticketRevenue = sumTicketRevenue(paidBookingsByPaymentDate);
     BigDecimal foodRevenue = sumFoodRevenue(paidBookingsByPaymentDate);
@@ -96,12 +81,7 @@ public class AdminAnalyticsService {
     long occupiedSeats = countTickets(paidBookingsByShowtimeDate);
 
     List<BookingResponse> recentBookings =
-        bookings.stream()
-            .sorted(
-                Comparator.comparing(
-                        Booking::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
-                    .reversed())
-            .limit(RECENT_BOOKING_LIMIT)
+        bookingRepository.findRecent(scopedBranchId, null, RECENT_BOOKING_LIMIT).stream()
             .map(bookingMapper::toBookingResponse)
             .toList();
 
@@ -281,21 +261,6 @@ public class AdminAnalyticsService {
         .toList();
   }
 
-  private boolean isPaidBooking(Booking booking) {
-    return booking.getStatus() == BookingStatus.COMPLETED
-        || booking.getPayment().getPaymentStatus() == PaymentStatus.PAID;
-  }
-
-  private boolean isBookingInBranch(Booking booking, Long branchId) {
-    return booking.getShowtime() != null && isShowtimeInBranch(booking.getShowtime(), branchId);
-  }
-
-  private boolean isShowtimeInBranch(Showtime showtime, Long branchId) {
-    return showtime.getRoom() != null
-        && showtime.getRoom().getBranch() != null
-        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId);
-  }
-
   private Long requireManagedBranch(User user) {
     if (user.getBranchId() == null) {
       throw new AccessDeniedException("Manager is not assigned to a branch");
@@ -319,12 +284,7 @@ public class AdminAnalyticsService {
     if (booking.getUpdatedAt() != null) {
       return booking.getUpdatedAt();
     }
-    return Objects.requireNonNullElseGet(booking.getCreatedAt(), LocalDateTime::now);
-  }
-
-  private boolean isInRange(
-      LocalDateTime value, LocalDateTime startInclusive, LocalDateTime endExclusive) {
-    return value != null && !value.isBefore(startInclusive) && value.isBefore(endExclusive);
+    return Objects.requireNonNullElseGet(booking.getCreatedAt(), () -> LocalDateTime.now(clock));
   }
 
   private BigDecimal sumBookingRevenue(List<Booking> bookings) {

@@ -1,0 +1,7 @@
+stateDiagram-v2
+    [*] --> AVAILABLE: Tạo suất chiếu
+    AVAILABLE --> HOLDING: Đơn chờ thanh toán giữ ghế
+    AVAILABLE --> BOOKED: Đơn quầy tiền mặt
+    HOLDING --> BOOKED: Thanh toán thành công
+    HOLDING --> AVAILABLE: Đơn bị hủy, hết hạn, thanh toán thất bại
+    BOOKED --> AVAILABLE: Hoàn tiền thành công

@@ -21,6 +21,7 @@ import {
 } from '../../components/Common/CinemaIcons';
 import { SkeletonBox } from '../../components/Common/Skeleton';
 import './AdminDashboard.css';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const emptyAnalytics = {
   summary: {
@@ -50,7 +51,7 @@ const formatCurrency = (amount) =>
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 
 const formatDate = (value) =>
-  value ? new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '-';
+  formatCinema(value, { day: '2-digit', month: '2-digit' }, '-');
 
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
 
@@ -369,7 +370,7 @@ const AdminDashboard = () => {
           <div className="dashboard-panel-heading">
             <h2 id="dashboard-food">Doanh số bắp nước</h2>
             <Link to={`${basePath}/foods`} className="dashboard-link">
-              Quản lý F&B <ArrowRightIcon size={14} aria-hidden="true" />
+              Quản lý bắp nước <ArrowRightIcon size={14} aria-hidden="true" />
             </Link>
           </div>
           {loading ? (

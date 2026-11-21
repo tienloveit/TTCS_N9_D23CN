@@ -114,6 +114,16 @@ public class JwtService {
     return true;
   }
 
+  /**
+   * Ends the refresh session the token was issued for. Possession of the token is the proof of
+   * ownership: the compare-and-delete only removes a session stored for the token's own subject.
+   */
+  public void revokeRefreshToken(String token) {
+    JWTClaimsSet claims = validate(token, REFRESH);
+    redis.execute(
+        CONSUME_REFRESH, List.of(ACTIVE_REFRESH_PREFIX + claims.getJWTID()), claims.getSubject());
+  }
+
   public void revokeAccessToken(String token) {
     JwtInfo info = parseToken(token);
     Duration remaining = Duration.between(Instant.now(clock), info.getExpiresTime().toInstant());
