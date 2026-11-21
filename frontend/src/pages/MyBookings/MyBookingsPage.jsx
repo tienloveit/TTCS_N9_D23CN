@@ -18,24 +18,63 @@ import TicketPassModal from './TicketPassModal';
 import RefundDialog from './RefundDialog';
 import { ConfirmDialog } from './Dialogs';
 import { dismissBookingChange, recordBookingChanges } from './bookingChanges';
-import { getBookingPhase, getShowStart, parseLocalDateTime } from './bookingFormat';
+import { getBookingPhase, getShowStart } from './bookingFormat';
 import './MyBookingsPage.css';
 
-const FILTERS = [
-  { key: 'all', label: 'Tất cả trạng thái' },
-  { key: 'upcoming', label: 'Sắp chiếu', phases: ['upcoming'] },
-  { key: 'pending', label: 'Chờ thanh toán', phases: ['pending'] },
-  { key: 'in_progress', label: 'Đang chiếu', phases: ['in_progress'] },
-  { key: 'watched', label: 'Đã chiếu / Đã check-in', phases: ['watched', 'checked_in'] },
-  { key: 'closed', label: 'Hủy, hết hạn và hoàn tiền', phases: ['refund_requested', 'refunded', 'cancelled', 'expired'] },
+// Nhóm theo việc khách cần làm: vé còn dùng được, vé đã dùng, tiền đang/đã hoàn, đơn không còn hiệu lực.
+const TABS = [
+  {
+    key: 'upcoming',
+    label: 'Sắp tới',
+    phases: ['pending', 'upcoming', 'in_progress', 'paid'],
+    empty: { title: 'Bạn chưa có suất chiếu nào sắp tới', detail: 'Vé đã thanh toán và đơn đang chờ thanh toán sẽ hiện ở đây.' },
+  },
+  {
+    key: 'watched',
+    label: 'Đã xem',
+    phases: ['watched', 'checked_in'],
+    empty: { title: 'Chưa có suất nào đã chiếu', detail: 'Vé sẽ chuyển sang đây sau khi suất chiếu kết thúc.' },
+  },
+  {
+    key: 'refund',
+    label: 'Hoàn tiền',
+    phases: ['refund_requested', 'refunded'],
+    empty: { title: 'Bạn chưa yêu cầu hoàn tiền đơn nào', detail: 'Yêu cầu đang chờ duyệt và đơn đã hoàn tiền sẽ hiện ở đây.' },
+  },
+  {
+    key: 'cancelled',
+    label: 'Đã hủy',
+    phases: ['cancelled', 'expired'],
+    empty: { title: 'Không có đơn nào bị hủy', detail: 'Đơn bạn hủy hoặc hết giờ thanh toán sẽ hiện ở đây.' },
+  },
+  { key: 'all', label: 'Tất cả', empty: { title: 'Chưa có đơn nào', detail: '' } },
 ];
 
 const PAGE_SIZE = 6;
 
-const createdTime = (b) => parseLocalDateTime(b.createdAt)?.getTime() || 0;
 const showTime = (b) => getShowStart(b)?.getTime() || 0;
-const byNewest = (a, b) => createdTime(b.booking) - createdTime(a.booking);
+// Vé sắp tới: suất gần nhất lên đầu. Lịch sử: suất mới chiếu gần đây lên đầu.
 const bySoonest = (a, b) => showTime(a.booking) - showTime(b.booking);
+const byLatestShow = (a, b) => showTime(b.booking) - showTime(a.booking);
+const pendingFirst = (a, b) => Number(b.phase === 'pending') - Number(a.phase === 'pending');
+
+// Tab Tất cả: việc cần làm lên trước, đơn không còn hiệu lực xuống cuối.
+const PHASE_RANK = {
+  pending: 0,
+  upcoming: 1,
+  in_progress: 1,
+  paid: 1,
+  refund_requested: 2,
+  watched: 3,
+  checked_in: 3,
+  refunded: 3,
+  cancelled: 4,
+  expired: 4,
+  other: 4,
+};
+const byRank = (a, b) => (PHASE_RANK[a.phase] ?? 4) - (PHASE_RANK[b.phase] ?? 4);
+const byRankThenShow = (a, b) => byRank(a, b)
+  || (PHASE_RANK[a.phase] === 1 ? bySoonest(a, b) : byLatestShow(a, b));
 
 const getErrorMessage = (err) => err?.response?.data?.message || err?.message || 'Đã có lỗi xảy ra';
 
@@ -63,7 +102,8 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
-  const [filter, setFilter] = useState('all');
+  // null = chưa chọn: mặc định vào "Sắp tới" nếu có vé còn dùng được.
+  const [filter, setFilter] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [now, setNow] = useState(() => Date.now());
@@ -113,19 +153,31 @@ export default function MyBookingsPage() {
   })), [bookings]);
 
   const query = normalizeSearch(search);
+  const withPhase = useMemo(
+    () => searchableBookings.map((item) => ({ ...item, phase: getBookingPhase(item.booking, now) })),
+    [searchableBookings, now],
+  );
+  const tabCounts = useMemo(() => Object.fromEntries(TABS.map((tab) => [
+    tab.key,
+    tab.phases ? withPhase.filter((item) => tab.phases.includes(item.phase)).length : withPhase.length,
+  ])), [withPhase]);
+  const activeTab = filter ?? (tabCounts.upcoming > 0 ? 'upcoming' : 'all');
+  const tab = TABS.find((item) => item.key === activeTab);
+
   const { nextBooking, upcomingCount, results } = useMemo(() => {
-    const withPhase = searchableBookings.map((item) => ({ ...item, phase: getBookingPhase(item.booking, now) }));
     const upcoming = withPhase.filter((item) => item.phase === 'upcoming').sort(bySoonest);
-    const phases = FILTERS.find((item) => item.key === filter)?.phases;
     const terms = query.split(/\s+/);
+    const showFeatured = !query && (activeTab === 'upcoming' || activeTab === 'all') ? upcoming[0] : null;
     const results = withPhase.filter((item) => (
-      (!phases || phases.includes(item.phase)) &&
+      item !== showFeatured &&
+      (!tab.phases || tab.phases.includes(item.phase)) &&
       terms.every((term) => item.searchText.includes(term))
     ));
-    const pendingFirst = (a, b) => Number(b.phase === 'pending') - Number(a.phase === 'pending');
-    results.sort(filter === 'upcoming' ? bySoonest : (a, b) => pendingFirst(a, b) || byNewest(a, b));
-    return { nextBooking: upcoming[0], upcomingCount: upcoming.length, results };
-  }, [searchableBookings, now, filter, query]);
+    results.sort(activeTab === 'upcoming'
+      ? (a, b) => pendingFirst(a, b) || bySoonest(a, b)
+      : activeTab === 'all' ? byRankThenShow : byLatestShow);
+    return { nextBooking: showFeatured, upcomingCount: upcoming.length, results };
+  }, [withPhase, activeTab, tab, query]);
 
   const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -232,10 +284,12 @@ export default function MyBookingsPage() {
           <div>
             <h1 id="mt-page-title" className="mt-heading" tabIndex={-1}>Vé của tôi</h1>
             {!loadError && bookings.length > 0 && (
-              <p className="mt-subheading">{bookings.length} đơn đặt vé{upcomingCount > 0 && ` · ${upcomingCount} đơn sắp chiếu`}</p>
+              <p className="mt-subheading">
+                {upcomingCount > 0 ? `${upcomingCount} suất sắp chiếu, ` : ''}{bookings.length} đơn đặt vé
+              </p>
             )}
           </div>
-          <Link to="/movies" className="mt-btn mt-btn--primary"><PlusIcon size={17} />Đặt vé mới</Link>
+          <Link to="/movies?status=NOW_SHOWING" className="mt-btn mt-btn--primary"><PlusIcon size={17} />Đặt vé mới</Link>
         </header>
 
         {loading && bookings.length === 0 ? (
@@ -254,7 +308,7 @@ export default function MyBookingsPage() {
             <div>
               <TicketIcon size={30} />
               <h2>Bạn chưa có vé nào</h2>
-              <p>Sau khi đặt vé, bạn có thể mở mã QR tại đây để vào rạp.</p>
+              <p>Sau khi thanh toán, vé và mã QR vào rạp sẽ nằm ở đây.</p>
               <Link to="/movies?status=NOW_SHOWING" className="mt-btn mt-btn--light">Xem phim đang chiếu <ArrowRightIcon size={17} /></Link>
             </div>
           </section>
@@ -268,10 +322,26 @@ export default function MyBookingsPage() {
 
             <section className="mt-section" aria-labelledby="mt-results-title">
               <div className="mt-section-header">
-                <h2 id="mt-results-title" ref={resultsHeading} tabIndex={-1}>Lịch sử đặt vé</h2>
+                <h2 id="mt-results-title" ref={resultsHeading} tabIndex={-1}>
+                  {activeTab === 'upcoming' && nextBooking ? 'Các vé khác' : 'Đơn đặt vé'}
+                </h2>
                 <span className="mt-results" role="status">
-                  {results.length > 0 ? `${offset + 1}–${offset + visibleResults.length} / ${results.length} đơn` : '0 đơn'}
+                  {results.length > 0 ? `${offset + 1}–${offset + visibleResults.length} / ${results.length} đơn` : ''}
                 </span>
+              </div>
+              <div className="mt-tabs" role="group" aria-label="Lọc đơn theo tình trạng">
+                {TABS.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className="mt-tab"
+                    aria-pressed={activeTab === item.key}
+                    onClick={() => updateFilter(item.key)}
+                  >
+                    {item.label}
+                    <span className="mt-tab-count">{tabCounts[item.key]}</span>
+                  </button>
+                ))}
               </div>
               <div className="mt-tools" role="group" aria-label="Tìm và lọc đơn đặt vé">
                 <div className="mt-field-control">
@@ -287,28 +357,32 @@ export default function MyBookingsPage() {
                     )}
                   </div>
                 </div>
-                <div className="mt-field-control">
-                  <label htmlFor="mt-filter">Trạng thái</label>
-                  <select id="mt-filter" value={filter} onChange={(event) => updateFilter(event.target.value)}>
-                    {FILTERS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-                  </select>
-                </div>
                 <button type="button" className="mt-btn mt-btn--outline mt-refresh" aria-disabled={loading} onClick={reload}>
-                  <RefreshIcon size={17} />{loading ? 'Đang cập nhật…' : 'Cập nhật vé'}
+                  <RefreshIcon size={17} />{loading ? 'Đang tải lại…' : 'Tải lại'}
                 </button>
               </div>
-              {results.length === 0 ? (
+              {results.length === 0 && query ? (
                 <div className="mt-state">
                   <span className="mt-state-icon"><SearchIcon size={25} /></span>
-                  <h3>Không tìm thấy đơn phù hợp</h3>
-                  <p>Thử từ khóa khác hoặc chọn trạng thái khác.</p>
+                  <h3>Không có đơn nào khớp với “{search.trim()}”</h3>
+                  <p>Thử tên phim, mã đơn hoặc tên rạp khác{activeTab !== 'all' ? ', hoặc tìm trong tab Tất cả' : ''}.</p>
                   <button type="button" className="mt-btn mt-btn--outline" onClick={() => {
-                    updateFilter('all');
                     updateSearch('');
                     document.getElementById('mt-search')?.focus();
-                  }}>Xóa bộ lọc</button>
+                  }}>Xóa tìm kiếm</button>
                 </div>
-              ) : (
+              ) : results.length === 0 && !(activeTab === 'upcoming' && nextBooking) ? (
+                <div className="mt-state">
+                  <span className="mt-state-icon"><TicketIcon size={25} /></span>
+                  <h3>{tab.empty.title}</h3>
+                  {tab.empty.detail && <p>{tab.empty.detail}</p>}
+                  {activeTab === 'upcoming' ? (
+                    <Link to="/movies?status=NOW_SHOWING" className="mt-btn mt-btn--primary">Xem phim đang chiếu</Link>
+                  ) : (
+                    <button type="button" className="mt-btn mt-btn--outline" onClick={() => updateFilter('all')}>Xem tất cả đơn</button>
+                  )}
+                </div>
+              ) : results.length === 0 ? null : (
                 <div className="mt-list">{visibleResults.map((item) => renderBooking(item))}</div>
               )}
               {pageCount > 1 && (

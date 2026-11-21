@@ -20,7 +20,7 @@ import {
   XIcon,
 } from '../../components/Common/CinemaIcons';
 import { formatScreening } from '../../utils/cinemaFormats';
-import { buildUpcomingDays, formatRoomType, formatTime, getAgeBadgeTone, getCinemaLocalNow, parseLocalDateTime } from './branchUtils';
+import { buildUpcomingDays, formatTime, getAgeBadgeTone, getAgeRatingLabel, getCinemaLocalNow, parseLocalDateTime } from './branchUtils';
 
 const DAYS_PER_WEEK = 7;
 
@@ -55,8 +55,8 @@ export function BranchMessage({ icon = <CalendarIcon size={23} />, title, detail
   );
 }
 
-export function BranchSpotlight({ branch, showDetails }) {
-  const Heading = showDetails ? 'h2' : 'h1';
+export function BranchSpotlight({ branch, headingLevel = 'h2' }) {
+  const Heading = headingLevel;
   const address = [branch.address, branch.city].filter(Boolean).join(', ');
   const mapQuery = encodeURIComponent([branch.name, address].filter(Boolean).join(', '));
 
@@ -74,13 +74,9 @@ export function BranchSpotlight({ branch, showDetails }) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Chỉ đường <ExternalLinkIcon size={15} />
+          Chỉ đường <ExternalLinkIcon size={15} aria-hidden="true" />
+          <span className="sr-only">(mở Google Maps trong tab mới)</span>
         </a>
-        {showDetails && (
-          <Link to={`/branch/${branch.branchId}`} className="br-btn br-btn--accent">
-            Chi tiết rạp <ArrowRightIcon size={16} />
-          </Link>
-        )}
       </div>
     </section>
   );
@@ -137,11 +133,15 @@ export function BranchSchedule({ branchId, emptyLink, emptyLinkLabel }) {
   const request = useMemo(() => ({ branchId, iso, attempt }), [branchId, iso, attempt]);
   const loading = result?.request !== request;
   const error = !loading && result.error;
-  const movies = loading ? [] : result.movies || [];
+  const movies = useMemo(() => (loading ? [] : result?.movies || []), [loading, result]);
+  const { upcomingMovies, pastSlotCount } = useMemo(
+    () => splitPastShowtimes(movies, parseLocalDateTime(now)),
+    [movies, now],
+  );
   const query = search.trim().toLowerCase();
-  const visibleMovies = movies.filter((movie) => !query || movie.movieName?.toLowerCase().includes(query));
-  const slotCount = visibleMovies.reduce((total, movie) => total + (movie.showtimes?.length || 0), 0);
-  const cinemaTime = parseLocalDateTime(now);
+  const visibleMovies = upcomingMovies.filter((movie) => !query || movie.movieName?.toLowerCase().includes(query));
+  const slotCount = visibleMovies.reduce((total, movie) => total + movie.showtimes.length, 0);
+  const isLastDay = dayIndex === days.length - 1;
 
   useEffect(() => {
     let ignore = false;
@@ -164,6 +164,11 @@ export function BranchSchedule({ branchId, emptyLink, emptyLinkLabel }) {
     setCalendar((current) => ({ week: Math.max(0, current.week + step), dayIndex: 0 }));
   }
 
+  function showNextDay() {
+    if (isLastDay) changeWeek(1);
+    else setCalendar({ week, dayIndex: dayIndex + 1 });
+  }
+
   return (
     <section className="br-schedule" aria-labelledby="br-schedule-heading">
       <div className="br-schedule-bar">
@@ -177,9 +182,14 @@ export function BranchSchedule({ branchId, emptyLink, emptyLinkLabel }) {
         <div className="br-schedule-meta">
           <div className="br-summary" role="status">
             <strong>{day.fullLabel}</strong>
-            {!loading && !error && <span>{visibleMovies.length} phim · {slotCount} suất chiếu</span>}
+            {!loading && !error && upcomingMovies.length > 0 && (
+              <span>{visibleMovies.length} phim, {slotCount} suất còn đặt được</span>
+            )}
+            {!loading && !error && pastSlotCount > 0 && upcomingMovies.length > 0 && (
+              <span className="br-summary-note">Đã ẩn {pastSlotCount} suất đã bắt đầu.</span>
+            )}
           </div>
-          {(movies.length > 1 || search) && (
+          {(upcomingMovies.length > 1 || search) && (
             <div className="br-search br-movie-search">
               <SearchIcon size={16} />
               <input type="text" aria-label="Tìm phim trong lịch chiếu" placeholder="Tìm phim…" value={search} onChange={(event) => setSearch(event.target.value)} />
@@ -196,23 +206,49 @@ export function BranchSchedule({ branchId, emptyLink, emptyLinkLabel }) {
       ) : error ? (
         <BranchMessage title="Không tải được lịch chiếu" detail="Hãy thử tải lại lịch chiếu của ngày đã chọn." error onRetry={() => setAttempt((current) => current + 1)} />
       ) : movies.length === 0 ? (
-        <BranchMessage title="Chưa có suất chiếu cho ngày này" detail="Bạn có thể chọn ngày khác trên thanh lịch.">
+        <BranchMessage title="Rạp chưa có suất chiếu ngày này" detail="Chọn ngày khác trên thanh lịch, hoặc xem phim đang chiếu ở rạp khác.">
           <Link to={emptyLink} className="br-btn">{emptyLinkLabel}<ArrowRightIcon size={16} /></Link>
         </BranchMessage>
+      ) : upcomingMovies.length === 0 ? (
+        <BranchMessage
+          icon={<ClockIcon size={23} />}
+          title="Các suất chiếu ngày này đã bắt đầu hoặc đã chiếu xong"
+          detail="Xem lịch ngày tiếp theo để đặt vé."
+        >
+          <button type="button" className="br-btn br-btn--accent" onClick={showNextDay}>
+            Xem ngày tiếp theo <ArrowRightIcon size={16} />
+          </button>
+        </BranchMessage>
       ) : visibleMovies.length === 0 ? (
-        <BranchMessage icon={<SearchIcon size={23} />} title="Không tìm thấy phim phù hợp" detail="Bạn có thể thử từ khóa khác hoặc xóa bộ lọc.">
-          <button type="button" className="br-btn" onClick={() => setSearch('')}>Xóa bộ lọc phim</button>
+        <BranchMessage icon={<SearchIcon size={23} />} title={`Không có phim nào khớp với “${search.trim()}”`} detail="Thử từ khóa khác hoặc xem toàn bộ lịch ngày này.">
+          <button type="button" className="br-btn" onClick={() => setSearch('')}>Xem tất cả phim</button>
         </BranchMessage>
       ) : (
         <div className="br-movie-list">
-          {visibleMovies.map((movie) => <MovieScheduleCard key={movie.movieId} movie={movie} now={cinemaTime} />)}
+          {visibleMovies.map((movie) => <MovieScheduleCard key={movie.movieId} movie={movie} />)}
         </div>
       )}
     </section>
   );
 }
 
-function MovieScheduleCard({ movie, now }) {
+/** Tách suất đã bắt đầu ra khỏi lịch; phim không còn suất nào thì bỏ khỏi danh sách. */
+function splitPastShowtimes(movies, now) {
+  let pastSlotCount = 0;
+  const upcomingMovies = [];
+  for (const movie of movies) {
+    const showtimes = (movie.showtimes || []).filter((slot) => {
+      const start = parseLocalDateTime(slot.startTime);
+      const started = Boolean(start && now && start <= now);
+      if (started) pastSlotCount += 1;
+      return !started;
+    });
+    if (showtimes.length > 0) upcomingMovies.push({ ...movie, showtimes });
+  }
+  return { upcomingMovies, pastSlotCount };
+}
+
+function MovieScheduleCard({ movie }) {
   const movieUrl = `/movie/${movie.movieId}`;
   const formats = new Map();
   const showtimes = [...(movie.showtimes || [])].sort((a, b) =>
@@ -232,7 +268,15 @@ function MovieScheduleCard({ movie, now }) {
         <SafeImage key={movie.thumbnailUrl} src={movie.thumbnailUrl} alt="" className="br-poster" fallback="/assets/img/empty-cinema.png" />
       </Link>
       <div className="br-movie-heading">
-        {movie.ageRating && <span className={`br-age br-age--${getAgeBadgeTone(movie.ageRating)}`}>{movie.ageRating}</span>}
+        {movie.ageRating && (
+          <span
+            className={`br-age br-age--${getAgeBadgeTone(movie.ageRating)}`}
+            title={getAgeRatingLabel(movie.ageRating)}
+          >
+            {movie.ageRating}
+            <span className="sr-only">: {getAgeRatingLabel(movie.ageRating)}</span>
+          </span>
+        )}
         <h3><Link to={movieUrl}>{movie.movieName}</Link></h3>
         <div className="br-movie-meta">
           {Boolean(movie.durationMinutes) && <span><ClockIcon size={15} />{movie.durationMinutes} phút</span>}
@@ -242,9 +286,9 @@ function MovieScheduleCard({ movie, now }) {
       <div className="br-formats">
         {Array.from(formats, ([format, slots]) => (
           <div className="br-format" key={format}>
-            <h4><FilmIcon size={15} />{formatRoomType(format)}</h4>
+            <h4><FilmIcon size={15} aria-hidden="true" />{format}</h4>
             <div className="br-slots">
-              {slots.map((slot) => <ShowtimeSlot key={slot.showtimeId} slot={slot} now={now} />)}
+              {slots.map((slot) => <ShowtimeSlot key={slot.showtimeId} slot={slot} />)}
             </div>
           </div>
         ))}
@@ -253,20 +297,18 @@ function MovieScheduleCard({ movie, now }) {
   );
 }
 
-function ShowtimeSlot({ slot, now }) {
-  const start = parseLocalDateTime(slot.startTime);
-  const started = start && start <= now;
+function ShowtimeSlot({ slot }) {
   const closed = slot.status && slot.status !== 'OPEN';
   const available = slot.availableSeats == null ? null : Number(slot.availableSeats);
   const hasSeatCount = Number.isFinite(available) && Number(slot.totalSeats) > 0;
   const soldOut = hasSeatCount && available <= 0;
   const lowSeats = hasSeatCount && available > 0 && available <= 12;
-  const disabled = started || closed || soldOut;
-  const state = started || closed ? 'closed' : soldOut ? 'soldout' : lowSeats ? 'low' : 'open';
+  const disabled = closed || soldOut;
+  const state = closed ? 'closed' : soldOut ? 'soldout' : lowSeats ? 'low' : 'open';
   const statusLabel = {
-    closed: started ? 'Đã qua giờ' : 'Ngừng bán',
+    closed: 'Ngừng bán vé',
     soldout: 'Hết ghế',
-    low: `Sắp hết · ${available} ghế`,
+    low: `Chỉ còn ${available} ghế`,
     open: hasSeatCount ? `Còn ${available} ghế` : 'Đang mở bán',
   }[state];
 
@@ -281,10 +323,11 @@ function ShowtimeSlot({ slot, now }) {
     </>
   );
   const className = `br-slot br-slot--${state}`;
+  const label = `Suất ${formatTime(slot.startTime)}, ${slot.roomName || 'phòng chiếu'}, ${statusLabel}`;
 
   return disabled ? (
-    <button type="button" className={className} disabled>{content}</button>
+    <button type="button" className={className} disabled aria-label={label}>{content}</button>
   ) : (
-    <Link className={className} to={`/showtime/${slot.showtimeId}/seats`}>{content}</Link>
+    <Link className={className} to={`/showtime/${slot.showtimeId}/seats`} aria-label={`${label}. Chọn ghế`}>{content}</Link>
   );
 }

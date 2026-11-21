@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   BuildingIcon,
   CheckIcon,
@@ -11,6 +11,25 @@ import {
 import { BranchMessage, BranchSchedule, BranchSpotlight } from './BranchSchedule';
 import useActiveBranches from './useActiveBranches';
 import './BranchPages.css';
+
+const LAST_BRANCH_KEY = 'movieptit.lastBranchId';
+
+// Nhớ rạp khách chọn gần nhất; lỗi localStorage (chế độ riêng tư...) thì bỏ qua.
+function readLastBranch() {
+  try {
+    return window.localStorage.getItem(LAST_BRANCH_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveLastBranch(branchId) {
+  try {
+    window.localStorage.setItem(LAST_BRANCH_KEY, String(branchId));
+  } catch {
+    // Không lưu được thì lần sau mở rạp đầu tiên.
+  }
+}
 
 function branchCity(branch) {
   return (branch.city || 'Khác').trim();
@@ -27,28 +46,36 @@ function filterBranches(branches, city, search) {
 
 export default function BranchListPage() {
   const { branches, loading, error, retry } = useActiveBranches();
-  const [{ city, search, branchId }, setFilters] = useState({ city: 'ALL', search: '', branchId: null });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [{ city, search }, setFilters] = useState({ city: 'ALL', search: '' });
+  // Rạp đang chọn nằm trên URL (?rap=) để chia sẻ được; không có thì dùng rạp khách chọn lần trước.
+  const branchId = searchParams.get('rap') || readLastBranch();
 
   const cities = [...new Set(branches.map(branchCity))];
   const filteredBranches = filterBranches(branches, city, search);
-  const selectedBranch = filteredBranches.find((branch) => branch.branchId === branchId)
-    || filteredBranches[0];
-  const activeBranch = selectedBranch || branches.find((branch) => branch.branchId === branchId);
+  const isBranch = (branch) => String(branch.branchId) === String(branchId);
+  const selectedBranch = filteredBranches.find(isBranch) || filteredBranches[0];
+  const activeBranch = selectedBranch || branches.find(isBranch);
+
+  function selectBranch(id) {
+    saveLastBranch(id);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.set('rap', String(id));
+      return next;
+    }, { replace: true });
+  }
 
   function updateFilters(nextCity, nextSearch) {
-    const matches = filterBranches(branches, nextCity, nextSearch);
-    const currentId = activeBranch?.branchId;
-    const nextId = matches.find((branch) => branch.branchId === currentId)?.branchId
-      ?? matches[0]?.branchId ?? currentId;
-    setFilters({ city: nextCity, search: nextSearch, branchId: nextId });
+    setFilters({ city: nextCity, search: nextSearch });
   }
 
   return (
     <div className="page br-page">
       <div className="br-wrap">
         <header className="br-hero">
-          <h1>Rạp chiếu &amp; Lịch chiếu</h1>
-          <p>Chọn rạp và ngày chiếu để xem giờ chiếu và đặt vé.</p>
+          <h1>Lịch chiếu theo rạp</h1>
+          <p>Chọn rạp và ngày để xem các suất còn vé, rồi bấm vào giờ chiếu để chọn ghế.</p>
         </header>
 
         {loading ? (
@@ -56,7 +83,7 @@ export default function BranchListPage() {
         ) : error ? (
           <BranchMessage title="Không tải được danh sách rạp" error onRetry={retry} />
         ) : branches.length === 0 ? (
-          <BranchMessage icon={<BuildingIcon size={23} />} title="Chưa có cụm rạp nào hoạt động" />
+          <BranchMessage icon={<BuildingIcon size={23} />} title="Hiện chưa có rạp nào mở cửa" detail="Hãy quay lại sau." />
         ) : (
           <div className="br-hub">
             <aside className="br-sidebar" aria-labelledby="br-cinema-heading">
@@ -96,9 +123,9 @@ export default function BranchListPage() {
 
               {filteredBranches.length === 0 ? (
                 <div className="br-sidebar-empty" role="status">
-                  <p>Không tìm thấy rạp phù hợp.</p>
+                  <p>Không có rạp nào khớp với bộ lọc.</p>
                   <button type="button" className="br-btn" onClick={() => updateFilters('ALL', '')}>
-                    Đặt lại bộ lọc
+                    Xem tất cả rạp
                   </button>
                 </div>
               ) : (
@@ -111,7 +138,7 @@ export default function BranchListPage() {
                           type="button"
                           className="br-branch-item"
                           aria-pressed={selected}
-                          onClick={() => setFilters({ city, search, branchId: branch.branchId })}
+                          onClick={() => selectBranch(branch.branchId)}
                         >
                           <span className="br-branch-name">{branch.name}</span>
                           {selected ? <CheckIcon size={17} /> : <ChevronRightIcon size={17} />}
@@ -131,8 +158,13 @@ export default function BranchListPage() {
 
             {activeBranch && (
               <div className="br-main">
-                <BranchSpotlight branch={activeBranch} showDetails />
-                <BranchSchedule branchId={activeBranch.branchId} emptyLink="/movies" emptyLinkLabel="Xem danh sách phim" />
+                <BranchSpotlight branch={activeBranch} />
+                {/* Không đặt key theo rạp: đổi rạp vẫn giữ ngày đang xem để so sánh các rạp. */}
+                <BranchSchedule
+                  branchId={activeBranch.branchId}
+                  emptyLink="/movies?status=NOW_SHOWING"
+                  emptyLinkLabel="Xem phim đang chiếu"
+                />
               </div>
             )}
           </div>
