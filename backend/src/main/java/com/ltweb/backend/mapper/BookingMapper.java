@@ -38,6 +38,8 @@ public interface BookingMapper {
   @Mapping(target = "refundAmount", source = "payment.refundAmount")
   @Mapping(target = "refundGatewayStatus", source = "payment.refundGatewayStatus")
   @Mapping(target = "refundGatewayMessage", source = "payment.refundGatewayMessage")
+  @Mapping(target = "staffUserId", source = "staffUser.id")
+  @Mapping(target = "staffUsername", source = "staffUser.username")
   @Mapping(target = "refundDeadline", ignore = true)
   BookingResponse toBookingResponse(Booking booking);
 

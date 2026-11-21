@@ -19,7 +19,10 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Table(name = "audit_logs")
+@Table(
+    name = "audit_logs",
+    indexes =
+        @jakarta.persistence.Index(name = "idx_audit_logs_created_at", columnList = "created_at"))
 @Getter
 @Setter
 @NoArgsConstructor

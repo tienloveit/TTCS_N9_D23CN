@@ -33,7 +33,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    indexes = @jakarta.persistence.Index(name = "idx_users_branch_id", columnList = "branch_id"))
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -44,9 +46,10 @@ public class User implements UserDetails {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(unique = true)
+  @Column(unique = true, nullable = false)
   private String username;
 
+  @Column(nullable = false)
   private String password;
 
   private String fullName;
@@ -64,12 +67,13 @@ public class User implements UserDetails {
 
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.VARCHAR)
-  @Column(length = 20)
+  @Column(length = 20, nullable = false)
   private UserRole role;
 
   private Long branchId;
 
   @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
   private UserStatus status;
 
   @Enumerated(EnumType.STRING)

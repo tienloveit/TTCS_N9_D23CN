@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -222,16 +221,7 @@ public class MovieService {
     if (branchId == null) {
       return List.of();
     }
-    Set<Long> movieIdsInBranch =
-        showtimeRepository.findAll().stream()
-            .filter(
-                showtime ->
-                    showtime.getRoom() != null
-                        && showtime.getRoom().getBranch() != null
-                        && Objects.equals(showtime.getRoom().getBranch().getBranchId(), branchId)
-                        && showtime.getMovie() != null)
-            .map(showtime -> showtime.getMovie().getId())
-            .collect(Collectors.toSet());
+    Set<Long> movieIdsInBranch = showtimeRepository.findMovieIdsByBranchId(branchId);
     return movies.stream().filter(movie -> movieIdsInBranch.contains(movie.getId())).toList();
   }
 

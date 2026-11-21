@@ -1,0 +1,235 @@
+/* Trình sửa sơ đồ ghế (modal trong Quản lý rạp & phòng).
+   Màu hạng ghế dùng chung token với sơ đồ ghế của khách và quầy. */
+
+.modal-content.seat-editor {
+  width: min(1180px, 96vw);
+  max-width: 1180px;
+  height: min(86vh, 860px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.seat-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--line);
+}
+
+.seat-editor-header h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+.seat-editor-header p {
+  margin: 6px 0 0;
+  color: var(--ink-muted);
+}
+
+.seat-editor-body {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  flex: 1;
+  min-height: 0;
+}
+
+.seat-editor-canvas {
+  padding: var(--space-5);
+  overflow: auto;
+  background: var(--surface-page);
+}
+
+.seat-editor-stage {
+  width: 100%;
+  min-width: 640px;
+}
+
+.seat-editor-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 560px;
+  height: 34px;
+  margin: 0 auto var(--space-5);
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--ink), var(--ink-muted));
+  color: var(--ink-inverse);
+  font-weight: var(--fw-bold);
+}
+
+.seat-editor-state {
+  display: flex;
+  justify-content: center;
+  padding: 60px;
+  color: var(--ink-muted);
+}
+
+.seat-editor-grid {
+  display: grid;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+/* --seat-cols được gán theo số cột của phòng */
+.seat-editor-row {
+  display: grid;
+  grid-template-columns: 34px repeat(var(--seat-cols, 1), 44px);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.seat-editor-row-label {
+  text-align: center;
+  font-weight: var(--fw-bold);
+  color: var(--ink-secondary);
+}
+
+.seat-editor-cell {
+  width: 44px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+}
+
+.seat-editor-cell--empty {
+  border: 1px dashed var(--line-strong);
+  background: var(--surface);
+}
+
+.seat-editor-seat {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid var(--seat-available-line);
+  border-radius: var(--radius-sm);
+  background: var(--seat-available-bg);
+  color: var(--seat-available-ink);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  cursor: grab;
+}
+
+.seat-editor-seat--vip,
+.seat-editor-swatch--vip {
+  border-color: var(--tier-vip);
+  background: var(--tier-vip-soft);
+  color: var(--tier-vip);
+  box-shadow: inset 0 -4px 0 var(--tier-vip);
+}
+
+.seat-editor-seat--couple,
+.seat-editor-swatch--couple {
+  border-color: var(--tier-couple);
+  background: var(--tier-couple-soft);
+  color: var(--tier-couple);
+  box-shadow: inset 0 -4px 0 var(--tier-couple);
+}
+
+.seat-editor-seat.is-selected {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.seat-editor-seat:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.seat-editor-panel {
+  padding: 22px;
+  overflow: auto;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.seat-editor-panel h3 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-base);
+}
+
+.seat-editor-panel-body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.seat-editor-current {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.seat-editor-current small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-muted);
+  font-size: var(--fs-xs);
+}
+
+.seat-editor-current strong {
+  display: block;
+  font-size: var(--fs-xl);
+  line-height: 1;
+}
+
+.seat-editor-current p,
+.seat-editor-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-muted);
+}
+
+.seat-editor-bulk {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-page);
+}
+
+.seat-editor-bulk p {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-secondary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+}
+
+.seat-editor-bulk-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.seat-editor-legend {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.seat-editor-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seat-editor-swatch {
+  width: 22px;
+  height: 18px;
+  border: 1px solid var(--seat-available-line);
+  border-radius: 4px;
+  background: var(--seat-available-bg);
+}
+
+@media (max-width: 900px) {
+  .seat-editor-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .seat-editor-panel {
+    max-height: 40vh;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}

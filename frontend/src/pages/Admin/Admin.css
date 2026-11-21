@@ -1,36 +1,28 @@
 /* ============================================================
-   ADMIN LAYOUT — Premium Dark Theme
-   Synced with the main Cinema design system (index.css vars)
+   ADMIN LAYOUT
+   Dùng token chung trong src/styles/tokens.css. Khu vận hành chỉ đổi
+   màu nhấn sang --ops; mọi màu khác kế thừa từ :root.
    ============================================================ */
 
 /* ---------- Layout Shell ---------- */
+.admin-layout,
+.staff-layout {
+  /* Biến alias phải được gán lại ở đây: var() trong :root đã được tính tại :root. */
+  --accent: var(--ops);
+  --accent-hover: var(--ops-strong);
+  --accent-glow: var(--ops-glow);
+  --bg-card-hover: var(--ops-soft);
+  --focus-ring: 0 0 0 3px var(--ops-glow);
+}
+
 .admin-layout {
-  --bg-primary: #f6f9fd;
-  --bg-secondary: #eef4fb;
-  --bg-card: #ffffff;
-  --bg-card-hover: #eef4ff;
-  --bg-input: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --accent: #0756a6;
-  --accent-hover: #034a91;
-  --accent-glow: rgba(7, 86, 166, 0.14);
-  --border: #dbe4ef;
-  --border-light: #b7c7da;
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.1);
-  --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.14);
   display: flex;
   min-height: 100vh;
   background: var(--bg-primary);
 }
 
 .staff-layout {
-  --accent: #0756a6;
-  --accent-hover: #034a91;
-  --accent-glow: rgba(7, 86, 166, 0.16);
-  background: #f6f9fd;
+  background: var(--surface-page);
 }
 
 .staff-layout .admin-sidebar {
@@ -141,7 +133,7 @@
 
 .admin-logo-text strong {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   background: none;
   -webkit-background-clip: text;
   -webkit-text-fill-color: currentColor;
@@ -153,9 +145,7 @@
 .admin-logo-text small {
   font-size: 0.7rem;
   color: #93a4b8;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: uppercase;
+  font-weight: var(--fw-regular);
 }
 
 /* --- Navigation --- */
@@ -172,11 +162,9 @@
 
 .admin-nav-label {
   padding: 16px 16px 8px;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   color: #93a4b8;
-  text-transform: uppercase;
-  letter-spacing: 0;
   user-select: none;
   overflow: hidden;
   white-space: nowrap;
@@ -189,7 +177,7 @@
   padding: 11px 16px;
   border-radius: var(--radius-md);
   color: #d4deea;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   font-size: 0.9rem;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -206,7 +194,7 @@
 .admin-nav-item--active {
   background: linear-gradient(135deg, #0b63b6, #0d75d3);
   color: #ffffff !important;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   box-shadow: 0 10px 24px rgba(3, 74, 145, 0.28);
 }
 
@@ -263,7 +251,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: 0.85rem;
   color: #fff;
   flex-shrink: 0;
@@ -303,7 +291,7 @@
   border: 1px solid rgba(239, 68, 68, 0.15);
   color: #ef4444;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -324,6 +312,8 @@
 /* ---------- Main Area ---------- */
 .admin-main {
   flex: 1;
+  /* Cho phép co nhỏ hơn bảng rộng; bảng tự cuộn trong .admin-table-card */
+  min-width: 0;
   margin-left: 264px;
   display: flex;
   flex-direction: column;
@@ -374,7 +364,7 @@
 
 .admin-header-title {
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
   letter-spacing: 0;
 }
@@ -393,7 +383,7 @@
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: var(--fw-regular);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -457,7 +447,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: 0.82rem;
   color: #fff;
   flex-shrink: 0;
@@ -532,7 +522,7 @@
 
 .stat-info h3 {
   font-size: 1.55rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
   letter-spacing: 0;
 }
@@ -542,8 +532,7 @@
   margin-bottom: 4px;
   color: var(--text-secondary);
   font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-weight: var(--fw-bold);
 }
 
 .stat-value {
@@ -555,7 +544,7 @@
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .dashboard-container {
@@ -577,7 +566,7 @@
   color: var(--text-secondary);
   padding: 8px 12px;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   white-space: nowrap;
 }
 
@@ -611,13 +600,13 @@
   margin: 0;
   color: var(--text-primary);
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
 }
 
 .analytics-card-header span {
   color: var(--text-secondary);
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   white-space: nowrap;
 }
 
@@ -650,7 +639,7 @@
 .analytics-tooltip span {
   color: var(--accent);
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
 }
 
 .analytics-list {
@@ -688,7 +677,7 @@
 .analytics-list-value span {
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .analytics-list-value {
@@ -718,7 +707,14 @@
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  overflow: hidden;
+  overflow-x: auto;
+}
+
+/* Bảng rộng cuộn ngang, thanh công cụ và tiêu đề đứng yên */
+.admin-table-card > .console-toolbar,
+.admin-table-card > .table-header {
+  position: sticky;
+  left: 0;
 }
 
 .table-header {
@@ -731,7 +727,7 @@
 
 .table-header h3 {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .admin-table {
@@ -741,21 +737,28 @@
 
 .admin-table th {
   text-align: left;
-  padding: 14px 24px;
-  background: #f8fafc;
+  padding: 14px 16px;
+  background: var(--surface-page);
   color: var(--text-secondary);
   font-size: 0.76rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0;
+  font-weight: var(--fw-semibold);
   border-bottom: 1px solid var(--border);
 }
 
 .admin-table td {
-  padding: 14px 24px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
   font-size: 0.88rem;
+}
+
+/* Cột đầu và cuối thẳng hàng với mép trong của thẻ */
+.admin-table :is(th, td):first-child {
+  padding-left: 24px;
+}
+
+.admin-table :is(th, td):last-child {
+  padding-right: 24px;
 }
 
 .admin-table tr:last-child td {
@@ -775,10 +778,11 @@
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .status-badge::before {
@@ -789,19 +793,392 @@
   background: currentColor;
 }
 
+/* Cùng màu với Badge tone success/danger/warning (styles/components.css) */
 .status--active {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--green);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .status--inactive {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .status--pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--gold);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* ---------- Bộ khung modal và form quản trị ----------
+   Dùng với .modal-content và useModalDialog:
+   <div className="modal-content admin-modal">
+     <div className="admin-modal-header"><h2/>…nút đóng</div>
+     <form className="admin-form">…<div className="admin-form-actions">…</div></form>
+   </div> */
+.modal-content.admin-modal {
+  width: min(600px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.modal-content.admin-modal--md {
+  width: min(650px, 100%);
+}
+
+.admin-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+}
+
+.admin-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Hai hoặc ba trường trên một hàng, tự xuống dòng khi hẹp */
+.admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.admin-form-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.admin-form-actions > .btn {
+  flex: 1;
+}
+
+/* ---------- Bảng và thanh công cụ ---------- */
+.page-header--split {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.page-header-actions,
+.admin-toolbar-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-section-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.admin-table-card--spaced {
+  margin-bottom: 28px;
+}
+
+.admin-table td.admin-table-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.admin-table .cell-index {
+  color: var(--text-muted);
+}
+
+.admin-table .cell-strong {
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.admin-table .cell-truncate {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-search {
+  position: relative;
+  flex: 0 1 300px;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+/* ---------- Modal: kích thước, phụ đề ---------- */
+.modal-content.admin-modal--lg {
+  width: min(700px, 100%);
+}
+
+.admin-modal-header p {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* ---------- Form: lưới 2 cột, trường kéo hết hàng ---------- */
+.admin-form--grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-form .span-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .admin-form--grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-form textarea.input,
+textarea.input.admin-textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.required-mark {
+  color: var(--danger);
+}
+
+/* Checkbox kèm nhãn */
+.admin-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  cursor: pointer;
+}
+
+.admin-check--strong {
+  margin-top: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.admin-check input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.form-group--align-end {
+  justify-content: flex-end;
+}
+
+/* Lựa chọn dạng thẻ (radio) */
+.admin-choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-choice {
+  display: flex;
+  flex: 1 1 120px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.admin-choice input {
+  accent-color: var(--accent);
+}
+
+.admin-choice.is-checked {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.admin-choice:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Hộp thông tin chỉ đọc trong modal */
+.admin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-page);
+}
+
+.admin-detail-grid .span-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .admin-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+}
+
+.admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ---------- Ô bảng ---------- */
+.admin-table .col-index {
+  width: 40px;
+}
+
+.admin-table .col-actions {
+  width: 130px;
+}
+
+.admin-table .cell-nowrap {
+  white-space: nowrap;
+}
+
+.admin-table .cell-muted {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.admin-table .cell-small {
+  font-size: 0.8rem;
+}
+
+.admin-table .cell-code {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-bold);
+}
+
+.admin-table .cell-amount-out {
+  font-weight: var(--fw-bold);
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+.admin-table .cell-wrap {
+  max-width: 240px;
+}
+
+/* Mô tả cắt sau 2 dòng */
+.cell-clamp {
+  display: -webkit-box;
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cell-subtext {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.admin-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Ảnh thu nhỏ và avatar trong bảng */
+.admin-media-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-thumb {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--surface-sunken);
+}
+
+.admin-thumb--preview {
+  width: 80px;
+  height: 80px;
+  margin-top: var(--space-2);
+  border: 1px solid var(--border);
+}
+
+.admin-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: var(--fw-bold);
+}
+
+.promo-code {
+  color: var(--accent);
+  letter-spacing: 0.03em;
+}
+
+.admin-table .mini-progress-wrap {
+  min-width: 80px;
+  margin-top: 4px;
+}
+
+.input.input-sm {
+  height: 36px;
+  padding-block: 0;
+  font-size: var(--fs-sm);
+}
+
+.admin-table .movie-badge {
+  white-space: nowrap;
+}
+
+.admin-search .input {
+  padding-left: 36px;
+}
+
+.input.input-auto {
+  width: auto;
 }
 
 /* ---------- Sidebar Overlay (mobile) ---------- */
@@ -920,4 +1297,21 @@
   .analytics-grid--wide {
     grid-template-columns: 1fr;
   }
+}
+fieldset.form-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Mã khuyến mãi luôn hiển thị in hoa khi nhập */
+.promo-code-input {
+  text-transform: uppercase;
+}
+
+/* Chuỗi dài không có khoảng trắng (email) được ngắt dòng thay vì làm bảng tràn */
+.admin-table .cell-break {
+  min-width: 160px;
+  overflow-wrap: anywhere;
 }

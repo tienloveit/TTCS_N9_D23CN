@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { branchApi, roomApi, seatApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
+import Badge from '../../components/Common/Badge';
+import Button from '../../components/Common/Button';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import useModalDialog from '../../components/Common/useModalDialog';
+import './BranchManagement.css';
 import {
   ArmchairIcon,
   EditIcon,
@@ -32,22 +36,15 @@ const seatTypeMap = {
   COUPLE: 'Ghế đôi',
 };
 
-const seatTypeStyles = {
-  STANDARD: {
-    background: '#eef2f7',
-    borderColor: '#cbd5e1',
-    color: '#334155',
-  },
-  VIP: {
-    background: '#dbeafe',
-    borderColor: '#2563eb',
-    color: '#1d4ed8',
-  },
-  COUPLE: {
-    background: '#fce7f3',
-    borderColor: '#db2777',
-    color: '#be185d',
-  },
+const roomStatusTone = {
+  ACTIVE: 'success',
+  INACTIVE: 'danger',
+  MAINTENANCE: 'warning',
+};
+
+const seatTypeClass = {
+  VIP: 'seat-editor-seat--vip',
+  COUPLE: 'seat-editor-seat--couple',
 };
 
 const Icon = ({ name }) => {
@@ -59,13 +56,17 @@ const Icon = ({ name }) => {
 
 const BranchManagement = () => {
   const { isAdmin } = useAuth();
+  const [branchModal, setBranchModal] = useState(false);
+  const [roomModal, setRoomModal] = useState(false);
+  const [seatMapModal, setSeatMapModal] = useState(false);
+  const branchDialog = useModalDialog(branchModal, () => setBranchModal(false));
+  const roomDialog = useModalDialog(roomModal, () => setRoomModal(false));
+  // Sơ đồ ghế có thay đổi chưa lưu: không đóng bằng Esc/click nền, chỉ bằng nút trong modal.
+  const seatMapDialog = useModalDialog(seatMapModal, null, { disabled: true });
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [branchModal, setBranchModal] = useState(false);
-  const [roomModal, setRoomModal] = useState(false);
-  const [seatMapModal, setSeatMapModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
 
@@ -366,30 +367,28 @@ const BranchManagement = () => {
 
   return (
     <div>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header page-header--split">
         <div>
-          <h1 className="page-title">Quản lý Rạp &amp; Phòng</h1>
+          <h1 className="page-title">Quản lý rạp &amp; phòng</h1>
           <p className="page-subtitle">
-            <strong>{branches.length}</strong> chi nhánh · <strong>{rooms.length}</strong> phòng chiếu
+            <strong>{branches.length}</strong> chi nhánh, <strong>{rooms.length}</strong> phòng chiếu
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary" onClick={() => openRoomModal()}>
-            <Icon name="plus" />
+        <div className="page-header-actions">
+          <Button icon={<Icon name="plus" />} onClick={() => openRoomModal()}>
             Thêm phòng
-          </button>
+          </Button>
           {isAdmin && (
-            <button className="btn btn-primary" onClick={() => openBranchModal()}>
-              <Icon name="plus" />
+            <Button variant="primary" icon={<Icon name="plus" />} onClick={() => openBranchModal()}>
               Thêm chi nhánh
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      <div className="admin-table-card" style={{ marginBottom: 28 }}>
+      <div className="admin-table-card admin-table-card--spaced">
         <div className="table-header">
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Chi nhánh</h3>
+          <h3 className="admin-section-title">Chi nhánh</h3>
         </div>
         <table className="admin-table">
           <thead>
@@ -407,31 +406,41 @@ const BranchManagement = () => {
           <tbody>
             {branches.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                  Chưa có chi nhánh
+                <td colSpan="8" className="admin-table-empty">
+                  Chưa có chi nhánh. Bấm “Thêm chi nhánh” để tạo rạp đầu tiên.
                 </td>
               </tr>
             ) : (
               branches.map((branch, index) => (
                 <tr key={branch.branchId || index}>
-                  <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
+                  <td className="cell-index">{index + 1}</td>
                   <td><span className="movie-badge">{branch.branchCode}</span></td>
-                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{branch.name}</td>
+                  <td className="cell-strong">{branch.name}</td>
                   <td>{branch.city || '-'}</td>
-                  <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td className="cell-truncate" title={branch.address || undefined}>
                     {branch.address || '-'}
                   </td>
                   <td>{branch.phone || '-'}</td>
-                  <td style={{ fontWeight: 600 }}>{getRoomCount(branch.branchId)}</td>
+                  <td className="cell-strong">{getRoomCount(branch.branchId)}</td>
                   <td>
                     <div className="action-btns">
-                      <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => openBranchModal(branch)}>
-                        <Icon name="edit" />
-                      </button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Sửa chi nhánh"
+                        aria-label={`Sửa chi nhánh ${branch.name}`}
+                        icon={<Icon name="edit" />}
+                        onClick={() => openBranchModal(branch)}
+                      />
                       {isAdmin && (
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDeleteBranch(branch.branchId, branch.name)}>
-                          <Icon name="trash" />
-                        </button>
+                        <Button
+                          variant="ghost-danger"
+                          size="sm"
+                          title="Xóa chi nhánh"
+                          aria-label={`Xóa chi nhánh ${branch.name}`}
+                          icon={<Icon name="trash" />}
+                          onClick={() => handleDeleteBranch(branch.branchId, branch.name)}
+                        />
                       )}
                     </div>
                   </td>
@@ -444,27 +453,24 @@ const BranchManagement = () => {
 
       <div className="admin-table-card">
         <div className="console-toolbar">
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+          <h3 className="admin-section-title">
             Phòng chiếu ({filteredRooms.length})
           </h3>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ position: 'relative', minWidth: 200 }}>
-              <SearchIcon
-                size={15}
-                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
-              />
+          <div className="admin-toolbar-filters">
+            <div className="admin-search">
+              <SearchIcon size={15} className="input-leading-icon" aria-hidden="true" />
               <input
-                type="text"
-                className="input"
+                type="search"
+                className="input input-sm"
                 placeholder="Tìm mã, tên phòng..."
+                aria-label="Tìm phòng chiếu theo mã hoặc tên"
                 value={roomSearch}
                 onChange={(e) => setRoomSearch(e.target.value)}
-                style={{ paddingLeft: 34, height: 36, fontSize: '0.84rem' }}
               />
             </div>
             <select
-              className="input"
-              style={{ width: 'auto', height: 36, fontSize: '0.84rem' }}
+              className="input input-sm input-auto"
+              aria-label="Lọc theo chi nhánh"
               value={roomBranchFilter}
               onChange={(e) => setRoomBranchFilter(e.target.value)}
             >
@@ -474,18 +480,15 @@ const BranchManagement = () => {
               ))}
             </select>
             <select
-              className="input"
-              style={{ width: 'auto', height: 36, fontSize: '0.84rem' }}
+              className="input input-sm input-auto"
+              aria-label="Lọc theo công nghệ phòng"
               value={roomTypeFilter}
               onChange={(e) => setRoomTypeFilter(e.target.value)}
             >
               <option value="ALL">Mọi công nghệ phòng</option>
-              <option value="STANDARD">Standard</option>
-              <option value="SCREEN_X">ScreenX</option>
-              <option value="GOLD_CLASS">Gold Class</option>
-
-              <option value="IMAX">IMAX</option>
-              <option value="FOUR_DX">4DX</option>
+              {Object.entries(roomTypeMap).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -505,8 +508,8 @@ const BranchManagement = () => {
           <tbody>
             {filteredRooms.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                  Không tìm thấy phòng chiếu phù hợp
+                <td colSpan="8" className="admin-table-empty">
+                  Không tìm thấy phòng chiếu phù hợp. Thử bỏ bớt bộ lọc.
                 </td>
               </tr>
             ) : (
@@ -514,32 +517,45 @@ const BranchManagement = () => {
                 const branch = branches.find((item) => item.branchId === room.branchId);
                 return (
                   <tr key={room.id || index}>
-                    <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
+                    <td className="cell-index">{index + 1}</td>
                     <td><span className="movie-badge">{room.code}</span></td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{room.name}</td>
+                    <td className="cell-strong">{room.name}</td>
                     <td>
-                      <span className="status-badge status--active" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue)' }}>
-                        {roomTypeMap[room.roomTechnology] || room.roomTechnology}
-                      </span>
+                      <Badge tone="info">{roomTypeMap[room.roomTechnology] || room.roomTechnology}</Badge>
                     </td>
                     <td>{room.seatCapacity || '-'}</td>
                     <td>{branch?.name || '-'}</td>
                     <td>
-                      <span className={`status-badge ${room.status === 'ACTIVE' ? 'status--active' : 'status--inactive'}`}>
+                      <Badge tone={roomStatusTone[room.status] || 'neutral'} dot>
                         {roomStatusMap[room.status] || room.status}
-                      </span>
+                      </Badge>
                     </td>
                     <td>
                       <div className="action-btns">
-                        <button className="btn btn-ghost btn-sm" title="Sơ đồ ghế" onClick={() => openSeatMapModal(room)}>
-                          <Icon name="seat" />
-                        </button>
-                        <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => openRoomModal(room)}>
-                          <Icon name="edit" />
-                        </button>
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDeleteRoom(room.id, room.name)}>
-                          <Icon name="trash" />
-                        </button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Sơ đồ ghế"
+                          aria-label={`Sửa sơ đồ ghế ${room.name}`}
+                          icon={<Icon name="seat" />}
+                          onClick={() => openSeatMapModal(room)}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Sửa phòng"
+                          aria-label={`Sửa phòng ${room.name}`}
+                          icon={<Icon name="edit" />}
+                          onClick={() => openRoomModal(room)}
+                        />
+                        <Button
+                          variant="ghost-danger"
+                          size="sm"
+                          title="Xóa phòng"
+                          aria-label={`Xóa phòng ${room.name}`}
+                          icon={<Icon name="trash" />}
+                          onClick={() => handleDeleteRoom(room.id, room.name)}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -551,15 +567,15 @@ const BranchManagement = () => {
       </div>
 
       {branchModal && (
-        <div className="modal-overlay" onClick={() => setBranchModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ margin: 0 }}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
-              <button type="button" className="modal-close" style={{ position: 'static', width: 32, height: 32 }} onClick={() => setBranchModal(false)} aria-label="Đóng">
+        <div className="modal-overlay" {...branchDialog.overlayProps}>
+          <div className="modal-content admin-modal admin-modal--md" {...branchDialog.contentProps}>
+            <div className="admin-modal-header">
+              <h2 id={branchDialog.titleId}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
+              <button type="button" className="modal-close modal-close--inline" onClick={() => setBranchModal(false)} aria-label="Đóng">
                 <XIcon size={16} />
               </button>
             </div>
-            <form onSubmit={handleBranchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleBranchSubmit} className="admin-form">
               <div className="form-group">
                 <label className="form-label">Mã chi nhánh</label>
                 <input className="input" value={branchForm.branchCode} onChange={(e) => setBranchForm({ ...branchForm, branchCode: e.target.value })} placeholder="VD: MPT-HANOI" required />
@@ -568,7 +584,7 @@ const BranchManagement = () => {
                 <label className="form-label">Tên rạp</label>
                 <input className="input" value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} placeholder="VD: MoviePTIT Cầu Giấy" required />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="admin-form-row">
                 <div className="form-group">
                   <label className="form-label">Thành phố</label>
                   <input className="input" value={branchForm.city || ''} onChange={(e) => setBranchForm({ ...branchForm, city: e.target.value })} />
@@ -589,9 +605,9 @@ const BranchManagement = () => {
                   <option value="INACTIVE">Tạm dừng</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setBranchModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Lưu lại</button>
+              <div className="admin-form-actions">
+                <Button onClick={() => setBranchModal(false)}>Hủy</Button>
+                <Button type="submit" variant="primary">{editingBranch ? 'Lưu chi nhánh' : 'Thêm chi nhánh'}</Button>
               </div>
             </form>
           </div>
@@ -599,15 +615,15 @@ const BranchManagement = () => {
       )}
 
       {roomModal && (
-        <div className="modal-overlay" onClick={() => setRoomModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, height: 'auto', aspectRatio: 'unset', overflow: 'visible', background: 'var(--bg-card)', padding: 32, borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ margin: 0 }}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
-              <button type="button" className="modal-close" style={{ position: 'static', width: 32, height: 32 }} onClick={() => setRoomModal(false)} aria-label="Đóng">
+        <div className="modal-overlay" {...roomDialog.overlayProps}>
+          <div className="modal-content admin-modal admin-modal--md" {...roomDialog.contentProps}>
+            <div className="admin-modal-header">
+              <h2 id={roomDialog.titleId}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
+              <button type="button" className="modal-close modal-close--inline" onClick={() => setRoomModal(false)} aria-label="Đóng">
                 <XIcon size={16} />
               </button>
             </div>
-            <form onSubmit={handleRoomSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleRoomSubmit} className="admin-form">
               <div className="form-group">
                 <label className="form-label">Thuộc chi nhánh</label>
                 <select className="input" value={roomForm.branchId || ''} onChange={(e) => setRoomForm({ ...roomForm, branchId: e.target.value })} required>
@@ -617,7 +633,7 @@ const BranchManagement = () => {
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="admin-form-row">
                 <div className="form-group">
                   <label className="form-label">Mã phòng</label>
                   <input className="input" value={roomForm.code || ''} onChange={(e) => setRoomForm({ ...roomForm, code: e.target.value })} placeholder="P01" required />
@@ -627,16 +643,13 @@ const BranchManagement = () => {
                   <input className="input" value={roomForm.name || ''} onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })} placeholder="Phòng số 1" required />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="admin-form-row">
                 <div className="form-group">
                   <label className="form-label">Công nghệ phòng</label>
                   <select className="input" value={roomForm.roomTechnology || 'STANDARD'} onChange={(e) => setRoomForm({ ...roomForm, roomTechnology: e.target.value })}>
-                    <option value="STANDARD">Standard</option>
-              <option value="SCREEN_X">ScreenX</option>
-              <option value="GOLD_CLASS">Gold Class</option>
-
-                    <option value="IMAX">IMAX</option>
-                    <option value="FOUR_DX">4DX</option>
+                    {Object.entries(roomTypeMap).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -652,9 +665,9 @@ const BranchManagement = () => {
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setRoomModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Lưu lại</button>
+              <div className="admin-form-actions">
+                <Button onClick={() => setRoomModal(false)}>Hủy</Button>
+                <Button type="submit" variant="primary">{editingRoom ? 'Lưu phòng' : 'Thêm phòng'}</Button>
               </div>
             </form>
           </div>
@@ -663,178 +676,133 @@ const BranchManagement = () => {
 
       {seatMapModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: 'min(1180px, 96vw)', maxWidth: 1180, height: 'min(86vh, 860px)', aspectRatio: 'unset', overflow: 'hidden', background: 'var(--bg-card)', padding: 0, borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ padding: '22px 26px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '1.35rem' }}>Sơ đồ ghế - {seatMapRoom?.name}</h2>
-                  <p style={{ margin: '6px 0 0', color: 'var(--text-muted)' }}>
-                    {sortedSeats.length} ghế · kéo ghế sang ô trống để tạo lối đi, kéo vào ghế khác để đổi chỗ
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setExtraColumns((value) => value + 1)}>
-                    Thêm cột trống
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={closeSeatMapModal}>
-                    Đóng
-                  </button>
-                  <button type="button" className="btn btn-primary" onClick={saveSeatLayout} disabled={savingSeatMap || seatMapLoading}>
-                    {savingSeatMap ? 'Đang lưu...' : 'Lưu sơ đồ'}
-                  </button>
+          <div className="modal-content seat-editor" {...seatMapDialog.contentProps}>
+            <div className="seat-editor-header">
+              <div>
+                <h2 id={seatMapDialog.titleId}>Sơ đồ ghế: {seatMapRoom?.name}</h2>
+                <p>
+                  {sortedSeats.length} ghế. Kéo ghế sang ô trống để tạo lối đi, kéo vào ghế khác để đổi chỗ.
+                </p>
+              </div>
+              <div className="page-header-actions">
+                <Button onClick={() => setExtraColumns((value) => value + 1)}>Thêm cột trống</Button>
+                <Button onClick={closeSeatMapModal}>Đóng</Button>
+                <Button variant="primary" onClick={saveSeatLayout} disabled={savingSeatMap || seatMapLoading}>
+                  {savingSeatMap ? 'Đang lưu...' : 'Lưu sơ đồ'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="seat-editor-body">
+              <div className="seat-editor-canvas">
+                <div className="seat-editor-stage">
+                  <div className="seat-editor-screen">Màn hình</div>
+
+                  {seatMapLoading ? (
+                    <div className="seat-editor-state">
+                      <div className="spinner" />
+                    </div>
+                  ) : seatRows.length === 0 ? (
+                    <div className="seat-editor-state">Phòng này chưa có ghế.</div>
+                  ) : (
+                    <div className="seat-editor-grid">
+                      {seatRows.map((rowLabel) => (
+                        <div key={rowLabel} className="seat-editor-row" style={{ '--seat-cols': gridColumns.length }}>
+                          <div className="seat-editor-row-label">{rowLabel}</div>
+                          {gridColumns.map((seatNumber) => {
+                            const seat = getSeatAt(rowLabel, seatNumber);
+                            const isSelected = seat?.seatId === selectedSeatId;
+                            return (
+                              <div
+                                key={`${rowLabel}-${seatNumber}`}
+                                className={`seat-editor-cell${seat ? '' : ' seat-editor-cell--empty'}`}
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={() => handleDrop(rowLabel, seatNumber)}
+                              >
+                                {seat && (
+                                  <button
+                                    type="button"
+                                    draggable
+                                    className={['seat-editor-seat', seatTypeClass[seat.seatType], isSelected && 'is-selected']
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    aria-pressed={isSelected}
+                                    onDragStart={() => setDraggedSeatId(seat.seatId)}
+                                    onDragEnd={() => setDraggedSeatId(null)}
+                                    onClick={() => setSelectedSeatId(seat.seatId)}
+                                    title={`${seat.seatCode} - ${seatTypeMap[seat.seatType] || seat.seatType}`}
+                                  >
+                                    {seat.seatCode}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', minHeight: 0, flex: 1 }}>
-                <div style={{ padding: 24, overflow: 'auto', background: '#f8fafc' }}>
-                  <div style={{ width: '100%', minWidth: 640 }}>
-                    <div style={{ height: 34, maxWidth: 560, margin: '0 auto 24px', borderRadius: 4, background: 'linear-gradient(135deg, #1f2937, #64748b)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, letterSpacing: 0 }}>
-                      MÀN HÌNH
+              <aside className="seat-editor-panel">
+                <h3>Thuộc tính ghế</h3>
+                {selectedSeat ? (
+                  <div className="seat-editor-panel-body">
+                    <div className="seat-editor-current">
+                      <small>Ghế đang chọn</small>
+                      <strong>{selectedSeat.seatCode}</strong>
+                      <p>Hàng {selectedSeat.rowLabel}, cột {selectedSeat.seatNumber}</p>
                     </div>
 
-                    {seatMapLoading ? (
-                      <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-                        <div className="spinner" />
-                      </div>
-                    ) : seatRows.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>Phòng này chưa có ghế</div>
-                    ) : (
-                      <div style={{ display: 'grid', gap: 8, justifyContent: 'center' }}>
-                        {seatRows.map((rowLabel) => (
-                          <div key={rowLabel} style={{ display: 'grid', gridTemplateColumns: `34px repeat(${gridColumns.length}, 44px)`, gap: 8, alignItems: 'center' }}>
-                            <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--text-secondary)' }}>{rowLabel}</div>
-                            {gridColumns.map((seatNumber) => {
-                              const seat = getSeatAt(rowLabel, seatNumber);
-                              const isSelected = seat?.seatId === selectedSeatId;
-                              const baseStyle = seat ? seatTypeStyles[seat.seatType] || seatTypeStyles.STANDARD : null;
-                              return (
-                                <div
-                                  key={`${rowLabel}-${seatNumber}`}
-                                  onDragOver={(event) => event.preventDefault()}
-                                  onDrop={() => handleDrop(rowLabel, seatNumber)}
-                                  style={{
-                                    width: 44,
-                                    height: 40,
-                                    border: seat ? 'none' : '1px dashed #cbd5e1',
-                                    borderRadius: 6,
-                                    background: seat ? 'transparent' : '#fff',
-                                  }}
-                                >
-                                  {seat && (
-                                    <button
-                                      type="button"
-                                      draggable
-                                      onDragStart={() => setDraggedSeatId(seat.seatId)}
-                                      onDragEnd={() => setDraggedSeatId(null)}
-                                      onClick={() => setSelectedSeatId(seat.seatId)}
-                                      title={`${seat.seatCode} - ${seatTypeMap[seat.seatType] || seat.seatType}`}
-                                      style={{
-                                        width: 44,
-                                        height: 40,
-                                        borderRadius: 6,
-                                        border: `2px solid ${isSelected ? '#0f172a' : baseStyle.borderColor}`,
-                                        background: baseStyle.background,
-                                        color: baseStyle.color,
-                                        fontWeight: 800,
-                                        fontSize: 12,
-                                        cursor: 'grab',
-                                        boxShadow: isSelected ? '0 0 0 3px rgba(15, 23, 42, 0.12)' : 'none',
-                                      }}
-                                    >
-                                      {seat.seatCode}
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="seat-editor-type">Loại ghế</label>
+                      <select
+                        id="seat-editor-type"
+                        className="input"
+                        value={selectedSeat.seatType || 'STANDARD'}
+                        onChange={(event) => updateSeatLocal(selectedSeat.seatId, { seatType: event.target.value })}
+                      >
+                        {Object.entries(seatTypeMap).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="seat-editor-bulk">
+                      <p>Đổi cả hàng {selectedSeat.rowLabel} sang</p>
+                      <div className="seat-editor-bulk-actions">
+                        {Object.entries(seatTypeMap).map(([value, label]) => (
+                          <Button
+                            key={value}
+                            size="xs"
+                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: value })}
+                          >
+                            {label}
+                          </Button>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                <aside style={{ borderLeft: '1px solid var(--border)', padding: 22, overflow: 'auto', background: 'var(--bg-card)' }}>
-                  <h3 style={{ margin: '0 0 16px', fontSize: '1rem' }}>Thuộc tính ghế</h3>
-                  {selectedSeat ? (
-                    <div style={{ display: 'grid', gap: 16 }}>
-                      <div style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Ghế đang chọn</div>
-                        <div style={{ fontSize: 28, lineHeight: 1, fontWeight: 800 }}>{selectedSeat.seatCode}</div>
-                        <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>
-                          Hàng {selectedSeat.rowLabel}, cột {selectedSeat.seatNumber}
-                        </div>
+                    <div className="seat-editor-legend">
+                      <div className="seat-editor-legend-item">
+                        <span className="seat-editor-swatch" aria-hidden="true" />
+                        <span>Ghế thường</span>
                       </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Loại ghế</label>
-                        <select
-                          className="input"
-                          value={selectedSeat.seatType || 'STANDARD'}
-                          onChange={(event) => updateSeatLocal(selectedSeat.seatId, { seatType: event.target.value })}
-                        >
-                          <option value="STANDARD">Thường</option>
-                          <option value="VIP">VIP</option>
-                          <option value="COUPLE">Ghế đôi</option>
-                        </select>
+                      <div className="seat-editor-legend-item">
+                        <span className="seat-editor-swatch seat-editor-swatch--vip" aria-hidden="true" />
+                        <span>Ghế VIP</span>
                       </div>
-
-                      <div style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid var(--border)' }}>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                          Đổi nhanh cả Hàng {selectedSeat.rowLabel}
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            style={{ fontSize: '0.74rem', padding: '5px 6px' }}
-                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: 'STANDARD' })}
-                          >
-                            Thường
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            style={{ fontSize: '0.74rem', padding: '5px 6px' }}
-                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: 'VIP' })}
-                          >
-                            VIP
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            style={{ fontSize: '0.74rem', padding: '5px 6px' }}
-                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: 'COUPLE' })}
-                          >
-                            Ghế đôi
-                          </button>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'grid', gap: 8, paddingTop: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 22, height: 18, borderRadius: 4, background: seatTypeStyles.STANDARD.background, border: `1px solid ${seatTypeStyles.STANDARD.borderColor}` }} />
-                          <span>Ghế thường</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 22, height: 18, borderRadius: 4, background: seatTypeStyles.VIP.background, border: `1px solid ${seatTypeStyles.VIP.borderColor}` }} />
-                          <span>Ghế VIP</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 22, height: 18, borderRadius: 4, background: seatTypeStyles.COUPLE.background, border: `1px solid ${seatTypeStyles.COUPLE.borderColor}` }} />
-                          <span>Ghế đôi</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 22, height: 18, borderRadius: 4, background: '#e5e7eb', border: '1px dashed #94a3b8' }} />
-                          <span>Khóa/hỏng</span>
-                        </div>
+                      <div className="seat-editor-legend-item">
+                        <span className="seat-editor-swatch seat-editor-swatch--couple" aria-hidden="true" />
+                        <span>Ghế đôi</span>
                       </div>
                     </div>
-                  ) : (
-                    <div style={{ color: 'var(--text-muted)' }}>Chọn một ghế để chỉnh loại ghế hoặc trạng thái bán.</div>
-                  )}
-                </aside>
-              </div>
+                  </div>
+                ) : (
+                  <p className="seat-editor-hint">Chọn một ghế để đổi loại ghế.</p>
+                )}
+              </aside>
             </div>
           </div>
         </div>

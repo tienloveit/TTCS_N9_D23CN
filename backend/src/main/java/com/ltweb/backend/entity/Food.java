@@ -17,7 +17,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
-@Table(name = "foods")
+@Table(
+    name = "foods",
+    indexes = @jakarta.persistence.Index(name = "idx_foods_branch_id", columnList = "branch_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,7 +37,7 @@ public class Food {
   @Column(length = 1000)
   private String description;
 
-  @Column(nullable = false, precision = 12, scale = 2)
+  @Column(nullable = false, precision = 15, scale = 2)
   private BigDecimal price;
 
   private String imageUrl;
@@ -50,7 +52,9 @@ public class Food {
   @Column(name = "low_stock_threshold")
   private Integer lowStockThreshold;
 
-  @Builder.Default private Boolean active = true;
+  @Column(nullable = false)
+  @Builder.Default
+  private Boolean active = true;
 
   @Column(name = "created_at", updatable = false)
   @CreationTimestamp

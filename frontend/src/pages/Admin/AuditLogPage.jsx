@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { auditLogApi } from '../../api';
 import { RefreshIcon, SearchIcon } from '../../components/Common/CinemaIcons';
+import { formatCinema } from '../../utils/cinemaTime';
 
 const formatDateTime = (value) =>
-  value ? new Date(value).toLocaleString('vi-VN') : '-';
+  formatCinema(value, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' }, '-');
 
 const actionLabels = {
   STAFF_BOOKING_CREATED: 'Tạo đơn tại quầy',

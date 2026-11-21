@@ -1,0 +1,41 @@
+flowchart LR
+    KH(["Khách hàng"])
+    NV(["Nhân viên quầy"])
+    QL(["Quản lý chi nhánh"])
+    AD(["Quản trị viên"])
+    VNP(["VNPay"])
+
+    subgraph HT["MoviePTIT"]
+        UC1["Xem phim, lịch chiếu"]
+        UC2["Đặt vé online, chọn ghế, bắp nước"]
+        UC3["Thanh toán VNPay"]
+        UC4["Xem vé QR, hủy đơn chờ"]
+        UC5["Yêu cầu hoàn tiền"]
+        UC6["Bán vé tại quầy"]
+        UC7["Soát vé"]
+        UC8["Duyệt hoàn tiền"]
+        UC9["Quản lý suất chiếu, phòng, bắp nước, khuyến mãi, nhân viên"]
+        UC10["Xem báo cáo, nhật ký"]
+        UC11["Quản lý phim, chi nhánh, tài khoản, cấu hình"]
+    end
+
+    KH --- UC1
+    KH --- UC2
+    KH --- UC3
+    KH --- UC4
+    KH --- UC5
+    NV --- UC6
+    NV --- UC7
+    NV --- UC5
+    QL --- UC7
+    QL --- UC8
+    QL --- UC9
+    QL --- UC10
+    AD --- UC6
+    AD --- UC7
+    AD --- UC8
+    AD --- UC9
+    AD --- UC10
+    AD --- UC11
+    UC3 --- VNP
+    UC8 --- VNP

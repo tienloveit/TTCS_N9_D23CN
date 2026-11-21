@@ -63,8 +63,13 @@ export default function PaymentResultPage() {
             <CheckCircleIcon className="payment-result-icon payment-result-icon--success" />
             <h1 className="page-title" style={{ color: 'var(--green)', fontSize: '2.2rem', marginBottom: 16 }}>ĐẶT VÉ THÀNH CÔNG!</h1>
             <p className="page-subtitle" style={{ marginBottom: 40, lineHeight: 1.6, fontSize: '1.1rem' }}>
-              Cảm ơn bạn! Hệ thống đã ghi nhận thanh toán của bạn. <br />
-              Bạn có thể xem vé và mã QR trong phần lịch sử đặt vé.
+              {isStaffOrAdmin ? (
+                <>Hệ thống đã ghi nhận thanh toán. <br />
+                  Nếu bạn mở cổng VNPay từ màn bán vé, có thể đóng tab này: màn quầy tự chuyển sang xuất vé.</>
+              ) : (
+                <>Cảm ơn bạn! Hệ thống đã ghi nhận thanh toán của bạn. <br />
+                  Bạn có thể xem vé và mã QR trong phần lịch sử đặt vé.</>
+              )}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {isStaffOrAdmin ? (
@@ -78,7 +83,7 @@ export default function PaymentResultPage() {
                   Xem vé của tôi
                 </button>
               )}
-              <button className="btn btn-ghost" onClick={() => navigate(isStaffOrAdmin ? '/admin/dashboard' : '/')}>
+              <button className="btn btn-ghost" onClick={() => navigate(isStaffOrAdmin ? '/staff/dashboard' : '/')}>
                 Quay lại trang chủ
               </button>
             </div>

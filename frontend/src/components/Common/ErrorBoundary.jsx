@@ -25,7 +25,7 @@ class ErrorBoundary extends React.Component {
           textAlign: 'center',
           minHeight: '80vh'
         }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--accent)' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--accent)' }}>
             Opps! Có lỗi xảy ra
           </h1>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>

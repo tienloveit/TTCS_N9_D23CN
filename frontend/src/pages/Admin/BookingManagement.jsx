@@ -1,7 +1,8 @@
-import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { bookingApi } from '../../api';
+import { bookingApi, branchApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
+import Badge from '../../components/Common/Badge';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import {
   BellIcon,
@@ -20,7 +21,9 @@ import {
 import './BookingManagement.css';
 
 const PAGE_SIZE = 15;
+const SEARCH_DEBOUNCE_MS = 300;
 const EMPTY_FILTERS = { branch: '', from: '', to: '', payment: '' };
+const EMPTY_PAGE = { totalElements: 0, totalPages: 0, summary: { completed: 0, refundRequested: 0, paidAmount: 0 } };
 const DASH = '—';
 const BOOKING_STATUS = {
   PENDING: { label: 'Chờ xử lý', tone: 'warning' },
@@ -70,7 +73,16 @@ const formatDateTime = (value) => {
 const bookingCode = (booking) => booking.bookingCode || '#' + booking.bookingId;
 const customerName = (booking) => booking.username || 'Khách tại quầy';
 const seats = (booking) => (booking.seatCodes || []).filter(Boolean).join(', ');
-const branchKey = (booking) => booking.branchId != null ? 'id:' + booking.branchId : 'name:' + (booking.branchName || '');
+// Khớp RefundPolicy/BookingAccessPolicy ở backend: đơn bán tại quầy, đã thanh toán, chưa check-in.
+// Thời hạn và phạm vi chi nhánh vẫn do backend quyết định.
+const canRequestRefundForCustomer = (booking) => Boolean(booking)
+  && booking.staffUserId != null
+  && booking.status === 'COMPLETED'
+  && booking.paymentStatus === 'PAID'
+  && !(booking.tickets || []).some((ticket) => ticket.checkedInAt);
+// Bỏ tham số rỗng để URL chỉ chứa bộ lọc đang dùng.
+const searchParams = (params) => Object.fromEntries(
+  Object.entries(params).filter(([, value]) => value !== '' && value != null));
 
 function StatusBadge({ statuses, value }) {
   const status = statuses[value] || { label: value || 'Chưa có dữ liệu', tone: 'neutral' };
@@ -139,43 +151,91 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
   const [confirmState, setConfirmState] = useState(null);
   const [detailBooking, setDetailBooking] = useState(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState(() => new Map());
   const [exporting, setExporting] = useState(false);
   const [refundError, setRefundError] = useState('');
+  const [refundReason, setRefundReason] = useState('');
   const [loadError, setLoadError] = useState('');
   const [lookupNotice, setLookupNotice] = useState('');
+  const [pageInfo, setPageInfo] = useState(EMPTY_PAGE);
+  const [branches, setBranches] = useState([]);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const openedRequest = useRef(null);
+  const latestRequest = useRef(0);
   const drawer = useRef(null);
   const closeButton = useRef(null);
   const pageCheckbox = useRef(null);
 
+  const invalidRange = Boolean(filters.from && filters.to && filters.from > filters.to);
+
+  // Lọc, đếm và phân trang ở backend; chỉ nhận phản hồi của lần gọi mới nhất.
   const fetchBookings = useCallback(async () => {
+    const request = ++latestRequest.current;
+    if (invalidRange) {
+      setBookings([]);
+      setPageInfo(EMPTY_PAGE);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError('');
     try {
-      const res = await bookingApi.getAll();
-      const sorted = (res.data.result || []).sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-      setBookings(sorted);
-      if (staff && requestedBookingId && openedRequest.current !== requestedBookingId) {
-        openedRequest.current = requestedBookingId;
-        const requested = sorted.find((booking) => String(booking.bookingId) === requestedBookingId);
-        if (requested) setDetailBooking(requested);
-        else setLookupNotice('Không tìm thấy đơn trong danh sách hiện có.');
-      }
+      const res = await bookingApi.search(searchParams({
+        q: debouncedSearch.trim(),
+        status: statusFilter === 'ALL' ? '' : statusFilter,
+        paymentStatus: filters.payment,
+        branchId: filters.branch,
+        from: filters.from,
+        to: filters.to,
+        page: page - 1,
+        size: PAGE_SIZE,
+      }));
+      if (request !== latestRequest.current) return;
+      const result = res.data.result || EMPTY_PAGE;
+      setBookings(result.content || []);
+      setPageInfo({
+        totalElements: result.totalElements || 0,
+        totalPages: result.totalPages || 0,
+        summary: result.summary || EMPTY_PAGE.summary,
+      });
+      // Trang hiện tại không còn sau khi dữ liệu thay đổi: về trang cuối còn đơn.
+      if (result.totalPages > 0 && page > result.totalPages) setPage(result.totalPages);
     } catch (err) {
+      if (request !== latestRequest.current) return;
       console.error('Lỗi khi tải đơn đặt vé:', err);
       if (staff) setLoadError(err.response?.data?.message || 'Không thể tải danh sách đơn đặt vé.');
       else toast.error('Không thể tải danh sách đơn đặt vé');
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) setLoading(false);
     }
-  }, [requestedBookingId, staff]);
+  }, [debouncedSearch, filters, invalidRange, page, staff, statusFilter]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Chỉ ADMIN chọn chi nhánh; STAFF/MANAGER luôn bị backend giới hạn trong chi nhánh của mình.
+  useEffect(() => {
+    if (!isAdmin) return;
+    branchApi.getAll()
+      .then((res) => setBranches([...(res.data.result || [])]
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'vi'))))
+      .catch(() => setBranches([]));
+  }, [isAdmin]);
+
+  // Liên kết /staff/bookings?booking={id}: mở thẳng chi tiết đơn, không phụ thuộc trang đang xem.
+  useEffect(() => {
+    if (!staff || !requestedBookingId || openedRequest.current === requestedBookingId) return;
+    openedRequest.current = requestedBookingId;
+    bookingApi.getById(requestedBookingId)
+      .then((res) => setDetailBooking(res.data.result))
+      .catch(() => setLookupNotice('Không tìm thấy đơn hoặc đơn không thuộc phạm vi được xem.'));
+  }, [requestedBookingId, staff]);
 
   const requestProcessRefund = (booking, approved) => {
     if (!canProcessRefund) return;
@@ -187,8 +247,56 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
     });
   };
 
+  // Đơn bán tại quầy: nhân viên gửi yêu cầu hoàn thay khách vãng lai (không có tài khoản đăng nhập).
+  const requestCustomerRefund = (booking) => {
+    setRefundError('');
+    setRefundReason('');
+    setConfirmState({
+      kind: 'request',
+      bookingId: booking.bookingId,
+      bookingCode: booking.bookingCode || `#${booking.bookingId}`,
+      cash: booking.paymentMethod === 'CASH',
+    });
+  };
+
+  const mergeSelected = (bookingId, updated) => setSelectedIds((previous) => previous.has(bookingId)
+    ? new Map(previous).set(bookingId, { ...previous.get(bookingId), ...updated })
+    : previous);
+
+  const mergeUpdatedBooking = (bookingId, updated) => {
+    setBookings((prev) => prev.map((b) => (b.bookingId === bookingId ? { ...b, ...updated } : b)));
+    setDetailBooking((previous) => previous?.bookingId === bookingId ? { ...previous, ...updated } : previous);
+    mergeSelected(bookingId, updated);
+  };
+
+  const executeRequestRefund = async () => {
+    const { bookingId } = confirmState;
+    const reason = refundReason.trim();
+    if (!reason) {
+      setRefundError('Nhập lý do hoàn tiền');
+      return;
+    }
+    setRefundError('');
+    setProcessingRefund(bookingId);
+    try {
+      const res = await bookingApi.requestRefund(bookingId, reason);
+      mergeUpdatedBooking(bookingId, res.data.result);
+      toast.success('Đã gửi yêu cầu hoàn tiền. Quản lý chi nhánh sẽ duyệt.');
+      setConfirmState(null);
+      setRefundReason('');
+    } catch (err) {
+      setRefundError(err.response?.data?.message || err.message);
+    } finally {
+      setProcessingRefund(null);
+    }
+  };
+
   const executeProcessRefund = async () => {
     if (!confirmState) return;
+    if (confirmState.kind === 'request') {
+      await executeRequestRefund();
+      return;
+    }
     const { bookingId, approved } = confirmState;
     setRefundError('');
     setProcessingRefund(bookingId);
@@ -211,6 +319,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         toast.success(approved ? 'Đã hoàn tiền thành công' : 'Đã từ chối yêu cầu hoàn tiền');
       }
       setDetailBooking((previous) => previous?.bookingId === bookingId ? { ...previous, ...updated } : previous);
+      mergeSelected(bookingId, updated);
       setConfirmState(null);
     } catch (err) {
       const message = err.response?.data?.message || err.message;
@@ -221,58 +330,14 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
     }
   };
 
-  const branchOptions = useMemo(() => {
-    const options = new Map();
-    for (const booking of bookings) {
-      if (booking.branchId != null || booking.branchName) {
-        options.set(branchKey(booking), {
-          label: booking.branchName || 'Chi nhánh #' + booking.branchId,
-          id: booking.branchId,
-        });
-      }
-    }
-    const nameCounts = new Map();
-    for (const { label } of options.values()) {
-      nameCounts.set(label, (nameCounts.get(label) || 0) + 1);
-    }
-    return [...options].map(([key, { label, id }]) => ({
-      key,
-      label: nameCounts.get(label) > 1 ? label + (id == null ? ' (chưa có mã)' : ' (#' + id + ')') : label,
-    })).sort((a, b) => a.label.localeCompare(b.label, 'vi'));
-  }, [bookings]);
-
-  const invalidRange = Boolean(filters.from && filters.to && filters.from > filters.to);
-  const filtered = useMemo(() => {
-    if (invalidRange) return [];
-    const query = searchTerm.trim().toLocaleLowerCase('vi');
-    return bookings.filter((booking) => {
-      if (filters.branch && branchKey(booking) !== filters.branch) return false;
-      if (statusFilter !== 'ALL' && booking.status !== statusFilter) return false;
-      if (filters.payment && (booking.paymentStatus || 'NO_TRANSACTION') !== filters.payment) return false;
-      if (filters.from || filters.to) {
-        const date = parseBookingDate(booking.createdAt);
-        if (!date) return false;
-        const day = dateKeyFormatter.format(date);
-        if ((filters.from && day < filters.from) || (filters.to && day > filters.to)) return false;
-      }
-      return !query || [bookingCode(booking), customerName(booking), booking.movieName, booking.branchName,
-        ...(staff ? (booking.tickets || []).map((ticket) => String(ticket.id ?? '')) : [])]
-        .some((value) => value?.toLocaleLowerCase('vi').includes(query));
-    });
-  }, [bookings, filters, invalidRange, searchTerm, staff, statusFilter]);
-
-  const stats = useMemo(() => filtered.reduce((totals, booking) => {
-    if (booking.status === 'COMPLETED') totals.completed++;
-    if (booking.status === 'REFUND_REQUESTED') totals.refundRequested++;
-    if (booking.paymentStatus === 'PAID') totals.paidAmount += Number(booking.totalAmount) || 0;
-    return totals;
-  }, { completed: 0, refundRequested: 0, paidAmount: 0 }), [filtered]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalElements = pageInfo.totalElements;
+  const stats = pageInfo.summary;
+  const totalPages = Math.max(1, pageInfo.totalPages);
   const currentPage = Math.min(page, totalPages);
   const firstRow = (currentPage - 1) * PAGE_SIZE;
-  const paginated = filtered.slice(firstRow, firstRow + PAGE_SIZE);
-  const selectedBookings = filtered.filter((booking) => selectedIds.has(booking.bookingId));
+  const paginated = bookings;
+  // Đơn đã chọn giữ qua các trang (theo ID) để xuất Excel một lần.
+  const selectedBookings = [...selectedIds.values()];
   const selectedOnPage = paginated.filter((booking) => selectedIds.has(booking.bookingId)).length;
   const pageSelected = paginated.length > 0 && selectedOnPage === paginated.length;
   const hasFilters = Boolean(searchTerm || statusFilter !== 'ALL' || Object.values(filters).some(Boolean));
@@ -298,7 +363,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
 
   const resetSelection = () => {
     setPage(1);
-    setSelectedIds(new Set());
+    setSelectedIds(new Map());
   };
 
   const updateFilter = (key, value) => {
@@ -308,9 +373,9 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
 
   const toggleSelection = (rows, checked) => {
     setSelectedIds((previous) => {
-      const next = new Set(previous);
+      const next = new Map(previous);
       for (const booking of rows) {
-        if (checked) next.add(booking.bookingId);
+        if (checked) next.set(booking.bookingId, booking);
         else next.delete(booking.bookingId);
       }
       return next;
@@ -330,7 +395,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
   };
 
   const summary = [
-    { label: 'Tổng đơn', value: numberFormatter.format(filtered.length), icon: <TicketIcon size={21} />, tone: 'info' },
+    { label: 'Tổng đơn', value: numberFormatter.format(totalElements), icon: <TicketIcon size={21} />, tone: 'info' },
     { label: 'Đơn hoàn tất', value: numberFormatter.format(stats.completed), icon: <CheckIcon size={21} />, tone: 'success' },
     { label: 'Yêu cầu hoàn tiền', value: numberFormatter.format(stats.refundRequested), icon: <BellIcon size={21} />, tone: 'warning' },
     { label: 'Tổng tiền đã thanh toán', value: formatCurrency(stats.paidAmount), icon: <CreditCardIcon size={21} />, tone: 'success' },
@@ -342,12 +407,12 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         <div className={staff ? 'staff-heading-copy' : undefined}>
           {staff && <span className="staff-heading-icon"><ListIcon size={24} /></span>}
           <div>
-            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý Đơn đặt vé'}</h1>
+            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý đơn đặt vé'}</h1>
             <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
           </div>
         </div>
         <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => {
-          setSelectedIds(new Set());
+          setSelectedIds(new Map());
           fetchBookings();
         }}>
           <RefreshIcon size={17} /> Làm mới
@@ -367,7 +432,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         <div className="booking-list-heading">
           <div>
             <h2 id="booking-list-title">Danh sách đơn</h2>
-            <p role="status">{loading ? 'Đang tải…' : loadError && !bookings.length ? 'Chưa tải được dữ liệu' : numberFormatter.format(filtered.length) + ' đơn phù hợp'}</p>
+            <p role="status">{loading ? 'Đang tải…' : loadError && !bookings.length ? 'Chưa tải được dữ liệu' : numberFormatter.format(totalElements) + ' đơn phù hợp'}</p>
           </div>
           {isAdmin && (
             <button type="button" className="btn btn-primary" disabled={loading || exporting || !selectedBookings.length} onClick={exportSelection}>
@@ -380,16 +445,20 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         <div className="booking-filters">
           <label>Tìm kiếm
             <span className="booking-search"><SearchIcon size={17} />
-              <input type="search" className="input" placeholder={staff ? 'Mã đơn, mã vé, khách, phim' : 'Mã đơn, khách, phim'} value={searchTerm}
+              <input type="search" className="input" placeholder="Mã đơn, mã vé, ghế, khách, phim" value={searchTerm}
                 onChange={(event) => { setSearchTerm(event.target.value); resetSelection(); }} />
             </span>
           </label>
-          <label>Chi nhánh
-            <select className="input" value={filters.branch} onChange={(event) => updateFilter('branch', event.target.value)}>
-              <option value="">Tất cả chi nhánh</option>
-              {branchOptions.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
-            </select>
-          </label>
+          {isAdmin && (
+            <label>Chi nhánh
+              <select className="input" value={filters.branch} onChange={(event) => updateFilter('branch', event.target.value)}>
+                <option value="">Tất cả chi nhánh</option>
+                {branches.map((branch) => (
+                  <option key={branch.branchId} value={String(branch.branchId)}>{branch.name || 'Chi nhánh #' + branch.branchId}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>Đặt từ ngày
             <input type="date" className="input" value={filters.from} max={filters.to || undefined}
               aria-invalid={invalidRange} onChange={(event) => updateFilter('from', event.target.value)} />
@@ -416,7 +485,7 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
         {isAdmin && selectedBookings.length > 0 && (
           <div className="booking-selection">
             <strong role="status">Đã chọn {numberFormatter.format(selectedBookings.length)} đơn</strong>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Map())}>Bỏ chọn</button>
           </div>
         )}
 
@@ -488,9 +557,9 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
           </div>
         )}
 
-        {!loading && filtered.length > 0 && (
+        {!loading && totalElements > 0 && (
           <footer className="booking-pagination">
-            <span>Hiển thị {firstRow + 1}–{firstRow + paginated.length} / {filtered.length} đơn</span>
+            <span>Hiển thị {firstRow + 1}–{firstRow + paginated.length} / {numberFormatter.format(totalElements)} đơn</span>
             {totalPages > 1 && (
               <nav aria-label="Phân trang đơn đặt vé">
                 <button type="button" className="btn btn-secondary btn-sm booking-icon-button" aria-label="Trang trước"
@@ -547,13 +616,13 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                     {detailBooking.tickets.map((ticket) => (
                       <li key={ticket.id ?? ticket.seatId}>
                         <span>{ticket.seatCode || DASH}{ticket.id != null ? ' · Vé #' + ticket.id : ''}</span>
-                        <span className={'staff-status' + (ticket.checkedInAt ? ' staff-status--success' : '')}>
+                        <Badge tone={ticket.checkedInAt ? 'success' : 'neutral'}>
                           {ticket.checkedInAt ? 'Đã check-in · ' + formatDateTime(ticket.checkedInAt)
                             : detailBooking.status === 'REFUNDED' ? 'Đơn đã hoàn tiền'
                             : detailBooking.status === 'CANCELLED' ? 'Đơn đã hủy'
                             : ticket.ticketStatus === 'BOOKED' ? 'Chưa check-in'
                             : ticket.ticketStatus === 'HOLDING' ? 'Đang giữ' : 'Chưa xác nhận'}
-                        </span>
+                        </Badge>
                       </li>
                     ))}
                   </ul>
@@ -596,6 +665,14 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                 </section>
               )}
             </div>
+            {canRequestRefundForCustomer(detailBooking) && (
+              <footer className="booking-drawer-footer">
+                <button type="button" className="btn btn-secondary" disabled={Boolean(processingRefund)}
+                  onClick={() => requestCustomerRefund(detailBooking)}>
+                  <CreditCardIcon size={16} /><span>Yêu cầu hoàn thay khách</span>
+                </button>
+              </footer>
+            )}
             {canProcessRefund && detailBooking.status === 'REFUND_REQUESTED' && (
               <footer className="booking-drawer-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => requestProcessRefund(detailBooking, false)}
@@ -615,13 +692,28 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
 
         <ConfirmDialog
           open={confirming}
-          title={confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
-          message={(confirmState?.approved
+          title={confirmState?.kind === 'request' ? 'Yêu cầu hoàn tiền thay khách'
+            : confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
+          message={confirmState?.kind === 'request' ? (
+            <>
+              <span>
+                Đơn {confirmState.bookingCode} bán tại quầy. Quản lý chi nhánh sẽ duyệt yêu cầu
+                {confirmState.cash ? '; tiền mặt hoàn tại quầy sau khi được duyệt.' : '.'}
+              </span>
+              <label className="booking-refund-reason">
+                <span>Lý do hoàn tiền</span>
+                <textarea className="input" rows={3} maxLength={500} value={refundReason}
+                  placeholder="Ví dụ: bán nhầm suất chiếu, khách đổi ý trước giờ chiếu"
+                  disabled={Boolean(processingRefund)} onChange={(event) => setRefundReason(event.target.value)} />
+              </label>
+              {refundError && <span className="booking-refund-error" role="alert">Lỗi: {refundError}</span>}
+            </>
+          ) : (confirmState?.approved
             ? 'Xác nhận xử lý hoàn tiền cho đơn ' + confirmState.bookingCode + '?'
             : 'Xác nhận từ chối yêu cầu hoàn tiền của đơn ' + confirmState?.bookingCode + '?') +
             (refundError ? '\n\nLỗi: ' + refundError : '')}
-          confirmText={confirmState?.approved ? 'Xác nhận' : 'Từ chối'}
-          variant={confirmState?.approved ? 'primary' : 'danger'}
+          confirmText={confirmState?.kind === 'request' ? 'Gửi yêu cầu' : confirmState?.approved ? 'Xác nhận' : 'Từ chối'}
+          variant={confirmState?.kind === 'request' || confirmState?.approved ? 'primary' : 'danger'}
           loading={Boolean(processingRefund)}
           onConfirm={executeProcessRefund}
           onCancel={() => setConfirmState(null)}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { bookingApi, foodApi, ticketApi, showtimeApi, movieApi } from '../../api';
@@ -7,6 +8,15 @@ import { API_BASE_URL } from '../../api/axiosClient';
 import { useAuth } from '../../context/useAuth';
 import BookingReceipt from '../../components/Common/BookingReceipt';
 import { CheckIcon, ClockIcon, RotateCcwIcon } from '../../components/Common/CinemaIcons';
+import {
+  formatDate as formatCinemaDate,
+  formatTime as formatCinemaTime,
+  getCinemaWeekday,
+} from '../../utils/cinemaTime';
+import { MAX_FOOD_QUANTITY } from '../../utils/bookingLimits';
+
+// Khớp message của ErrorCode.SHOWTIME_NOT_FOUND ở backend.
+const SHOWTIME_UNAVAILABLE_MESSAGE = 'Showtime does not exist';
 
 export default function SeatSelectPage() {
   const { showtimeId } = useParams();
@@ -179,17 +189,13 @@ export default function SeatSelectPage() {
   const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
 
   // Format time from ISO string
-  const formatTime = (isoStr) => {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
+  const formatTime = (isoStr) => (isoStr ? formatCinemaTime(isoStr) : '');
 
   const formatDate = (isoStr) => {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
+    const weekday = getCinemaWeekday(isoStr);
+    if (weekday === null) return '';
     const weekdays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-    return `${weekdays[d.getDay()]}, ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+    return `${weekdays[weekday]}, ${formatCinemaDate(isoStr)}`;
   };
 
   const toggleSeat = (ticket) => {
@@ -208,7 +214,7 @@ export default function SeatSelectPage() {
     const stock = foods.find((food) => food.id === foodId)?.stockQuantity;
     setSelectedFoods((prev) => {
       const currentQuantity = prev[foodId] || 0;
-      const maxQuantity = stock == null ? Infinity : Math.max(0, stock);
+      const maxQuantity = Math.min(MAX_FOOD_QUANTITY, stock == null ? Infinity : Math.max(0, stock));
       const nextQuantity = Math.min(maxQuantity, Math.max(0, currentQuantity + delta));
       const nextSelectedFoods = { ...prev };
 
@@ -280,11 +286,11 @@ export default function SeatSelectPage() {
       const bookingData = res.data.result;
       navigate(`/booking/${bookingData.bookingId}/payment`);
     } catch (err) {
-      const code = err.response?.data?.code;
       const msg = err.response?.data?.message || '';
-      // Showtime đã bị xóa hoặc đã đóng → quay lại chọn suất
-      if (code === 1012 || msg.toLowerCase().includes('showtime')) {
-        alert('Suất chiếu này không còn khả dụng. Vui lòng chọn suất chiếu khác.');
+      // ErrorCode.SHOWTIME_NOT_FOUND: suất đã xóa/đóng/hủy, phim ẩn hoặc phòng/rạp ngừng hoạt động.
+      // Backend dùng chung code 400 cho nhiều lỗi nên phân biệt bằng message chính xác.
+      if (msg === SHOWTIME_UNAVAILABLE_MESSAGE) {
+        toast.error('Suất chiếu này không còn khả dụng. Vui lòng chọn suất chiếu khác.');
         navigate(-1);
       } else {
         setError(msg || 'Đặt vé thất bại. Vui lòng thử lại.');
@@ -330,7 +336,7 @@ export default function SeatSelectPage() {
     { label: 'Suất chiếu', done: true },
     { label: 'Chọn ghế', active: bookingStep === 1, done: bookingStep > 1 },
     { label: 'Bắp nước', active: bookingStep === 2, done: bookingStep > 2 },
-    { label: 'Thu tiền & Xuất vé' },
+    { label: 'Thanh toán' },
   ];
 
   return (
@@ -423,72 +429,39 @@ export default function SeatSelectPage() {
                   </div>
 
                   <div className="seat-legend-wrap">
-                    <div className="seat-legend" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+                    <div className="seat-legend">
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(16,185,129,0.15)',
-                            borderColor: 'var(--seat-available)',
-                          }}
-                        />
+                        <div className="seat-legend-dot" aria-hidden="true" />
                         Trống
                       </div>
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(59,130,246,0.3)',
-                            borderColor: 'var(--seat-selected)',
-                          }}
-                        />
+                        <div className="seat-legend-dot seat-legend-dot--selected" aria-hidden="true" />
                         Đang chọn
                       </div>
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(245,158,11,0.15)',
-                            borderColor: 'var(--seat-holding)',
-                          }}
-                        />
+                        <div className="seat-legend-dot seat-legend-dot--holding" aria-hidden="true" />
                         Đang giữ
                       </div>
                       <div className="seat-legend-item">
-                        <div
-                          className="seat-legend-dot"
-                          style={{
-                            background: 'rgba(239,68,68,0.15)',
-                            borderColor: 'var(--seat-booked)',
-                          }}
-                        />
+                        <div className="seat-legend-dot seat-legend-dot--booked" aria-hidden="true" />
                         Đã đặt
                       </div>
                     </div>
 
                     {seatTierPricing.length > 0 && (
-                      <div className="seat-legend" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+                      <div className="seat-legend">
                         {seatTierPricing.map(([tierName, tierPrice]) => {
                           const upper = tierName.toUpperCase();
                           const isVip = upper.includes('VIP');
                           const isCouple = upper.includes('COUPLE') || upper.includes('ĐÔI');
+                          const tierDotClass = isVip
+                            ? ' seat-legend-dot--vip'
+                            : isCouple
+                              ? ' seat-legend-dot--couple'
+                              : '';
                           return (
                             <div key={tierName} className="seat-legend-item">
-                              <div
-                                className="seat-legend-dot"
-                                style={{
-                                  background: isVip
-                                    ? 'rgba(245,158,11,0.14)'
-                                    : isCouple
-                                      ? 'rgba(124,58,237,0.14)'
-                                      : 'rgba(16,185,129,0.15)',
-                                  borderColor: isVip
-                                    ? 'var(--gold)'
-                                    : isCouple
-                                      ? 'var(--purple)'
-                                      : 'var(--seat-available)',
-                                }}
-                              />
+                              <div className={`seat-legend-dot${tierDotClass}`} aria-hidden="true" />
                               <span>
                                 {tierName}: <strong>{formatCurrency(tierPrice)}</strong>
                               </span>

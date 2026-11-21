@@ -23,8 +23,24 @@ public class BookingMembershipService {
   @Transactional
   public void updateMembershipAfterPayment(Long bookingId) {
     Booking booking = getBooking(bookingId);
-    User user = booking.getUser();
-    if (user == null) return;
+    // Chạy một lần cho mỗi đơn: sự kiện thanh toán lặp lại không cộng chi tiêu hai lần.
+    if (booking.getSpendingRecorded() != null) return;
+    booking.setSpendingRecorded(true);
+
+    // Đơn cũ chưa giữ lượt lúc tạo: tính lượt khi thanh toán như trước.
+    if (booking.getPromotionCode() != null
+        && !Boolean.TRUE.equals(booking.getPromotionUsageReserved())) {
+      promotionService.incrementUsage(booking.getPromotionCode());
+    }
+    // Lượt đã giữ nay trở thành lượt đã dùng; không trả lại khi hoàn tiền.
+    booking.setPromotionUsageReserved(false);
+    bookingRepository.save(booking);
+
+    if (booking.getUser() == null) return;
+    User user =
+        userRepository
+            .findByIdForUpdate(booking.getUser().getId())
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     BigDecimal currentSpending =
         user.getTotalSpending() != null ? user.getTotalSpending() : BigDecimal.ZERO;
@@ -32,11 +48,6 @@ public class BookingMembershipService {
     user.setMembershipTier(
         com.ltweb.backend.enums.MembershipTier.fromSpending(user.getTotalSpending()));
     userRepository.save(user);
-
-    // Tăng usedCount của promotion nếu có
-    if (booking.getPromotionCode() != null) {
-      promotionService.incrementUsage(booking.getPromotionCode());
-    }
 
     log.info(
         "Updated membership for user {}: spending={}, tier={}",

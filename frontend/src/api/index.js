@@ -3,12 +3,12 @@ import axiosClient, { API_BASE_URL } from './axiosClient';
 // ==================== AUTH ====================
 export const authApi = {
   login: (data) => axiosClient.post('/auth/login', data, { skipAuth: true }),
-  logout: () => {
-    const token = localStorage.getItem('accessToken');
-    return axiosClient.post('/auth/logout', null, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  // Tokens go in the body, not a Bearer header: an expired access token must not trigger a
+  // refresh here, and the backend needs the refresh token to end that session.
+  logout: () => axiosClient.post('/auth/logout', {
+    accessToken: localStorage.getItem('accessToken'),
+    refreshToken: localStorage.getItem('refreshToken'),
+  }, { skipAuth: true }),
   refresh: (refreshToken) => axiosClient.post('/auth/refresh', { refreshToken }, { skipAuth: true }),
   changePassword: (data) => axiosClient.post('/auth/change-password', data),
   forgotPassword: (email) => axiosClient.post('/auth/forgot-password', { email }, { skipAuth: true }),
@@ -127,7 +127,9 @@ export const foodApi = {
 export const bookingApi = {
   create: (data) => axiosClient.post('/booking', data),
   staffCreate: (data) => axiosClient.post('/booking/staff', data),
-  getAll: () => axiosClient.get('/booking'),
+  // Danh sách đơn quản lý theo trang: { q, status, paymentStatus, branchId, from, to,
+  // showtimeDate, checkedInDate, page (từ 0), size } → { content, totalElements, totalPages, summary }.
+  search: (params) => axiosClient.get('/booking/search', { params }),
   getById: (id) => axiosClient.get(`/booking/${id}`),
   getMyBookings: () => axiosClient.get('/booking/my-bookings/list'),
   getMyBookingById: (id) => axiosClient.get(`/booking/my-bookings/${id}`),
@@ -177,6 +179,9 @@ export const systemSettingsApi = {
 // ==================== STAFF OPERATIONS ====================
 export const staffApi = {
   getDashboard: () => axiosClient.get('/staff/dashboard'),
+  /** Tra cứu khách tại quầy theo email/SĐT; trả thông tin đã che bớt để nhân viên xác nhận. */
+  lookupCustomer: ({ email, phone }) =>
+    axiosClient.get('/staff/customers/lookup', { params: { email: email || undefined, phone: phone || undefined } }),
 };
 
 // ==================== PROMOTION ====================

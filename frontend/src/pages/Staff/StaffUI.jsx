@@ -1,3 +1,4 @@
+import Button from '../../components/Common/Button';
 import { AlertCircleIcon, RefreshIcon } from '../../components/Common/CinemaIcons';
 
 export function StaffPageHeading({ title, description, icon: Icon, children }) {
@@ -19,13 +20,34 @@ export function StaffState({ title, description, icon: Icon, error, onRetry }) {
       {StateIcon && <span className="staff-state-icon"><StateIcon size={22} aria-hidden="true" /></span>}
       <strong>{title}</strong>
       {description && <p>{description}</p>}
-      {onRetry && <button type="button" className="btn btn-secondary" onClick={onRetry}>
-        <RefreshIcon size={16} /> Thử lại
-      </button>}
+      {onRetry && <Button icon={<RefreshIcon size={16} />} onClick={onRetry}>Thử lại</Button>}
     </div>
   );
 }
 
 export function StaffSkeleton({ label = 'Đang tải dữ liệu' }) {
   return <div className="staff-skeleton" role="status" aria-label={label}><span /><span /><span /></div>;
+}
+
+/**
+ * Nhóm nút lọc chọn một (bộ lọc khung giờ, trạng thái nhật ký...).
+ * - options: [{ key, label }]
+ * - label: tên nhóm cho trình đọc màn hình
+ */
+export function StaffChips({ options, value, onChange, label, className = '' }) {
+  return (
+    <div className={'staff-chips ' + className} role="group" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          className="staff-chip"
+          aria-pressed={value === option.key}
+          onClick={() => onChange(option.key)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
 }

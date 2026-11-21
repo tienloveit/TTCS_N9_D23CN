@@ -19,7 +19,12 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Table(name = "notifications")
+@Table(
+    name = "notifications",
+    indexes =
+        @jakarta.persistence.Index(
+            name = "idx_notifications_created_at",
+            columnList = "created_at"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -52,8 +57,6 @@ public class Notification {
   private String targetType;
 
   private String targetId;
-
-  private LocalDateTime readAt;
 
   @CreationTimestamp private LocalDateTime createdAt;
 }

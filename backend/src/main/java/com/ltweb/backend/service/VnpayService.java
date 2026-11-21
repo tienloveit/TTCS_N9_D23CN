@@ -7,6 +7,8 @@ import com.ltweb.backend.dto.request.RefundRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.SeatStatusEvent;
 import com.ltweb.backend.entity.Booking;
+import com.ltweb.backend.entity.Payment;
+import com.ltweb.backend.entity.PaymentEvent;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
 import com.ltweb.backend.enums.BookingStatus;
@@ -32,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -66,8 +69,16 @@ public class VnpayService {
   private final RedisTemplate<String, String> redisTemplate;
   private final SimpMessagingTemplate simpMessagingTemplate;
   private final ApplicationEventPublisher eventPublisher;
-  private final FoodStockService foodStockService;
+  private final BookingReleaseService bookingReleaseService;
+  private final NotificationService notificationService;
+  private final PaymentEventService paymentEventService;
   private final BookingRefundService bookingRefundService;
+
+  static final String LATE_PAYMENT_REFUND_REASON =
+      "VNPay xác nhận thanh toán sau khi đơn đã hết hạn giữ ghế; cần hoàn tiền";
+  static final String LATE_PAYMENT_MESSAGE =
+      "Thanh toán đến sau khi đơn đã hết thời gian giữ ghế nên không xuất vé."
+          + " Đơn đã được chuyển sang chờ hoàn tiền.";
 
   private static final Map<String, String> RESPONSE_CODE_DESC = createResponseCodeDesc();
   private static final Map<String, String> TRANSACTION_STATUS_DESC = createTransactionStatusDesc();
@@ -279,13 +290,15 @@ public class VnpayService {
   public ApiResponse<Map<String, Object>> processReturnUrl(Map<String, String> params) {
     Map<String, Object> verified = new HashMap<>(verifyCallback(params));
     if (!Boolean.TRUE.equals(verified.get("validSignature"))) {
+      paymentEventService.recordCallback(
+          PaymentEvent.Type.VNPAY_RETURN, null, params, false, "97", "Invalid Checksum");
       return ApiResponse.<Map<String, Object>>builder()
           .code(97)
           .message("Chữ ký không hợp lệ")
           .result(verified)
           .build();
     }
-    Map<String, String> outcome = applyVerifiedCallback(params);
+    Map<String, String> outcome = applyVerifiedCallback(PaymentEvent.Type.VNPAY_RETURN, params);
     boolean paid = "true".equals(outcome.get("paid"));
     verified.put("paymentApplied", paid);
     verified.put(
@@ -297,7 +310,10 @@ public class VnpayService {
             params.get("vnp_TransactionStatus"), "Không xác định"));
     return ApiResponse.<Map<String, Object>>builder()
         .code(paid ? 200 : 99)
-        .message(paid ? "Thanh toán đã được ghi nhận" : outcome.get("Message"))
+        .message(
+            paid
+                ? "Thanh toán đã được ghi nhận"
+                : outcome.getOrDefault("userMessage", outcome.get("Message")))
         .result(verified)
         .build();
   }
@@ -305,17 +321,36 @@ public class VnpayService {
   @Transactional
   public Map<String, String> processIpn(Map<String, String> params) {
     if (!Boolean.TRUE.equals(verifyCallback(params).get("validSignature"))) {
+      paymentEventService.recordCallback(
+          PaymentEvent.Type.VNPAY_IPN, null, params, false, "97", "Invalid Checksum");
       return rsp("97", "Invalid Checksum");
     }
-    Map<String, String> outcome = applyVerifiedCallback(params);
+    Map<String, String> outcome = applyVerifiedCallback(PaymentEvent.Type.VNPAY_IPN, params);
     return rsp(outcome.get("RspCode"), outcome.get("Message"));
   }
 
-  private Map<String, String> applyVerifiedCallback(Map<String, String> params) {
+  /** Áp dụng callback đã xác thực chữ ký và ghi lại vào nhật ký thanh toán. */
+  private Map<String, String> applyVerifiedCallback(
+      PaymentEvent.Type type, Map<String, String> params) {
+    AtomicReference<Long> bookingId = new AtomicReference<>();
+    Map<String, String> outcome = applyCallback(params, bookingId);
+    paymentEventService.recordCallback(
+        type,
+        bookingId.get(),
+        params,
+        true,
+        outcome.get("RspCode"),
+        outcome.getOrDefault("userMessage", outcome.get("Message")));
+    return outcome;
+  }
+
+  private Map<String, String> applyCallback(
+      Map<String, String> params, AtomicReference<Long> matchedBooking) {
     String txnRef = params.get("vnp_TxnRef");
     if (txnRef == null || txnRef.isBlank()) return rsp("01", "Order not Found");
     Booking booking = findBookingByTxnRef(txnRef).orElse(null);
     if (booking == null || booking.getPayment() == null) return rsp("01", "Order not Found");
+    matchedBooking.set(booking.getId());
     String expected =
         booking.getPayment().getAmount().movePointRight(2).toBigIntegerExact().toString();
     if (!expected.equals(params.get("vnp_Amount"))) return rsp("04", "Invalid Amount");
@@ -323,60 +358,123 @@ public class VnpayService {
     boolean success =
         "00".equals(params.get("vnp_ResponseCode"))
             && "00".equals(params.get("vnp_TransactionStatus"));
-    if (booking.getStatus() == BookingStatus.COMPLETED
-        && booking.getPayment().getPaymentStatus() == PaymentStatus.PAID) {
-      Map<String, String> result = rsp("02", "Order already completed");
-      result.put("paid", String.valueOf(success));
+    if (booking.getPayment().getPaymentStatus() == PaymentStatus.PAID) {
+      // Callback lặp lại (IPN và return URL, hoặc VNPay gửi lại): kết quả đã được ghi nhận.
+      Map<String, String> result = rsp("02", "Order already confirmed");
+      result.put("paid", String.valueOf(success && ticketsIssued(booking)));
+      if (!ticketsIssued(booking)) result.put("userMessage", LATE_PAYMENT_MESSAGE);
       return result;
     }
-    if (!isPendingPayment(booking)) return rsp("02", "Order is no longer payable");
-    if (booking.getTickets().isEmpty()
-        || booking.getTickets().stream()
-            .anyMatch(
-                ticket ->
-                    ticket.getTicketStatus() != TicketStatus.HOLDING
-                        || ticket.getBooking() == null
-                        || !booking.getId().equals(ticket.getBooking().getId()))) {
-      return rsp("02", "Seats are no longer reserved for this order");
+
+    boolean awaitingPayment =
+        booking.getStatus() == BookingStatus.PENDING
+            && booking.getPayment().getPaymentStatus() == PaymentStatus.PENDING;
+    boolean seatsHeld = seatsHeldBy(booking);
+
+    if (success) {
+      // VNPay chỉ cho trả trước vnp_ExpireDate, nhưng IPN có thể tới sau expiresAt. Nếu ghế vẫn
+      // còn giữ cho đơn thì vẫn xuất vé; nếu không, tiền đã bị trừ nên phải ghi nhận để hoàn.
+      if (awaitingPayment && seatsHeld) return confirmPaid(booking, params);
+      if (!isReleasedOrUnpaid(booking)) {
+        // Trạng thái không nhất quán (ví dụ REFUNDED mà payment chưa PAID): không ghi đè.
+        return rsp("02", "Order is no longer payable");
+      }
+      return recordLatePayment(booking, params);
     }
 
+    if (!isPendingPayment(booking) || !seatsHeld) {
+      // Thất bại sau khi đơn đã hết hạn/hủy: job dọn dẹp hoặc lệnh hủy đã trả tài nguyên.
+      return rsp("02", "Order is no longer payable");
+    }
+    booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
+    booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
+    booking.setStatus(BookingStatus.CANCELLED);
+    bookingReleaseService.releaseUnpaid(booking);
+    bookingRepository.save(booking);
+    Map<String, String> result = rsp("00", "Confirm Success");
+    result.put("paid", "false");
+    return result;
+  }
+
+  private Map<String, String> confirmPaid(Booking booking, Map<String, String> params) {
     booking.getPayment().setProviderTxnId(params.get("vnp_TransactionNo"));
     booking.getPayment().setPaymentMethod(PaymentMethod.VNPAY);
-    booking.getPayment().setPaymentStatus(success ? PaymentStatus.PAID : PaymentStatus.CANCELLED);
-    booking.setStatus(success ? BookingStatus.COMPLETED : BookingStatus.CANCELLED);
-    if (success) booking.getPayment().setPaidAt(LocalDateTime.now(clock));
+    booking.getPayment().setPaymentStatus(PaymentStatus.PAID);
+    booking.getPayment().setPaidAt(LocalDateTime.now(clock));
+    booking.setStatus(BookingStatus.COMPLETED);
+    Long showtimeId = booking.getShowtime().getId();
     for (Ticket ticket : booking.getTickets()) {
-      if (success) {
-        ticket.setTicketStatus(TicketStatus.BOOKED);
-        ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
-      } else {
-        ticket.setBooking(null);
-        ticket.setTicketStatus(TicketStatus.AVAILABLE);
-        ticket.setQrCode(null);
-        ticket.setCheckedInAt(null);
-        ticket.setCheckedInBy(null);
-      }
+      ticket.setTicketStatus(TicketStatus.BOOKED);
+      ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
       ticketRepository.save(ticket);
+      Long seatId = ticket.getSeat().getId();
       BookingTransactionEffects.afterCommit(
           () ->
               simpMessagingTemplate.convertAndSend(
-                  "/topic/showtime/" + ticket.getShowtime().getId() + "/seats",
-                  SeatStatusEvent.builder()
-                      .seatId(ticket.getSeat().getId())
-                      .status(success ? "BOOKED" : "AVAILABLE")
-                      .build()));
+                  "/topic/showtime/" + showtimeId + "/seats",
+                  SeatStatusEvent.builder().seatId(seatId).status("BOOKED").build()));
     }
     BookingTransactionEffects.releaseAfterCommit(
-        redisTemplate,
-        booking.getShowtime().getId(),
-        booking.getTickets(),
-        booking.getBookingCode());
+        redisTemplate, showtimeId, booking.getTickets(), booking.getBookingCode());
     bookingRepository.save(booking);
-    if (!success) foodStockService.release(booking);
-    if (success) eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
+    eventPublisher.publishEvent(new BookingPaidEvent(booking.getId()));
     Map<String, String> result = rsp("00", "Confirm Success");
-    result.put("paid", String.valueOf(success));
+    result.put("paid", "true");
     return result;
+  }
+
+  /**
+   * Tiền đã bị trừ nhưng đơn không còn ghế (đã hủy/hết hạn). Không xuất vé: ghi nhận giao dịch, đưa
+   * đơn vào hàng chờ hoàn tiền sẵn có và báo quản lý. Trả RspCode 00 để VNPay biết đơn đã được ghi
+   * nhận; nếu trả mã lỗi, khoản thanh toán sẽ không còn dấu vết nào trong hệ thống.
+   */
+  private Map<String, String> recordLatePayment(Booking booking, Map<String, String> params) {
+    if (booking.getStatus() == BookingStatus.PENDING) {
+      // Đơn chưa được dọn nhưng không còn giữ ghế: trả tài nguyên còn lại trước khi chờ hoàn.
+      bookingReleaseService.releaseUnpaid(booking);
+    }
+    Payment payment = booking.getPayment();
+    payment.setProviderTxnId(params.get("vnp_TransactionNo"));
+    payment.setPaymentMethod(PaymentMethod.VNPAY);
+    payment.setPaymentStatus(PaymentStatus.PAID);
+    payment.setPaidAt(LocalDateTime.now(clock));
+    payment.setRefundReason(LATE_PAYMENT_REFUND_REASON);
+    payment.setRefundAmount(payment.getAmount());
+    booking.setStatus(BookingStatus.REFUND_REQUESTED);
+    booking.setSpendingRecorded(false);
+    bookingRepository.save(booking);
+    notificationService.notifyRefundRequest(
+        bookingAccessPolicy.branchId(booking), booking.getId(), booking.getBookingCode());
+    log.warn(
+        "VNPay payment {} arrived after booking {} was released; queued for refund",
+        params.get("vnp_TransactionNo"),
+        booking.getBookingCode());
+    Map<String, String> result = rsp("00", "Confirm Success");
+    result.put("paid", "false");
+    result.put("userMessage", LATE_PAYMENT_MESSAGE);
+    return result;
+  }
+
+  private static boolean seatsHeldBy(Booking booking) {
+    return !booking.getTickets().isEmpty()
+        && booking.getTickets().stream()
+            .allMatch(
+                ticket ->
+                    ticket.getTicketStatus() == TicketStatus.HOLDING
+                        && ticket.getBooking() != null
+                        && booking.getId().equals(ticket.getBooking().getId()));
+  }
+
+  private static boolean isReleasedOrUnpaid(Booking booking) {
+    return booking.getStatus() == BookingStatus.PENDING
+        || booking.getStatus() == BookingStatus.CANCELLED
+        || booking.getStatus() == BookingStatus.EXPIRED;
+  }
+
+  private static boolean ticketsIssued(Booking booking) {
+    return !Boolean.FALSE.equals(booking.getSpendingRecorded())
+        && booking.getStatus() != BookingStatus.REFUNDED
+        && !booking.getTickets().isEmpty();
   }
 
   private boolean isPendingPayment(Booking booking) {

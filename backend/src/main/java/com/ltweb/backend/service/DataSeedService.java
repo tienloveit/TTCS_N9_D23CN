@@ -44,7 +44,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,11 +64,9 @@ public class DataSeedService {
   private final SeatRepository seatRepository;
   private final ShowtimeRepository showtimeRepository;
   private final TicketRepository ticketRepository;
-  private final JdbcTemplate jdbcTemplate;
 
   @Transactional
   public void seedInitialData() {
-    ensureUserRoleColumnSupportsAllRoles();
     seedUsers();
     seedFoods();
 
@@ -80,53 +77,6 @@ public class DataSeedService {
     seedShowtimesAndTickets(movies, rooms);
 
     log.info("Demo seed data has been checked and refreshed.");
-  }
-
-  private void ensureUserRoleColumnSupportsAllRoles() {
-    try {
-      jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN role VARCHAR(20)");
-    } catch (Exception ex) {
-      log.debug("Could not adjust users.role column: {}", ex.getMessage());
-    }
-
-    try {
-      List<String> roleCheckConstraints =
-          jdbcTemplate.queryForList(
-              """
-                            SELECT tc.CONSTRAINT_NAME
-                            FROM information_schema.TABLE_CONSTRAINTS tc
-                            JOIN information_schema.CHECK_CONSTRAINTS cc
-                              ON tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA
-                             AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
-                            WHERE tc.TABLE_SCHEMA = DATABASE()
-                              AND tc.TABLE_NAME = 'users'
-                              AND tc.CONSTRAINT_TYPE = 'CHECK'
-                              AND LOWER(cc.CHECK_CLAUSE) LIKE '%role%'
-                            """,
-              String.class);
-
-      for (String constraintName : roleCheckConstraints) {
-        try {
-          jdbcTemplate.execute("ALTER TABLE users DROP CHECK " + constraintName);
-        } catch (Exception ex) {
-          log.debug(
-              "Could not drop users.role check constraint {}: {}", constraintName, ex.getMessage());
-        }
-      }
-    } catch (Exception ex) {
-      log.debug("Could not inspect users.role check constraints: {}", ex.getMessage());
-    }
-
-    try {
-      jdbcTemplate.execute(
-          """
-                            ALTER TABLE users
-                            ADD CONSTRAINT users_role_chk
-                            CHECK (role IS NULL OR role IN ('ADMIN', 'MANAGER', 'STAFF', 'USER'))
-                            """);
-    } catch (Exception ex) {
-      log.debug("Could not add users.role check constraint: {}", ex.getMessage());
-    }
   }
 
   private void seedUsers() {

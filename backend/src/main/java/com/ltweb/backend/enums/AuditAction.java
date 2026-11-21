@@ -3,6 +3,7 @@ package com.ltweb.backend.enums;
 public enum AuditAction {
   STAFF_BOOKING_CREATED,
   TICKET_CHECKED_IN,
+  REFUND_REQUESTED,
   REFUND_APPROVED,
   REFUND_REJECTED,
   FOOD_CREATED,
