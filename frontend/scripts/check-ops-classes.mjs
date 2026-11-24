@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Linter } from 'eslint';
@@ -32,7 +32,7 @@ export function checkClasses(source) {
   return new Linter().verify(source, {
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
     plugins: { ops: { rules } }, rules: { 'ops/classes': 'error' },
-  });
+  }, { allowInlineConfig: false });
 }
 
 function files(dir) {
@@ -44,12 +44,9 @@ function files(dir) {
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const migration = join(root, 'ops-migration.json');
-  const pending = new Set(existsSync(migration) ? JSON.parse(readFileSync(migration, 'utf8')) : []);
   for (const dir of ['src/pages/Admin', 'src/pages/Staff', 'src/components/Ops']) {
     for (const file of files(join(root, dir))) {
       const path = relative(root, file).replaceAll('\\', '/');
-      if (pending.has(path)) continue;
       for (const problem of checkClasses(readFileSync(file, 'utf8'))) {
         console.error(path + ':' + problem.line + ' ' + problem.message);
         process.exitCode = 1;

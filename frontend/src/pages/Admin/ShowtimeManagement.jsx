@@ -1,193 +1,22 @@
-import { ROOM_TECHNOLOGY_LABELS, formatScreening } from '../../utils/cinemaFormats';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { showtimeApi, movieApi, branchApi, roomApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
-import ConfirmDialog from '../../components/Common/ConfirmDialog';
-import useModalDialog from '../../components/Common/useModalDialog';
+import { EditIcon, PlusIcon, TrashIcon } from '../../components/Common/CinemaIcons';
 import {
-  CalendarIcon as LucideCalendarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  EditIcon as LucideEditIcon,
-  PlusIcon,
-  SearchIcon,
-  TrashIcon as LucideTrashIcon,
-  XIcon,
-} from '../../components/Common/CinemaIcons';
-import './ShowtimeCalendar.css';
+  DataTable, DateLabel, Field, FilterBar, Money, OpsButton, OpsConfirm, OpsDialog,
+  OpsPage, OpsPanel, Segmented, Select, ShowtimeRail, ShowTime, StateBlock, StatusBadge, TextInput,
+} from '../../components/Ops';
+import { addDaysToDateKey, cinemaTodayKey, formatTime, parseLocalDateTime, toCinemaDateKey } from '../../utils/cinemaTime';
+import { ROOM_TECHNOLOGY_LABELS, formatScreening } from '../../utils/cinemaFormats';
+import { SHOWTIME_STATUS_META } from '../../utils/showtimeStatus';
 
-const EditIcon = () => <LucideEditIcon size={15} />;
-const TrashIcon = () => <LucideTrashIcon size={15} />;
-const CalendarIcon = () => <LucideCalendarIcon size={16} />;
-
-const ROOM_TYPE_LABELS = ROOM_TECHNOLOGY_LABELS;
-
-const STATUS_MAP = {
-  OPEN: { label: 'Đang mở', className: 'status--active' },
-  CLOSED: { label: 'Đã đóng', className: 'status--inactive' },
-  CANCELLED: { label: 'Đã hủy', className: 'status--inactive' },
+const localInputTime = value => {
+  const date = parseLocalDateTime(value);
+  return date ? toCinemaDateKey(date) + 'T' + formatTime(date) : '';
 };
-
-const DAY_START_HOUR = 7;
-const DAY_END_HOUR = 24;
-const HOUR_WIDTH = 90;
-const calendarDate = new Intl.DateTimeFormat('vi-VN', {
-  weekday: 'long',
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-
-const toDateInputValue = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const toMinutes = (dateStr) => {
-  const date = new Date(dateStr);
-  return date.getHours() * 60 + date.getMinutes();
-};
-
-const isSameDate = (dateStr, dateInput) => {
-  if (!dateStr || !dateInput) return false;
-  return toDateInputValue(new Date(dateStr)) === dateInput;
-};
-
-const formatTime = (dateStr) =>
-  dateStr
-    ? new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    : '--:--';
-
-const shiftCalendarDate = (value, days) => {
-  const date = new Date(value);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-};
-
-const layoutRoomShowtimes = (showtimes, date, firstMinute) => {
-  const laneEnds = [];
-  const slots = showtimes.map((showtime) => {
-    const start = toMinutes(showtime.startTime);
-    const end = new Date(showtime.endTime) > new Date(showtime.startTime)
-      ? (isSameDate(showtime.endTime, date) ? toMinutes(showtime.endTime) : DAY_END_HOUR * 60)
-      : start + 30;
-    const visibleEnd = Math.min(DAY_END_HOUR * 60, Math.max(end, start + 20));
-    const availableLane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
-    const lane = availableLane === -1 ? laneEnds.length : availableLane;
-    laneEnds[lane] = visibleEnd;
-    const minutes = DAY_END_HOUR * 60 - firstMinute;
-    return {
-      showtime,
-      style: {
-        '--slot-offset': `${(start - firstMinute) / minutes * 100}%`,
-        '--slot-width': `${(visibleEnd - start) / minutes * 100}%`,
-        '--slot-lane': lane,
-      },
-    };
-  });
-  return { slots, lanes: Math.max(laneEnds.length, 1) };
-};
-
-const ShowtimeCalendar = ({ date, rooms, showtimes, branches, canEdit, onSelect }) => {
-  const scrollRef = useRef(null);
-  const firstShowtimeMinute = showtimes.length ? toMinutes(showtimes[0].startTime) : DAY_START_HOUR * 60;
-  const firstShowtimeHour = Math.floor(firstShowtimeMinute / 60);
-  const firstHour = Math.min(DAY_START_HOUR, firstShowtimeHour);
-  const hours = Array.from({ length: DAY_END_HOUR - firstHour }, (_, index) => firstHour + index);
-  const branchNames = new Map(branches.map((branch) => [String(branch.branchId), branch.name]));
-  const showtimesByRoom = new Map();
-  for (const showtime of showtimes) {
-    const roomId = String(showtime.roomId);
-    if (!showtimesByRoom.has(roomId)) showtimesByRoom.set(roomId, []);
-    showtimesByRoom.get(roomId).push(showtime);
-  }
-  const openCount = showtimes.filter((showtime) => showtime.status === 'OPEN').length;
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      const leadHours = scrollRef.current.clientWidth < 480 ? 0 : 1;
-      scrollRef.current.scrollLeft = Math.max(0, (firstShowtimeHour - firstHour - leadHours) * HOUR_WIDTH);
-    }
-  }, [date, firstHour, firstShowtimeHour]);
-
-  return (
-    <section className="schedule-calendar" aria-labelledby="schedule-calendar-title">
-      <header className="schedule-calendar-heading">
-        <div>
-          <h2 id="schedule-calendar-title">Lịch chiếu theo phòng</h2>
-          <p aria-live="polite">
-            <time dateTime={date}>{calendarDate.format(new Date(date))}</time>
-            <span> · {showtimes.length} suất · {rooms.length} phòng · {openCount} đang mở bán</span>
-          </p>
-        </div>
-        {rooms.length > 0 && (
-          <ul className="schedule-legend" aria-label="Trạng thái suất chiếu">
-            {Object.entries(STATUS_MAP).map(([status, info]) => (
-              <li key={status} data-status={status}>{info.label}</li>
-            ))}
-          </ul>
-        )}
-      </header>
-      {rooms.length === 0 ? (
-        <p className="schedule-empty">Không có suất chiếu trong ngày và chi nhánh đang chọn.</p>
-      ) : (
-        <div className="schedule-scroll" ref={scrollRef} role="region" tabIndex={0} aria-label="Trục giờ chiếu theo phòng">
-          <div className="schedule-grid" style={{ '--schedule-hours': hours.length, '--schedule-hour-width': `${HOUR_WIDTH}px` }}>
-            <div className="schedule-row schedule-hour-header">
-              <span className="schedule-room">Phòng chiếu</span>
-              <div className="schedule-hours">
-                {hours.map((hour) => <span key={hour}>{String(hour).padStart(2, '0')}:00</span>)}
-              </div>
-            </div>
-            {rooms.map((room) => {
-              const roomShowtimes = showtimesByRoom.get(String(room.id)) || [];
-              const { slots, lanes } = layoutRoomShowtimes(roomShowtimes, date, firstHour * 60);
-              const branchName = branchNames.get(String(room.branchId)) || roomShowtimes[0]?.branchName;
-              const technology = ROOM_TYPE_LABELS[room.roomTechnology] || room.roomTechnology;
-              return (
-                <div className="schedule-row" key={room.id} role="group" aria-label={branchName ? `${room.name}, ${branchName}` : room.name}>
-                  <div className="schedule-room">
-                    <strong>{room.name}</strong>
-                    {branchName && <span>{branchName}</span>}
-                    <span>{[technology, `${room.seatCapacity || 0} ghế`].filter(Boolean).join(' · ')}</span>
-                  </div>
-                  <div className="schedule-track" style={{ '--schedule-lanes': lanes }}>
-                    {slots.map(({ showtime, style }) => {
-                      const status = STATUS_MAP[showtime.status]?.label || showtime.status || '–';
-                      const time = `${formatTime(showtime.startTime)} – ${formatTime(showtime.endTime)}`;
-                      const label = `${showtime.movieName}, ${time}, ${status}`;
-                      return (
-                        <button
-                          key={showtime.showtimeId}
-                          type="button"
-                          className="schedule-slot"
-                          data-status={showtime.status}
-                          style={style}
-                          title={label}
-                          aria-label={label}
-                          disabled={!canEdit}
-                          onClick={() => onSelect(showtime)}
-                        >
-                          <span className="schedule-slot-time">{time}</span>
-                          <strong>{showtime.movieName}</strong>
-                          <span className="schedule-slot-meta">{formatScreening(showtime.screeningFormat, showtime.roomTechnology)} · {status}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-};
+const showtimeStatuses = Object.entries(SHOWTIME_STATUS_META);
+const idOfMovie = movie => movie.movieId ?? movie.id;
 
 const ShowtimeManagement = () => {
   const { isAdmin, isManager, isAdminOrManager } = useAuth();
@@ -197,15 +26,18 @@ const ShowtimeManagement = () => {
   const [completedRequest, setCompletedRequest] = useState(null);
   const loading = completedRequest?.reloadCount !== reloadCount || completedRequest?.isManager !== isManager;
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('calendar');
-  const [selectedDate, setSelectedDate] = useState(toDateInputValue());
+  const [showAllDates, setShowAllDates] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(cinemaTodayKey);
+  const [movieFilter, setMovieFilter] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
-  const dialog = useModalDialog(showModal, () => setShowModal(false));
   const [isEditing, setIsEditing] = useState(false);
   const [movies, setMovies] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -246,12 +78,13 @@ const ShowtimeManagement = () => {
         if (!active) return;
         const branchList = branchRes.data.result || [];
         setShowtimes(stRes.data.result || []);
-        setMovies(movieList);
+        setMovies(Array.isArray(movieList) ? movieList : movieList.content || []);
+        setLoadError('');
         setBranches(branchList);
         setRooms(roomRes.data.result || []);
         setSelectedBranchId((current) => current || (branchList.length === 1 ? String(branchList[0].branchId) : ''));
       } catch {
-        if (active) toast.error('Lỗi khi tải dữ liệu');
+        if (active) setLoadError('Không tải được lịch chiếu, phim hoặc danh sách phòng.');
       } finally {
         if (active) setCompletedRequest({ reloadCount, isManager });
       }
@@ -267,25 +100,32 @@ const ShowtimeManagement = () => {
     ? rooms.filter((room) => String(room.branchId || room.branch_id) === String(formData.branchId))
     : [];
 
-  const calendarShowtimes = useMemo(
-    () =>
-      showtimes
-        .filter((showtime) => isSameDate(showtime.startTime, selectedDate))
-        .filter((showtime) => !selectedBranchId || String(showtime.branchId) === String(selectedBranchId))
-        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
-    [showtimes, selectedDate, selectedBranchId],
-  );
+  const scopedShowtimes = useMemo(() => showtimes
+    .filter(show => !selectedBranchId || String(show.branchId) === selectedBranchId)
+    .filter(show => !movieFilter || String(show.movieId) === movieFilter)
+    .filter(show => statusFilter === 'ALL' || show.status === statusFilter)
+    .filter(show => !searchTerm.trim() || [show.movieName, show.roomName, show.branchName].some(
+      value => value?.toLocaleLowerCase('vi').includes(searchTerm.toLocaleLowerCase('vi').trim()),
+    ))
+    .sort((first, second) => parseLocalDateTime(first.startTime) - parseLocalDateTime(second.startTime)),
+  [showtimes, selectedBranchId, movieFilter, statusFilter, searchTerm]);
+  const calendarShowtimes = scopedShowtimes.filter(show => toCinemaDateKey(show.startTime) === selectedDate);
+  const calendarRooms = rooms
+    .filter(room => !selectedBranchId || String(room.branchId) === selectedBranchId)
+    .map(room => ({ ...room, roomName: room.name,
+      branchName: branches.find(branch => String(branch.branchId) === String(room.branchId))?.name }));
 
-  const calendarRooms = useMemo(() => {
-    const roomIdsWithSchedule = new Set(calendarShowtimes.map((showtime) => String(showtime.roomId)));
-    return rooms
-      .filter((room) => !selectedBranchId || String(room.branchId) === String(selectedBranchId))
-      .filter((room) => roomIdsWithSchedule.has(String(room.id)))
-      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-  }, [rooms, calendarShowtimes, selectedBranchId]);
+  const computeEndTimeFromMovie = (movieId, startTime) => {
+    const start = parseLocalDateTime(startTime);
+    if (!movieId || !start) return '';
+    const movie = movies.find(item => String(idOfMovie(item)) === String(movieId));
+    const duration = Number(movie?.durationMinutes || movie?.duration || 120);
+    return localInputTime(new Date(start.getTime() + duration * 60_000));
+  };
 
-  const handleOpenModal = (showtime = null) => {
+  const handleOpenModal = (showtime = null, room, startTime = selectedDate + 'T08:00') => {
     if (!canEditShowtime) return;
+    setSaveError('');
     if (showtime) {
       setIsEditing(true);
       setFormData({
@@ -293,8 +133,8 @@ const ShowtimeManagement = () => {
         movieId: showtime.movieId,
         branchId: showtime.branchId || '',
         roomId: showtime.roomId,
-        startTime: showtime.startTime ? showtime.startTime.slice(0, 16) : '',
-        endTime: showtime.endTime ? showtime.endTime.slice(0, 16) : '',
+        startTime: localInputTime(showtime.startTime),
+        endTime: localInputTime(showtime.endTime),
         status: showtime.status || 'OPEN',
         screeningFormat: showtime.screeningFormat || 'TWO_D',
         ticketPrice: showtime.ticketPrice ?? '',
@@ -303,11 +143,11 @@ const ShowtimeManagement = () => {
       setIsEditing(false);
       setFormData({
         showtimeId: null,
-        movieId: '',
-        branchId: selectedBranchId || (branches.length === 1 ? String(branches[0].branchId) : ''),
-        roomId: '',
-        startTime: `${selectedDate}T08:00`,
-        endTime: `${selectedDate}T10:00`,
+        movieId: movieFilter,
+        branchId: room?.branchId ?? (selectedBranchId || (branches.length === 1 ? String(branches[0].branchId) : '')),
+        roomId: room?.id ?? '',
+        startTime,
+        endTime: computeEndTimeFromMovie(movieFilter, startTime),
         status: 'OPEN',
         screeningFormat: 'TWO_D',
         ticketPrice: '',
@@ -318,32 +158,25 @@ const ShowtimeManagement = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!canEditShowtime) return;
+    if (!canEditShowtime || saving) return;
+    setSaving(true);
+    setSaveError('');
     try {
       const payload = { ...formData, ticketPrice: Number(formData.ticketPrice) };
       if (isEditing) {
         await showtimeApi.update(formData.showtimeId, payload);
-        toast.success('Cập nhật suất chiếu thành công!');
+        toast.success('Đã lưu thay đổi suất chiếu');
       } else {
         await showtimeApi.create(payload);
-        toast.success('Thêm suất chiếu thành công!');
+        toast.success('Đã thêm suất chiếu');
       }
       setShowModal(false);
       setReloadCount((count) => count + 1);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+      setSaveError(err.response?.data?.message || 'Không lưu được suất chiếu. Kiểm tra dữ liệu rồi thử lại.');
+    } finally {
+      setSaving(false);
     }
-  };
-
-  const computeEndTimeFromMovie = (movieId, startTimeStr) => {
-    if (!movieId || !startTimeStr) return '';
-    const found = movies.find((m) => String(m.movieId || m.id) === String(movieId));
-    const duration = Number(found?.durationMinutes || found?.duration || 120);
-    const start = new Date(startTimeStr);
-    if (Number.isNaN(start.getTime())) return '';
-    const end = new Date(start.getTime() + duration * 60000);
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
   };
 
   const handleDelete = (id) => {
@@ -356,7 +189,7 @@ const ShowtimeManagement = () => {
     setDeleting(true);
     try {
       await showtimeApi.delete(deleteTargetId);
-      toast.success('Xóa suất chiếu thành công!');
+      toast.success('Đã xóa suất chiếu');
       setDeleteTargetId(null);
       setReloadCount((count) => count + 1);
     } catch (err) {
@@ -366,341 +199,140 @@ const ShowtimeManagement = () => {
     }
   };
 
-  const listShowtimes = useMemo(() => {
-    return showtimes.filter((showtime) => !selectedBranchId || String(showtime.branchId) === String(selectedBranchId));
-  }, [showtimes, selectedBranchId]);
 
-  const filtered = listShowtimes.filter((showtime) => {
-    if (statusFilter !== 'ALL' && showtime.status !== statusFilter) return false;
-    return [showtime.movieName, showtime.roomName, showtime.branchName].some((field) =>
-      field?.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-  });
-
-  const formatDT = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return (
-      <div>
-        <div style={{ fontWeight: 400, color: 'var(--text-primary)' }}>{formatTime(dateStr)}</div>
-        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-          {date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-        </div>
-      </div>
-    );
+  const today = cinemaTodayKey();
+  const tomorrow = addDaysToDateKey(today, 1);
+  const resetFilters = () => {
+    setSearchTerm('');
+    setMovieFilter('');
+    setStatusFilter('ALL');
+    setSelectedDate(today);
+    setShowAllDates(false);
+    setSelectedBranchId(branches.length === 1 ? String(branches[0].branchId) : '');
   };
-
-  if (loading && showtimes.length === 0) return <div className="loading"><div className="spinner" /></div>;
-
+  const openNew = () => handleOpenModal();
+  const reload = () => setReloadCount(count => count + 1);
+  const setField = (key, value) => setFormData(current => ({ ...current, [key]: value }));
+  const setScheduleField = (key, value) => {
+    setSaveError('');
+    setFormData(current => {
+      const next = { ...current, [key]: value };
+      return { ...next, endTime: computeEndTimeFromMovie(next.movieId, next.startTime) || current.endTime };
+    });
+  };
+  const visibleShows = showAllDates ? scopedShowtimes : calendarShowtimes;
+  const columns = [
+    { key: 'movieName', header: 'Phim' },
+    { key: 'room', header: 'Phòng chiếu', render: row => <>{row.roomName}<small className="o-subline">{formatScreening(row.screeningFormat, row.roomTechnology)}</small></> },
+    { key: 'branchName', header: 'Chi nhánh' },
+    { key: 'startTime', header: 'Bắt đầu', render: row => <><ShowTime value={row.startTime} /> <DateLabel value={row.startTime} /></> },
+    { key: 'endTime', header: 'Kết thúc', render: row => <><ShowTime value={row.endTime} /> <DateLabel value={row.endTime} /></> },
+    { key: 'price', header: 'Giá vé', align: 'end', render: row => <Money value={row.ticketPrice} /> },
+    { key: 'status', header: 'Trạng thái', render: row => <StatusBadge kind="showtime" value={row.status} /> },
+    ...(canEditShowtime ? [{ key: 'actions', header: 'Thao tác', render: row => <div className="o-actions">
+      <OpsButton variant="ghost" icon={<EditIcon size={16} />} aria-label={'Sửa suất ' + row.movieName} onClick={() => handleOpenModal(row)} />
+      {isAdmin && <OpsButton variant="ghost-danger" icon={<TrashIcon size={16} />} aria-label={'Xóa suất ' + row.movieName} onClick={() => handleDelete(row.showtimeId)} />}
+    </div> }] : []),
+  ];
+  const deleteTarget = showtimes.find(show => show.showtimeId === deleteTargetId);
   return (
-    <div className="showtime-management">
-      <header className="schedule-page-heading">
-        <div>
-          <h1>Quản lý suất chiếu</h1>
-          {viewMode === 'list' && <p>{listShowtimes.length} suất chiếu</p>}
-        </div>
-        {canEditShowtime && (
-          <button type="button" className="schedule-button schedule-button--primary" onClick={() => handleOpenModal()}>
-            <PlusIcon size={16} aria-hidden="true" />
-            Thêm suất chiếu
-          </button>
-        )}
-      </header>
-
-      <div className="schedule-toolbar">
-        {viewMode === 'calendar' && (
-          <div className="schedule-date-controls" role="group" aria-label="Điều hướng lịch chiếu">
-            <button type="button" className="schedule-button schedule-arrow" aria-label="Ngày trước" onClick={() => setSelectedDate(shiftCalendarDate(selectedDate, -1))}>
-              <ChevronLeftIcon size={16} aria-hidden="true" />
-            </button>
-            <button type="button" className="schedule-button" onClick={() => setSelectedDate(toDateInputValue())}>Hôm nay</button>
-            <button type="button" className="schedule-button schedule-arrow" aria-label="Ngày sau" onClick={() => setSelectedDate(shiftCalendarDate(selectedDate, 1))}>
-              <ChevronRightIcon size={16} aria-hidden="true" />
-            </button>
-            <input
-              className="schedule-field schedule-date-field"
-              aria-label="Ngày chiếu"
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value || toDateInputValue())}
-            />
-          </div>
-        )}
-
-        <label className="schedule-branch">
-          <span>Chi nhánh</span>
-          <select className="schedule-field" aria-label="Chi nhánh" value={selectedBranchId} onChange={(event) => setSelectedBranchId(event.target.value)}>
+    <OpsPage title="Quản lý suất chiếu" actions={canEditShowtime &&
+      <OpsButton variant="primary" icon={<PlusIcon size={16} />} disabled={loading || Boolean(loadError)} onClick={openNew}>Thêm suất chiếu</OpsButton>}>
+      <FilterBar search={searchTerm} onSearchChange={setSearchTerm} searchLabel="Tìm phim, phòng hoặc rạp"
+        filtered={Boolean(movieFilter || statusFilter !== 'ALL' || selectedDate !== today || showAllDates || (isAdmin && selectedBranchId && branches.length > 1))}
+        onReset={resetFilters} resultLabel={loading ? undefined : visibleShows.length + ' suất'}>
+        {isAdmin && <Field label="Chi nhánh">
+          <Select value={selectedBranchId} onChange={event => setSelectedBranchId(event.target.value)}>
             <option value="">Tất cả chi nhánh</option>
-            {branches.map((branch) => (
-              <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
-            ))}
-          </select>
-        </label>
-
-        <div className="schedule-views" role="group" aria-label="Kiểu hiển thị suất chiếu">
-          <button type="button" className="schedule-button" aria-pressed={viewMode === 'calendar'} onClick={() => setViewMode('calendar')}>
-            <CalendarIcon />
-            Lịch
-          </button>
-          <button type="button" className="schedule-button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}>
-            Danh sách
-          </button>
-        </div>
+            {branches.map(branch => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
+          </Select>
+        </Field>}
+        <Field label="Phim">
+          <Select value={movieFilter} onChange={event => setMovieFilter(event.target.value)}>
+            <option value="">Tất cả phim</option>
+            {movies.map(movie => <option key={idOfMovie(movie)} value={idOfMovie(movie)}>{movie.movieName}</option>)}
+          </Select>
+        </Field>
+        <Field label="Trạng thái">
+          <Select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+            <option value="ALL">Tất cả</option>
+            {showtimeStatuses.map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+          </Select>
+        </Field>
+      </FilterBar>
+      <div className="o-actions">
+        <Segmented label="Ngày chiếu" value={showAllDates ? 'all' : selectedDate} onChange={value => {
+          setShowAllDates(value === 'all');
+          if (value !== 'all') setSelectedDate(value);
+        }} options={[{ value: today, label: 'Hôm nay' }, { value: tomorrow, label: 'Ngày mai' }, { value: 'all', label: 'Tất cả ngày' }]} />
+        <TextInput type="date" aria-label="Chọn ngày chiếu" value={selectedDate} onChange={event => {
+          setSelectedDate(event.target.value || today); setShowAllDates(false);
+        }} />
       </div>
-
-      {viewMode === 'calendar' ? (
-        <ShowtimeCalendar
-          key={selectedBranchId}
-          date={selectedDate}
-          rooms={calendarRooms}
-          showtimes={calendarShowtimes}
-          branches={branches}
-          canEdit={canEditShowtime}
-          onSelect={handleOpenModal}
-        />
-      ) : (
-        <div className="admin-table-card">
-          <div className="console-toolbar">
-            <div className="console-status-tabs">
-              {[
-                { key: 'ALL', label: 'Tất cả' },
-                { key: 'OPEN', label: 'Đang mở' },
-                { key: 'CLOSED', label: 'Đã đóng' },
-                { key: 'CANCELLED', label: 'Đã hủy' },
-              ].map((tab) => {
-                const count =
-                  tab.key === 'ALL'
-                    ? listShowtimes.length
-                    : listShowtimes.filter((s) => s.status === tab.key).length;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    className={`console-status-tab ${statusFilter === tab.key ? 'is-active' : ''}`}
-                    onClick={() => setStatusFilter(tab.key)}
-                  >
-                    <span>{tab.label}</span>
-                    <span className="console-status-count">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ position: 'relative', maxWidth: 320, flex: '0 1 320px' }}>
-              <SearchIcon
-                size={16}
-                style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
-              />
-              <input
-                type="text"
-                className="input"
-                placeholder="Tìm phim, phòng, chi nhánh..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ paddingLeft: 40, height: 38, background: 'var(--bg-input)' }}
-              />
-            </div>
-          </div>
-
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th style={{ width: 40 }}>#</th>
-                <th>Phim</th>
-                <th>Phòng chiếu</th>
-                <th>Chi nhánh</th>
-                <th>Bắt đầu</th>
-                <th>Kết thúc</th>
-                <th>Giá vé</th>
-                <th>Trạng thái</th>
-                {canEditShowtime && <th style={{ width: 100 }}>Hành động</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={canEditShowtime ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                    {searchTerm ? 'Không tìm thấy suất chiếu nào' : 'Chưa có suất chiếu nào'}
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((showtime, index) => {
-                  const statusInfo = STATUS_MAP[showtime.status] || { label: showtime.status || '-', className: '' };
-                  return (
-                    <tr key={showtime.showtimeId || index}>
-                      <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{showtime.movieName || '-'}</td>
-                      <td>
-                        <div>
-                          <div style={{ color: 'var(--text-primary)' }}>{showtime.roomName || '-'}</div>
-                          {showtime.roomTechnology && (
-                            <span className="movie-badge" style={{ marginTop: 3, display: 'inline-block' }}>
-                              {formatScreening(showtime.screeningFormat, showtime.roomTechnology)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>{showtime.branchName || '-'}</td>
-                      <td>{formatDT(showtime.startTime)}</td>
-                      <td>{formatDT(showtime.endTime)}</td>
-                      <td>{Number(showtime.ticketPrice || 0).toLocaleString('vi-VN')}đ</td>
-                      <td><span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span></td>
-                      {canEditShowtime && (
-                        <td>
-                          <div className="action-btns">
-                            <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(showtime)}><EditIcon /></button>
-                            {isAdmin && (
-                              <button className="btn btn-ghost btn-sm" title="Xóa" style={{ color: '#ef4444' }} onClick={() => handleDelete(showtime.showtimeId)}><TrashIcon /></button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {showModal && (
-        <div className="modal-overlay" {...dialog.overlayProps}>
-          <div
-            className="modal-content"
-            {...dialog.contentProps}
-            style={{
-              maxWidth: 650,
-              height: 'auto',
-              aspectRatio: 'unset',
-              overflowY: 'auto',
-              maxHeight: '90vh',
-              background: 'var(--bg-card)',
-              padding: '28px 32px',
-              borderRadius: 'var(--radius-lg)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 id={dialog.titleId} style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
-                {isEditing ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}
-              </h2>
-              <button
-                type="button"
-                className="modal-close modal-close--inline modal-close--lg"
-                onClick={() => setShowModal(false)}
-                aria-label="Đóng"
-              >
-                <XIcon size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div className="form-group">
-                <label className="form-label">Chọn phim</label>
-                <select
-                  className="input"
-                  value={formData.movieId}
-                  onChange={(e) => {
-                    const nextMovieId = e.target.value;
-                    const autoEnd = computeEndTimeFromMovie(nextMovieId, formData.startTime);
-                    setFormData({
-                      ...formData,
-                      movieId: nextMovieId,
-                      endTime: autoEnd || formData.endTime,
-                    });
-                  }}
-                  required
-                >
-                  <option value="">-- Chọn phim --</option>
-                  {movies.map((movie) => (
-                    <option key={movie.movieId} value={movie.movieId}>
-                      {movie.movieName} {movie.durationMinutes ? `(${movie.durationMinutes} phút)` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="form-group">
-                  <label className="form-label">Chi nhánh</label>
-                  <select className="input" value={formData.branchId} onChange={(e) => setFormData({ ...formData, branchId: e.target.value, roomId: '' })} required>
-                    <option value="">-- Chọn rạp --</option>
-                    {branches.map((branch) => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Phòng chiếu</label>
-                  <select className="input" value={formData.roomId} onChange={(e) => setFormData({ ...formData, roomId: e.target.value })} required disabled={!formData.branchId}>
-                    <option value="">-- Chọn phòng --</option>
-                    {filteredRooms.map((room) => <option key={room.id} value={room.id}>{room.name} ({ROOM_TYPE_LABELS[room.roomTechnology] || room.roomTechnology})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="form-group">
-                  <label className="form-label">Bắt đầu</label>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    value={formData.startTime}
-                    onChange={(e) => {
-                      const nextStart = e.target.value;
-                      const autoEnd = computeEndTimeFromMovie(formData.movieId, nextStart);
-                      setFormData({
-                        ...formData,
-                        startTime: nextStart,
-                        endTime: autoEnd || formData.endTime,
-                      });
-                    }}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Kết thúc (tự động tính theo thời lượng)</label>
-                  <input type="datetime-local" className="input" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="showtime-ticket-price">Giá vé (VNĐ/vé)</label>
-                <input id="showtime-ticket-price" type="number" className="input" min="1" max="999999999999" step="1" required
-                  value={formData.ticketPrice} onChange={(e) => setFormData({ ...formData, ticketPrice: e.target.value })} />
-                <small style={{ color: 'var(--text-muted)' }}>Áp dụng cho mọi loại ghế. Chỉ đổi giá khi chưa có ghế đang giữ hoặc vé đã bán.</small>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Định dạng chiếu</label>
-                <select className="input" value={formData.screeningFormat} onChange={(e) => setFormData({ ...formData, screeningFormat: e.target.value })} required>
-                  <option value="TWO_D">2D</option><option value="THREE_D">3D</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Trạng thái</label>
-                <select className="input" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                  <option value="OPEN">Mở bán</option>
-                  <option value="CLOSED">Đóng</option>
-                  <option value="CANCELLED">Đã hủy</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Lưu lại</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={Boolean(deleteTargetId)}
-        title="Xóa suất chiếu"
-        message="Bạn có chắc chắn muốn xóa suất chiếu này? Thao tác này không thể hoàn tác."
-        confirmText="Xóa suất chiếu"
-        loading={deleting}
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteTargetId(null)}
-      />
-    </div>
+      {!showAllDates && <OpsPanel title="Lịch chiếu theo phòng">
+        {loading ? <StateBlock state="loading" title="Đang tải lịch chiếu" /> :
+          loadError ? <StateBlock state="error" title={loadError} onRetry={reload} /> :
+          calendarRooms.length ? <ShowtimeRail date={selectedDate} showtimes={calendarShowtimes} rooms={calendarRooms}
+            onSelect={canEditShowtime ? handleOpenModal : undefined}
+            onCreate={canEditShowtime ? (room, startTime) => handleOpenModal(null, room, startTime) : undefined} /> :
+          <StateBlock title="Không có phòng chiếu phù hợp" action={{ label: 'Xóa bộ lọc', onClick: resetFilters }} />}
+      </OpsPanel>}
+      <OpsPanel title={showAllDates ? 'Danh sách suất chiếu' : 'Danh sách suất trong ngày'} flush>
+        <DataTable caption="Danh sách suất chiếu" columns={columns} rows={visibleShows} rowKey="showtimeId"
+          state={loading ? 'loading' : loadError ? 'error' : 'ready'} error={loadError} onRetry={reload} stackOnMobile
+          empty={{ title: 'Chưa có suất chiếu phù hợp', action: canEditShowtime
+            ? { label: 'Thêm suất chiếu', onClick: openNew } : { label: 'Xóa bộ lọc', onClick: resetFilters } }} />
+      </OpsPanel>
+      <OpsDialog open={showModal} size="md" title={isEditing ? 'Sửa suất chiếu' : 'Thêm suất chiếu'}
+        onClose={() => setShowModal(false)} disabled={saving}
+        footer={<><OpsButton disabled={saving} onClick={() => setShowModal(false)}>Quay lại</OpsButton>
+          <OpsButton type="submit" form="o-showtime-form" variant="primary" loading={saving}>
+            {isEditing ? 'Lưu thay đổi' : 'Thêm suất chiếu'}
+          </OpsButton></>}>
+        <form id="o-showtime-form" className="o-form-grid" onSubmit={handleSave}>
+          <Field className="o-form-grid__wide" label="Phim" required>
+            <Select value={formData.movieId} onChange={event => setScheduleField('movieId', event.target.value)}>
+              <option value="">Chọn phim</option>
+              {movies.map(movie => <option key={idOfMovie(movie)} value={idOfMovie(movie)}>{movie.movieName}</option>)}
+            </Select>
+          </Field>
+          <Field label="Chi nhánh" required>
+            <Select value={formData.branchId} onChange={event => setFormData(current => ({ ...current, branchId: event.target.value, roomId: '' }))}>
+              <option value="">Chọn rạp</option>
+              {branches.map(branch => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Phòng chiếu" required>
+            <Select value={formData.roomId} disabled={!formData.branchId} onChange={event => setField('roomId', event.target.value)}>
+              <option value="">Chọn phòng</option>
+              {filteredRooms.map(room => <option key={room.id} value={room.id}>{room.name} ({ROOM_TECHNOLOGY_LABELS[room.roomTechnology] || room.roomTechnology})</option>)}
+            </Select>
+          </Field>
+          <Field label="Bắt đầu" required error={saveError}>
+            <TextInput type="datetime-local" value={formData.startTime} onChange={event => setScheduleField('startTime', event.target.value)} />
+          </Field>
+          <Field label="Kết thúc" required hint="Gợi ý theo thời lượng phim. Có thể chỉnh giờ nếu cần.">
+            <TextInput type="datetime-local" value={formData.endTime} onChange={event => setField('endTime', event.target.value)} />
+          </Field>
+          <Field label="Giá vé (đ/vé)" required hint="Chỉ đổi giá khi chưa có ghế đang giữ hoặc vé đã bán.">
+            <TextInput type="number" min={1} max={999999999999} step={1} value={formData.ticketPrice} onChange={event => setField('ticketPrice', event.target.value)} />
+          </Field>
+          <Field label="Định dạng chiếu" required>
+            <Select value={formData.screeningFormat} onChange={event => setField('screeningFormat', event.target.value)}>
+              <option value="TWO_D">2D</option><option value="THREE_D">3D</option>
+            </Select>
+          </Field>
+          <Field label="Trạng thái">
+            <Select value={formData.status} onChange={event => setField('status', event.target.value)}>
+              {showtimeStatuses.map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+            </Select>
+          </Field>
+        </form>
+      </OpsDialog>
+      <OpsConfirm open={Boolean(deleteTargetId)} title="Xóa suất chiếu"
+        message={deleteTarget && <>Xóa suất <strong>{deleteTarget.movieName}</strong> lúc <ShowTime value={deleteTarget.startTime} />? Thao tác này không thể hoàn tác.</>}
+        confirmLabel="Xóa suất chiếu" loading={deleting} onConfirm={confirmDelete} onClose={() => setDeleteTargetId(null)} />
+    </OpsPage>
   );
 };
 

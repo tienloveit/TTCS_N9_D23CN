@@ -7,15 +7,14 @@ import {
 } from '../../../utils/cinemaTime';
 import { MAX_FOOD_QUANTITY } from '../../../utils/bookingLimits';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from '../../../context/useAuth';
 import { bookingApi, foodApi, movieApi, showtimeApi, ticketApi, promotionApi, staffApi, vnpayApi } from '../../../api';
 import { API_BASE_URL } from '../../../api/axiosClient';
-import { StaffSkeleton, StaffState } from '../StaffUI';
-import { CheckIcon } from '../../../components/Common/CinemaIcons';
+import { Money, OpsButton, OpsDrawer, OpsPage, StateBlock, Stepper } from '../../../components/Ops';
 
 import {
   formatCurrency,
@@ -33,7 +32,6 @@ import StaffSeatStep from './StaffSeatStep';
 import StaffShowtimeStep from './StaffShowtimeStep';
 import StaffSaleComplete from './StaffSaleComplete';
 import StaffVnpayPanel from './StaffVnpayPanel';
-import './StaffBooking.css';
 
 // Quầy được bán tới 15 phút sau giờ chiếu, khớp BookingCheckoutService.STAFF_SALE_GRACE_MINUTES.
 function isShowtimeAvailable(showtime) {
@@ -48,16 +46,17 @@ function isShowtimeAvailable(showtime) {
 
 export default function StaffBookingPage() {
   const { user, isAdmin } = useAuth();
-  // Nút "Bán vé suất này" ở trang tổng quan mở trang với ?showtime=<id>: chọn sẵn suất đó khi danh mục tải xong.
+  // Tổng quan ca truyền suất qua router state. Liên kết cũ vẫn nhận ?showtime=<id>.
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedShowtimeId = useRef(searchParams.get('showtime'));
+  const { state: locationState } = useLocation();
+  const requestedShowtimeId = useRef(String(locationState?.showtimeId ?? searchParams.get('showtime') ?? ''));
 
   const [showtimes, setShowtimes] = useState([]);
   const [moviesMap, setMoviesMap] = useState({});
   const [foods, setFoods] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [showtimeId, setShowtimeId] = useState('');
-  // Ba bước: SELECTION (suất chiếu) → SEATS (ghế, tab bắp nước) → CHECKOUT (thu tiền).
+  // Ghế và bắp nước dùng cùng giỏ hàng trước bước thu tiền.
   const [currentStep, setCurrentStep] = useState('SELECTION');
   const [seatTab, setSeatTab] = useState('seats');
   const [quickCount, setQuickCount] = useState(2);
@@ -113,6 +112,7 @@ export default function StaffBookingPage() {
   const [catalogError, setCatalogError] = useState('');
   const [ticketAttempt, setTicketAttempt] = useState(0);
   const [ticketError, setTicketError] = useState('');
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   // Xuất vé và xóa đơn đang soạn; chỉ dùng hàm setState nên ổn định giữa các lần render.
   const completeSale = useCallback((booking) => {
@@ -181,7 +181,8 @@ export default function StaffBookingPage() {
           if (requestedId) {
             requestedShowtimeId.current = null;
             const requested = list.find((item) => String(item.showtimeId) === requestedId);
-            if (requested && isShowtimeAvailable(requested)) {
+            if (requested && isShowtimeAvailable(requested) && requested.availableSeats !== 0
+              && (isAdmin || user?.branchId == null || String(requested.branchId) === String(user.branchId))) {
               setShowtimeId(String(requested.showtimeId));
               setCurrentStep('SEATS');
             } else {
@@ -217,7 +218,7 @@ export default function StaffBookingPage() {
     return () => {
       mounted = false;
     };
-  }, [catalogAttempt]);
+  }, [catalogAttempt, isAdmin, user?.branchId]);
 
   useEffect(() => {
     setTicketError('');
@@ -423,43 +424,6 @@ export default function StaffBookingPage() {
     return result;
   }, [scopedShowtimes, searchQuery, dateFilter, timeFilter, statusFilter]);
 
-  // Group filtered showtimes by Movie -> then by Branch for fast POS visual scanning
-  const movieGroups = useMemo(() => {
-    const map = new Map();
-
-    filteredShowtimes.forEach((st) => {
-      const mKey = st.movieId != null ? String(st.movieId) : st.movieName || 'UNKNOWN';
-      if (!map.has(mKey)) {
-        const meta = moviesMap[String(st.movieId)] || {};
-        map.set(mKey, {
-          movieKey: mKey,
-          movieId: st.movieId,
-          movieName: st.movieName || meta.movieName || 'Phim chưa rõ tên',
-          thumbnailUrl: st.thumbnailUrl || meta.thumbnailUrl || meta.posterUrl || '',
-          ageRating: st.ageRating || meta.ageRating || null,
-          duration: meta.duration || meta.durationMinutes || null,
-          language: meta.language || null,
-          branches: new Map(),
-        });
-      }
-
-      const group = map.get(mKey);
-      const bName = st.branchName || 'Rạp chưa xác định';
-      if (!group.branches.has(bName)) {
-        group.branches.set(bName, []);
-      }
-      group.branches.get(bName).push(st);
-    });
-
-    return [...map.values()].map((m) => ({
-      ...m,
-      branches: [...m.branches.entries()].map(([branchName, items]) => ({
-        branchName,
-        items: [...items].sort((a, b) => new Date(a.startTime || 0) - new Date(b.startTime || 0)),
-      })),
-    }));
-  }, [filteredShowtimes, moviesMap]);
-
   const handleBranchFilterChange = (event) => {
     const nextBranchFilter = event.target.value;
     setBranchFilter(nextBranchFilter);
@@ -574,7 +538,8 @@ export default function StaffBookingPage() {
 
   const stepItems = [
     { key: 'SELECTION', label: 'Suất chiếu' },
-    { key: 'SEATS', label: 'Ghế và bắp nước' },
+    { key: 'SEATS', label: 'Chọn ghế' },
+    { key: 'FOOD', label: 'Bắp nước' },
     { key: 'CHECKOUT', label: 'Thu tiền' },
   ];
 
@@ -628,6 +593,7 @@ export default function StaffBookingPage() {
   };
 
   const goToCheckout = () => {
+    setReceiptOpen(false);
     setCurrentStep('CHECKOUT');
     void loadPromos();
   };
@@ -641,7 +607,8 @@ export default function StaffBookingPage() {
       toast.info('Vui lòng chọn suất chiếu trước');
       return;
     }
-    if (targetStep === 'SEATS') {
+    if (targetStep === 'SEATS' || targetStep === 'FOOD') {
+      setSeatTab(targetStep === 'FOOD' ? 'food' : 'seats');
       setCurrentStep('SEATS');
       return;
     }
@@ -654,6 +621,7 @@ export default function StaffBookingPage() {
   };
 
   const handleResetOrder = () => {
+    setReceiptOpen(false);
     submissionPending.current = false;
     setSelectedSeats([]);
     setSelectedFoods({});
@@ -943,14 +911,14 @@ export default function StaffBookingPage() {
     printWindow.document.close();
   };
 
-  if (loading) return <StaffSkeleton label="Đang tải lịch chiếu" />;
-  if (catalogError) return <StaffState title={catalogError} error onRetry={() => {
+  if (loading) return <OpsPage title="Bán vé tại quầy"><StateBlock state="loading" title="Đang tải lịch chiếu" /></OpsPage>;
+  if (catalogError) return <OpsPage title="Bán vé tại quầy"><StateBlock state="error" title={catalogError} onRetry={() => {
     setCatalogError('');
     setLoading(true);
     setCatalogAttempt((attempt) => attempt + 1);
-  }} />;
+  }} /></OpsPage>;
 
-  const activeIndex = stepItems.findIndex((item) => item.key === currentStep);
+  const activeStep = currentStep === 'SEATS' && seatTab === 'food' ? 'FOOD' : currentStep;
   const posterUrl =
     selectedShowtime?.thumbnailUrl ||
     selectedMovieMeta?.thumbnailUrl ||
@@ -964,52 +932,73 @@ export default function StaffBookingPage() {
     ? customerLookup.data
     : null;
   const customerLabel = matchedCustomer
-    ? [matchedCustomer.maskedName || 'Khách hàng', matchedCustomer.membershipTier && `Hạng ${matchedCustomer.membershipTier}`].filter(Boolean).join(' · ')
+    ? [matchedCustomer.maskedName || 'Khách hàng', matchedCustomer.membershipTier && `Hạng ${matchedCustomer.membershipTier}`].filter(Boolean).join(', ')
     : customer.customerName.trim() || 'Khách vãng lai';
-  const submitLabel = submitting ? 'Đang xử lý…'
-    : paymentMethod === 'CASH' ? `Thu ${formatCurrency(finalPrice)} & xuất vé` : `Tạo mã QR · ${formatCurrency(finalPrice)}`;
+  const submitLabel = paymentMethod === 'CASH' ? `Thu ${formatCurrency(finalPrice)} & xuất vé` : 'Tạo mã QR';
   const retryTickets = () => {
     setTicketError('');
     setLoadingTickets(true);
     setTicketAttempt((attempt) => attempt + 1);
   };
 
+  const continueOrder = () => {
+    setReceiptOpen(false);
+    if (seatTab === 'seats' && canContinueSeats) {
+      setSeatTab('food');
+      return;
+    }
+    continueFromSeats();
+  };
+  const receipt = (
+    <StaffReceiptSidebar
+      canContinueSeats={canContinueSeats}
+      canContinueSelection={canContinueSelection}
+      cashChange={cashChange}
+      cashReceived={cashReceived}
+      continueFromSeats={continueOrder}
+      continueFromSelection={() => { setReceiptOpen(false); continueFromSelection(); }}
+      currentStep={currentStep}
+      nextLabel={seatTab === 'food' ? 'Sang thu tiền' : 'Chọn bắp nước'}
+      customerLabel={customerLabel}
+      finalPrice={finalPrice}
+      foodQuantity={foodQuantity}
+      foodTotal={foodTotal}
+      handleResetOrder={handleResetOrder}
+      handleSubmit={handleSubmit}
+      onChangeShowtime={() => { setReceiptOpen(false); setCurrentStep('SELECTION'); }}
+      onEditOrder={() => { setReceiptOpen(false); handleStepNavigation('SEATS'); }}
+      paymentMethod={paymentMethod}
+      posterUrl={posterUrl}
+      promo={{
+        appliedPromo,
+        availablePromos,
+        loadingPromos,
+        onApply: handleValidatePromo,
+        onClear: clearPromo,
+        promoCode,
+        promoDiscount,
+        promoError,
+        setPromoCode,
+        validatingPromo,
+      }}
+      seatGroups={seatGroups}
+      seatTotal={seatTotal}
+      selectedFoodItems={selectedFoodItems}
+      selectedSeatTickets={selectedSeatTickets}
+      selectedSeats={selectedSeats}
+      selectedShowtime={selectedShowtime}
+      showtimeId={showtimeId}
+      submitting={submitting}
+      toggleSeat={toggleSeat}
+    />
+  );
   return (
-    <form onSubmit={(event) => event.preventDefault()} className="counter-page">
+    <OpsPage title="Bán vé tại quầy" className="o-counter-page"
+      description={[branchLabel, formatDate(new Date())].filter(Boolean).join(', ')}>
       {!lastBooking && !vnpaySale && (
-        <header className="counter-header">
-          <div>
-            <h1>Bán vé tại quầy</h1>
-            <p>{[branchLabel, formatDate(new Date())].filter(Boolean).join(' · ')}</p>
-          </div>
-          <nav className="counter-steps" aria-label="Các bước bán vé">
-            {stepItems.map((step, index) => {
-              const isActive = step.key === currentStep;
-              const isDone = index < activeIndex;
-              const disabled =
-                (step.key === 'SEATS' && !showtimeId) ||
-                (step.key === 'CHECKOUT' && (!showtimeId || selectedSeats.length === 0));
-              return (
-                <button
-                  key={step.key}
-                  type="button"
-                  disabled={disabled || submitting}
-                  aria-current={isActive ? 'step' : undefined}
-                  className={'counter-step' + (isActive ? ' is-active' : '') + (isDone ? ' is-done' : '')}
-                  onClick={() => handleStepNavigation(step.key)}
-                >
-                  <span className="counter-step-dot" aria-hidden="true">
-                    {isDone ? <CheckIcon size={12} strokeWidth={3.5} /> : index + 1}
-                  </span>
-                  {step.label}
-                </button>
-              );
-            })}
-          </nav>
-        </header>
+        <Stepper steps={stepItems} current={activeStep} onChange={handleStepNavigation} disabled={submitting} />
       )}
-
-      {error && <div className="error-message" role="alert">{error}</div>}
+      {error && <StateBlock state="error" title={error} />}
 
       {lastBooking ? (
         <StaffSaleComplete
@@ -1030,8 +1019,8 @@ export default function StaffBookingPage() {
           sale={vnpaySale}
         />
       ) : (
-        <div className="counter-workspace">
-          <div className="counter-main">
+        <div className="o-counter-workspace">
+          <div className="o-counter-main">
             {currentStep === 'SELECTION' && (
               <StaffShowtimeStep
                 branchFilter={branchFilter}
@@ -1043,7 +1032,6 @@ export default function StaffBookingPage() {
                 handleSelectShowtime={handleSelectShowtime}
                 hasActiveFilters={hasActiveFilters}
                 isShowtimeAvailable={isShowtimeAvailable}
-                movieGroups={movieGroups}
                 quickDates={quickDates}
                 searchQuery={searchQuery}
                 setDateFilter={setDateFilter}
@@ -1069,10 +1057,9 @@ export default function StaffBookingPage() {
                   submitting,
                   updateFoodQuantity,
                 }}
-                foodQuantity={foodQuantity}
                 getSeatClass={getSeatClass}
                 loadingTickets={loadingTickets}
-                onChangeShowtime={() => setCurrentStep('SELECTION')}
+                onChangeShowtime={() => { setReceiptOpen(false); setCurrentStep('SELECTION'); }}
                 onQuickPick={applyQuickPick}
                 onRetryTickets={retryTickets}
                 onSwitchShowtime={(showtime) => setShowtimeId(String(showtime.showtimeId))}
@@ -1083,7 +1070,6 @@ export default function StaffBookingPage() {
                 selectedSeats={selectedSeats}
                 selectedShowtime={selectedShowtime}
                 setQuickCount={setQuickCount}
-                setSeatTab={setSeatTab}
                 setSelectedSeats={setSelectedSeats}
                 showtimeId={showtimeId}
                 siblingShowtimes={siblingShowtimes}
@@ -1111,71 +1097,33 @@ export default function StaffBookingPage() {
             )}
           </div>
 
-          <StaffReceiptSidebar
-            canContinueSeats={canContinueSeats}
-            canContinueSelection={canContinueSelection}
-            cashChange={cashChange}
-            cashReceived={cashReceived}
-            continueFromSeats={continueFromSeats}
-            continueFromSelection={continueFromSelection}
-            currentStep={currentStep}
-            customerLabel={customerLabel}
-            finalPrice={finalPrice}
-            foodQuantity={foodQuantity}
-            foodTotal={foodTotal}
-            handleResetOrder={handleResetOrder}
-            handleSubmit={handleSubmit}
-            onChangeShowtime={() => setCurrentStep('SELECTION')}
-            onEditOrder={() => setCurrentStep('SEATS')}
-            paymentMethod={paymentMethod}
-            posterUrl={posterUrl}
-            promo={{
-              appliedPromo,
-              availablePromos,
-              loadingPromos,
-              onApply: handleValidatePromo,
-              onClear: clearPromo,
-              promoCode,
-              promoDiscount,
-              promoError,
-              setPromoCode,
-              validatingPromo,
-            }}
-            seatGroups={seatGroups}
-            seatTotal={seatTotal}
-            selectedFoodItems={selectedFoodItems}
-            selectedSeatTickets={selectedSeatTickets}
-            selectedSeats={selectedSeats}
-            selectedShowtime={selectedShowtime}
-            showtimeId={showtimeId}
-            submitting={submitting}
-            toggleSeat={toggleSeat}
-          />
+          <div className="o-counter-desktop-receipt">{receipt}</div>
         </div>
       )}
 
-      {/* Thanh dưới cùng trên màn hẹp, thay cho nút ở chân phiếu bán vé */}
       {!lastBooking && !vnpaySale && (
-        <div className="counter-mobile-bar">
-          <span><strong>{selectedSeats.length}</strong> ghế</span>
-          {foodQuantity > 0 && <span><strong>{foodQuantity}</strong> món</span>}
-          <span className="counter-mobile-total">{formatCurrency(finalPrice)}</span>
-          {currentStep === 'CHECKOUT' ? (
-            <button type="button" onClick={handleSubmit} className="btn btn-primary" disabled={submitting}>
-              {submitLabel}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={currentStep === 'SELECTION' ? !canContinueSelection : !canContinueSeats}
-              onClick={currentStep === 'SELECTION' ? continueFromSelection : continueFromSeats}
-            >
-              {currentStep === 'SELECTION' ? 'Chọn ghế' : 'Sang thu tiền'}
-            </button>
-          )}
-        </div>
+        <>
+          <div className="o-counter-mobile-bar">
+            {activeStep !== 'SELECTION' && <OpsButton size="sm" disabled={submitting}
+              onClick={() => handleStepNavigation(activeStep === 'CHECKOUT' ? 'FOOD' : activeStep === 'FOOD' ? 'SEATS' : 'SELECTION')}>
+              Quay lại
+            </OpsButton>}
+            <OpsButton size="sm" onClick={() => setReceiptOpen(true)} aria-label="Mở phiếu bán vé">
+              <Money value={finalPrice} />
+            </OpsButton>
+            {currentStep === 'CHECKOUT' ? (
+              <OpsButton variant="primary" onClick={handleSubmit} loading={submitting}>{submitLabel}</OpsButton>
+            ) : (
+              <OpsButton variant="primary" disabled={currentStep === 'SELECTION' ? !canContinueSelection : !canContinueSeats}
+                onClick={currentStep === 'SELECTION' ? continueFromSelection : continueOrder}>
+                {currentStep === 'SELECTION' ? 'Chọn ghế' : seatTab === 'food' ? 'Sang thu tiền' : 'Chọn bắp nước'}
+              </OpsButton>
+            )}
+          </div>
+          <OpsDrawer open={receiptOpen} title="Chi tiết phiếu bán vé" disabled={submitting}
+            onClose={() => setReceiptOpen(false)}>{receipt}</OpsDrawer>
+        </>
       )}
-    </form>
+    </OpsPage>
   );
 }

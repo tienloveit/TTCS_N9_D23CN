@@ -7,24 +7,25 @@ import { EyeIcon, EyeOffIcon } from './CinemaIcons';
  * - toggleLabel: tên đối tượng trong tên nút, ví dụ "mật khẩu xác nhận"
  * Các prop còn lại (value, onChange, name, required, minLength, autoComplete...) truyền thẳng vào <input>.
  */
-export default function PasswordField({ label, id, toggleLabel = 'mật khẩu', className = 'form-group', ...inputProps }) {
+export default function PasswordField({ label, id, toggleLabel = 'mật khẩu', appearance = 'auth', className, ...inputProps }) {
   const generatedId = useId();
   const inputId = id || generatedId;
   const [visible, setVisible] = useState(false);
+  const isOps = appearance === 'ops';
 
   return (
-    <div className={className}>
-      <label className="form-label" htmlFor={inputId}>{label}</label>
-      <div className="auth-input-wrap">
+    <div className={className ?? (isOps ? 'o-field' : 'form-group')}>
+      <label className={isOps ? 'o-field__label' : 'form-label'} htmlFor={inputId}>{label}</label>
+      <div className={isOps ? 'o-password' : 'auth-input-wrap'}>
         <input
           {...inputProps}
           id={inputId}
-          className="input auth-input-with-toggle"
+          className={isOps ? 'o-input' : 'input auth-input-with-toggle'}
           type={visible ? 'text' : 'password'}
         />
         <button
           type="button"
-          className="auth-password-toggle"
+          className={isOps ? 'o-btn o-btn--ghost o-btn--icon' : 'auth-password-toggle'}
           onClick={() => setVisible((value) => !value)}
           aria-label={`${visible ? 'Ẩn' : 'Hiện'} ${toggleLabel}`}
           aria-pressed={visible}

@@ -1,9 +1,9 @@
+import { DataTable, FilterBar, OpsButton, OpsConfirm, OpsPage, OpsPanel, Segmented, StatusBadge } from '../../components/Ops';
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { movieApi, genreApi, directorApi } from '../../api';
 import MovieForm from './MovieForm';
 import SafeImage from '../../components/Common/SafeImage';
-import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import { useAuth } from '../../context/useAuth';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon } from '../../components/Common/CinemaIcons';
 import { formatDate as formatCinemaDate } from '../../utils/cinemaTime';
@@ -22,6 +22,7 @@ const MovieManagement = () => {
   const [genres, setGenres] = useState([]);
   const [directors, setDirectors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [deleteTarget, setDeleteTarget] = useState(null); // { movieId, movieName }
@@ -33,9 +34,11 @@ const MovieManagement = () => {
   const fetchMovies = async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const res = await movieApi.getAll();
       setMovies(res.data.result || []);
     } catch (err) {
+      setLoadError(true);
       console.error('Lỗi khi tải danh sách phim:', err);
     } finally {
       setLoading(false);
@@ -123,157 +126,82 @@ const MovieManagement = () => {
 
   const getStatusInfo = (status) => {
     const map = {
-      NOW_SHOWING: { label: 'Đang chiếu', className: 'status--active' },
-      UPCOMING: { label: 'Sắp chiếu', className: 'status--pending' },
-      ENDED: { label: 'Đã kết thúc', className: 'status--inactive' },
+      NOW_SHOWING: { label: 'Đang chiếu', tone: 'success' },
+      UPCOMING: { label: 'Sắp chiếu', tone: 'warning' },
+      ENDED: { label: 'Đã kết thúc', tone: 'neutral' },
     };
-    return map[status] || { label: status, className: '' };
+    return map[status] || { label: status, tone: 'neutral' };
   };
 
-  if (loading && !isModalOpen) {
-    return <div className="loading"><div className="spinner" /></div>;
-  }
+
 
   return (
-    <div className="admin-movies">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 className="page-title">Quản lý phim</h1>
-          <p className="page-subtitle">
-            Tổng cộng <strong>{movies.length}</strong> phim trong hệ thống.
-          </p>
-        </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={!isAdmin} style={!isAdmin ? { display: 'none' } : undefined}>
-          <PlusIcon size={18} />
-          Thêm phim mới
-        </button>
-      </div>
+    <OpsPage title="Quản lý phim" description={<>Tổng cộng <strong>{movies.length}</strong> phim trong hệ thống.</>} actions={isAdmin && <OpsButton variant="primary" icon={<PlusIcon size={18} />}
+      onClick={() => handleOpenModal()}>Thêm phim</OpsButton>}>
 
-      <div className="admin-table-card">
-        <div className="console-toolbar">
-          <div className="console-status-tabs">
-            {MOVIE_STATUS_TABS.map((tab) => {
-              const count =
+
+      <FilterBar search={searchTerm} onSearchChange={setSearchTerm} searchLabel="Tìm phim" searchPlaceholder="Tìm tên phim, đạo diễn..."
+        filtered={Boolean(searchTerm || statusFilter !== 'ALL')} onReset={() => { setSearchTerm(''); setStatusFilter('ALL'); }} resultLabel={`${filteredMovies.length} phim`}>
+        <Segmented label="Trạng thái" value={statusFilter} onChange={setStatusFilter} options={(MOVIE_STATUS_TABS).map(tab => {
+                const count =
                 tab.key === 'ALL'
                   ? movies.length
                   : movies.filter((m) => tab.key === 'DRAFT' ? m.isPublic === false : m.status === tab.key && m.isPublic !== false).length;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  className={`console-status-tab ${statusFilter === tab.key ? 'is-active' : ''}`}
-                  onClick={() => setStatusFilter(tab.key)}
-                >
-                  <span>{tab.label}</span>
-                  <span className="console-status-count">{count}</span>
-                </button>
-              );
-            })}
-          </div>
+                return { value: tab.key, label: tab.label, count };
+              })} />
 
-          <div style={{ position: 'relative', maxWidth: '320px', flex: '0 1 320px' }}>
-            <SearchIcon
-              size={16}
-              className="input-leading-icon"
-            />
-            <input
-              type="text"
-              className="input"
-              placeholder="Tìm tên phim, đạo diễn..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px', height: 38, background: 'var(--bg-input)' }}
-            />
-          </div>
-        </div>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th style={{ width: '40px' }}>#</th>
-              <th>Tên phim</th>
-              <th>Đạo diễn</th>
-              <th>Thể loại</th>
-              <th>Thời lượng</th>
-              <th>Ngày chiếu</th>
-              <th>Trạng thái</th>
-              {isAdmin && <th style={{ width: '120px' }}>Hành động</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMovies.length === 0 ? (
-              <tr>
-                <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  {searchTerm ? 'Không tìm thấy phim nào' : 'Chưa có phim nào trong hệ thống'}
-                </td>
-              </tr>
-            ) : (
-              filteredMovies.map((movie, idx) => {
-                const statusInfo = movie.isPublic === false ? { label: 'Bản nháp', className: 'status--inactive' } : getStatusInfo(movie.status);
-                return (
-                  <tr key={movie.movieId || idx}>
-                    <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      </FilterBar>
+      <OpsPanel flush title="Phim">
+
+        <DataTable caption="Phim" rows={filteredMovies} rowKey={movie => movie.movieId}
+          state={loading ? 'loading' : loadError ? 'error' : 'ready'} onRetry={fetchMovies}
+          empty={{ title: 'Không có phim phù hợp', action: { label: 'Làm mới', onClick: fetchMovies } }}
+          columns={[
+            { key: 'index', header: "#", render: (movie, idx) => idx + 1 },
+            { key: 'ten_phim', header: "Tên phim", render: movie => <> <div className="o-media">
                         <SafeImage
                           src={movie.thumbnailUrl}
                           alt={movie.movieName}
-                          style={{
-                            width: '40px', height: '56px', borderRadius: '6px',
-                            objectFit: 'cover', background: 'var(--bg-secondary)',
-                          }}
-                          fallback="https://via.placeholder.com/40x56?text=No+Img"
+                          className="o-poster"
                         />
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{movie.movieName}</div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                          <div className="o-table-value">{movie.movieName}</div>
+                          <div className="o-subline">
                             {movie.ageRating && <span>{movie.ageRating}</span>}
-                            {movie.language && <span> · {movie.language}</span>}
+                            {movie.language && <span> {movie.language}</span>}
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>{movie.directorName || '—'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      </div> </> },
+            { key: 'dao_dien', header: "Đạo diễn", render: movie => movie.directorName || '—' },
+            { key: 'the_loai', header: "Thể loại", render: movie => <> <div className="o-actions">
                         {movie.genres?.map((g, i) => (
-                          <span key={i} className="movie-badge">{g.name}</span>
+                          <StatusBadge key={g.id ?? i}>{g.name}</StatusBadge>
                         )) || '—'}
-                      </div>
-                    </td>
-                    <td>{movie.durationMinutes ? `${movie.durationMinutes} phút` : '—'}</td>
-                    <td>
-                      {movie.releaseDate
+                      </div> </> },
+            { key: 'thoi_luong', header: "Thời lượng", render: movie => movie.durationMinutes ? `${movie.durationMinutes} phút` : '—' },
+            { key: 'ngay_chieu', header: "Ngày chiếu", render: movie => movie.releaseDate
                         ? formatCinemaDate(movie.releaseDate)
-                        : '—'}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${statusInfo.className}`}>
+                        : '—' },
+            { key: 'trang_thai', header: "Trạng thái", render: movie => {
+              const statusInfo = movie.isPublic === false ? { label: 'Bản nháp', tone: 'neutral' } : getStatusInfo(movie.status);
+              return (<> <StatusBadge tone={statusInfo.tone}>
                         {statusInfo.label}
-                      </span>
-                    </td>
-                    {isAdmin && <td>
-                      <div className="action-btns">
-                        <button className="btn btn-ghost btn-sm" title="Sửa" onClick={() => handleOpenModal(movie)} disabled={!isAdmin} style={!isAdmin ? { display: 'none' } : undefined}>
-                          <EditIcon size={15} />
-                        </button>
-                        <button className="btn btn-ghost btn-sm" title="Xóa" style={isAdmin ? { color: '#ef4444' } : { display: 'none' }} onClick={() => handleDelete(movie.movieId, movie.movieName)} disabled={!isAdmin}>
-                          <TrashIcon size={15} />
-                        </button>
-                      </div>
-                    </td>}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                      </StatusBadge> </>);
+            } },
+            ...(isAdmin ? [{ key: 'hanh_dong', header: "Hành động", render: movie => <> <div className="o-actions">
+                        <OpsButton variant="ghost" icon={<EditIcon size={16} />} aria-label={'Sửa phim ' + movie.movieName}
+                          onClick={() => handleOpenModal(movie)} />
+                        <OpsButton variant="ghost-danger" icon={<TrashIcon size={16} />} aria-label={'Xóa phim ' + movie.movieName}
+                          onClick={() => handleDelete(movie.movieId, movie.movieName)} />
+                      </div> </> }] : [])
+          ]} />
+      </OpsPanel>
 
       {isModalOpen && (
         <MovieForm movie={editingMovie} genres={genres} directors={directors} onSave={handleSubmit} onClose={handleCloseModal} />
       )}
 
-      <ConfirmDialog
+      <OpsConfirm
         open={Boolean(deleteTarget)}
         title="Xoá phim"
         message={`Bạn có chắc chắn muốn xoá phim "${deleteTarget?.movieName}" khỏi hệ thống?`}
@@ -282,7 +210,7 @@ const MovieManagement = () => {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </div>
+    </OpsPage>
   );
 };
 

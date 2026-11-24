@@ -1,185 +1,125 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { systemSettingsApi } from '../../api';
-import { CheckIcon, RefreshIcon } from '../../components/Common/CinemaIcons';
+import { RefreshIcon } from '../../components/Common/CinemaIcons';
+import { Field, OpsButton, OpsPage, OpsPanel, StateBlock, TextInput } from '../../components/Ops';
 
-const settingMeta = {
-  'booking.holdMinutes': { label: 'Thời gian giữ ghế', unit: 'phút', isNumeric: true },
-  'booking.maxTicketsPerTransaction': { label: 'Số vé tối đa mỗi giao dịch', unit: 'vé', isNumeric: true },
-  'booking.maxPendingPerUser': { label: 'Số đơn chờ thanh toán tối đa mỗi khách', unit: 'đơn', isNumeric: true },
-  'refund.windowHours': { label: 'Thời hạn gửi yêu cầu hoàn tiền sau thanh toán', unit: 'giờ', isNumeric: true },
-  'cinema.supportEmail': { label: 'Email hỗ trợ khách hàng', unit: '', isNumeric: false },
-  'cinema.supportHotline': { label: 'Hotline hỗ trợ khách hàng', unit: '', isNumeric: false },
+const groups = {
+  booking: 'Đặt vé', refund: 'Hoàn tiền', cinema: 'Hỗ trợ khách hàng', membership: 'Thành viên',
 };
+const meta = {
+  'booking.holdMinutes': {
+    label: 'Thời gian giữ ghế (phút)', type: 'number',
+    hint: 'Áp dụng cho đơn tạo sau khi lưu. Đơn đang giữ ghế giữ nguyên hạn hiện tại.',
+  },
+  'booking.maxTicketsPerTransaction': { label: 'Số vé tối đa mỗi giao dịch', type: 'number' },
+  'booking.maxPendingPerUser': { label: 'Số đơn tối đa đang chờ thanh toán mỗi khách', type: 'number' },
+  'refund.windowHours': { label: 'Thời hạn yêu cầu hoàn tiền (giờ)', type: 'number' },
+  'cinema.supportEmail': { label: 'Email hỗ trợ khách hàng', type: 'text' },
+  'cinema.supportHotline': { label: 'Số điện thoại hỗ trợ khách hàng', type: 'text' },
+};
+const readValues = settings => Object.fromEntries(settings.map(item => [item.settingKey, item.settingValue ?? '']));
 
-const SystemSettingsPage = () => {
+export default function SystemSettingsPage() {
   const [settings, setSettings] = useState([]);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
-  const [savingKey, setSavingKey] = useState('');
-  const [savingAll, setSavingAll] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const fetchSettings = async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const res = await systemSettingsApi.getAll();
-      const result = res.data.result || [];
-      setSettings(result);
-      setDrafts(Object.fromEntries(result.map((item) => [item.settingKey, item.settingValue || ''])));
+      const { data } = await systemSettingsApi.getAll();
+      const values = data.result || [];
+      setSettings(values);
+      setDrafts(readValues(values));
+      setErrors({});
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Không thể tải cấu hình hệ thống');
+      setLoadError(err.response?.data?.message || 'Không tải được cấu hình hệ thống.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  useEffect(() => { void fetchSettings(); }, []);
 
-  const dirtySettings = useMemo(
-    () =>
-      settings.filter(
-        (item) => String(drafts[item.settingKey] ?? '') !== String(item.settingValue ?? '')
-      ),
-    [settings, drafts]
-  );
+  const dirty = useMemo(() => settings.filter(item =>
+    String(drafts[item.settingKey] ?? '') !== String(item.settingValue ?? '')), [settings, drafts]);
+  const grouped = new Map();
+  for (const setting of settings) {
+    const label = groups[setting.settingKey.split('.')[0]] || 'Cấu hình khác';
+    if (!grouped.has(label)) grouped.set(label, []);
+    grouped.get(label).push(setting);
+  }
 
-  const handleSave = async (setting) => {
-    setSavingKey(setting.settingKey);
+  const undo = () => { setDrafts(readValues(settings)); setErrors({}); };
+  const save = async (event) => {
+    event.preventDefault();
+    if (saving || dirty.length === 0) return;
+    setSaving(true);
+    const form = event.currentTarget;
     try {
-      await systemSettingsApi.update(setting.settingKey, {
-        settingValue: drafts[setting.settingKey],
-        description: setting.description,
+      const results = await Promise.allSettled(dirty.map(setting =>
+        systemSettingsApi.update(setting.settingKey, {
+          settingValue: drafts[setting.settingKey],
+          description: setting.description,
+        })));
+      const saved = new Map();
+      const failed = {};
+      results.forEach((result, index) => {
+        const { settingKey } = dirty[index];
+        if (result.status === 'fulfilled') {
+          const response = result.value.data.result;
+          saved.set(settingKey, response?.settingValue ?? drafts[settingKey]);
+        } else {
+          failed[settingKey] = result.reason?.response?.data?.message || 'Không lưu được cấu hình. Kiểm tra giá trị rồi thử lại.';
+        }
       });
-      toast.success(`Đã lưu "${settingMeta[setting.settingKey]?.label || setting.settingKey}"`);
-      fetchSettings();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Không thể lưu cấu hình');
+      const accepted = Object.fromEntries(saved);
+      setSettings(current => current.map(setting => saved.has(setting.settingKey)
+        ? { ...setting, settingValue: saved.get(setting.settingKey) } : setting));
+      setDrafts(current => ({ ...current, ...accepted }));
+      setErrors(failed);
+      if (saved.size) toast.success('Đã lưu ' + saved.size + ' thay đổi');
+      const firstError = Object.keys(failed)[0];
+      if (firstError) requestAnimationFrame(() => form.elements.namedItem(firstError)?.focus());
     } finally {
-      setSavingKey('');
-    }
-  };
-
-  const handleSaveAll = async () => {
-    if (dirtySettings.length === 0 || savingAll) return;
-    setSavingAll(true);
-    try {
-      await Promise.all(
-        dirtySettings.map((setting) =>
-          systemSettingsApi.update(setting.settingKey, {
-            settingValue: drafts[setting.settingKey],
-            description: setting.description,
-          })
-        )
-      );
-      toast.success(`Đã lưu ${dirtySettings.length} cấu hình thay đổi`);
-      fetchSettings();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Không thể lưu toàn bộ cấu hình');
-    } finally {
-      setSavingAll(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <div>
-          <h1 className="page-title">Cấu hình hệ thống</h1>
-          <p className="page-subtitle">Thiết lập các tham số vận hành dùng chung cho đặt vé, giữ ghế và hoàn tiền.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {dirtySettings.length > 0 && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSaveAll}
-              disabled={savingAll}
-            >
-              <CheckIcon size={16} />
-              <span>{savingAll ? 'Đang lưu...' : `Lưu tất cả thay đổi (${dirtySettings.length})`}</span>
-            </button>
-          )}
-          <button type="button" className="btn btn-secondary" onClick={fetchSettings} disabled={loading}>
-            <RefreshIcon size={16} />
-            <span>Khôi phục / Tải lại</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-table-card">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Cấu hình</th>
-              <th>Giá trị thiết lập</th>
-              <th>Mô tả</th>
-              <th>Trạng thái</th>
-              <th style={{ width: 130 }}>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: 32 }}>Đang tải...</td></tr>
-            ) : settings.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: 32 }}>Chưa có cấu hình</td></tr>
-            ) : (
-              settings.map((setting) => {
-                const meta = settingMeta[setting.settingKey] || { label: setting.settingKey, unit: '', isNumeric: false };
-                const isDirty = String(drafts[setting.settingKey] ?? '') !== String(setting.settingValue ?? '');
-                return (
-                  <tr key={setting.settingKey}>
-                    <td>
-                      <strong>{meta.label}</strong>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontFamily: 'monospace' }}>
-                        {setting.settingKey}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 260 }}>
-                        <input
-                          type={meta.isNumeric ? 'number' : 'text'}
-                          className="input"
-                          value={drafts[setting.settingKey] ?? ''}
-                          onChange={(e) =>
-                            setDrafts((prev) => ({ ...prev, [setting.settingKey]: e.target.value }))
-                          }
-                        />
-                        {meta.unit && (
-                          <span className="movie-badge" style={{ flexShrink: 0 }}>
-                            {meta.unit}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>{setting.description || '-'}</td>
-                    <td>
-                      <span className={`status-badge ${isDirty ? 'status--pending' : 'status--active'}`}>
-                        {isDirty ? 'Chưa lưu' : 'Đã đồng bộ'}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${isDirty ? 'btn-primary' : 'btn-secondary'}`}
-                        disabled={!isDirty || savingKey === setting.settingKey}
-                        onClick={() => handleSave(setting)}
-                      >
-                        <CheckIcon size={14} />
-                        <span>{savingKey === setting.settingKey ? 'Đang lưu...' : 'Lưu'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <OpsPage title="Cấu hình hệ thống" description="Thiết lập các tham số dùng chung cho đặt vé, giữ ghế và hoàn tiền."
+      actions={<OpsButton icon={<RefreshIcon size={16} />} onClick={fetchSettings}
+        disabled={loading || saving || dirty.length > 0}>Tải lại</OpsButton>}>
+      {loading ? <StateBlock state="loading" title="Đang tải cấu hình" /> :
+        loadError ? <StateBlock state="error" title={loadError} onRetry={fetchSettings} /> :
+        !settings.length ? <StateBlock title="Chưa có cấu hình" action={{ label: 'Tải lại', onClick: fetchSettings }} /> :
+        <form className="o-form o-settings" onSubmit={save}>
+          {[...grouped].map(([title, items]) => <OpsPanel title={title} key={title}>
+            <div className="o-form">
+              {items.map(({ settingKey, description }) => <Field key={settingKey}
+                label={meta[settingKey]?.label || settingKey} hint={meta[settingKey]?.hint || description} error={errors[settingKey]}>
+                <TextInput type={meta[settingKey]?.type || 'text'} name={settingKey} value={drafts[settingKey] ?? ''}
+                  disabled={saving} onChange={event => {
+                    const value = event.target.value;
+                    setDrafts(current => ({ ...current, [settingKey]: value }));
+                    setErrors(current => ({ ...current, [settingKey]: '' }));
+                  }} />
+              </Field>)}
+            </div>
+          </OpsPanel>)}
+          {dirty.length > 0 && <div className="o-settings__save">
+            <span role="status">Có {dirty.length} thay đổi chưa lưu</span>
+            <div className="o-actions">
+              <OpsButton disabled={saving} onClick={undo}>Hoàn tác</OpsButton>
+              <OpsButton type="submit" variant="primary" loading={saving}>Lưu thay đổi</OpsButton>
+            </div>
+          </div>}
+        </form>}
+    </OpsPage>
   );
-};
-
-export default SystemSettingsPage;
-
+}
