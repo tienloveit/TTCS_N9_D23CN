@@ -1,6 +1,6 @@
 # Hướng dẫn cho AI — MoviePTIT
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 MoviePTIT là hệ thống đặt vé cho chuỗi rạp nhiều chi nhánh: website khách hàng, quầy bán vé và khu quản trị. File này chỉ giữ lệnh, quy tắc bắt buộc và bản đồ điểm vào. Nghiệp vụ nằm trong [docs/02-domain](docs/02-domain/), cách làm việc với code nằm trong [docs/07-development](docs/07-development/), mục lục ở [docs/README.md](docs/README.md). Khi làm trong `backend/` hoặc `frontend/`, đọc thêm [backend/AGENTS.md](backend/AGENTS.md) hoặc [frontend/AGENTS.md](frontend/AGENTS.md).
 
@@ -50,6 +50,7 @@ Lần theo một luồng: route trong `AnimatedRoutes.jsx` → component trang �
 | Sửa thanh toán, hoàn tiền | [payment-refund.md](docs/02-domain/payment-refund.md), [vnpay.md](docs/06-integrations/vnpay.md) |
 | Sửa khuyến mãi, hạng thành viên | [promotion-membership.md](docs/02-domain/promotion-membership.md) |
 | Sửa schema | [migrations.md](docs/05-database/migrations.md), [data-dictionary.md](docs/05-database/data-dictionary.md) |
+| Sửa màn Staff, Manager, Admin | [ops-design-system.md](docs/03-architecture/ops-design-system.md) |
 | Quy ước code, Git, kiểm thử | [coding-conventions.md](docs/07-development/coding-conventions.md), [git-workflow.md](docs/07-development/git-workflow.md), [testing.md](docs/07-development/testing.md) |
 
 # Frontend UI & Icon System Rules (`frontend`)
