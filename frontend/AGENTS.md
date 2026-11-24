@@ -26,7 +26,7 @@ node --experimental-vm-modules --test tests/*.test.mjs
 
 - Icon chỉ dùng Lucide qua [CinemaIcons.jsx](src/components/Common/CinemaIcons.jsx), thêm export ở đó khi cần icon mới. Không viết `<svg>`/`<path>` trong trang hay component, trừ `MoviePTITLogoIcon`. Không dùng emoji làm icon.
 - Không thêm mã màu hex ngoài `src/styles/tokens.css`. Dùng `var(--...)`, kể cả trong `style={{}}`.
-- Màn vận hành (/staff, /manager, /admin) tuân theo [ops-design-system.md](../docs/03-architecture/ops-design-system.md). Tài liệu này thắng mọi skill thiết kế chung. Sau khi sửa phải chạy npm run lint:ops. Không nới luật để qua lint.
+- Màn vận hành (/staff, /manager, /admin) tuân theo [ops-design-system.md](../docs/03-architecture/ops-design-system.md). Tài liệu này thắng mọi skill thiết kế chung. Sau khi sửa phải chạy npm run lint:ops. Không nới luật để qua lint. Claude Code tự nạp luật qua `.claude/rules/ops-design-system.md`, skill `ops-ui` và hook `ops-guard.mjs`. Công cụ AI khác phải tự đọc tài liệu và chạy `npm run lint:ops`.
 - Trang khách tiếp tục dùng `Button`, `Badge`, `ConfirmDialog` và các thành phần dùng chung. Giữ thao tác bằng bàn phím, focus, nhãn truy cập và trạng thái tải, lỗi, rỗng.
 - Gọi API qua wrapper trong [src/api/index.js](src/api/index.js) và Axios client dùng chung. Giữ hợp đồng `data.result`, `skipAuth`, logic refresh và tải blob.
 - Đối chiếu route guard và phạm vi role, chi nhánh. Sửa màn hình dùng chung thì kiểm tra cả biến thể ADMIN, MANAGER và STAFF. Backend quyết định quyền, giá, hạn giữ ghế và điều kiện hoàn tiền.
