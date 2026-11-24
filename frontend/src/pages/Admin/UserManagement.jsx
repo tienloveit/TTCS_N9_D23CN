@@ -150,7 +150,7 @@ const UserManagement = () => {
           branchId: ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.update(editingUser.id, payload);
-        toast.success(`Cập nhật người dùng "${formData.username}" thành công!`);
+        toast.success(`Đã cập nhật người dùng "${formData.username}"`);
       } else {
         // Thêm mới: dùng CreateUserRequest
         const payload = {
@@ -165,7 +165,7 @@ const UserManagement = () => {
           branchId: ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.create(payload);
-        toast.success(`Tạo tài khoản "${formData.username}" thành công!`);
+        toast.success(`Đã tạo tài khoản "${formData.username}"`);
       }
       closeModal();
       fetchUsers();

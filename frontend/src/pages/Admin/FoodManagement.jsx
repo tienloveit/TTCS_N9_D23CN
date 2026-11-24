@@ -112,10 +112,10 @@ const FoodManagement = () => {
 
       if (editingFood) {
         await foodApi.update(editingFood.id, payload);
-        toast.success(`Cập nhật "${formData.name}" thành công!`);
+        toast.success(`Đã cập nhật "${formData.name}"`);
       } else {
         await foodApi.create(payload);
-        toast.success(`Thêm "${formData.name}" thành công!`);
+        toast.success(`Đã thêm "${formData.name}"`);
       }
       handleCloseModal();
       fetchFoods();
@@ -135,7 +135,7 @@ const FoodManagement = () => {
     setDeleting(true);
     try {
       await foodApi.delete(deleteTarget.id);
-      toast.success(`Đã vô hiệu hóa "${deleteTarget.name}"!`);
+      toast.success(`Đã vô hiệu hóa "${deleteTarget.name}"`);
       setDeleteTarget(null);
       fetchFoods();
     } catch (err) {

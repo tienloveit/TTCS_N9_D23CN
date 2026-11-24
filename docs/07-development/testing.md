@@ -1,6 +1,6 @@
 # Kiểm thử
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `262d041`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `f89017e`.
 
 ## Lệnh
 
@@ -82,14 +82,14 @@ Flyway tự migrate bản sao khi test khởi động. Không trỏ biến này 
 | `cinemaTime.test.mjs` | Giờ rạp không phụ thuộc múi giờ máy |
 | `profile.test.mjs` | Form hồ sơ gửi `dob`, không gửi trường quản trị |
 | `useModalDialog.test.mjs` | Esc, modal lồng nhau, click nền |
-| `opsClasses.test.mjs` | Từ chối class cũ trong JSX, chấp nhận class vận hành |
+| `opsRules.test.mjs` | Luật khu vận hành: class cũ, inline style, svg, emoji, chữ giao diện, import, mã hex trong JSX; tiền tố `o-`, `!important`, `@layer`, `box-shadow`, `font-family` trong CSS |
 | `opsNav.test.mjs` | Mục điều hướng cho STAFF, MANAGER và ADMIN |
 | `opsFormat.test.mjs` | Tiền Việt Nam, ngày tương đối theo múi giờ rạp |
 | `showtimeRail.test.mjs` | Cửa sổ giờ, vị trí, trạng thái suất và làm tròn giờ tạo suất |
 
 `componentHarness.mjs` là bộ dựng component dùng chung. Nó giả lập `useState` theo thứ tự khai báo, nên component được test phải thêm state mới ở cuối.
 
-Mốc đối chiếu frontend ngày 2026-11-24 có 33 test đạt, kể cả khi chạy với `TZ=UTC`. Mốc backend ngày 2026-11-21 có 268 test, 0 lỗi và 6 test bỏ qua khi chưa cấu hình bản sao MySQL cho `PaymentPersistenceIntegrationTest`.
+Mốc đối chiếu frontend ngày 2026-11-25 có 41 test đạt, kể cả khi chạy với `TZ=UTC`. Mốc backend ngày 2026-11-21 có 268 test, 0 lỗi và 6 test bỏ qua khi chưa cấu hình bản sao MySQL cho `PaymentPersistenceIntegrationTest`.
 
 ## Phần kiểm thử tay
 

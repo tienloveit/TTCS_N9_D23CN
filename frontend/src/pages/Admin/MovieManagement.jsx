@@ -102,7 +102,7 @@ const MovieManagement = () => {
     setDeleting(true);
     try {
       await movieApi.delete(deleteTarget.movieId);
-      toast.success(`Xoá phim "${deleteTarget.movieName}" thành công!`);
+      toast.success(`Đã xoá phim "${deleteTarget.movieName}"`);
       setDeleteTarget(null);
       fetchMovies();
     } catch (err) {

@@ -182,10 +182,10 @@ const BranchManagement = () => {
     try {
       if (editingBranch) {
         await branchApi.update(editingBranch.branchId, branchForm);
-        toast.success('Cập nhật chi nhánh thành công!');
+        toast.success('Đã cập nhật chi nhánh');
       } else {
         await branchApi.create(branchForm);
-        toast.success('Thêm chi nhánh thành công!');
+        toast.success('Đã thêm chi nhánh');
       }
       setBranchModal(false);
       fetchData();
@@ -208,10 +208,10 @@ const BranchManagement = () => {
       };
       if (editingRoom) {
         await roomApi.update(editingRoom.id, payload);
-        toast.success('Cập nhật phòng thành công!');
+        toast.success('Đã cập nhật phòng');
       } else {
         await roomApi.create(payload);
-        toast.success('Thêm phòng thành công! Sơ đồ ghế đã được tự động khởi tạo.');
+        toast.success('Đã thêm phòng và tạo sơ đồ ghế');
       }
       setRoomModal(false);
       fetchData();
