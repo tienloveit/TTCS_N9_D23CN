@@ -39,7 +39,7 @@ frontend/src/
 │   │                      SafeImage, Skeleton, BookingReceipt, PasswordField, useModalDialog
 │   ├── Layout/, Navbar/   Khung trang khách
 │   ├── MovieCard/         Thẻ phim
-│   ├── Ops/               Bảng suất chiếu: khung trang, menu, component vận hành
+│   ├── Ops/               Design system khu vận hành: khung trang, menu, bảng, hộp thoại, ops.css
 │   └── Ticket/            DigitalTicket (vé số)
 ├── pages/
 │   ├── Home/, MovieList/, MovieDetail/, Branch/     Khám phá

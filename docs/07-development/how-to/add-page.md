@@ -1,6 +1,6 @@
 # Thêm một trang frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `5805a41`.
+> Đối chiếu mã nguồn ngày 2026-11-24, commit `ef70b10`.
 
 Ví dụ: thêm trang `/manager/vouchers-report` cho ADMIN và MANAGER.
 
