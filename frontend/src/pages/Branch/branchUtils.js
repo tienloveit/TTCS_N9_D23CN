@@ -1,6 +1,7 @@
 /**
  * Helpers dùng chung cho khu vực Rạp chiếu (`/branches` và `/branch/:branchId`).
  */
+import { AGE_RATINGS } from '../../utils/ageRatings';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -73,13 +74,7 @@ export const buildUpcomingDays = (count = 7, offset = 0, today = getCinemaLocalN
 };
 
 // Phân loại phim theo quy định phổ biến phim tại Việt Nam.
-const AGE_RATING_LABELS = {
-  P: 'Phim dành cho mọi lứa tuổi',
-  K: 'Khán giả dưới 13 tuổi cần xem cùng cha mẹ hoặc người giám hộ',
-  T13: 'Phim dành cho khán giả từ đủ 13 tuổi',
-  T16: 'Phim dành cho khán giả từ đủ 16 tuổi',
-  T18: 'Phim dành cho khán giả từ đủ 18 tuổi',
-};
+const AGE_RATING_LABELS = Object.fromEntries(AGE_RATINGS.map((rating) => [rating.code, rating.description]));
 
 export const getAgeRatingLabel = (ageRating) => {
   const code = String(ageRating || '').toUpperCase().replace(/[^A-Z0-9]/g, '');

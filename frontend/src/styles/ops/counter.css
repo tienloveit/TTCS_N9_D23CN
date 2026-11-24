@@ -1,0 +1,322 @@
+/* ---------- Khung hai cột ---------- */
+.o-counter-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); gap: 20px; align-items: start; }
+.o-counter-main { display: grid; gap: 14px; min-width: 0; }
+.o-counter-card {
+  min-width: 0;
+  background: var(--o-surface);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-r-3);
+}
+.o-counter-section { display: grid; gap: 10px; min-width: 0; }
+.o-counter-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 12px; }
+.o-counter-section-head h2 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--o-ink); font-size: 17px; }
+.o-counter-section-head > span { color: var(--o-muted); font-size: 13px; }
+.o-counter-muted { margin: 0; color: var(--o-muted); font-size: 13px; }
+.o-counter-link-button {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; padding: 0 4px;
+  border: 0; background: none; color: var(--o-ink);
+  font: inherit; font-weight: var(--fw-bold); cursor: pointer;
+}
+.o-counter-link-button:hover { text-decoration: underline; }
+.o-counter-link-button--danger { color: var(--danger); }
+.o-counter-link-button:disabled { color: var(--o-muted); cursor: not-allowed; text-decoration: none; }
+
+/* ---------- Chọn ghế và bắp nước ---------- */
+.o-counter-showtime-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 14px 16px; }
+.o-counter-showtime-info { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.o-counter-showtime-info strong { font-size: 16px; }
+.o-counter-showtime-info p { margin: 2px 0 0; color: var(--o-ink-2); font-size: 13px; }
+.o-counter-times { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.o-counter-times > span { color: var(--o-muted); font-size: 13px; font-weight: var(--fw-semibold); }
+.o-counter-times button {
+  min-height: 40px; padding: 0 12px;
+  border: 1px solid var(--o-line); border-radius: 8px;
+  background: var(--o-surface); color: var(--o-ink);
+  font: inherit; font-weight: var(--fw-semibold); cursor: pointer;
+}
+.o-counter-times [aria-pressed="true"] { border-color: var(--o-control-line); background: var(--o-sunken); color: var(--o-ink); }
+
+
+.o-counter-seat-card { display: grid; gap: 16px; padding: 16px; }
+.o-counter-seat-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.o-counter-seat-stats { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.o-counter-seat-stats span { padding: 5px 10px; border-radius: var(--radius-pill); background: var(--o-sunken); color: var(--o-ink-2); }
+.o-counter-seat-stats strong { color: var(--o-ink); }
+.o-counter-seat-stats .o-counter-stat--selected { background: var(--o-sunken); color: var(--o-ink); }
+.o-counter-seat-stats .o-counter-stat--holding { background: var(--warning-soft); color: var(--warning-strong); }
+.o-counter-seat-stats :is(.o-counter-stat--selected, .o-counter-stat--holding) strong { color: inherit; }
+.o-counter-quick {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 4px; border: 1px solid var(--o-line); border-radius: 10px;
+  background: var(--o-sunken);
+}
+.o-counter-quick > span { padding: 0 6px 0 8px; color: var(--o-ink-2); font-size: 13px; font-weight: var(--fw-semibold); }
+.o-counter-quick > button:not(.o-counter-quick-apply) {
+  width: 36px; height: 36px;
+  border: 1px solid var(--o-control-line); border-radius: var(--o-r-2);
+  background: var(--o-surface); color: var(--o-ink);
+  font: inherit; font-size: var(--o-fs-lg); cursor: pointer;
+}
+.o-counter-quick output { min-width: 22px; text-align: center; font-weight: var(--fw-bold); }
+.o-counter-quick-apply {
+  min-height: 36px; padding: 0 12px;
+  border: 0; border-radius: 8px;
+  background: var(--o-ink); color: var(--o-surface);
+  font: inherit; font-weight: var(--fw-bold); cursor: pointer;
+}
+.o-counter-quick button:disabled { opacity: .5; cursor: not-allowed; }
+
+.o-counter-screen { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.o-counter-screen span { width: 70%; height: 8px; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: var(--o-ink-2); }
+.o-counter-screen small { color: var(--o-muted); font-size: 11px; font-weight: var(--fw-bold);  }
+.o-counter-seatmap { overflow-x: auto; }
+.o-counter-seatmap:focus-visible { outline-offset: 2px; }
+.o-counter-seatmap-rows { display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; margin: 0 auto; padding: 2px; }
+.o-counter-seat-row { display: flex; align-items: center; gap: 5px; }
+.o-counter-row-label { width: 20px; color: var(--o-muted); font-size: 12px; font-weight: var(--fw-bold); text-align: center; }
+/* Ghế dùng class .seat chung với trang khách; ở quầy to hơn để bấm nhanh. */
+.o-counter-seatmap .seat { flex-shrink: 0; width: 40px; height: 36px; border-radius: 7px 7px 4px 4px; font-size: 12px; font-weight: var(--fw-bold); }
+.o-counter-seatmap .seat.o-counter-seat--couple { width: 85px; }
+.o-counter-seatmap .seat--booked { text-decoration: line-through; }
+.o-counter-legend {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px;
+  margin: 0; padding: 12px 0 0; border-top: 1px solid var(--o-sunken);
+  list-style: none; color: var(--o-ink-2); font-size: 12px;
+}
+.o-counter-legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.o-counter-legend .seat-legend-dot { flex: none; }
+
+.o-counter-food { display: grid; gap: 14px; padding: 16px; }
+.o-counter-food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.o-counter-food-item {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  padding: 12px; border: 1.5px solid var(--o-line); border-radius: 12px;
+  background: var(--o-surface);
+}
+.o-counter-food-item[data-selected] { border-color: var(--o-ink); background: var(--o-sunken); }
+.o-counter-food-item[data-sold-out] { background: var(--o-sunken); }
+.o-counter-food-info { display: flex; align-items: flex-start; gap: 10px; }
+.o-counter-food-info > div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.o-counter-food-info strong { font-size: 14px; }
+.o-counter-food-info span { font-weight: var(--fw-semibold); }
+.o-counter-food-thumb {
+  display: grid; place-items: center; flex: none; overflow: hidden;
+  width: 48px; height: 48px; border-radius: 10px;
+  background: var(--o-sunken); color: var(--o-muted);
+}
+.o-counter-food-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.o-counter-food-stock { color: var(--o-muted); font-size: 12px; font-weight: var(--fw-semibold); }
+.o-counter-food-stock--low { color: var(--warning-strong); }
+.o-counter-food-stock--out { color: var(--danger); }
+.o-counter-stepper { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.o-counter-stepper button {
+  width: var(--o-control-h); height: var(--o-control-h);
+  border: 1px solid var(--o-control-line); border-radius: var(--o-r-2);
+  background: var(--o-surface); color: var(--o-ink);
+  font: inherit; font-size: var(--o-fs-lg); cursor: pointer;
+}
+.o-counter-stepper button:disabled { opacity: .45; cursor: not-allowed; }
+.o-counter-stepper output { font-size: 16px; font-weight: var(--fw-bold); }
+
+/* ---------- Thu tiền ---------- */
+.o-counter-hold-note {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 0; padding: 10px 16px;
+  border: 1px solid var(--warning-line); border-radius: 12px;
+  background: var(--warning-soft); color: var(--warning-strong);
+}
+.o-counter-hold-note svg { flex: none; margin-top: 2px; }
+
+.o-counter-match {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0; padding: 12px 14px;
+  border: 1px solid var(--o-line); border-radius: 10px;
+  background: var(--o-sunken); color: var(--o-ink-2); font-size: 13px;
+}
+.o-counter-match--found { border-color: var(--warning-line); background: var(--warning-soft); }
+.o-counter-match--found[data-confirmed] { border-color: var(--success-line); background: var(--success-soft); }
+.o-counter-match--error { border-color: var(--danger-line); background: var(--danger-soft); color: var(--danger); }
+.o-counter-match-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.o-counter-match-who > div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.o-counter-match-who strong { color: var(--o-ink); font-size: 14px; }
+.o-counter-match-who small { font-size: 12px; }
+.o-counter-avatar {
+  display: grid; place-items: center; flex: none;
+  width: 40px; height: 40px; border-radius: var(--radius-pill);
+  background: var(--o-sunken); color: var(--warning-strong); font-weight: var(--fw-bold);
+}
+
+
+.o-counter-cash { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; padding: 16px; background: var(--o-sunken); }
+.o-counter-change {
+  flex: 1 1 220px; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding: 10px 16px; border: 1px solid var(--o-line); border-radius: 10px;
+  background: var(--o-surface); color: var(--o-ink-2);
+}
+.o-counter-change span { font-size: 13px; font-weight: var(--fw-semibold); }
+.o-counter-change strong { font-size: 26px; line-height: 1.2; }
+.o-counter-change--ok { border-color: var(--success-line); background: var(--success-soft); color: var(--success); }
+.o-counter-change--short { border-color: var(--danger-line); background: var(--danger-soft); color: var(--danger); }
+.o-counter-vnpay-note { display: grid; gap: 6px; padding: 14px 16px; background: var(--info-soft); color: var(--info); }
+.o-counter-vnpay-note span { font-size: 13px; }
+
+/* ---------- Phiếu bán vé / tóm tắt đơn ---------- */
+.o-counter-receipt {
+  position: sticky;
+  top: 72px;
+  display: flex; flex-direction: column;
+  max-height: calc(100dvh - 84px);
+  overflow: auto;
+  background: var(--o-surface);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-r-3);
+}
+.o-counter-receipt-banner {
+  display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px 10px 18px;
+  background: var(--o-ink); color: var(--o-surface);
+}
+.o-counter-receipt-banner > span { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: var(--fw-bold); }
+.o-counter-receipt-banner svg { color: var(--o-surface); }
+.o-counter-receipt-banner button {
+  min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--o-control-line); border-radius: 8px;
+  background: transparent; color: var(--o-surface);
+  font: inherit; font-size: 13px; font-weight: var(--fw-semibold); cursor: pointer;
+}
+.o-counter-receipt-banner button:hover { background: var(--o-ink-hover); }
+
+.o-counter-receipt-banner button:disabled { opacity: .6; cursor: not-allowed; }
+.o-counter-receipt-body { display: grid; gap: 14px; min-height: 0; padding: 16px 18px; overflow: auto; }
+.o-counter-receipt-body:focus-visible { outline-offset: -3px; }
+.o-counter-receipt-movie { display: flex; gap: 12px; padding-bottom: 14px; border-bottom: 1px dashed var(--o-control-line); }
+.o-counter-receipt-poster { flex: none; width: 52px; height: 74px; overflow: hidden; border-radius: 6px; background: var(--o-sunken); object-fit: cover; }
+.o-counter-receipt-movie > div { display: grid; align-content: start; gap: 2px; min-width: 0; color: var(--o-ink-2); font-size: 13px; overflow-wrap: anywhere; }
+.o-counter-receipt-movie h3 { margin: 0 0 2px; color: var(--o-ink); font-size: 15px; }
+.o-counter-receipt-movie strong { color: var(--o-ink); }
+.o-counter-receipt-movie .o-counter-receipt-time { color: var(--o-ink); }
+.o-counter-receipt-movie .o-counter-chips { margin-top: 4px; }
+.o-counter-receipt-section { display: grid; gap: 8px; }
+.o-counter-receipt-section-head { display: flex; justify-content: space-between; gap: 12px; color: var(--o-ink-2); font-size: 13px; font-weight: var(--fw-bold); }
+.o-counter-receipt-section-head span + span { color: var(--o-ink); }
+.o-counter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.o-counter-chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  background: var(--o-sunken); color: var(--o-ink);
+  font-size: 13px; font-weight: var(--fw-bold);
+}
+.o-counter-chip:has(button) { padding: 2px 2px 2px 10px; }
+.o-counter-chip button {
+  display: grid; place-items: center;
+  width: 28px; height: 28px; border: 0; border-radius: var(--radius-pill);
+  background: transparent; color: var(--o-ink); cursor: pointer;
+}
+.o-counter-chip button:hover { background: var(--o-sunken); }
+.o-counter-lines { display: grid; gap: 8px; }
+.o-counter-line { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.o-counter-line > :first-child { color: var(--o-ink-2); }
+.o-counter-line > :last-child { text-align: right; overflow-wrap: anywhere; }
+.o-counter-line--discount, .o-counter-line--discount > :first-child { color: var(--success); }
+.o-counter-receipt-summary {
+  display: grid; flex-shrink: 0; gap: 6px; margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid var(--o-line);
+  background: var(--o-sunken);
+}
+.o-counter-receipt-summary .o-counter-line { font-size: 14px; }
+.o-counter-receipt-summary .o-counter-line strong { color: var(--o-ink); }
+.o-counter-receipt-summary .o-counter-line--discount strong { color: var(--success); }
+.o-counter-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--o-line); }
+.o-counter-total span { font-weight: var(--fw-bold); }
+.o-counter-total strong { color: var(--o-ink); font-size: 26px; letter-spacing: -.01em; }
+.o-counter-receipt-actions {
+  display: grid; flex-shrink: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 8px;
+  padding: 12px 18px 18px; background: var(--o-sunken);
+}
+.o-counter-receipt-actions > :only-child { grid-column: 1 / -1; }
+.o-counter-receipt-actions .o-btn { min-height: 48px; white-space: normal; }
+.o-counter-receipt-actions--checkout { grid-template-columns: minmax(0, 1fr); padding-top: 0; }
+.o-counter-receipt-actions .o-counter-submit { min-height: 52px; font-size: 16px; }
+.o-counter-short { margin: 0; color: var(--danger); font-size: 13px; font-weight: var(--fw-semibold); }
+.o-counter-receipt-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.o-counter-receipt-links .o-counter-link-button { min-height: 40px; font-size: 13px; }
+
+.o-counter-promo { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--o-line); }
+.o-counter-promo-applied {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px 8px 12px; border: 1px solid var(--success-line); border-radius: 8px;
+  background: var(--success-soft); color: var(--success); font-size: 13px;
+}
+.o-counter-promo-applied button {
+  min-height: 32px; padding: 0 10px;
+  border: 1px solid var(--success-line); border-radius: 6px;
+  background: var(--o-surface); color: var(--success);
+  font: inherit; font-weight: var(--fw-bold); cursor: pointer;
+}
+.o-counter-promo-row { display: flex; gap: 8px; }
+.o-counter-promo-row .o-input { flex: 1 1 auto; min-width: 0; text-transform: uppercase; }
+.o-counter-promo-row .o-btn { flex: none; }
+.o-counter-promo-error { margin: 0; color: var(--danger); font-size: 13px; }
+.o-counter-promo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.o-counter-promo-chips button {
+  min-height: 36px; padding: 0 12px;
+  border: 1.5px dashed var(--o-control-line); border-radius: var(--radius-pill);
+  background: var(--o-surface); color: var(--o-ink);
+  font: inherit; font-size: 12px; font-weight: var(--fw-bold); cursor: pointer;
+}
+.o-counter-promo-chips [aria-pressed="true"] { border-color: var(--o-ink); background: var(--o-sunken); }
+.o-counter-promo-chips button:disabled { cursor: wait; }
+
+/* ---------- Màn xuất vé ---------- */
+.o-staff-sale-complete { width: min(100%, 860px); margin-inline: auto; padding: clamp(15px, 3vw, 32px); background: var(--o-surface); border: 1px solid var(--o-line); border-radius: var(--o-r-3); }
+.o-staff-sale-complete .digital-ticket { border: 1px solid var(--o-line); }
+.o-staff-sale-actions { margin-top: 22px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.o-staff-sale-foods { margin-top: 20px; padding-top: 18px; border-top: 2px dashed var(--o-line); text-align: left; }
+.o-staff-sale-foods h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 1rem; }
+.o-staff-sale-foods ul { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.o-staff-sale-foods li { padding: 8px 14px; border: 1px solid var(--o-line); border-radius: 10px; background: var(--o-sunken); font-size: 0.9rem; font-weight: var(--fw-semibold); }
+.o-staff-sale-foods li strong { margin-right: 6px; color: var(--accent); }
+
+/* ---------- Đơn VNPay tại quầy đang chờ khách thanh toán ---------- */
+.o-staff-vnpay-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(16px, 3vw, 32px); align-items: start; }
+.o-staff-vnpay-qr { display: grid; justify-items: center; gap: 8px; padding: 14px; background: var(--o-surface); border: 1px solid var(--o-line); border-radius: var(--o-r-3); }
+.o-staff-vnpay-qr small { color: var(--o-muted); font-size: 12px; }
+.o-staff-vnpay-qr-missing { width: 208px; min-height: 208px; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; color: var(--o-muted); }
+.o-staff-vnpay-qr-missing p { margin: 0; }
+.o-staff-vnpay-info dl { margin: 0; display: grid; gap: 8px; }
+.o-staff-vnpay-info dl div { display: flex; justify-content: space-between; gap: 12px; }
+.o-staff-vnpay-info dt { color: var(--o-muted); }
+.o-staff-vnpay-info dd { margin: 0; font-weight: var(--fw-semibold); text-align: right; }
+.o-staff-vnpay-timer { margin: 16px 0 0; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--o-sunken); color: var(--o-ink); font-variant-numeric: tabular-nums; }
+.o-staff-vnpay-timer[data-urgent] { background: var(--danger-soft); color: var(--danger); }
+.o-staff-vnpay-status, .o-staff-vnpay-message { margin: 12px 0 0; color: var(--o-muted); }
+.o-staff-vnpay-message { color: var(--o-ink); }
+@media (max-width: 640px) { .o-staff-vnpay-body { grid-template-columns: 1fr; } .o-staff-vnpay-qr { justify-self: center; } }
+
+.o-seat-details { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0; list-style: none; }
+.o-seat-details li { color: var(--o-muted); }
+.o-counter-check { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--o-control-h); }
+.o-counter-mobile-bar { display: none; }
+.o-counter-desktop-receipt { min-width: 0; position: sticky; top: 72px; }
+.o-drawer .o-counter-receipt { position: static; max-height: none; }
+.o-staff-sale-complete h2 { font-size: var(--o-fs-3xl); }
+@media (max-width: 1023px) {
+  .o-counter-page { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .o-counter-workspace { grid-template-columns: minmax(0, 1fr); }
+  .o-counter-desktop-receipt { display: none; }
+  .o-counter-mobile-bar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--o-line);
+    background: var(--o-surface);
+  }
+}

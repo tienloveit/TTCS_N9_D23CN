@@ -1,6 +1,6 @@
 # Thêm một migration
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `3ae857c`.
 
 Quy tắc chung và lịch sử version nằm trong [migrations.md](../../05-database/migrations.md). Ví dụ: thêm cột `foods.category` dạng enum `SNACK`, `DRINK`, `COMBO`, bắt buộc.
 
@@ -62,7 +62,7 @@ private FoodCategory category = FoodCategory.SNACK;
 
 ## Không được làm
 
-- Sửa file migration đã merge vào `dev`.
+- Sửa file migration đã merge vào `dev` hoặc `main`.
 - Sửa bảng bằng tay trên database dùng chung rồi "bổ sung migration sau".
 - Bật `spring.jpa.hibernate.ddl-auto: update`.
 - Thêm code sửa schema lúc khởi động trong `BackendApplication` hay seed.

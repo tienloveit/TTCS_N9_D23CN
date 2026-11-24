@@ -3,11 +3,9 @@ import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { userApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 import { toast } from 'react-toastify';
-import { EyeIcon, EyeOffIcon } from '../../components/Common/CinemaIcons';
+import PasswordField from '../../components/Common/PasswordField';
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -70,94 +68,47 @@ export default function RegisterPage() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Tên đăng nhập</label>
-            <input className="input" name="username" placeholder="Nhập tên đăng nhập" value={form.username} onChange={handleChange} required />
+            <label className="form-label" htmlFor="register-username">Tên đăng nhập</label>
+            <input id="register-username" className="input" name="username" autoComplete="username" placeholder="Nhập tên đăng nhập" value={form.username} onChange={handleChange} required />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Họ và tên</label>
-            <input className="input" name="fullName" placeholder="Nhập họ và tên" value={form.fullName} onChange={handleChange} required />
+            <label className="form-label" htmlFor="register-fullName">Họ và tên</label>
+            <input id="register-fullName" className="input" name="fullName" autoComplete="name" placeholder="Nhập họ và tên" value={form.fullName} onChange={handleChange} required />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email</label>
-            <input className="input" name="email" type="email" placeholder="Nhập email" value={form.email} onChange={handleChange} required />
+            <label className="form-label" htmlFor="register-email">Email</label>
+            <input id="register-email" className="input" name="email" autoComplete="email" type="email" placeholder="Nhập email" value={form.email} onChange={handleChange} required />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Số điện thoại</label>
-            <input className="input" name="phoneNumber" placeholder="Nhập số điện thoại" value={form.phoneNumber} onChange={handleChange} required />
+            <label className="form-label" htmlFor="register-phoneNumber">Số điện thoại</label>
+            <input id="register-phoneNumber" className="input" name="phoneNumber" autoComplete="tel" placeholder="Nhập số điện thoại" value={form.phoneNumber} onChange={handleChange} required />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Mật khẩu</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="input"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Nhập mật khẩu"
-                value={form.password}
-                onChange={handleChange}
-                required
-                style={{ paddingRight: '40px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: 0
-                }}
-              >
-                {showPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
-              </button>
-            </div>
-          </div>
+          <PasswordField
+            id="register-password"
+            label="Mật khẩu"
+            name="password"
+            placeholder="Nhập mật khẩu"
+            autoComplete="new-password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
 
-          <div className="form-group">
-            <label className="form-label">Xác nhận mật khẩu</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="input"
-                name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Nhập lại mật khẩu"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                style={{ paddingRight: '40px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: 0
-                }}
-              >
-                {showConfirmPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
-              </button>
-            </div>
-          </div>
+          <PasswordField
+            id="register-confirm-password"
+            label="Xác nhận mật khẩu"
+            toggleLabel="mật khẩu xác nhận"
+            name="confirmPassword"
+            placeholder="Nhập lại mật khẩu"
+            autoComplete="new-password"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            required
+          />
 
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%', marginTop: 8 }}>
             {loading ? 'Đang xử lý...' : 'Đăng ký'}

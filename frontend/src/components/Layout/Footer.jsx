@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import useModalDialog from '../Common/useModalDialog';
 import { Link } from 'react-router-dom';
 import {
   FilmIcon,
@@ -18,7 +19,7 @@ const POLICY_CONTENT = {
     items: [
       'Vé đã thanh toán thành công được cấp mã QR định danh duy nhất cho từng đơn đặt vé.',
       'Khán giả vui lòng có mặt trước giờ chiếu ít nhất 15 phút để xuất trình mã QR tại quầy kiểm soát vé.',
-      'Phim có phân loại độ tuổi (P, T13, T16, T18): rạp có quyền từ chối phục vụ nếu khán giả không đáp ứng quy định độ tuổi.',
+      'Phim có phân loại độ tuổi (P, K, T13, T16, T18): rạp có quyền từ chối phục vụ nếu khán giả không đáp ứng quy định độ tuổi.',
     ],
   },
   privacy: {
@@ -32,7 +33,7 @@ const POLICY_CONTENT = {
   refund: {
     title: 'Chính sách huỷ & hoàn tiền vé',
     items: [
-      'Đơn đặt vé đang chờ thanh toán sẽ giữ ghế tối đa 06 phút trước khi tự động giải phóng ghế.',
+      'Đơn đặt vé đang chờ thanh toán chỉ giữ ghế trong thời gian giới hạn. Hạn giữ ghế của từng đơn hiển thị trên trang thanh toán; quá hạn, ghế sẽ tự động được giải phóng.',
       'Vé đã thanh toán có thể gửi yêu cầu hoàn tiền trong mục "Vé của tôi" trước giờ khởi chiếu theo quy định của rạp.',
       'Yêu cầu hoàn tiền hợp lệ sẽ được nhân viên/quản lý rạp xét duyệt và phản hồi trạng thái trực tiếp trên hệ thống.',
     ],
@@ -42,6 +43,9 @@ const POLICY_CONTENT = {
 const Footer = () => {
   const [activePolicy, setActivePolicy] = useState(null);
   const policyData = activePolicy ? POLICY_CONTENT[activePolicy] : null;
+  const closePolicy = () => setActivePolicy(null);
+  // Esc để đóng, giữ focus trong hộp thoại và trả focus về đúng nút chính sách khi đóng.
+  const dialog = useModalDialog(Boolean(policyData), closePolicy);
 
   return (
     <footer className="footer-professional">
@@ -137,14 +141,14 @@ const Footer = () => {
       </div>
 
       {policyData && (
-        <div className="modal-overlay" onClick={() => setActivePolicy(null)} role="dialog" aria-modal="true" aria-label={policyData.title}>
+        <div className="modal-overlay" {...dialog.overlayProps}>
           <div
             className="card"
+            {...dialog.contentProps}
             style={{ maxWidth: 520, width: '92%', padding: '28px 30px', position: 'relative' }}
-            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.15rem', fontWeight: 700 }}>
+              <h3 id={dialog.titleId} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.15rem', fontWeight: 700 }}>
                 <ShieldIcon size={20} style={{ color: 'var(--blue)' }} />
                 {policyData.title}
               </h3>
@@ -152,7 +156,7 @@ const Footer = () => {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 aria-label="Đóng hộp thoại"
-                onClick={() => setActivePolicy(null)}
+                onClick={closePolicy}
                 style={{ padding: 6 }}
               >
                 <XIcon size={18} />
@@ -164,7 +168,7 @@ const Footer = () => {
               ))}
             </ul>
             <div style={{ marginTop: 22, display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setActivePolicy(null)}>
+              <button type="button" className="btn btn-primary btn-sm" onClick={closePolicy}>
                 Đã hiểu
               </button>
             </div>

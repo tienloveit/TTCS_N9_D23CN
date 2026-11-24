@@ -1,13 +1,15 @@
 import {
   AlertCircleIcon,
-  BanknoteIcon,
   CheckIcon,
-  QrCodeIcon,
 } from '../../../components/Common/CinemaIcons';
-import Button from '../../../components/Common/Button';
-import { formatCurrency, maskedInitials } from './staffBookingUtils';
+import { ChoiceCards, Field, Money, OpsButton, OpsPanel, TextInput } from '../../../components/Ops';
+import { maskedInitials } from './staffBookingUtils';
 
 const moneyInput = new Intl.NumberFormat('vi-VN');
+const paymentOptions = [
+  { value: 'CASH', label: 'Tiền mặt', description: 'Thu tại quầy, xuất vé ngay' },
+  { value: 'VNPAY', label: 'VNPay / QR ngân hàng', description: 'Khách quét mã để thanh toán' },
+];
 
 /**
  * Kết quả tra cứu khách theo SĐT/email. Khi trùng một tài khoản có sẵn, nhân viên hỏi lại khách rồi
@@ -16,19 +18,19 @@ const moneyInput = new Intl.NumberFormat('vi-VN');
 function CustomerMatch({ confirmedCustomerId, lookup, onConfirm, onLookup }) {
   if (!lookup) return null;
   if (lookup.status === 'checking') {
-    return <p className="counter-match" role="status">Đang kiểm tra thông tin khách…</p>;
+    return <p className="o-counter-match" role="status">Đang kiểm tra thông tin khách…</p>;
   }
   if (lookup.status === 'error') {
     return (
-      <div className="counter-match counter-match--error" role="alert">
+      <div className="o-counter-match o-counter-match--error" role="alert">
         <span>{lookup.message}</span>
-        <Button size="sm" onClick={onLookup}>Kiểm tra lại</Button>
+        <OpsButton size="sm" onClick={onLookup}>Kiểm tra lại</OpsButton>
       </div>
     );
   }
   if (lookup.status === 'none') {
     return (
-      <p className="counter-match" role="status">
+      <p className="o-counter-match" role="status">
         Chưa có tài khoản với thông tin này. Khi thu tiền, hệ thống tạo hồ sơ khách mới.
       </p>
     );
@@ -39,11 +41,11 @@ function CustomerMatch({ confirmedCustomerId, lookup, onConfirm, onLookup }) {
   const name = data.maskedName || (data.guestAccount ? 'Khách từng mua tại quầy' : 'Khách hàng');
   const details = [data.maskedPhone, data.maskedEmail, data.membershipTier && 'Hạng ' + data.membershipTier]
     .filter(Boolean)
-    .join(' · ');
+    .join(', ');
   return (
-    <div className={'counter-match counter-match--found' + (confirmed ? ' is-confirmed' : '')} role="status">
-      <div className="counter-match-who">
-        <span className="counter-avatar" aria-hidden="true">{maskedInitials(name)}</span>
+    <div className="o-counter-match o-counter-match--found" data-confirmed={confirmed || undefined} role="status">
+      <div className="o-counter-match-who">
+        <span className="o-counter-avatar" aria-hidden="true">{maskedInitials(name)}</span>
         <div>
           <strong>{confirmed ? 'Đã xác nhận: ' : 'Trùng tài khoản: '}{name}</strong>
           {details && <span>{details}</span>}
@@ -55,11 +57,11 @@ function CustomerMatch({ confirmedCustomerId, lookup, onConfirm, onLookup }) {
         </div>
       </div>
       {confirmed ? (
-        <Button size="sm" onClick={() => onConfirm(null)}>Bỏ xác nhận</Button>
+        <OpsButton size="sm" onClick={() => onConfirm(null)}>Bỏ xác nhận</OpsButton>
       ) : (
-        <Button size="sm" variant="primary" icon={<CheckIcon size={15} />} onClick={() => onConfirm(data.customerId)}>
+        <OpsButton size="sm" variant="primary" icon={<CheckIcon size={15} />} onClick={() => onConfirm(data.customerId)}>
           Đúng khách này
-        </Button>
+        </OpsButton>
       )}
     </div>
   );
@@ -83,12 +85,12 @@ export default function StaffCheckoutStep({
   const isCash = paymentMethod === 'CASH';
   const hasReceived = cashReceived !== '';
   const short = hasReceived && cashChange < 0;
-  const changeTone = !hasReceived ? '' : short ? ' counter-change--short' : ' counter-change--ok';
+  const changeTone = !hasReceived ? '' : short ? ' o-counter-change--short' : ' o-counter-change--ok';
 
   return (
     <>
       {/* Đơn tại quầy chỉ được tạo (và ghế chỉ được giữ) khi thu tiền hoặc tạo mã QR. */}
-      <p className="counter-hold-note" role="note">
+      <p className="o-counter-hold-note" role="note">
         <AlertCircleIcon size={18} aria-hidden="true" />
         <span>
           Ghế <strong>{selectedSeatCodes.join(', ')}</strong> chưa được giữ. Hệ thống giữ ghế khi bạn thu tiền hoặc tạo mã QR;
@@ -96,87 +98,47 @@ export default function StaffCheckoutStep({
         </span>
       </p>
 
-      <section className="counter-card counter-checkout-section" aria-labelledby="counter-customer-title">
-        <div className="counter-section-head">
-          <h2 id="counter-customer-title"><span className="counter-step-num" aria-hidden="true">1</span>Thông tin khách <small>(tùy chọn)</small></h2>
-          <span>Gửi vé điện tử, cộng điểm thành viên</span>
-        </div>
-        <div className="counter-fields">
-          <label>
-            <span>Số điện thoại</span>
-            <input className="input" inputMode="tel" autoComplete="off" placeholder="09xx..."
-              value={customer.customerPhone}
-              onChange={(event) => setCustomer({ ...customer, customerPhone: event.target.value })}
-              onBlur={onLookupCustomer} />
-          </label>
-          <label>
-            <span>Email nhận vé</span>
-            <input className="input" type="email" autoComplete="off" placeholder="example@email.com"
-              value={customer.customerEmail}
-              onChange={(event) => setCustomer({ ...customer, customerEmail: event.target.value })}
-              onBlur={onLookupCustomer} />
-          </label>
-          <label>
-            <span>Họ và tên</span>
-            <input className="input" autoComplete="off" placeholder="Khách vãng lai"
+      <OpsPanel title="Thông tin khách" description="Dùng để gửi vé điện tử và cộng điểm thành viên.">
+        <div className="o-form">
+          <div className="o-form-grid">
+            <Field label="Số điện thoại"><TextInput inputMode="tel" autoComplete="off"
+              value={customer.customerPhone} onBlur={onLookupCustomer}
+              onChange={event => setCustomer({ ...customer, customerPhone: event.target.value })} /></Field>
+            <Field label="Email nhận vé"><TextInput type="email" autoComplete="off"
+              value={customer.customerEmail} onBlur={onLookupCustomer}
+              onChange={event => setCustomer({ ...customer, customerEmail: event.target.value })} /></Field>
+            <Field label="Họ và tên"><TextInput autoComplete="off" placeholder="Khách tại quầy"
               value={customer.customerName}
-              onChange={(event) => setCustomer({ ...customer, customerName: event.target.value })} />
-          </label>
+              onChange={event => setCustomer({ ...customer, customerName: event.target.value })} /></Field>
+          </div>
+          <CustomerMatch confirmedCustomerId={confirmedCustomerId} lookup={customerLookup}
+            onConfirm={onConfirmCustomer} onLookup={onLookupCustomer} />
         </div>
-        <CustomerMatch
-          confirmedCustomerId={confirmedCustomerId}
-          lookup={customerLookup}
-          onConfirm={onConfirmCustomer}
-          onLookup={onLookupCustomer}
-        />
-      </section>
+      </OpsPanel>
 
-      <section className="counter-card counter-checkout-section" aria-labelledby="counter-pay-title">
-        <h2 id="counter-pay-title"><span className="counter-step-num" aria-hidden="true">2</span>Phương thức thanh toán</h2>
-        <div className="counter-pay" role="radiogroup" aria-labelledby="counter-pay-title">
-          <label className={'counter-pay-option' + (isCash ? ' is-active' : '')}>
-            <input type="radio" name="counter-payment" value="CASH" checked={isCash} onChange={() => setPaymentMethod('CASH')} />
-            <span className="counter-pay-icon counter-pay-icon--cash" aria-hidden="true"><BanknoteIcon size={20} /></span>
-            <span className="counter-pay-text"><strong>Tiền mặt</strong><small>Thu tại quầy, xuất vé ngay</small></span>
-          </label>
-
-          {isCash && (
-            <div className="counter-cash">
-              <label className="counter-cash-input">
-                <span>Tiền khách đưa</span>
-                <span className="counter-money">
-                  <input
-                    className="input"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={hasReceived ? moneyInput.format(Number(cashReceived)) : ''}
-                    onChange={(event) => setCashReceived(event.target.value.replace(/\D/g, ''))}
-                  />
-                  <span aria-hidden="true">₫</span>
-                </span>
-                <small>Để trống nếu khách đưa đúng số tiền</small>
-              </label>
-              <div className={'counter-change' + changeTone} role="status">
+      <OpsPanel title="Thanh toán">
+        <div className="o-form">
+          <ChoiceCards name="o-counter-payment" label="Phương thức thanh toán"
+            options={paymentOptions} value={paymentMethod} onChange={setPaymentMethod} />
+          {isCash ? (
+            <div className="o-counter-cash">
+              <Field label="Tiền khách đưa (đ)" hint="Để trống nếu khách đưa đúng số tiền">
+                <TextInput inputMode="numeric" placeholder="0" value={hasReceived ? moneyInput.format(Number(cashReceived)) : ''}
+                  onChange={event => setCashReceived(event.target.value.replace(/\D/g, ''))} />
+              </Field>
+              <div className={'o-counter-change' + changeTone} role="status">
                 <span>{short ? 'Khách đưa còn thiếu' : 'Tiền thừa trả khách'}</span>
-                <strong>{hasReceived ? formatCurrency(Math.abs(cashChange)) : '—'}</strong>
+                <strong>{hasReceived ? <Money value={Math.abs(cashChange)} /> : '—'}</strong>
               </div>
             </div>
-          )}
-
-          <label className={'counter-pay-option counter-pay-option--vnpay' + (!isCash ? ' is-active' : '')}>
-            <input type="radio" name="counter-payment" value="VNPAY" checked={!isCash} onChange={() => setPaymentMethod('VNPAY')} />
-            <span className="counter-pay-icon counter-pay-icon--vnpay" aria-hidden="true"><QrCodeIcon size={20} /></span>
-            <span className="counter-pay-text"><strong>VNPay / QR ngân hàng</strong><small>Khách quét QR bằng app ngân hàng hoặc ví</small></span>
-          </label>
-
-          {!isCash && (
-            <div className="counter-vnpay-note">
-              <strong>Bấm "Tạo mã QR" để hiện mã cho khách quét.</strong>
-              <span>Màn hình đếm ngược theo hạn hệ thống trả về. Có thể hủy giao dịch để đổi sang tiền mặt mà không mất giỏ hàng.</span>
+          ) : (
+            <div className="o-counter-vnpay-note">
+              <strong>Bấm “Tạo mã QR” để hiện mã cho khách quét.</strong>
+              <span>Màn hình hiển thị hạn giữ ghế từ hệ thống. Bạn có thể hủy giao dịch để đổi sang tiền mặt và giữ giỏ hàng.</span>
             </div>
           )}
         </div>
-      </section>
+      </OpsPanel>
     </>
   );
 }

@@ -1,6 +1,6 @@
 # Tài liệu MoviePTIT
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 Thư mục này là nguồn tài liệu chính của dự án. Mỗi chủ đề chỉ có một file làm nguồn chính, các nơi khác chỉ đặt link tới file đó. Đầu mỗi file ghi ngày và commit đã đối chiếu. Khi sửa code làm thay đổi nội dung một file, cập nhật file đó và dòng đối chiếu trong cùng commit.
 
@@ -9,7 +9,7 @@ Thư mục này là nguồn tài liệu chính của dự án. Mỗi chủ đề
 | Người đọc | Thứ tự gợi ý |
 | --- | --- |
 | Thành viên mới | [01 Chạy dự án](01-getting-started/requirements.md) → [02 Nghiệp vụ](02-domain/overview.md) → [03 Kiến trúc](03-architecture/overview.md) → [04 API](04-api/conventions.md) → [05 Dữ liệu](05-database/erd.md) → [06 Tích hợp](06-integrations/vnpay.md) → [07 Làm việc với code](07-development/coding-conventions.md) |
-| Người làm frontend | [02 Nghiệp vụ](02-domain/overview.md) → [04 API](04-api/conventions.md), [endpoint](04-api/endpoints.md), [realtime](04-api/realtime.md) → [03 Frontend](03-architecture/frontend.md) → [Thêm trang](07-development/how-to/add-page.md) |
+| Người làm frontend | [02 Nghiệp vụ](02-domain/overview.md) → [04 API](04-api/conventions.md), [endpoint](04-api/endpoints.md), [realtime](04-api/realtime.md) → [03 Frontend](03-architecture/frontend.md) → [Design system vận hành](03-architecture/ops-design-system.md) → [Thêm trang](07-development/how-to/add-page.md) |
 | Người làm backend | [02 Nghiệp vụ](02-domain/overview.md) → [03 Backend](03-architecture/backend.md) → [04 API](04-api/conventions.md) → [05 Dữ liệu](05-database/erd.md) → [Thêm endpoint](07-development/how-to/add-endpoint.md), [thêm migration](07-development/how-to/add-migration.md) |
 | Giảng viên chấm | [02 Nghiệp vụ](02-domain/overview.md) → [03 Kiến trúc](03-architecture/overview.md) → [05 Dữ liệu](05-database/erd.md) → [09 Báo cáo](09-report/bao-cao.md) |
 
@@ -43,6 +43,7 @@ Thư mục này là nguồn tài liệu chính của dự án. Mỗi chủ đề
 | [overview.md](03-architecture/overview.md) | Các thành phần nói chuyện với nhau ra sao? |
 | [backend.md](03-architecture/backend.md) | Code backend tổ chức theo tầng nào? |
 | [frontend.md](03-architecture/frontend.md) | Code frontend tổ chức thế nào? |
+| [ops-design-system.md](03-architecture/ops-design-system.md) | Màn Staff, Manager, Admin phải trông và hành xử thế nào? |
 | [diagrams/](03-architecture/diagrams/) | File nguồn sơ đồ để xuất ảnh cho báo cáo |
 
 ### [04-api](04-api/) — hợp đồng giữa frontend và backend

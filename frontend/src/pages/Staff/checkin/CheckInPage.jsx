@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import jsQR from 'jsqr';
-import { StaffPageHeading } from '../StaffUI';
+import { OpsPage, OpsPanel, ShowTime, StatStrip, Tabs } from '../../../components/Ops';
+import useShiftSchedule from '../useShiftSchedule';
 import { bookingApi, ticketApi } from '../../../api';
-import { ScanIcon, SearchIcon, TicketIcon } from '../../../components/Common/CinemaIcons';
 import {
   formatCinema,
   parseLocalDateTime,
@@ -22,7 +22,6 @@ import CheckInHistoryLog from './CheckInHistoryLog';
 import CheckInVerdictPanel from './CheckInVerdictPanel';
 import CheckInLookupTab from './CheckInLookupTab';
 import CheckInScannerTab from './CheckInScannerTab';
-import './CheckIn.css';
 
 const PAID_BOOKINGS = { status: 'COMPLETED', paymentStatus: 'PAID' };
 // Tab tra cứu hiển thị tối đa 25 đơn; lịch sử phiên giữ tối đa 50 lượt.
@@ -65,8 +64,10 @@ export default function CheckInPage() {
   const [historySearch, setHistorySearch] = useState('');
 
   const codeInputRef = useRef(null);
+  const lookupInputRef = useRef(null);
+  const schedule = useShiftSchedule();
 
-  // Stop camera on unmount or tab switch
+  // Dừng camera khi rời trang hoặc đổi tab.
   const stopCamera = () => {
     cameraRequest.current = null;
     setCameraStarting(false);
@@ -83,7 +84,7 @@ export default function CheckInPage() {
 
   // Tra cứu nhanh: backend lọc đơn đã thanh toán theo từ khóa và ngày chiếu, trả tối đa một trang.
   const lookupRequest = useRef(0);
-  const fetchBookingsForLookup = async () => {
+  const fetchBookingsForLookup = useCallback(async () => {
     const request = ++lookupRequest.current;
     setLoadingBookings(true);
     setLookupError('');
@@ -101,7 +102,7 @@ export default function CheckInPage() {
     } finally {
       if (request === lookupRequest.current) setLoadingBookings(false);
     }
-  };
+  }, [lookupFilter, lookupQuery]);
 
   // Đưa các vé đã soát hôm nay (ghi trong DB, có thể từ quầy khác) vào lịch sử phiên nếu chưa có.
   const syncTodayCheckIns = async () => {
@@ -199,15 +200,11 @@ export default function CheckInPage() {
     if (activeTab !== 'LOOKUP') return undefined;
     const timer = setTimeout(fetchBookingsForLookup, LOOKUP_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ gọi lại khi tab/từ khóa/bộ lọc đổi
-  }, [activeTab, lookupQuery, lookupFilter]);
+  }, [activeTab, fetchBookingsForLookup]);
 
   useEffect(() => {
     if (activeTab !== 'SCANNER') {
       stopCamera();
-    } else {
-      const focusTimer = setTimeout(() => codeInputRef.current?.focus(), 80);
-      return () => clearTimeout(focusTimer);
     }
   }, [activeTab]);
 
@@ -215,6 +212,7 @@ export default function CheckInPage() {
     setRecentCheckIns((prev) => [
       {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        sortTime: Date.now(),
         time: formatCinema(new Date(), TIME_WITH_SECONDS),
         ...entry,
       },
@@ -254,9 +252,9 @@ export default function CheckInPage() {
     });
 
     if (allAlready) {
-      toast.warning('Vé này đã được check-in trước đó!');
+      toast.warn('Vé đã được soát trước đó');
     } else {
-      toast.success(`Check-in thành công ${newlyCheckedIn} vé!`);
+      toast.success(`Đã soát ${newlyCheckedIn} vé`);
     }
   };
 
@@ -266,7 +264,9 @@ export default function CheckInPage() {
     const errorMsg = technicalFailure
       ? 'Chưa xác nhận được kết quả soát vé. Hãy kiểm tra kết nối rồi quét lại.'
       : err.response?.data?.message || fallback;
-    setVerdict({ type: technicalFailure ? 'CONNECTION' : 'ERROR', errorMsg, scannedCode: label });
+    const timing = /^(Chưa tới giờ soát vé|Suất chiếu đã kết thúc)/i.test(errorMsg);
+    const type = technicalFailure ? 'CONNECTION' : timing ? 'TIMING' : 'ERROR';
+    setVerdict({ type, errorMsg, scannedCode: label });
     if (!technicalFailure) {
       recordHistory({ code: label, movieName: errorMsg, seats: '', roomName: '', status: 'ERROR', statusLabel: 'Từ chối' });
     }
@@ -298,7 +298,7 @@ export default function CheckInPage() {
     } finally {
       checkInPending.current = false;
       setChecking(false);
-      setTimeout(() => codeInputRef.current?.focus(), 60);
+      setTimeout(() => (activeTab === 'LOOKUP' ? lookupInputRef : codeInputRef).current?.focus(), 60);
     }
   };
 
@@ -460,7 +460,7 @@ export default function CheckInPage() {
     const valid = recentCheckIns.filter((i) => i.status === 'SUCCESS').length;
     const duplicate = recentCheckIns.filter((i) => i.status === 'DUPLICATE').length;
     const failed = recentCheckIns.filter((i) => i.status === 'ERROR').length;
-    return { total: recentCheckIns.length, valid, duplicate, failed };
+    return { valid, duplicate, failed };
   }, [recentCheckIns]);
 
   const filteredHistory = useMemo(() => {
@@ -476,116 +476,51 @@ export default function CheckInPage() {
     });
   }, [recentCheckIns, historyFilter, historySearch]);
 
+  const next = schedule.shows
+    .filter(show => show.status === 'OPEN' && parseLocalDateTime(show.startTime) > schedule.now)
+    .sort((first, second) => parseLocalDateTime(first.startTime) - parseLocalDateTime(second.startTime))[0];
+  const reopenResult = (item) => {
+    const tickets = item.rawResponse.tickets || [];
+    const alreadyCount = tickets.filter(ticket => ticket.alreadyCheckedIn).length;
+    setVerdict({
+      type: alreadyCount ? 'WARNING' : 'VALID', historical: true, data: item.rawResponse, scannedCode: item.code,
+      newlyCheckedIn: tickets.length - alreadyCount, alreadyCount,
+    });
+  };
+
   return (
-    <div className="gate-page">
-      {/* ===== TOP GATE CONTROL BAR ===== */}
-      <StaffPageHeading icon={ScanIcon} title="Soát vé vào rạp" description="Quét mã QR, nhập mã đơn hoặc tìm đơn của khách." />
-      <div className="gate-top-bar">
-
-        <dl className="gate-stats-row" aria-label="Thống kê soát vé trong phiên">
-          {[
-            ['Lượt trong nhật ký', stats.total, 'neutral'],
-            ['Hợp lệ', stats.valid, 'success'],
-            ['Đã quét trùng', stats.duplicate, 'warning'],
-            ['Từ chối', stats.failed, 'danger'],
-          ].map(([label, value, tone]) => (
-            <div className={`gate-stat-chip gate-stat-chip--${tone}`} key={label}>
-              <span className="gate-stat-chip-dot" aria-hidden="true" />
-              <div>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      {/* ===== 2-COLUMN GATE WORKSPACE ===== */}
-      <div className="gate-workspace">
-        {/* ===== LEFT COLUMN: SCANNER & INPUT METHODS ===== */}
-        <div className="gate-col">
-          <section className="gate-card">
-            {/* Mode Switcher Tabs */}
-            <div className="gate-mode-tabs">
-              <button
-                type="button"
-                className={`gate-mode-tab ${activeTab === 'SCANNER' ? 'gate-mode-tab--active' : ''}`}
-                aria-pressed={activeTab === 'SCANNER'}
-                onClick={() => setActiveTab('SCANNER')}
-              >
-                <TicketIcon />
-                <span>Máy quét / mã đơn</span>
-              </button>
-
-              <button
-                type="button"
-                className={`gate-mode-tab ${activeTab === 'LOOKUP' ? 'gate-mode-tab--active' : ''}`}
-                aria-pressed={activeTab === 'LOOKUP'}
-                onClick={() => setActiveTab('LOOKUP')}
-              >
-                <SearchIcon size={18} />
-                <span>Tra cứu đơn vé</span>
-              </button>
-            </div>
-
-            {/* TAB 1: BARCODE / QR SCANNER & MANUAL CODE */}
-            {activeTab === 'SCANNER' && (
-              <CheckInScannerTab
-                cameraActive={cameraActive}
-                cameraError={cameraError}
-                cameraStarting={cameraStarting}
-                captureCameraFrameAndCheckIn={captureCameraFrameAndCheckIn}
-                checking={checking}
-                code={code}
-                codeInputRef={codeInputRef}
-                handleSubmitCode={handleSubmitCode}
-                setCode={setCode}
-                startCamera={startCamera}
-                stopCamera={stopCamera}
-                videoRef={videoRef}
-              />
+    <OpsPage title="Soát vé vào rạp" description="Quét mã QR, nhập mã đơn hoặc tìm đơn của khách.">
+      <StatStrip items={[
+        { label: 'Lượt soát hợp lệ hôm nay', value: stats.valid },
+        { label: 'Đã quét trùng', value: stats.duplicate, tone: 'warning' },
+        { label: 'Từ chối', value: stats.failed, tone: 'danger' },
+        { label: 'Suất kế tiếp', value: next ? <ShowTime value={next.startTime} /> : '—' },
+      ]} />
+      <div className="o-work-pair">
+        <OpsPanel title="Soát vé">
+          <Tabs label="Cách soát vé" options={[
+            { value: 'SCANNER', label: 'Quét mã QR' },
+            { value: 'LOOKUP', label: 'Tra cứu mã đơn' },
+          ]} value={activeTab} onChange={setActiveTab}>
+            {activeTab === 'SCANNER' ? (
+              <CheckInScannerTab {...{
+                cameraActive, cameraError, cameraStarting, captureCameraFrameAndCheckIn,
+                checking, code, codeInputRef, handleSubmitCode, setCode, startCamera, stopCamera, videoRef,
+              }} />
+            ) : (
+              <CheckInLookupTab {...{
+                checking, fetchBookingsForLookup, filteredLookupBookings, loadingBookings, lookupError,
+                lookupFilter, lookupQuery, lookupInputRef, performCodeCheckIn, setLookupFilter, setLookupQuery,
+              }} />
             )}
-
-            {/* TAB 2: QUICK CUSTOMER / BOOKING LOOKUP */}
-            {activeTab === 'LOOKUP' && (
-              <CheckInLookupTab
-                checking={checking}
-                fetchBookingsForLookup={fetchBookingsForLookup}
-                filteredLookupBookings={filteredLookupBookings}
-                loadingBookings={loadingBookings}
-                lookupError={lookupError}
-                lookupFilter={lookupFilter}
-                lookupQuery={lookupQuery}
-                performCodeCheckIn={performCodeCheckIn}
-                setLookupFilter={setLookupFilter}
-                setLookupQuery={setLookupQuery}
-              />
-            )}
-          </section>
-
-        </div>
-
-        {/* ===== RIGHT COLUMN: LIVE GATE PASS VERDICT DISPLAY ===== */}
-        <CheckInVerdictPanel
-          checking={checking}
-          codeInputRef={codeInputRef}
-          setActiveTab={setActiveTab}
-          setVerdict={setVerdict}
-          verdict={verdict}
-        />
-          {/* ===== SESSION CHECK-IN LOG ===== */}
-          <CheckInHistoryLog
-            evaluateCheckInResult={evaluateCheckInResult}
-            filteredHistory={filteredHistory}
-            historyFilter={historyFilter}
-            historySearch={historySearch}
-            recentCheckIns={recentCheckIns}
-            setHistoryFilter={setHistoryFilter}
-            setHistorySearch={setHistorySearch}
-            setRecentCheckIns={setRecentCheckIns}
-            setVerdict={setVerdict}
-          />
+          </Tabs>
+        </OpsPanel>
+        <CheckInVerdictPanel {...{ checking, codeInputRef, setActiveTab, setVerdict, verdict }} />
       </div>
-    </div>
+      <CheckInHistoryLog {...{
+        reopenResult, filteredHistory, historyFilter, historySearch, recentCheckIns,
+        setHistoryFilter, setHistorySearch, setRecentCheckIns, setVerdict,
+      }} />
+    </OpsPage>
   );
 }

@@ -1,6 +1,6 @@
 # Quy ước viết code
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 ## Chung
 
@@ -71,7 +71,8 @@ Không sửa mã MapStruct sinh trong `target/`.
 | Component, trang | PascalCase `.jsx`, một component chính mỗi file | `BookingCard.jsx`, `StaffSeatStep.jsx` |
 | Hook | `useTên.js` | `useModalDialog.js`, `useActiveBranches.js` |
 | Hàm thuần, hằng | camelCase `.js` | `cinemaTime.js`, `staffBookingUtils.js` |
-| CSS của trang | Cùng tên với trang hoặc khu, import trong trang | `MyBookingsPage.css`, `StaffBooking.css` |
+| CSS trang khách | Cùng tên với trang, import trong trang | `MyBookingsPage.css` |
+| CSS khu vận hành | File trong `src/styles/ops/`, nạp qua `@import` ở `components/Ops/ops.css`, không import trong trang | `styles/ops/counter.css` |
 | Thư mục trang | `src/pages/<Khu>/`, khu nhỏ tách thư mục con | `pages/Staff/booking/`, `pages/Staff/checkin/` |
 
 Trang lớn giữ state, effect và gọi API ở component cha. Component con chỉ nhận props, hàm thuần tách ra file `*Utils.js` để test được. `StaffBookingPage` và `CheckInPage` là mẫu.
@@ -93,13 +94,12 @@ Trang lớn giữ state, effect và gọi API ở component cha. Component con c
 
 - Không thêm mã màu hex ngoài `src/styles/tokens.css`. Dùng `var(--...)`, kể cả trong `style={{}}`.
 - `npm run lint` chạy `lint:tokens`, lệnh này thất bại khi một file có nhiều mã hex hơn mức trong `design-tokens-baseline.json`. Sau khi thay mã hex bằng token, chạy `npm run lint:tokens -- --update` để hạ mức. Mức chỉ được giảm.
-- Khu `/admin`, `/manager` dùng `--ops` làm màu nhấn, khu nhân viên dùng nhóm `--staff-*`.
-- CSS gộp chung toàn ứng dụng. Class dùng chung với trang khác phải viết kèm class cha của khu đang sửa.
+- Khu vận hành theo [ops-design-system.md](../03-architecture/ops-design-system.md), kiểm bằng `npm run lint:ops`.
 - Không dùng Tailwind hay PostCSS.
 
 ### Component và trải nghiệm
 
-- Tái sử dụng `Button`, `Badge`, `ConfirmDialog`, `EmptyState`, `Skeleton`, `useModalDialog` và bộ class `admin-*` trong `Admin.css`. Danh sách ở [frontend.md](../03-architecture/frontend.md#thành-phần-dùng-chung).
+- Màn vận hành dùng `OpsPage`, `DataTable` trong `OpsPanel flush`, `FilterBar`, `Field` và `OpsDialog`. Dùng `OpsDrawer` để xem chi tiết, `OpsConfirm` cho xác nhận và `StateBlock` cho tải, lỗi hoặc rỗng. Trang khách dùng các thành phần trong `components/Common`. Danh sách ở [frontend.md](../03-architecture/frontend.md#thành-phần-dùng-chung).
 - Mọi màn hình có trạng thái đang tải, lỗi và rỗng.
 - Thao tác được bằng bàn phím, focus nhìn thấy được, nút chỉ có icon có `aria-label`, nhóm nút chọn một dùng `aria-pressed`.
 - Thời gian dùng `src/utils/cinemaTime.js`. Không tự tính "hôm nay" bằng `new Date()`.
