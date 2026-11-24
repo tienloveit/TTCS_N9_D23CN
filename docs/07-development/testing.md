@@ -83,13 +83,14 @@ Flyway tự migrate bản sao khi test khởi động. Không trỏ biến này 
 | `profile.test.mjs` | Form hồ sơ gửi `dob`, không gửi trường quản trị |
 | `useModalDialog.test.mjs` | Esc, modal lồng nhau, click nền |
 | `opsRules.test.mjs` | Luật khu vận hành: class cũ, inline style, svg, emoji, chữ giao diện, import, mã hex trong JSX; tiền tố `o-`, `!important`, `@layer`, `box-shadow`, `font-family` trong CSS |
+| `opsGuard.test.mjs` | Hook `ops-guard.mjs`: báo vi phạm với exit 2, không chặn khi input hỏng, file ngoài phạm vi vận hành hoặc file đã xoá |
 | `opsNav.test.mjs` | Mục điều hướng cho STAFF, MANAGER và ADMIN |
 | `opsFormat.test.mjs` | Tiền Việt Nam, ngày tương đối theo múi giờ rạp |
 | `showtimeRail.test.mjs` | Cửa sổ giờ, vị trí, trạng thái suất và làm tròn giờ tạo suất |
 
 `componentHarness.mjs` là bộ dựng component dùng chung. Nó giả lập `useState` theo thứ tự khai báo, nên component được test phải thêm state mới ở cuối.
 
-Mốc đối chiếu frontend ngày 2026-11-25 có 41 test đạt, kể cả khi chạy với `TZ=UTC`. Mốc backend ngày 2026-11-21 có 268 test, 0 lỗi và 6 test bỏ qua khi chưa cấu hình bản sao MySQL cho `PaymentPersistenceIntegrationTest`.
+Mốc đối chiếu frontend ngày 2026-11-25 có 44 test đạt, kể cả khi chạy với `TZ=UTC`. Mốc backend ngày 2026-11-21 có 268 test, 0 lỗi và 6 test bỏ qua khi chưa cấu hình bản sao MySQL cho `PaymentPersistenceIntegrationTest`.
 
 ## Phần kiểm thử tay
 
