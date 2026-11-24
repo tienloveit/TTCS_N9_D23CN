@@ -1,6 +1,6 @@
 # Hướng dẫn AI cho frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `c9504d3`.
 
 Áp dụng cho `frontend/`. Đọc [quy tắc toàn dự án](../AGENTS.md) trước. Kiến trúc frontend nằm trong [docs/03-architecture/frontend.md](../docs/03-architecture/frontend.md), quy ước code trong [coding-conventions.md](../docs/07-development/coding-conventions.md#frontend).
 
@@ -41,7 +41,7 @@ node --experimental-vm-modules --test tests/*.test.mjs
 | Route, guard | `src/AnimatedRoutes.jsx`, `src/context/roleHomePaths.js` |
 | Đăng nhập | `src/context/AuthContext.jsx`, `useAuth.js` |
 | API | `src/api/index.js`, `src/api/axiosClient.js` |
-| Trang khách | `src/pages/Home`, `MovieList`, `MovieDetail`, `Branch`, `SeatSelect`, `Payment`, `MyBookings`, `Profile`, `Login` |
+| Trang khách | `src/pages/Home`, `MovieList`, `MovieDetail`, `Schedule`, `SeatSelect`, `Payment`, `MyBookings`, `Profile`, `Login` |
 | Khu nhân viên | `src/pages/Staff/` (`booking/StaffBookingPage.jsx`, `checkin/CheckInPage.jsx`, `StaffDashboardPage.jsx`) |
 | Khu quản trị, quản lý | `src/pages/Admin/` (dùng chung cho `/admin` và `/manager`) |
 | Design system khu vận hành | `src/components/Ops/` (`OpsShell.jsx`, `opsNav.js`, `ops.css`) |

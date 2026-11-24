@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `c9504d3`.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -42,7 +42,7 @@ frontend/src/
 │   ├── Ops/               Design system khu vận hành: khung trang, menu, bảng, hộp thoại, ops.css
 │   └── Ticket/            DigitalTicket (vé số)
 ├── pages/
-│   ├── Home/, MovieList/, MovieDetail/, Branch/     Khám phá
+│   ├── Home/, MovieList/, MovieDetail/, Schedule/   Khám phá (Schedule/ là trang lịch chiếu /branches)
 │   ├── SeatSelect/, Payment/, MyBookings/, Profile/ Đặt vé và tài khoản khách
 │   ├── Login/, Register/, NotFound/
 │   ├── Admin/             Trang quản trị, dùng chung cho ADMIN và MANAGER
@@ -120,7 +120,7 @@ Bảng quyền đầy đủ ở [roles-permissions.md](../02-domain/roles-permis
 | `AuthContext` | Người dùng hiện tại giải mã từ token |
 | State của trang | Dữ liệu đã tải, lựa chọn đang làm, trạng thái tải và lỗi |
 | Router state | `showtimeId` chọn sẵn ở quầy, do Tổng quan ca gửi khi mở `/staff/booking` |
-| URL | Rạp đang xem (`/branches?rap=<id>`), đơn đang mở (`/staff/bookings?booking=<id>`). `/staff/booking?showtime=<id>` là liên kết cũ vẫn được hỗ trợ |
+| URL | Lịch chiếu: rạp, ngày và cách xem (`/branches?rap=<id>&ngay=YYYY-MM-DD&xem=gio`, ngày ngoài dải 14 ngày quay về hôm nay), đơn đang mở (`/staff/bookings?booking=<id>`). `/staff/booking?showtime=<id>` là liên kết cũ vẫn được hỗ trợ |
 | localStorage | `accessToken`, `refreshToken`; `movieptit.lastBranchId` (rạp xem gần nhất); `movieptit_cash_count_v1` (tiền đếm ở két theo ngày rạp); `movieptit_checkin_session_v1` (lịch sử soát vé của phiên) |
 
 ## Realtime
@@ -141,7 +141,7 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | Khu vực | Điểm vào | Ghi chú |
 | --- | --- | --- |
 | Khám phá phim | `Home/HomePage.jsx`, `MovieList/MovieListPage.jsx`, `MovieDetail/MovieDetailPage.jsx` | Danh sách lọc theo từ khóa, trạng thái, tuổi, thể loại. Chi tiết phim gom suất theo ngày và rạp, có đánh giá và trailer. |
-| Lịch chiếu theo rạp | `Branch/BranchListPage.jsx`, `BranchSchedule.jsx` | Rạp đang chọn nằm trên URL và được nhớ ở localStorage. `/branch/:branchId` chỉ chuyển hướng. Ẩn suất đã bắt đầu. |
+| Lịch chiếu theo rạp | `Schedule/SchedulePage.jsx`, `scheduleModel.js` | Tên rạp làm tiêu đề, đổi rạp qua hộp thoại `CinemaPicker`. Dải 14 ngày từ hôm nay theo giờ rạp. Hai cách xem cùng dữ liệu: "Theo phim" (suất nhóm theo định dạng, mỗi suất là một cuống vé) và "Theo giờ" (mọi suất xếp theo giờ, kèm giá vé backend trả về). Lọc theo buổi và tên phim trên dữ liệu đã tải. Rạp, ngày, cách xem nằm trên URL, rạp được nhớ ở localStorage. `/branch/:branchId` chỉ chuyển hướng. Ẩn suất đã bắt đầu. Phép tính thuần nằm trong `scheduleModel.js`, có test `tests/scheduleModel.test.mjs`. |
 | Chọn ghế | `SeatSelect/SeatSelectPage.jsx` | Tải suất, vé, bắp nước, nghe STOMP, gọi `bookingApi.create`. Xem công khai, đặt vé cần đăng nhập. |
 | Thanh toán | `Payment/PaymentPage.jsx`, `PaymentResultPage.jsx` | Đếm ngược theo `expiresAt` của backend. Thiếu `expiresAt` thì hiện cảnh báo, không tự ước tính. Áp hoặc bỏ mã, lấy URL VNPay. Trang kết quả gửi query string về backend và chỉ hiển thị kết quả backend xác nhận. |
 | Vé của tôi | `MyBookings/MyBookingsPage.jsx`, `BookingCard.jsx`, `TicketPassModal.jsx`, `RefundDialog.jsx` | Suất sắp chiếu gần nhất nổi lên đầu và không lặp lại trong danh sách. Tab Sắp tới, Đã xem, Hoàn tiền, Đã hủy, Tất cả, mặc định Sắp tới nếu còn vé dùng được. Tab Tất cả xếp đơn cần xử lý lên trước, đơn hủy xuống cuối. Có tìm kiếm và phân trang. Điều kiện mở QR, thanh toán, hủy, hoàn tiền dùng chung trong `BookingCard`. `TicketPassModal` mở QR và tải ảnh vé, `bookingFormat.js` phân loại vé và đọc hạn hoàn, `bookingChanges.js` ghi nhận thay đổi khi làm mới. |
