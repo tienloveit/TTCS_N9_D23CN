@@ -17,7 +17,7 @@
 .ops .o-rail__times { font-stretch: var(--o-stretch-time); font-variant-numeric: tabular-nums; }
 .ops .o-rail__badges { display: flex; flex-wrap: wrap; gap: 2px; }
 .ops .o-rail__fill { background: var(--o-sunken); height: 3px; position: absolute; bottom: 0; left: 0; right: 0; }
-.ops .o-rail__fill::after { content: ''; display: block; height: 100%; width: calc(100% * var(--o-fill)); background: var(--o-ink-2); }
+.ops .o-rail__fill::after { content: ''; display: block; height: 100%; width: calc(100% * var(--o-fill)); background: var(--o-chart-1); }
 .ops .o-rail__now-time, .ops .o-rail__now-line { position: absolute; left: calc(100% * var(--o-now)); pointer-events: none; z-index: 2; }
 .ops .o-rail__now-time { bottom: 0; background: var(--o-mark-soft); color: var(--o-mark); padding: 2px 4px; }
 .ops .o-rail__now-line { top: 0; bottom: 0; border-left: 2px solid var(--o-mark); }
