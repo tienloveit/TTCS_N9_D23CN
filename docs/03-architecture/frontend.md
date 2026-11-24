@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `262d041`.
+> Đối chiếu mã nguồn ngày 2026-11-24, commit `ef70b10`.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -47,6 +47,10 @@ frontend/src/
 │   ├── Login/, Register/, NotFound/
 │   ├── Admin/             Trang quản trị, dùng chung cho ADMIN và MANAGER
 │   └── Staff/             Khu nhân viên: booking/ (bán vé), checkin/ (soát vé)
+│       ├── StaffLayout.jsx      Khung khu nhân viên: OpsShell area="staff", mật độ touch
+│       ├── StaffDashboardPage.jsx Tổng quan ca
+│       ├── useShiftSchedule.js  Lịch chiếu hôm nay cho Tổng quan ca, tự đổi ngày theo giờ rạp, có retry
+│       └── StaffInbox.jsx       Giao diện thông báo nhân viên, do Admin/NotificationPage render ở /staff/notifications
 ├── styles/
 │   ├── tokens.css         Design token: màu, chữ, khoảng cách, bo góc, đổ bóng, z-index
 │   ├── components.css     Biến thể nút và badge
@@ -56,6 +60,11 @@ frontend/src/
 │   ├── cinemaFormats.js   Nhãn công nghệ phòng, định dạng chiếu
 │   ├── bookingLimits.js   MAX_FOOD_QUANTITY = 50
 │   ├── bookingStatus.js   Nhãn và tone Badge cho booking.status, dùng chung mọi màn
+│   ├── paymentStatus.js   PAYMENT_STATUS_META: nhãn và tone cho trạng thái thanh toán
+│   ├── showtimeStatus.js  SHOWTIME_STATUS_META: nhãn và tone cho trạng thái suất chiếu
+│   ├── opsFormat.js       formatMoney, formatDateLabel ("Hôm nay", "Ngày mai") cho khu vận hành
+│   ├── opsFilters.js      SEARCH_DEBOUNCE_MS = 300 cho ô tìm kiếm vận hành
+│   ├── useNow.js          Hook thời điểm hiện tại, cập nhật theo chu kỳ cho đếm ngược
 │   └── ageRatings.js      Danh mục phân loại độ tuổi P, K, T13, T16, T18
 └── index.css              CSS chung
 ```
@@ -73,6 +82,7 @@ frontend/src/
 | Nhân viên (`StaffRoute`) | `/staff/dashboard`, `/staff/booking`, `/staff/check-in`, `/staff/bookings`, `/staff/notifications` |
 | Quản trị (`AdminRoute`) | `/admin` và `movies`, `showtimes`, `branches`, `users`, `bookings`, `foods`, `promotions`, `operations`, `refunds`, `revenue`, `audit-logs`, `notifications`, `settings` |
 | Quản lý (`AdminRoute`) | `/manager` và `showtimes`, `branches`, `users`, `bookings`, `foods`, `promotions`, `operations`, `refunds`, `revenue`, `audit-logs`, `notifications` |
+| Chỉ DEV | `/ops-gallery`: thư viện thành phần vận hành, chỉ khai báo khi `import.meta.env.DEV`, không có trong bản build production |
 
 - `AdminRoute` nhận ADMIN và MANAGER. MANAGER mở `/admin/*` được chuyển sang `/manager/*` tương ứng, giữ query string, nên luôn dùng menu và phạm vi của khu quản lý.
 - `AdminOnlyRoute` bọc thêm các trang `/admin` index, `movies`, `showtimes`, `users`, `bookings`, `foods`, `promotions`, `settings`.
@@ -109,7 +119,8 @@ Bảng quyền đầy đủ ở [roles-permissions.md](../02-domain/roles-permis
 | --- | --- |
 | `AuthContext` | Người dùng hiện tại giải mã từ token |
 | State của trang | Dữ liệu đã tải, lựa chọn đang làm, trạng thái tải và lỗi |
-| URL | Rạp đang xem (`/branches?rap=<id>`), suất chọn sẵn ở quầy (`/staff/booking?showtime=<id>`), đơn đang mở (`/staff/bookings?booking=<id>`) |
+| Router state | `showtimeId` chọn sẵn ở quầy, do Tổng quan ca gửi khi mở `/staff/booking` |
+| URL | Rạp đang xem (`/branches?rap=<id>`), đơn đang mở (`/staff/bookings?booking=<id>`). `/staff/booking?showtime=<id>` là liên kết cũ vẫn được hỗ trợ |
 | localStorage | `accessToken`, `refreshToken`; `movieptit.lastBranchId` (rạp xem gần nhất); `movieptit_cash_count_v1` (tiền đếm ở két theo ngày rạp); `movieptit_checkin_session_v1` (lịch sử soát vé của phiên) |
 
 ## Realtime
@@ -135,7 +146,7 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | Thanh toán | `Payment/PaymentPage.jsx`, `PaymentResultPage.jsx` | Đếm ngược theo `expiresAt` của backend. Thiếu `expiresAt` thì hiện cảnh báo, không tự ước tính. Áp hoặc bỏ mã, lấy URL VNPay. Trang kết quả gửi query string về backend và chỉ hiển thị kết quả backend xác nhận. |
 | Vé của tôi | `MyBookings/MyBookingsPage.jsx`, `BookingCard.jsx`, `TicketPassModal.jsx`, `RefundDialog.jsx` | Suất sắp chiếu gần nhất nổi lên đầu và không lặp lại trong danh sách. Tab Sắp tới, Đã xem, Hoàn tiền, Đã hủy, Tất cả, mặc định Sắp tới nếu còn vé dùng được. Tab Tất cả xếp đơn cần xử lý lên trước, đơn hủy xuống cuối. Có tìm kiếm và phân trang. Điều kiện mở QR, thanh toán, hủy, hoàn tiền dùng chung trong `BookingCard`. `TicketPassModal` mở QR và tải ảnh vé, `bookingFormat.js` phân loại vé và đọc hạn hoàn, `bookingChanges.js` ghi nhận thay đổi khi làm mới. |
 | Hồ sơ | `Profile/ProfilePage.jsx` | Chỉ gửi các trường của `UpdateProfileRequest`: `fullName`, `dob`, `phoneNumber`, `gender`, `email`. |
-| Bán vé tại quầy | `Staff/booking/StaffBookingPage.jsx` | Bốn bước hiển thị: suất chiếu, ghế, bắp nước, thu tiền. Ghế và bắp nước dùng cùng giỏ hàng trong `SEATS`. Trang cha giữ state, effect, STOMP và handler. Component con chỉ nhận props: `StaffShowtimeStep` (bộ lọc mặc định Hôm nay, `ShowtimeRail` mở sơ đồ ghế), `StaffSeatStep` (nút "Chọn nhanh"), `StaffAddonsStep`, `StaffCheckoutStep` (thông tin khách, phương thức thanh toán dạng radio, khối tiền mặt), `StaffReceiptSidebar` ("Phiếu bán vé" ở bước 1–2, "Tóm tắt đơn" có mã khuyến mãi ở bước thu tiền), `StaffVnpayPanel`, `StaffSaleComplete`. Hàm thuần ở `staffBookingUtils.js`: định dạng, phiếu in, `TIME_FILTERS`, `pickAdjacentSeats` (cụm ghế trống liền số, cùng loại, ưu tiên hàng giữa), `formatStartsIn`. Tổng quan ca gửi `showtimeId` qua router state. Liên kết `?showtime={id}` vẫn được hỗ trợ. Dưới 1024px, thanh tổng tiền mở phiếu bán vé trong drawer. Mã khuyến mãi khả dụng tải một lần khi vào bước thu tiền, `appliedPromo` là mã backend đã xác nhận, `promoCode` chỉ là ô nhập. Tra cứu khách gọi `staffApi.lookupCustomer` lúc rời ô và trước khi thu tiền, đổi SĐT/email xóa xác nhận. VNPay tại quầy hỏi `bookingApi.getById` mỗi 3 giây: `COMPLETED`/`PAID` thì xuất vé, `CANCELLED`/`EXPIRED`/`REFUND_REQUESTED` thì báo không hoàn tất. |
+| Bán vé tại quầy | `Staff/booking/StaffBookingPage.jsx` | Bốn bước hiển thị: suất chiếu, ghế, bắp nước, thu tiền. Ghế và bắp nước dùng cùng giỏ hàng trong `SEATS`. Trang cha giữ state, effect, STOMP và handler. Component con chỉ nhận props: `StaffShowtimeStep` (bộ lọc mặc định Hôm nay, `ShowtimeRail` mở sơ đồ ghế), `StaffSeatStep` (nút "Chọn nhanh"), `StaffAddonsStep`, `StaffCheckoutStep` (thông tin khách, phương thức thanh toán dạng radio, khối tiền mặt), `StaffReceiptSidebar` ("Phiếu bán vé" ở bước 1–3: suất chiếu, ghế, bắp nước; "Tóm tắt đơn" có mã khuyến mãi ở bước thu tiền), `StaffVnpayPanel`, `StaffSaleComplete`. Hàm thuần ở `staffBookingUtils.js`: định dạng, phiếu in, `TIME_FILTERS`, `pickAdjacentSeats` (cụm ghế trống liền số, cùng loại, ưu tiên hàng giữa), `formatStartsIn`. Tổng quan ca gửi `showtimeId` qua router state. Liên kết `?showtime={id}` vẫn được hỗ trợ. Dưới 1024px, thanh tổng tiền mở phiếu bán vé trong drawer. Mã khuyến mãi khả dụng tải một lần khi vào bước thu tiền, `appliedPromo` là mã backend đã xác nhận, `promoCode` chỉ là ô nhập. Tra cứu khách gọi `staffApi.lookupCustomer` lúc rời ô và trước khi thu tiền, đổi SĐT/email xóa xác nhận. VNPay tại quầy hỏi `bookingApi.getById` mỗi 3 giây: `COMPLETED`/`PAID` thì xuất vé, `CANCELLED`/`EXPIRED`/`REFUND_REQUESTED` thì báo không hoàn tất. |
 | Soát vé | `Staff/checkin/CheckInPage.jsx` | Giữ state, camera (jsQR) và gọi API. Giao diện tách ở `CheckInScannerTab`, `CheckInLookupTab`, `CheckInVerdictPanel`, `CheckInHistoryLog`, hàm định dạng và phiên soát lưu localStorage ở `checkInUtils.js`. Tab tra cứu gọi `bookingApi.search` (đơn `COMPLETED`/`PAID`, từ khóa, `showtimeDate` hôm nay khi lọc Hôm nay, tối đa 25 đơn). Lúc mở trang, lịch sử phiên được bổ sung từ đơn có vé soát hôm nay (`checkedInDate`). |
 | Tổng quan ca | `Staff/StaffDashboardPage.jsx` | Làm mới mỗi 60 giây khi tab hiện. `ShowtimeRail` lấy lịch trong ngày qua `useShiftSchedule.js`, đọc giờ rạp và mở bước chọn ghế từ suất còn bán. Dữ liệu ca gồm đơn cần xử lý, giao dịch gần đây, doanh thu, vé đã bán, vé đã soát và đối soát két. Hạn giữ ghế lấy từ `expiresAt`. Đồng hồ chung ở `utils/useNow.js`. |
 | Quản lý đơn | `Admin/BookingManagement.jsx` | Dùng chung cho ADMIN, MANAGER và STAFF. 15 đơn mỗi trang, ô tìm kiếm chờ 300 ms. Dòng đã chọn giữ qua các trang để xuất XLSX trên trình duyệt. Có nút "Yêu cầu hoàn thay khách" cho đơn tại quầy. |
