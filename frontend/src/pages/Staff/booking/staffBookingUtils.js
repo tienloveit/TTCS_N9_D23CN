@@ -135,15 +135,6 @@ export const formatStartsIn = (startMs, nowMs) => {
   return rest ? `còn ${hours} giờ ${rest} phút` : `còn ${hours} giờ`;
 };
 
-/** Mức lấp đầy (%) và tông màu theo số ghế còn trống. Ngưỡng "sắp hết" khớp màn chọn suất. */
-export const LOW_SEAT_THRESHOLD = 15;
-export const seatFill = (availableSeats, totalSeats) => {
-  if (availableSeats == null || !totalSeats) return null;
-  const percent = Math.min(100, Math.max(0, Math.round(((totalSeats - availableSeats) / totalSeats) * 100)));
-  const tone = availableSeats === 0 ? 'full' : availableSeats <= LOW_SEAT_THRESHOLD ? 'low' : 'ok';
-  return { percent, tone };
-};
-
 const ticketStatus = (ticket) => ticket.displayStatus || ticket.ticketStatus;
 
 /**
