@@ -1,6 +1,6 @@
 # Ca kiểm thử: Khách hàng (USER)
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `c9504d3`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a` và thay đổi đang làm việc.
 
 - Người kiểm thử:
 - Ngày chạy:
@@ -27,4 +27,5 @@
 | U-17 | Yêu cầu hoàn tiền | Đơn đã thanh toán dưới 24 giờ, chưa soát vé | 1) Mở "Vé của tôi"<br>2) Bấm yêu cầu hoàn, nhập lý do | Đơn chuyển "Chờ hoàn tiền". Quản lý chi nhánh nhận thông báo. Đơn quá 24 giờ không có nút yêu cầu hoàn. | |
 | U-18 | Không hoàn vé đã soát | Đơn đã thanh toán, có vé đã check-in | 1) Mở "Vé của tôi" | Không có nút yêu cầu hoàn. Gọi `POST /api/booking/{id}/refund-request` trả lỗi không thể hoàn. | |
 | U-19 | Đánh giá phim | Đăng nhập `user` | 1) Mở chi tiết phim, chấm 4 sao và bình luận<br>2) Chấm lại 5 sao | Đánh giá hiện trong danh sách. Lần thứ hai cập nhật đánh giá cũ, không tạo bản mới. Điểm trung bình đổi theo. | |
-| U-20 | Hồ sơ và đổi mật khẩu | Đăng nhập `user` | 1) Mở `/profile`, sửa họ tên, ngày sinh<br>2) Đổi mật khẩu với mật khẩu hiện tại sai<br>3) Đổi với mật khẩu hiện tại đúng | Hồ sơ lưu được. Mật khẩu hiện tại sai báo lỗi tại form, không bị đăng xuất. Mật khẩu đúng đổi thành công. | |
+| U-20 | Hồ sơ và đổi mật khẩu | Đăng nhập `user` | 1) Mở `/profile`, sửa họ tên, ngày sinh<br>2) Sửa email thành email của tài khoản khác rồi lưu<br>3) Mở `/profile#password`<br>4) Đổi mật khẩu với mật khẩu hiện tại sai<br>5) Đổi với mật khẩu hiện tại đúng | Hồ sơ lưu được. Lưu email trùng tài khoản khác báo lỗi bằng tiếng Việt, form vẫn mở. Mở `/profile#password` thì form đổi mật khẩu mở sẵn. Mật khẩu hiện tại sai báo lỗi tại form, không bị đăng xuất. Mật khẩu đúng đổi thành công. | |
+| U-21 | Vào tài khoản từ Navbar và đăng xuất | Đăng nhập `user` | 1) Bấm tên đăng nhập trên Navbar<br>2) Bấm Đăng xuất cạnh Vé của tôi hai lần nhanh<br>3) Lặp lại trên điện thoại, lần này đăng xuất từ ngăn kéo | Bấm tên mở thẳng `/profile` và liên kết tên được đánh dấu là trang hiện tại. Nút bị khóa trong lúc gửi yêu cầu, chỉ gửi một yêu cầu đăng xuất. Cả hai vị trí đều đưa khách về `/login` và Navbar trở về trạng thái chưa đăng nhập. | |

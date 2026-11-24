@@ -8,6 +8,7 @@ import {
   parseLocalDateTime,
 } from '../../utils/cinemaTime.js';
 import { formatScreening } from '../../utils/cinemaFormats.js';
+import { normalizeSearch } from '../../utils/searchText.js';
 
 export const SCHEDULE_DAYS = 14;
 export const LOW_SEAT_COUNT = 12;
@@ -128,16 +129,6 @@ export function countByDaypart(movies) {
     }
   }
   return counts;
-}
-
-/** Chuẩn hóa chuỗi để tìm kiếm: chữ thường, bỏ dấu, đ thành d. */
-export function normalizeSearch(text) {
-  return String(text ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/g, 'd')
-    .trim();
 }
 
 /** Lọc theo buổi và từ khóa tên phim (bỏ dấu, không phân biệt hoa thường). */

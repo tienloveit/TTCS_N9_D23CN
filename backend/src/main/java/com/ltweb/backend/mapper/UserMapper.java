@@ -9,6 +9,7 @@ import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring")
@@ -40,10 +41,16 @@ public interface UserMapper {
       nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
   @Mapping(target = "fullName", source = "fullName")
   @Mapping(target = "dob", source = "dob")
-  @Mapping(target = "phoneNumber", source = "phoneNumber")
+  @Mapping(target = "phoneNumber", source = "phoneNumber", qualifiedByName = "emptyToNull")
   @Mapping(target = "gender", source = "gender")
-  @Mapping(target = "email", source = "email")
+  @Mapping(target = "email", source = "email", qualifiedByName = "emptyToNull")
   void updateProfile(@MappingTarget User user, UpdateProfileRequest request);
+
+  // The unique columns allow multiple NULLs when users clear their contact details.
+  @Named("emptyToNull")
+  default String emptyToNull(String value) {
+    return "".equals(value) ? null : value;
+  }
 
   UserResponse toUserResponse(User user);
 }

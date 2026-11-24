@@ -1,6 +1,6 @@
 # Khuyến mãi và hạng thành viên
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a`.
 
 ## Thứ tự tính giá
 
@@ -78,6 +78,8 @@ ADMIN tạo và sửa mọi mã. MANAGER chỉ tạo, sửa và tắt mã của 
 | `SILVER` | Bạc | 500.000 đ |
 | `GOLD` | Vàng | 2.000.000 đ |
 | `PLATINUM` | Bạch Kim | 5.000.000 đ |
+
+Frontend giữ bản sao ngưỡng này trong `frontend/src/utils/membership.js` để vẽ thang hạng ở `/profile`. Đổi ngưỡng trong `MembershipTier.java` thì sửa file đó cùng lúc.
 
 Hạng luôn được tính lại từ `totalSpending` (`MembershipTier.fromSpending`), nên có thể lên hoặc xuống.
 

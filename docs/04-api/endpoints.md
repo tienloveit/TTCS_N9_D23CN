@@ -1,6 +1,6 @@
 # Danh sách endpoint
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a` và thay đổi đang làm việc.
 
 Đường dẫn tính từ `http://localhost:8081/api`. Quy ước phản hồi, lỗi và phân trang ở [conventions.md](conventions.md). Dự án chưa có Swagger/OpenAPI, nên file này là danh mục chính.
 
@@ -30,7 +30,7 @@ Cột **Client** là hàm trong [frontend/src/api/index.js](../../frontend/src/a
 | GET, PUT, DELETE | `/users/{id}` | ADMIN, MANAGER | MANAGER chỉ với STAFF (CN) | `userApi.getById`, `update`, `delete` |
 | PUT | `/users/{id}/status?status=` | ADMIN, MANAGER | Đổi `ACTIVE`, `INACTIVE`, `BLOCKED` | `userApi.updateStatus` |
 | GET | `/my-info` | Đăng nhập | Hồ sơ của chính mình | `userApi.getMyInfo` |
-| PUT | `/my-info` | Đăng nhập | Chỉ `fullName`, `dob`, `phoneNumber`, `gender`, `email`. Không đổi role, chi nhánh, trạng thái. | `userApi.updateMyInfo` |
+| PUT | `/my-info` | Đăng nhập | Chỉ `fullName`, `dob`, `phoneNumber`, `gender`, `email`. Không đổi role, chi nhánh, trạng thái. Bỏ trường hoặc gửi `null` để giữ giá trị hiện tại. Gửi chuỗi rỗng để xóa họ tên, email hoặc số điện thoại. Email và số điện thoại đã xóa trả về `null`. | `userApi.updateMyInfo` |
 
 ## Phim
 

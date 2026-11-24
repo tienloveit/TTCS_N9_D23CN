@@ -1,8 +1,8 @@
 # Ảnh màn hình
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a` và thay đổi đang làm việc.
 
-Ảnh dùng chung cho báo cáo, slide và [README gốc](../../../README.md). Thư mục hiện chưa có ảnh, chụp theo danh sách dưới.
+Ảnh dùng chung cho báo cáo, slide và [README gốc](../../../README.md). Danh sách dưới gồm cả ảnh đã có và ảnh cần chụp.
 
 ## Quy ước
 
@@ -18,7 +18,9 @@
 | --- | --- | --- |
 | `public-home.png` | Trang chủ | README, báo cáo 3.8 |
 | `public-movie-detail.png` | Chi tiết phim | Báo cáo 3.8 |
-| `public-branch-schedule.png` | Lịch chiếu theo rạp | Báo cáo 3.8 |
+| [`public-branch-schedule.png`](public-branch-schedule.png) | Lịch chiếu theo rạp | Báo cáo 3.8, review giao diện |
+| [`user-profile.png`](user-profile.png) | Tài khoản, hạng thành viên và ưu đãi | Review giao diện |
+| [`user-navbar-account-mobile.png`](user-navbar-account-mobile.png) | Nhóm tài khoản trong ngăn kéo điện thoại | Review giao diện |
 | `user-seat-select.png` | Chọn ghế, có ghế đang giữ và đã bán | README, báo cáo 2.3, slide 6 |
 | `user-payment.png` | Trang thanh toán có đếm ngược và mã khuyến mãi | Báo cáo 2.3 |
 | `user-my-bookings.png` | Vé của tôi | Báo cáo 3.8 |

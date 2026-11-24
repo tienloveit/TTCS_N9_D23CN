@@ -1,13 +1,15 @@
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import useLogout from '../../context/useLogout';
+import { ROLE_HOME_PATHS } from '../../context/roleHomePaths';
 import { useState, useRef, useEffect } from 'react';
 import { movieApi } from '../../api';
 import SafeImage from '../Common/SafeImage';
 import '../MovieCard/MovieBrowse.css';
 import {
   CalendarIcon,
+  DashboardIcon,
   FilmIcon,
-  KeyIcon,
   LogoutIcon,
   MenuIcon,
   MoviePTITLogoIcon,
@@ -18,29 +20,27 @@ import {
   XIcon,
 } from '../Common/CinemaIcons';
 
+const WORKSPACE_LABELS = { ADMIN: 'Khu quản trị', MANAGER: 'Khu quản lý', STAFF: 'Khu nhân viên' };
+
 export default function Navbar() {
-  const { user, logout, isAuthenticated, isAdmin, isManager, isStaff } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { logout, pending } = useLogout();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState(null);
   const [highlighted, setHighlighted] = useState(-1);
   const [showSearch, setShowSearch] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchRef = useRef(null);
   const searchInput = useRef(null);
-  const userMenuRef = useRef(null);
   const query = searchQuery.trim();
   const searchOpen = showSearch && query.length >= 2;
   const searchResults = suggestions?.query === query ? suggestions.movies : [];
   const searchPath = '/movies?movieName=' + encodeURIComponent(query);
   const status = new URLSearchParams(location.search).get('status');
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
+  const workspaceLabel = WORKSPACE_LABELS[user?.role];
+  const accountLabel = user ? `Tài khoản ${user.username}` : undefined;
 
   const handleSearchChange = (event) => {
     const value = event.target.value;
@@ -49,14 +49,11 @@ export default function Navbar() {
     setShowSearch(value.trim().length >= 2);
   };
 
-  // Close dropdowns when clicking outside
+  // Close search suggestions when clicking outside.
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowSearch(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -86,7 +83,6 @@ export default function Navbar() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setShowSearch(false);
-      setShowUserMenu(false);
       setMobileMenuOpen(false);
       setSearchQuery('');
       setHighlighted(-1);
@@ -97,11 +93,7 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
   const scheduleActive = ['/branches', '/branch'].some((path) => isActive(path));
-  const goToProfileSection = (hash) => {
-    setShowUserMenu(false);
-    setMobileMenuOpen(false);
-    navigate(`/profile${hash}`);
-  };
+  const closeDrawer = () => setMobileMenuOpen(false);
 
   const handleSearchKeyDown = (event) => {
     if (event.nativeEvent.isComposing) return;
@@ -205,57 +197,23 @@ export default function Navbar() {
             Lịch chiếu
           </Link>
 
-          {isAuthenticated && (
-            <NavLink to="/my-bookings" className={`navbar-link ${isActive('/my-bookings') ? 'navbar-link--active' : ''}`}>
-              Vé của tôi
-            </NavLink>
-          )}
-
           {isAuthenticated ? (
-            <div className="navbar-user">
-              <div className="navbar-user-menu" ref={userMenuRef}>
-                <button
-                  type="button"
-                  aria-expanded={showUserMenu}
-                  className={`navbar-user-name navbar-user-trigger ${isActive('/profile') ? 'navbar-link--active' : ''}`}
-                  onClick={() => setShowUserMenu((open) => !open)}
-                >
-                  <UserIcon className="navbar-user-icon" />
-                  <span>{user?.username}</span>
-                </button>
-                {showUserMenu && (
-                  <div className="navbar-user-dropdown">
-                    <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#info')}>
-                      <UserIcon className="navbar-dropdown-icon" />
-                      Thông tin cá nhân
-                    </button>
-                    <button type="button" className="navbar-user-dropdown-item" onClick={() => goToProfileSection('#password')}>
-                      <KeyIcon className="navbar-dropdown-icon" />
-                      Đổi mật khẩu
-                    </button>
-                    <div className="navbar-user-dropdown-divider"></div>
-                    <button type="button" className="navbar-user-dropdown-item navbar-user-dropdown-logout" onClick={handleLogout}>
-                      <LogoutIcon className="navbar-dropdown-icon" />
-                      Đăng xuất
-                    </button>
-                  </div>
-                )}
-              </div>
-              {(isAdmin || isManager) && (
-                <Link to={isManager ? '/manager' : '/admin'} className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                  Admin
+            <>
+              <NavLink to="/my-bookings" className="navbar-link">Vé của tôi</NavLink>
+              {workspaceLabel && (
+                <Link to={ROLE_HOME_PATHS[user.role]} className="navbar-link">
+                  <DashboardIcon size={16} aria-hidden="true" />{workspaceLabel}
                 </Link>
               )}
-              {isStaff && (
-                <Link to="/staff" className="navbar-link" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                  Staff
-                </Link>
-              )}
-            </div>
+              <NavLink to="/profile" className="navbar-link navbar-account" aria-label={accountLabel} title={user.username}>
+                <UserIcon className="navbar-user-icon" aria-hidden="true" />
+                <span>{user.username}</span>
+              </NavLink>
+            </>
           ) : (
             <>
-              <Link to="/login" style={{ color: 'var(--text-secondary)' }}>Đăng nhập</Link>
-              <Link to="/register" className="btn btn-primary" style={{ padding: '8px 20px', fontSize: '0.85rem' }}>
+              <Link to="/login" className="navbar-link">Đăng nhập</Link>
+              <Link to="/register" className="btn btn-primary navbar-register">
                 Đăng ký
               </Link>
             </>
@@ -278,31 +236,36 @@ export default function Navbar() {
           <Link to="/movies" aria-current={isActive('/movies') && !status ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)}>
             <FilmIcon size={16} /> Tất cả phim
           </Link>
-          {isAuthenticated ? (
-            <>
-              <NavLink to="/my-bookings" onClick={() => setMobileMenuOpen(false)}>
-                <TicketIcon size={16} /> Vé của tôi
-              </NavLink>
-              <button type="button" onClick={() => goToProfileSection('#info')}>
-                <UserIcon size={16} /> Thông tin cá nhân ({user?.username})
-              </button>
-              <button type="button" onClick={() => goToProfileSection('#password')}>
-                <KeyIcon size={16} /> Đổi mật khẩu
-              </button>
-              <button type="button" onClick={handleLogout} style={{ color: '#dc2626' }}>
-                <LogoutIcon size={16} /> Đăng xuất
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login">
-                <UserIcon size={16} /> Đăng nhập
-              </Link>
-              <Link to="/register" style={{ color: 'var(--accent)' }}>
-                <SparkIcon size={16} /> Đăng ký tài khoản
-              </Link>
-            </>
-          )}
+          <div className="navbar-drawer-group" role="group" aria-label="Tài khoản">
+            {isAuthenticated ? (
+              <>
+                <NavLink to="/profile" className="navbar-account" aria-label={accountLabel} title={user.username} onClick={closeDrawer}>
+                  <UserIcon className="navbar-user-icon" aria-hidden="true" />
+                  <span>{user.username}</span>
+                </NavLink>
+                <NavLink to="/my-bookings" onClick={closeDrawer}>
+                  <TicketIcon size={16} /> Vé của tôi
+                </NavLink>
+                {workspaceLabel && (
+                  <Link to={ROLE_HOME_PATHS[user.role]} onClick={closeDrawer}>
+                    <DashboardIcon size={16} aria-hidden="true" />{workspaceLabel}
+                  </Link>
+                )}
+                <button type="button" className="navbar-drawer-logout" onClick={logout} disabled={pending}>
+                  <LogoutIcon size={16} aria-hidden="true" />{pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={closeDrawer}>
+                  <UserIcon size={16} /> Đăng nhập
+                </Link>
+                <Link to="/register" className="navbar-drawer-register" onClick={closeDrawer}>
+                  <SparkIcon size={16} /> Đăng ký tài khoản
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       )}
     </nav>

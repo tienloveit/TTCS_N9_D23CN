@@ -15,7 +15,7 @@ import LegacyBranchRedirect from './pages/Schedule/LegacyBranchRedirect';
 import MyBookingsPage from './pages/MyBookings/MyBookingsPage';
 import PaymentPage from './pages/Payment/PaymentPage';
 import PaymentResultPage from './pages/Payment/PaymentResultPage';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import NotFoundPage from './pages/NotFound/NotFoundPage';
 
 // Admin and staff pages
@@ -110,6 +110,9 @@ function StaffBookings() {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const [reloadedLocation] = useState(() =>
+    window.performance.getEntriesByType('navigation')[0]?.type === 'reload' ? location : null,
+  );
   const { user } = useAuth();
   const roleHome = ROLE_HOME_PATHS[user?.role];
 
@@ -205,7 +208,7 @@ const AnimatedRoutes = () => {
           <Route path="/movie/:id" element={<PageWrapper><MovieDetailPage /></PageWrapper>} />
           <Route path="/branches" element={<PageWrapper><SchedulePage /></PageWrapper>} />
           <Route path="/branch/:branchId" element={<PageWrapper><LegacyBranchRedirect /></PageWrapper>} />
-          <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage /></PageWrapper></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage isReload={location === reloadedLocation} /></PageWrapper></PrivateRoute>} />
           <Route path="/my-bookings" element={<PrivateRoute><PageWrapper><MyBookingsPage /></PageWrapper></PrivateRoute>} />
           <Route path="/booking/:bookingId/payment" element={<PrivateRoute><PageWrapper><PaymentPage /></PageWrapper></PrivateRoute>} />
           <Route path="/payment/vnpay-return" element={<PageWrapper><PaymentResultPage /></PageWrapper>} />

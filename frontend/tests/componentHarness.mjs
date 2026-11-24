@@ -26,7 +26,7 @@ export async function loadPage(path, initialState, services = {}) {
     useRef: value => ({ current: value }),
   };
   const icons = ['Award', 'Check', 'Copy', 'Edit', 'Gift', 'Key', 'Spark', 'User',
-    'AlertCircle', 'ArrowRight', 'Bell', 'ChevronLeft', 'ChevronRight', 'CreditCard', 'Download', 'Eye', 'EyeOff', 'List', 'Refresh', 'Search', 'Ticket', 'X'];
+    'AlertCircle', 'ArrowRight', 'Bell', 'CheckCircle', 'Lock', 'Timer', 'ChevronLeft', 'ChevronRight', 'CreditCard', 'Download', 'Eye', 'EyeOff', 'List', 'Refresh', 'Search', 'Ticket', 'X'];
   const dependencies = {
     react: hooks,
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
@@ -35,6 +35,7 @@ export async function loadPage(path, initialState, services = {}) {
     '../../api': { bookingApi: {}, branchApi: {}, userApi: {}, authApi: {}, promotionApi: {}, ...services },
     '../../context/useAuth': { useAuth: () => ({ isAdmin: true, isManager: false }) },
     '../../components/Common/Badge': { default: 'Badge' },
+    '../../components/Common/Button': { default: 'Button' },
     '../../components/Common/ConfirmDialog': { default: 'ConfirmDialog' },
     '../../components/Ops': Object.fromEntries(['Code', 'DataTable', 'Field', 'FilterBar', 'Money', 'OpsButton',
       'OpsConfirm', 'OpsDrawer', 'OpsPage', 'OpsPanel', 'Pagination', 'Select', 'StatStrip', 'StatusBadge',
@@ -59,7 +60,7 @@ export async function loadPage(path, initialState, services = {}) {
   await module.evaluate();
   return {
     state, notifications,
-    render() { cursor = 0; return module.namespace.default(); },
+    render(props = {}) { cursor = 0; return module.namespace.default(props); },
   };
 }
 

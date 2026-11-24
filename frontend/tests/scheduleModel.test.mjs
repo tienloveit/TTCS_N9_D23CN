@@ -13,12 +13,12 @@ import {
   getSlotState,
   groupByFormat,
   minutesUntil,
-  normalizeSearch,
   resolveDayParam,
   slotLabel,
   sortMovies,
   toTimeline,
 } from '../src/pages/Schedule/scheduleModel.js';
+import { normalizeSearch } from '../src/utils/searchText.js';
 
 // Mọi giờ trong test là giờ rạp; `at` dựng Date thật để không phụ thuộc múi giờ máy.
 const at = (text) => parseLocalDateTime(text);

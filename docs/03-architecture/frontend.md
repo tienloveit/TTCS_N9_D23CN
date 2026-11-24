@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `c9504d3`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a` và thay đổi đang làm việc.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -64,6 +64,8 @@ frontend/src/
 │   ├── showtimeStatus.js  SHOWTIME_STATUS_META: nhãn và tone cho trạng thái suất chiếu
 │   ├── opsFormat.js       formatMoney, formatDateLabel ("Hôm nay", "Ngày mai") cho khu vận hành
 │   ├── opsFilters.js      SEARCH_DEBOUNCE_MS = 300 cho ô tìm kiếm vận hành
+│   ├── membership.js      MEMBERSHIP_TIERS (bản sao ngưỡng hạng), tierName, getTierLadder
+│   ├── searchText.js      normalizeSearch: bỏ dấu, chữ thường, dùng cho ô tìm ở trang khách
 │   ├── useNow.js          Hook thời điểm hiện tại, cập nhật theo chu kỳ cho đếm ngược
 │   └── ageRatings.js      Danh mục phân loại độ tuổi P, K, T13, T16, T18
 └── index.css              CSS chung
@@ -91,6 +93,8 @@ frontend/src/
 - `/` chuyển người dùng vận hành về trang mặc định theo role.
 
 Bảng quyền đầy đủ ở [roles-permissions.md](../02-domain/roles-permissions.md#giao-diện-theo-vai-trò).
+
+Navbar dùng tên đăng nhập làm liên kết tới `/profile`. Liên kết khu làm việc lấy đích theo vai trò từ `roleHomePaths.js`. Nút Đăng xuất nằm cạnh Vé của tôi ở đầu trang tài khoản và trong ngăn kéo trên điện thoại. Hai vị trí dùng `useLogout` để khóa nút trong lúc xử lý và chuyển tới `/login` khi hoàn tất.
 
 ## Xác thực và gọi API
 
@@ -145,7 +149,7 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | Chọn ghế | `SeatSelect/SeatSelectPage.jsx` | Tải suất, vé, bắp nước, nghe STOMP, gọi `bookingApi.create`. Xem công khai, đặt vé cần đăng nhập. |
 | Thanh toán | `Payment/PaymentPage.jsx`, `PaymentResultPage.jsx` | Đếm ngược theo `expiresAt` của backend. Thiếu `expiresAt` thì hiện cảnh báo, không tự ước tính. Áp hoặc bỏ mã, lấy URL VNPay. Trang kết quả gửi query string về backend và chỉ hiển thị kết quả backend xác nhận. |
 | Vé của tôi | `MyBookings/MyBookingsPage.jsx`, `BookingCard.jsx`, `TicketPassModal.jsx`, `RefundDialog.jsx` | Suất sắp chiếu gần nhất nổi lên đầu và không lặp lại trong danh sách. Tab Sắp tới, Đã xem, Hoàn tiền, Đã hủy, Tất cả, mặc định Sắp tới nếu còn vé dùng được. Tab Tất cả xếp đơn cần xử lý lên trước, đơn hủy xuống cuối. Có tìm kiếm và phân trang. Điều kiện mở QR, thanh toán, hủy, hoàn tiền dùng chung trong `BookingCard`. `TicketPassModal` mở QR và tải ảnh vé, `bookingFormat.js` phân loại vé và đọc hạn hoàn, `bookingChanges.js` ghi nhận thay đổi khi làm mới. |
-| Hồ sơ | `Profile/ProfilePage.jsx` | Chỉ gửi các trường của `UpdateProfileRequest`: `fullName`, `dob`, `phoneNumber`, `gender`, `email`. |
+| Hồ sơ | `Profile/ProfilePage.jsx`, `MembershipLadder.jsx`, `PromotionList.jsx`, `ProfileInfoSection.jsx`, `PasswordSection.jsx`, `promotionView.js` | Một trang cuộn, không tab. Tên khách làm `h1`. Cột trái là thang hạng (dọc trên máy tính và điện thoại, ngang ở 768–1023px), hạng và chi tiêu lấy từ backend, ngưỡng hạng chỉ để giải thích. Cột phải gồm ưu đãi (lọc theo hạng, theo rạp, tìm kiếm, hiện 5 mã đầu), thông tin cá nhân (dạng đọc, bấm "Sửa thông tin" mới thành form) và mật khẩu (gập, có lối Quên mật khẩu). Hash `#promos`, `#info`, `#password` chỉ cuộn tới phần tương ứng, `#password` mở sẵn form. Chỉ gửi các trường của `UpdateProfileRequest`: `fullName`, `dob`, `phoneNumber`, `gender`, `email`. Lỗi `DUPLICATE_VALUE` báo bằng tiếng Việt. Phép tính thuần có test `tests/membership.test.mjs`, `tests/promotionView.test.mjs`. |
 | Bán vé tại quầy | `Staff/booking/StaffBookingPage.jsx` | Bốn bước hiển thị: suất chiếu, ghế, bắp nước, thu tiền. Ghế và bắp nước dùng cùng giỏ hàng trong `SEATS`. Trang cha giữ state, effect, STOMP và handler. Component con chỉ nhận props: `StaffShowtimeStep` (bộ lọc mặc định Hôm nay, `ShowtimeRail` mở sơ đồ ghế), `StaffSeatStep` (nút "Chọn nhanh"), `StaffAddonsStep`, `StaffCheckoutStep` (thông tin khách, phương thức thanh toán dạng radio, khối tiền mặt), `StaffReceiptSidebar` ("Phiếu bán vé" ở bước 1–3: suất chiếu, ghế, bắp nước; "Tóm tắt đơn" có mã khuyến mãi ở bước thu tiền), `StaffVnpayPanel`, `StaffSaleComplete`. Hàm thuần ở `staffBookingUtils.js`: định dạng, phiếu in, `TIME_FILTERS`, `pickAdjacentSeats` (cụm ghế trống liền số, cùng loại, ưu tiên hàng giữa), `formatStartsIn`. Tổng quan ca gửi `showtimeId` qua router state. Liên kết `?showtime={id}` vẫn được hỗ trợ. Dưới 1024px, thanh tổng tiền mở phiếu bán vé trong drawer. Mã khuyến mãi khả dụng tải một lần khi vào bước thu tiền, `appliedPromo` là mã backend đã xác nhận, `promoCode` chỉ là ô nhập. Tra cứu khách gọi `staffApi.lookupCustomer` lúc rời ô và trước khi thu tiền, đổi SĐT/email xóa xác nhận. VNPay tại quầy hỏi `bookingApi.getById` mỗi 3 giây: `COMPLETED`/`PAID` thì xuất vé, `CANCELLED`/`EXPIRED`/`REFUND_REQUESTED` thì báo không hoàn tất. |
 | Soát vé | `Staff/checkin/CheckInPage.jsx` | Giữ state, camera (jsQR) và gọi API. Giao diện tách ở `CheckInScannerTab`, `CheckInLookupTab`, `CheckInVerdictPanel`, `CheckInHistoryLog`, hàm định dạng và phiên soát lưu localStorage ở `checkInUtils.js`. Tab tra cứu gọi `bookingApi.search` (đơn `COMPLETED`/`PAID`, từ khóa, `showtimeDate` hôm nay khi lọc Hôm nay, tối đa 25 đơn). Lúc mở trang, lịch sử phiên được bổ sung từ đơn có vé soát hôm nay (`checkedInDate`). |
 | Tổng quan ca | `Staff/StaffDashboardPage.jsx` | Làm mới mỗi 60 giây khi tab hiện. `ShowtimeRail` lấy lịch trong ngày qua `useShiftSchedule.js`, đọc giờ rạp và mở bước chọn ghế từ suất còn bán. Dữ liệu ca gồm đơn cần xử lý, giao dịch gần đây, doanh thu, vé đã bán, vé đã soát và đối soát két. Hạn giữ ghế lấy từ `expiresAt`. Đồng hồ chung ở `utils/useNow.js`. |
@@ -153,6 +157,8 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | Phim và suất chiếu | `Admin/MovieManagement.jsx`, `MovieForm.jsx`, `ShowtimeManagement.jsx` | Upload poster/banner qua `POST /movie/media`. Lịch suất theo ngày/phòng và chế độ danh sách. |
 | Hoàn tiền | `Admin/RefundManagementPage.jsx` | Chỉ báo thành công khi đơn trả về `REFUNDED`. |
 | Báo cáo | `Admin/AdminDashboard.jsx`, `RevenueReportPage.jsx`, `OperationsReportPage.jsx` | XLSX tải dạng blob từ backend. |
+
+`ProfilePage` đợi khối ưu đãi tải xong hoặc báo lỗi trước khi cuộn tới `#info` và `#password`, để tiêu đề giữ đúng vị trí khi nội dung ưu đãi thay đổi chiều cao. Tải lại bằng F5 đưa trang về đầu, kể cả khi URL đang có hash. Mở liên kết tới một mục vẫn cuộn và đặt focus vào mục đó.
 
 ## Thành phần dùng chung
 

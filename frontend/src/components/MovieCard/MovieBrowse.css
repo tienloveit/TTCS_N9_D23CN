@@ -496,10 +496,10 @@
 
 .cinema-navbar .navbar-search-clear { width: 27px; height: 27px; }
 .cinema-navbar .navbar-links { gap: 3px; }
-.cinema-navbar .navbar-user { gap: 5px; }
 .cinema-navbar .navbar-links > a,
-.cinema-navbar .navbar-user-trigger { padding-inline: 9px; white-space: nowrap; }
-.cinema-navbar .navbar-user-trigger span { overflow: hidden; max-width: 12ch; text-overflow: ellipsis; }
+.cinema-navbar .navbar-account { padding-inline: 9px; white-space: nowrap; }
+.cinema-navbar .navbar-account span { overflow: hidden; max-width: 12ch; text-overflow: ellipsis; }
+.cinema-navbar .navbar-links > .navbar-register { padding-inline: 20px; font-size: .85rem; }
 .cinema-navbar .navbar-links > .btn-primary { background: var(--brand); color: #fff; }
 .cinema-navbar .navbar-links > .btn-primary:hover { background: var(--brand-strong); color: #fff; }
 
@@ -534,7 +534,7 @@
 
 @media (max-width: 1050px) and (min-width: 901px) {
   .cinema-navbar .navbar-links > a,
-  .cinema-navbar .navbar-user-trigger { font-size: .81rem; padding-inline: 7px; }
+  .cinema-navbar .navbar-account { font-size: .81rem; padding-inline: 7px; }
 }
 
 @media (max-width: 980px) {

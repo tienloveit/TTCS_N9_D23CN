@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Button from '../../components/Common/Button';
 import { SearchIcon, XIcon } from '../../components/Common/CinemaIcons';
 import useModalDialog from '../../components/Common/useModalDialog';
-import { normalizeSearch } from './scheduleModel';
+import { normalizeSearch } from '../../utils/searchText';
 
 const cityOf = (branch) => (branch.city || 'Khác').trim();
 
