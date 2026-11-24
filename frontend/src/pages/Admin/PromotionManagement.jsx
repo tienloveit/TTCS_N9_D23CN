@@ -2,6 +2,8 @@ import { DataTable, FilterBar, OpsButton, OpsConfirm, OpsDialog, OpsPage, OpsPan
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { promotionApi, branchApi } from '../../api';
+import { useAuth } from '../../context/useAuth';
+import { branchScopeLabel, canEditBranchItem } from '../../utils/branchScope';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
 import { formatDateTime as formatCinemaDateTime } from '../../utils/cinemaTime';
 
@@ -29,6 +31,7 @@ const toDateTimeLocal = (dateStr) => {
 };
 
 const PromotionManagement = () => {
+  const { user, isAdmin } = useAuth();
   const [promotions, setPromotions] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +116,8 @@ const PromotionManagement = () => {
         discountPercent: formData.discountPercent ? Number(formData.discountPercent) : null,
         maxDiscount: formData.maxDiscount ? Number(formData.maxDiscount) : null,
         minOrderAmount: formData.minOrderAmount ? Number(formData.minOrderAmount) : null,
-        branchId: formData.branchId ? Number(formData.branchId) : null,
+        // MANAGER chỉ tạo và sửa mã của chi nhánh mình, backend cũng ép giá trị này.
+        branchId: isAdmin ? (formData.branchId ? Number(formData.branchId) : null) : user?.branchId ?? null,
         usageLimit: formData.usageLimit ? Number(formData.usageLimit) : null,
         minMembershipTier: formData.minMembershipTier || null,
         startDate: formData.startDate || null,
@@ -172,7 +176,9 @@ const PromotionManagement = () => {
 
 
   return (
-    <OpsPage title="Quản lý khuyến mãi" description={<>Tổng cộng <strong>{promotions.length}</strong> mã khuyến mãi.</>} actions={<OpsButton variant="primary" icon={<PlusIcon size={18} />} onClick={() => handleOpenModal()}>
+    <OpsPage title="Quản lý khuyến mãi" description={isAdmin
+      ? <>Tổng cộng <strong>{promotions.length}</strong> mã khuyến mãi.</>
+      : <>Tổng cộng <strong>{promotions.length}</strong> mã áp dụng tại chi nhánh. Mã toàn hệ thống chỉ quản trị viên sửa được.</>} actions={<OpsButton variant="primary" icon={<PlusIcon size={18} />} onClick={() => handleOpenModal()}>
           Thêm khuyến mãi
         </OpsButton>}>
 
@@ -200,7 +206,7 @@ const PromotionManagement = () => {
             { key: 'giam', header: "Giảm", render: p => <> {p.discountPercent}% </> },
             { key: 'giam_toi_da', header: "Giảm tối đa", render: p => formatCurrency(p.maxDiscount) },
             { key: 'hang_toi_thieu', header: "Hạng tối thiểu", render: p => p.minMembershipTier ? TIER_OPTIONS.find(t => t.value === p.minMembershipTier)?.label || p.minMembershipTier : 'Tất cả' },
-            { key: 'chi_nhanh', header: "Chi nhánh", render: p => p.branchName || 'Toàn hệ thống' },
+            { key: 'chi_nhanh', header: "Chi nhánh", render: p => branchScopeLabel(p, branches) },
             { key: 'da_dung', header: "Đã dùng", render: p => <> <div>
                       <strong className="o-table-value">
                         {p.usedCount || 0}{p.usageLimit ? ` / ${p.usageLimit}` : ''}
@@ -213,7 +219,9 @@ const PromotionManagement = () => {
             { key: 'trang_thai', header: "Trạng thái", render: p => <> <StatusBadge tone={!p.active ? 'neutral' : isExpired(p) ? 'warning' : 'success'}>
                       {!p.active ? 'Đã tắt' : isExpired(p) ? 'Hết hạn' : 'Hoạt động'}
                     </StatusBadge> </> },
-            { key: 'hanh_dong', header: "Hành động", render: p => <> <div className="o-actions">
+            { key: 'hanh_dong', header: "Hành động", render: p => !canEditBranchItem(p, user)
+              ? <small className="o-subline">Chỉ quản trị viên sửa</small>
+              : <> <div className="o-actions">
                       <OpsButton
                         variant="ghost"
                         size="sm"
@@ -273,12 +281,19 @@ const PromotionManagement = () => {
                 </select>
               </Field>
 
-              <Field label="Chi nhánh áp dụng">
-                <select id="promo-branch" name="branchId" className="o-input" value={formData.branchId} onChange={handleInputChange}>
-                  <option value="">Toàn hệ thống</option>
-                  {branches.map(b => <option key={b.branchId} value={b.branchId}>{b.name}</option>)}
-                </select>
-              </Field>
+              {isAdmin ? (
+                <Field label="Chi nhánh áp dụng">
+                  <select id="promo-branch" name="branchId" className="o-input" value={formData.branchId} onChange={handleInputChange}>
+                    <option value="">Toàn hệ thống</option>
+                    {branches.map(b => <option key={b.branchId} value={b.branchId}>{b.name}</option>)}
+                  </select>
+                </Field>
+              ) : (
+                <div className="o-field">
+                  <span className="o-field__label">Chi nhánh áp dụng</span>
+                  <p className="o-field__static">{branchScopeLabel({ branchId: user?.branchId }, branches)}</p>
+                </div>
+              )}
 
               <Field label="Ngày bắt đầu">
                 <input id="promo-start" type="datetime-local" name="startDate" className="o-input" value={formData.startDate} onChange={handleInputChange} />
