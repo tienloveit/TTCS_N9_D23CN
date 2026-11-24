@@ -1,6 +1,6 @@
 # Kiểm thử
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`. Lần chạy ngày đối chiếu: backend 268 test, 0 lỗi, 6 bỏ qua (`PaymentPersistenceIntegrationTest` khi chưa cấu hình database bản sao). Frontend 26 test, 0 lỗi.
+> Đối chiếu mã nguồn ngày 2026-11-24, commit `262d041`.
 
 ## Lệnh
 
@@ -82,8 +82,14 @@ Flyway tự migrate bản sao khi test khởi động. Không trỏ biến này 
 | `cinemaTime.test.mjs` | Giờ rạp không phụ thuộc múi giờ máy |
 | `profile.test.mjs` | Form hồ sơ gửi `dob`, không gửi trường quản trị |
 | `useModalDialog.test.mjs` | Esc, modal lồng nhau, click nền |
+| `opsClasses.test.mjs` | Từ chối class cũ trong JSX, chấp nhận class vận hành |
+| `opsNav.test.mjs` | Mục điều hướng cho STAFF, MANAGER và ADMIN |
+| `opsFormat.test.mjs` | Tiền Việt Nam, ngày tương đối theo múi giờ rạp |
+| `showtimeRail.test.mjs` | Cửa sổ giờ, vị trí, trạng thái suất và làm tròn giờ tạo suất |
 
 `componentHarness.mjs` là bộ dựng component dùng chung. Nó giả lập `useState` theo thứ tự khai báo, nên component được test phải thêm state mới ở cuối.
+
+Mốc đối chiếu frontend ngày 2026-11-24 có 33 test đạt, kể cả khi chạy với `TZ=UTC`. Mốc backend ngày 2026-11-21 có 268 test, 0 lỗi và 6 test bỏ qua khi chưa cấu hình bản sao MySQL cho `PaymentPersistenceIntegrationTest`.
 
 ## Phần kiểm thử tay
 
@@ -95,7 +101,8 @@ Chưa có test end-to-end tự động. Các luồng sau cần thử tay trên t
 - Bán vé tại quầy tiền mặt và VNPay, in phiếu.
 - Soát vé bằng camera, ảnh QR và mã đơn.
 - Hoàn tiền VNPay và tiền mặt.
-- Giao diện từng vai trò, kể cả màn hình hẹp.
+- Giao diện từng vai trò ở 1280, 1024, 768 và 390px. Dùng `/ops-gallery` khi chạy Vite dev để thử hai mật độ, trạng thái bảng, focus và Esc.
+- Chạy Lighthouse Accessibility cho Tổng quan ca, Soát vé, Đơn đặt vé và Suất chiếu. Thử bán vé tại quầy và duyệt hoàn tiền bằng bàn phím và NVDA trên Chrome.
 
 ## Trước khi merge
 
