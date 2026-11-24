@@ -35,7 +35,7 @@
   background: var(--o-surface); color: var(--o-ink);
   font: inherit; font-weight: var(--fw-semibold); cursor: pointer;
 }
-.o-counter-times [aria-pressed="true"] { border-color: var(--o-control-line); background: var(--o-sunken); color: var(--o-ink); }
+.o-counter-times [aria-pressed="true"] { border-color: var(--o-accent); background: var(--o-accent-soft); color: var(--o-accent-ink); }
 
 
 .o-counter-seat-card { display: grid; gap: 16px; padding: 16px; }
@@ -43,7 +43,7 @@
 .o-counter-seat-stats { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
 .o-counter-seat-stats span { padding: 5px 10px; border-radius: var(--radius-pill); background: var(--o-sunken); color: var(--o-ink-2); }
 .o-counter-seat-stats strong { color: var(--o-ink); }
-.o-counter-seat-stats .o-counter-stat--selected { background: var(--o-sunken); color: var(--o-ink); }
+.o-counter-seat-stats .o-counter-stat--selected { background: var(--o-accent-soft); color: var(--o-accent-ink); }
 .o-counter-seat-stats .o-counter-stat--holding { background: var(--warning-soft); color: var(--warning-strong); }
 .o-counter-seat-stats :is(.o-counter-stat--selected, .o-counter-stat--holding) strong { color: inherit; }
 .o-counter-quick {
@@ -62,9 +62,10 @@
 .o-counter-quick-apply {
   min-height: 36px; padding: 0 12px;
   border: 0; border-radius: 8px;
-  background: var(--o-ink); color: var(--o-surface);
+  background: var(--o-accent); color: var(--o-surface);
   font: inherit; font-weight: var(--fw-bold); cursor: pointer;
 }
+.o-counter-quick-apply:hover { background: var(--o-accent-hover); }
 .o-counter-quick button:disabled { opacity: .5; cursor: not-allowed; }
 
 .o-counter-screen { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -94,7 +95,7 @@
   padding: 12px; border: 1.5px solid var(--o-line); border-radius: 12px;
   background: var(--o-surface);
 }
-.o-counter-food-item[data-selected] { border-color: var(--o-ink); background: var(--o-sunken); }
+.o-counter-food-item[data-selected] { border-color: var(--o-accent); background: var(--o-accent-soft); }
 .o-counter-food-item[data-sold-out] { background: var(--o-sunken); }
 .o-counter-food-info { display: flex; align-items: flex-start; gap: 10px; }
 .o-counter-food-info > div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
@@ -175,17 +176,17 @@
 .o-counter-receipt-banner {
   display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 12px 10px 18px;
-  background: var(--o-ink); color: var(--o-surface);
+  background: var(--o-nav-bg); color: var(--o-nav-ink);
 }
 .o-counter-receipt-banner > span { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: var(--fw-bold); }
-.o-counter-receipt-banner svg { color: var(--o-surface); }
+.o-counter-receipt-banner svg { color: var(--o-nav-mark); }
 .o-counter-receipt-banner button {
   min-height: 36px; padding: 0 12px;
-  border: 1px solid var(--o-control-line); border-radius: 8px;
-  background: transparent; color: var(--o-surface);
+  border: 1px solid var(--o-nav-line); border-radius: 8px;
+  background: transparent; color: var(--o-nav-ink);
   font: inherit; font-size: 13px; font-weight: var(--fw-semibold); cursor: pointer;
 }
-.o-counter-receipt-banner button:hover { background: var(--o-ink-hover); }
+.o-counter-receipt-banner button:hover { background: var(--o-nav-hover); }
 
 .o-counter-receipt-banner button:disabled { opacity: .6; cursor: not-allowed; }
 .o-counter-receipt-body { display: grid; gap: 14px; min-height: 0; padding: 16px 18px; overflow: auto; }
@@ -266,7 +267,7 @@
   background: var(--o-surface); color: var(--o-ink);
   font: inherit; font-size: 12px; font-weight: var(--fw-bold); cursor: pointer;
 }
-.o-counter-promo-chips [aria-pressed="true"] { border-color: var(--o-ink); background: var(--o-sunken); }
+.o-counter-promo-chips [aria-pressed="true"] { border-color: var(--o-accent); background: var(--o-accent-soft); color: var(--o-accent-ink); }
 .o-counter-promo-chips button:disabled { cursor: wait; }
 
 /* ---------- Màn xuất vé ---------- */

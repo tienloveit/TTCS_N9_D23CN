@@ -152,6 +152,19 @@
   --o-muted: #5a6270;          /* 5.18:1 trên sunken */
   --o-mark: var(--brand);      /* "đang ở đây" và "bây giờ": 5.78:1 */
   --o-mark-soft: var(--brand-soft);
+  /* Màu thương hiệu cho thao tác: nút chính, điều khiển đang chọn, ô đang nhập */
+  --o-accent: var(--brand);            /* chữ trắng trên nền này: 5.78:1 */
+  --o-accent-hover: var(--brand-strong);
+  --o-accent-soft: var(--brand-soft);
+  --o-accent-ink: var(--brand-strong); /* chữ trên --o-accent-soft: 7.23:1 */
+  /* Sidebar tối */
+  --o-nav-bg: #1c2028;
+  --o-nav-ink: #eef0f3;        /* 14.30:1 trên --o-nav-bg */
+  --o-nav-muted: #a3aab6;      /* 6.98:1 trên --o-nav-bg */
+  --o-nav-hover: #272c36;
+  --o-nav-active: #3b2a24;     /* nền mục đang chọn, chữ trắng 13.61:1 */
+  --o-nav-mark: #f2794a;       /* vạch "đang ở đây" trên nền tối: 4.93:1 */
+  --o-nav-line: #343a46;
   --o-scrim: rgba(21, 23, 28, 0.48);
   --o-shadow-float: 0 12px 32px rgba(21, 23, 28, 0.16), 0 2px 6px rgba(21, 23, 28, 0.08);
 
@@ -175,9 +188,9 @@
   --o-dur-2: 200ms;
   --o-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Biểu đồ: một chuỗi dùng ink-2, phần đang chọn hoặc hôm nay dùng mark; chuỗi thứ hai dùng chart-2 */
-  --o-chart-1: var(--o-ink-2);
-  --o-chart-2: #a8afb9;
+  /* Biểu đồ: chuỗi chính màu xanh dương, phần đang chọn hoặc hôm nay dùng mark; chuỗi thứ hai dùng chart-2 */
+  --o-chart-1: var(--info);    /* 7.26:1 trên nền trắng */
+  --o-chart-2: #5f86b8;        /* 3.76:1 trên nền trắng */
   --o-chart-grid: var(--o-line);
 
   /* ============================================================
