@@ -1,6 +1,6 @@
 import { AlertCircleIcon } from '../../components/Common/CinemaIcons';
 
-/** Trạng thái ngoài dữ liệu: lỗi dùng role="alert", rỗng dùng role="status", kèm hành động nếu có. */
+/** Trạng thái ngoài dữ liệu, căn trái: lỗi dùng role="alert", rỗng dùng role="status", kèm hành động nếu có. */
 export default function AccountState({ icon, title, detail, error = false, children, headingAs = 'h3' }) {
   const Heading = headingAs;
   return (
@@ -15,37 +15,39 @@ export default function AccountState({ icon, title, detail, error = false, child
   );
 }
 
+/** Khung giả theo bố cục thật: đầu trang, đường hạng, ba tab và ngăn đang mở. */
 export function AccountSkeleton() {
   return (
     <div className="ac-wrap ac-top">
       <h1 className="sr-only">Tài khoản của tôi</h1>
       <span className="sr-only" role="status">Đang tải tài khoản</span>
       <div className="ac-head" aria-hidden="true">
-        <div className="ac-head__identity">
+        <div className="ac-head__id">
           <span className="ac-skeleton ac-skeleton--title" />
-          <span className="ac-skeleton ac-skeleton--line" />
-          <span className="ac-skeleton ac-skeleton--row" />
-        </div>
-        <div className="ac-tier">
-          <span className="ac-skeleton ac-skeleton--heading" />
-          <span className="ac-skeleton ac-skeleton--figure" />
-          <span className="ac-skeleton ac-skeleton--line" />
+          <span className="ac-skeleton ac-skeleton--meta" />
         </div>
       </div>
-      <div className="ac-jump" aria-hidden="true">
-        {[0, 1, 2].map((index) => <span className="ac-skeleton ac-skeleton--jump" key={index} />)}
-      </div>
-      <div className="ac-layout" aria-hidden="true">
-        <div className="ac-settings">
-          <div className="ac-section">
-            <span className="ac-skeleton ac-skeleton--heading" />
-            {[0, 1, 2, 3, 4, 5].map((index) => <span className="ac-skeleton ac-skeleton--row" key={index} />)}
-          </div>
-          <div className="ac-section"><span className="ac-skeleton ac-skeleton--heading" /></div>
+      <div className="ac-tier" aria-hidden="true">
+        <div className="ac-tier__summary">
+          <span className="ac-skeleton ac-skeleton--tier" />
+          <span className="ac-skeleton ac-skeleton--amount" />
         </div>
-        <div className="ac-section ac-promos">
+        <div className="ac-track">
+          {[0, 1, 2, 3].map((index) => (
+            <span className="ac-track__stop" key={index}>
+              <span className="ac-track__node" />
+              <span className="ac-skeleton ac-skeleton--stop" />
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="ac-account" aria-hidden="true">
+        <div className="ac-tabs">
+          {[0, 1, 2].map((index) => <span className="ac-skeleton ac-skeleton--tab" key={index} />)}
+        </div>
+        <div className="ac-panel">
           <span className="ac-skeleton ac-skeleton--heading" />
-          <PromotionPlaceholder />
+          {[0, 1, 2].map((index) => <span className="ac-skeleton ac-skeleton--row" key={index} />)}
         </div>
       </div>
     </div>

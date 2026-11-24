@@ -29,24 +29,24 @@ function validate(values) {
 }
 
 /**
- * Mật khẩu: gập sau nút "Đổi mật khẩu". open do ProfilePage giữ để #password mở sẵn form.
+ * Ngăn Mật khẩu: form luôn hiện. Đổi thành công thì xóa ba ô và focus tiêu đề ngăn.
  * 401 "Password incorrect" từ /auth/change-password không kích hoạt refresh hay đăng xuất (xem axiosClient.js).
  */
-export default function PasswordSection({ open, onOpenChange }) {
+export default function PasswordSection() {
   const [values, setValues] = useState(EMPTY);
   const [visible, setVisible] = useState({});
   const [errors, setErrors] = useState({});
   const [failure, setFailure] = useState('');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
-  const toggleRef = useRef(null);
   const formRef = useRef(null);
   const focusTarget = useRef(null);
 
   useEffect(() => {
     const target = focusTarget.current;
     focusTarget.current = null;
-    if (target === 'toggle') toggleRef.current?.focus();
+    // Không để focus trên nút submit đang disabled, trình duyệt sẽ đẩy focus về body.
+    if (target === 'title') document.getElementById('ac-password-title')?.focus();
     else if (target) formRef.current?.elements.namedItem(target)?.focus();
   });
 
@@ -57,22 +57,11 @@ export default function PasswordSection({ open, onOpenChange }) {
     setFailure('');
   }
 
-  function openForm() {
-    setDone(false);
-    focusTarget.current = 'currentPassword';
-    onOpenChange(true);
-  }
-
-  function closeForm() {
-    reset();
-    focusTarget.current = 'toggle';
-    onOpenChange(false);
-  }
-
   function update(name, value) {
     setValues((current) => ({ ...current, [name]: value }));
     setErrors((current) => ({ ...current, [name]: '', ...(name === 'newPassword' && { confirmPassword: '' }) }));
     setFailure('');
+    setDone(false);
   }
 
   async function submit(event) {
@@ -92,8 +81,7 @@ export default function PasswordSection({ open, onOpenChange }) {
       await authApi.changePassword({ currentPassword: values.currentPassword, newPassword: values.newPassword });
       reset();
       setDone(true);
-      focusTarget.current = 'toggle';
-      onOpenChange(false);
+      focusTarget.current = 'title';
     } catch (error) {
       const response = error?.response;
       if (response?.status === 401 && response.data?.message === 'Password incorrect') {
@@ -108,83 +96,67 @@ export default function PasswordSection({ open, onOpenChange }) {
   }
 
   return (
-    <section className="ac-section" aria-labelledby="ac-password-title">
-      <div className="ac-section__head">
-        <h2 id="ac-password-title" className="ac-section__title" tabIndex={-1}>Mật khẩu</h2>
-        {!open && (
-          <Button
-            variant="secondary"
-            ref={toggleRef}
-            icon={<KeyIcon size={16} />}
-            aria-expanded={false}
-            aria-controls="ac-password-form"
-            onClick={openForm}
-          >
-            Đổi mật khẩu
-          </Button>
-        )}
+    <section className="ac-password-panel">
+      <div className="ac-panel__head">
+        <h2 id="ac-password-title" className="ac-panel__title" tabIndex={-1}>Mật khẩu</h2>
       </div>
-
-      {!open && <p className="ac-section__lead">Dùng mật khẩu để đăng nhập bằng tên tài khoản.</p>}
-      <p className={!open && done ? 'ac-notice' : 'sr-only'} data-tone="success" role="status">
-        {!open && done && <><CheckCircleIcon size={18} />Đã đổi mật khẩu.</>}
+      <p className="ac-panel__lead">Dùng khi đăng nhập bằng tên tài khoản.</p>
+      <p className={done ? 'ac-notice' : 'sr-only'} data-tone="success" role="status">
+        {done && <><CheckCircleIcon size={18} />Đã đổi mật khẩu.</>}
       </p>
 
-      {open && (
-        <form id="ac-password-form" className="ac-form ac-form--narrow" ref={formRef} onSubmit={submit} noValidate aria-busy={saving}>
-          {failure && (
-            <p className="ac-notice" data-tone="danger" role="alert">
-              <AlertCircleIcon size={18} />{failure}
-            </p>
-          )}
-          {FIELDS.map(({ name, label, autoComplete }) => {
-            const id = `ac-pw-${name}`;
-            const errorId = errors[name] ? `${id}-error` : null;
-            const hintId = name === 'newPassword' ? `${id}-hint` : null;
-            const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
-            return (
-              <div className="ac-field" key={name}>
-                <label className="ac-field__label" htmlFor={id}>{label}</label>
-                <div className="ac-password">
-                  <input
-                    id={id}
-                    name={name}
-                    className="ac-input ac-password__input"
-                    type={visible[name] ? 'text' : 'password'}
-                    autoComplete={autoComplete}
-                    value={values[name]}
-                    readOnly={saving}
-                    aria-invalid={errorId ? true : undefined}
-                    aria-describedby={describedBy}
-                    onChange={(event) => update(name, event.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="ac-password__toggle"
-                    aria-label={`Hiện ${label.toLowerCase()}`}
-                    aria-pressed={Boolean(visible[name])}
-                    onClick={() => setVisible((current) => ({ ...current, [name]: !current[name] }))}
-                  >
-                    {visible[name] ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
-                  </button>
-                </div>
-                {hintId && <p className="ac-field__hint" id={hintId}>Ít nhất 6 ký tự.</p>}
-                {errorId && <p className="ac-field__error" id={errorId}>{errors[name]}</p>}
-              </div>
-            );
-          })}
-          <p className="ac-form__note">
-            Không nhớ mật khẩu hiện tại, hoặc bạn đăng nhập bằng Google? Đặt mật khẩu mới qua email ở trang{' '}
-            <Link to="/forgot-password" className="ac-link">Quên mật khẩu</Link>.
+      <form className="ac-form ac-form--narrow" ref={formRef} onSubmit={submit} noValidate aria-busy={saving}>
+        {failure && (
+          <p className="ac-notice" data-tone="danger" role="alert">
+            <AlertCircleIcon size={18} />{failure}
           </p>
-          <div className="ac-form__actions">
-            <Button variant="secondary" onClick={closeForm} disabled={saving}>Hủy</Button>
-            <Button variant="primary" type="submit" icon={<KeyIcon size={16} />} disabled={saving}>
-              {saving ? 'Đang đổi mật khẩu…' : 'Đổi mật khẩu'}
-            </Button>
-          </div>
-        </form>
-      )}
+        )}
+        {FIELDS.map(({ name, label, autoComplete }) => {
+          const id = `ac-pw-${name}`;
+          const errorId = errors[name] ? `${id}-error` : null;
+          const hintId = name === 'newPassword' ? `${id}-hint` : null;
+          const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
+          return (
+            <div className="ac-field" key={name}>
+              <label className="ac-field__label" htmlFor={id}>{label}</label>
+              <div className="ac-password">
+                <input
+                  id={id}
+                  name={name}
+                  className="ac-input ac-password__input"
+                  type={visible[name] ? 'text' : 'password'}
+                  autoComplete={autoComplete}
+                  value={values[name]}
+                  readOnly={saving}
+                  aria-invalid={errorId ? true : undefined}
+                  aria-describedby={describedBy}
+                  onChange={(event) => update(name, event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="ac-password__toggle"
+                  aria-label={`Hiện ${label.toLowerCase()}`}
+                  aria-pressed={Boolean(visible[name])}
+                  onClick={() => setVisible((current) => ({ ...current, [name]: !current[name] }))}
+                >
+                  {visible[name] ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                </button>
+              </div>
+              {hintId && <p className="ac-field__hint" id={hintId}>Ít nhất 6 ký tự.</p>}
+              {errorId && <p className="ac-field__error" id={errorId}>{errors[name]}</p>}
+            </div>
+          );
+        })}
+        <p className="ac-form__note">
+          Không nhớ mật khẩu hiện tại, hoặc bạn đăng nhập bằng Google? Đặt mật khẩu mới qua email ở trang{' '}
+          <Link to="/forgot-password" className="ac-link">Quên mật khẩu</Link>.
+        </p>
+        <div className="ac-form__actions">
+          <Button variant="primary" type="submit" icon={<KeyIcon size={16} />} disabled={saving}>
+            {saving ? 'Đang đổi mật khẩu…' : 'Đổi mật khẩu'}
+          </Button>
+        </div>
+      </form>
     </section>
   );
 }

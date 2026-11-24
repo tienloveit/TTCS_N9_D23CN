@@ -8,6 +8,7 @@ import SafeImage from '../Common/SafeImage';
 import '../MovieCard/MovieBrowse.css';
 import {
   CalendarIcon,
+  ChevronDownIcon,
   DashboardIcon,
   FilmIcon,
   LogoutIcon,
@@ -32,7 +33,10 @@ export default function Navbar() {
   const [highlighted, setHighlighted] = useState(-1);
   const [showSearch, setShowSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const searchRef = useRef(null);
+  const accountRef = useRef(null);
+  const accountButton = useRef(null);
   const searchInput = useRef(null);
   const query = searchQuery.trim();
   const searchOpen = showSearch && query.length >= 2;
@@ -49,11 +53,14 @@ export default function Navbar() {
     setShowSearch(value.trim().length >= 2);
   };
 
-  // Close search suggestions when clicking outside.
+  // Close search suggestions and the account menu when clicking outside.
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowSearch(false);
+      }
+      if (accountRef.current && !accountRef.current.contains(e.target)) {
+        setAccountOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -84,6 +91,7 @@ export default function Navbar() {
     const timer = window.setTimeout(() => {
       setShowSearch(false);
       setMobileMenuOpen(false);
+      setAccountOpen(false);
       setSearchQuery('');
       setHighlighted(-1);
     }, 0);
@@ -94,6 +102,14 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
   const scheduleActive = ['/branches', '/branch'].some((path) => isActive(path));
   const closeDrawer = () => setMobileMenuOpen(false);
+  const accountActive = isActive('/profile');
+
+  const handleAccountKeyDown = (event) => {
+    if (event.key !== 'Escape' || !accountOpen) return;
+    event.stopPropagation();
+    setAccountOpen(false);
+    accountButton.current?.focus();
+  };
 
   const handleSearchKeyDown = (event) => {
     if (event.nativeEvent.isComposing) return;
@@ -205,10 +221,37 @@ export default function Navbar() {
                   <DashboardIcon size={16} aria-hidden="true" />{workspaceLabel}
                 </Link>
               )}
-              <NavLink to="/profile" className="navbar-link navbar-account" aria-label={accountLabel} title={user.username}>
-                <UserIcon className="navbar-user-icon" aria-hidden="true" />
-                <span>{user.username}</span>
-              </NavLink>
+              <div
+                className="navbar-account-menu"
+                ref={accountRef}
+                onKeyDown={handleAccountKeyDown}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false);
+                }}
+              >
+                <button
+                  type="button"
+                  ref={accountButton}
+                  className={`navbar-link navbar-account ${accountActive ? 'navbar-link--active' : ''}`}
+                  aria-label={accountLabel}
+                  aria-expanded={accountOpen}
+                  aria-controls="navbar-account-dropdown"
+                  title={user.username}
+                  onClick={() => { setShowSearch(false); setAccountOpen((open) => !open); }}
+                >
+                  <UserIcon className="navbar-user-icon" aria-hidden="true" />
+                  <span>{user.username}</span>
+                  <ChevronDownIcon size={14} className="navbar-account-chevron" />
+                </button>
+                <div id="navbar-account-dropdown" className="navbar-account-dropdown" hidden={!accountOpen}>
+                  <NavLink to="/profile" className="navbar-account-item" onClick={() => setAccountOpen(false)}>
+                    <UserIcon size={16} />Tài khoản của tôi
+                  </NavLink>
+                  <button type="button" className="navbar-account-item navbar-account-logout" onClick={logout} disabled={pending}>
+                    <LogoutIcon size={16} />{pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
+                  </button>
+                </div>
+              </div>
             </>
           ) : (
             <>

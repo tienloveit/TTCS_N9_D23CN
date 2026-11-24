@@ -193,13 +193,13 @@ export default function PromotionList({ promotions, state, onRetry }) {
   }
 
   return (
-    <section className="ac-section ac-promos" aria-labelledby="ac-promos-title">
-      <div className="ac-section__head">
-        <h2 id="ac-promos-title" className="ac-section__title" tabIndex={-1}>Ưu đãi của bạn</h2>
-        {state === 'ready' && total > 0 && <span className="ac-section__count">{total} mã</span>}
+    <section className="ac-promos">
+      <div className="ac-panel__head">
+        <h2 id="ac-promos-title" className="ac-panel__title" tabIndex={-1}>Ưu đãi của bạn</h2>
+        {state === 'ready' && total > 0 && <span className="ac-panel__count">{total} mã</span>}
       </div>
       {state === 'ready' && total > 0 && (
-        <p className="ac-section__lead">Mã được kiểm tra lại khi bạn nhập lúc thanh toán.</p>
+        <p className="ac-panel__lead">Nhập mã ở bước thanh toán. Điều kiện được kiểm tra lại khi bạn áp mã.</p>
       )}
 
       {state === 'ready' && total >= FILTER_MIN && (

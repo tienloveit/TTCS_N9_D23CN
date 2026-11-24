@@ -1,43 +1,32 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { promotionApi, userApi } from '../../api';
 import Button from '../../components/Common/Button';
 import { RefreshIcon } from '../../components/Common/CinemaIcons';
 import AccountHeader from './AccountHeader';
 import AccountState, { AccountSkeleton } from './AccountState';
+import AccountTabs from './AccountTabs';
+import { ACCOUNT_TABS, isTabHash, tabFromHash } from './accountTabsModel';
+import MembershipTrack from './MembershipTrack';
 import PasswordSection, { CURRENT_PASSWORD_ID } from './PasswordSection';
 import ProfileInfoSection from './ProfileInfoSection';
 import PromotionList from './PromotionList';
 import './ProfilePage.css';
 
-// Hash chỉ để cuộn tới phần tương ứng. Footer liên kết tới #promos.
-const SECTIONS = [
-  ['info', 'Thông tin cá nhân'],
-  ['password', 'Mật khẩu'],
-  ['promos', 'Ưu đãi của bạn'],
-];
-
 export default function ProfilePage({ isReload }) {
   const location = useLocation();
-  const hash = location.hash.slice(1);
+  const navigate = useNavigate();
+  const activeTab = tabFromHash(location.hash);
   const [profile, setProfile] = useState(null);
   const [profileState, setProfileState] = useState('loading');
   const [profileAttempt, setProfileAttempt] = useState(0);
   const [promotions, setPromotions] = useState([]);
   const [promoState, setPromoState] = useState('loading');
   const [promoAttempt, setPromoAttempt] = useState(0);
-  const [passwordOpen, setPasswordOpen] = useState(hash === 'password');
-  // Ghép key với hash: đổi hash trên thanh địa chỉ giữ nguyên location.key ("default").
-  const locationId = `${location.key}${location.hash}`;
-  const [seenLocation, setSeenLocation] = useState(locationId);
   const profileRetryFocus = useRef(false);
+  // Đổi hash do bấm tab: không cuộn, focus ở lại trên tab.
+  const tabClick = useRef(false);
   const readyToScroll = !isReload && profileState === 'ready';
-
-  // Vào lại bằng #password (kể cả khi đang ở trang) thì mở sẵn form đổi mật khẩu.
-  if (seenLocation !== locationId) {
-    setSeenLocation(locationId);
-    if (hash === 'password') setPasswordOpen(true);
-  }
 
   useLayoutEffect(() => {
     if (!isReload) return;
@@ -78,18 +67,21 @@ export default function ProfilePage({ isReload }) {
     return () => { ignore = true; };
   }, [promoAttempt]);
 
+  // Vào trang bằng hash của một tab (Footer, Back/Forward): cuộn tới vùng tab và focus tiêu đề ngăn.
   useEffect(() => {
-    if (!readyToScroll || !SECTIONS.some(([id]) => id === hash)) return;
+    if (tabClick.current) { tabClick.current = false; return; }
+    if (!readyToScroll || !isTabHash(location.hash)) return;
     if (profileRetryFocus.current && document.activeElement !== document.body) return;
-    const heading = document.getElementById(`ac-${hash}-title`);
-    if (!heading) return;
+    const tablist = document.getElementById('ac-tabs');
+    if (!tablist) return;
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    heading.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth', block: 'start' });
-    const target = hash === 'password'
-      ? heading.closest('section')?.querySelector(`#${CURRENT_PASSWORD_ID}`)
-      : heading;
-    (target || heading).focus({ preventScroll: true });
-  }, [readyToScroll, hash, location.key]);
+    tablist.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth', block: 'start' });
+    const id = tabFromHash(location.hash);
+    const target = id === 'password'
+      ? document.getElementById(CURRENT_PASSWORD_ID)
+      : document.getElementById(`ac-${id}-title`);
+    target?.focus({ preventScroll: true });
+  }, [readyToScroll, location.key, location.hash]);
 
   useEffect(() => {
     if (!profileRetryFocus.current || profileState === 'loading') return;
@@ -103,6 +95,12 @@ export default function ProfilePage({ isReload }) {
     profileRetryFocus.current = true;
     setProfileState('loading');
     setProfileAttempt((attempt) => attempt + 1);
+  }
+
+  function selectTab(id) {
+    if (id === activeTab) return;
+    tabClick.current = true;
+    navigate({ search: location.search, hash: `#${id}` }, { replace: true });
   }
 
   function retryPromotions() {
@@ -132,17 +130,26 @@ export default function ProfilePage({ isReload }) {
     <div className="ac-page">
       <div className="ac-wrap ac-top">
         <AccountHeader profile={profile} />
-        <nav className="ac-jump" aria-label="Mục tài khoản">
-          {SECTIONS.map(([id, label]) => (
-            <Link key={id} to={{ search: location.search, hash: `#${id}` }}>{label}</Link>
-          ))}
-        </nav>
-        <div className="ac-layout">
-          <div className="ac-settings">
-            <ProfileInfoSection profile={profile} onSaved={setProfile} />
-            <PasswordSection open={passwordOpen} onOpenChange={setPasswordOpen} />
+        <MembershipTrack tier={profile.membershipTier} spending={profile.totalSpending} />
+        <div className="ac-account">
+          <AccountTabs
+            tabs={ACCOUNT_TABS}
+            active={activeTab}
+            onSelect={selectTab}
+            promoCount={promoState === 'ready' ? promotions.length : 0}
+          />
+          {/* Cả ba ngăn luôn render để giữ bản nháp, chữ đã gõ và bộ lọc khi đổi tab. */}
+          <div className="ac-panels">
+            <div className="ac-panel" role="tabpanel" id="ac-panel-promos" aria-labelledby="ac-tab-promos" hidden={activeTab !== 'promos'}>
+              <PromotionList promotions={promotions} state={promoState} onRetry={retryPromotions} />
+            </div>
+            <div className="ac-panel" role="tabpanel" id="ac-panel-info" aria-labelledby="ac-tab-info" hidden={activeTab !== 'info'}>
+              <ProfileInfoSection profile={profile} onSaved={setProfile} />
+            </div>
+            <div className="ac-panel" role="tabpanel" id="ac-panel-password" aria-labelledby="ac-tab-password" hidden={activeTab !== 'password'}>
+              <PasswordSection />
+            </div>
           </div>
-          <PromotionList promotions={promotions} state={promoState} onRetry={retryPromotions} />
         </div>
       </div>
     </div>
