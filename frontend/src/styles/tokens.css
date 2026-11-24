@@ -169,6 +169,47 @@
   /* Breakpoint quy ước (CSS variable không dùng được trong @media):
      480px · 768px · 1024px · 1280px */
 
+  /* ---------- Khu vận hành "Bảng suất chiếu" (/staff, /manager, /admin) ----------
+     Chỉ dùng trong cây .ops. Mật độ (--o-control-h...) nằm ở components/Ops/ops.css. */
+  --o-canvas: #f3f4f6;
+  --o-surface: #ffffff;
+  --o-sunken: #e9ecef;
+  --o-line: #d9dde3;           /* trang trí, 1.36:1 */
+  --o-control-line: #868e9a;   /* viền mang nghĩa: 3.31:1 trên surface */
+  --o-ink: #15171c;            /* 16.29:1 trên canvas */
+  --o-ink-hover: #2b2f37;
+  --o-ink-2: #3b414b;          /* 9.34:1 */
+  --o-muted: #5a6270;          /* 5.18:1 trên sunken */
+  --o-mark: var(--brand);      /* "đang ở đây" và "bây giờ": 5.78:1 */
+  --o-mark-soft: var(--brand-soft);
+  --o-scrim: rgba(21, 23, 28, 0.48);
+  --o-shadow-float: 0 12px 32px rgba(21, 23, 28, 0.16), 0 2px 6px rgba(21, 23, 28, 0.08);
+
+  --o-font: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --o-stretch-data: 87.5%;
+  --o-stretch-time: 75%;
+  --o-fs-xs: 0.75rem;
+  --o-fs-sm: 0.8125rem;
+  --o-fs-md: 0.875rem;
+  --o-fs-lg: 1rem;
+  --o-fs-xl: 1.25rem;
+  --o-fs-2xl: 1.5rem;
+  --o-fs-3xl: 2rem;
+  --o-fs-time: 2.5rem;
+
+  --o-r-1: 4px;
+  --o-r-2: 6px;
+  --o-r-3: 10px;
+
+  --o-dur-1: 120ms;
+  --o-dur-2: 200ms;
+  --o-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Biểu đồ: một chuỗi dùng ink-2, phần đang chọn hoặc hôm nay dùng mark; chuỗi thứ hai dùng chart-2 */
+  --o-chart-1: var(--o-ink-2);
+  --o-chart-2: #a8afb9;
+  --o-chart-grid: var(--o-line);
+
   /* ============================================================
      Tên cũ: giữ để các màn hiện có tiếp tục chạy.
      Code mới dùng tên ở trên; tên cũ sẽ được thay dần.
