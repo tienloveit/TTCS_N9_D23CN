@@ -2,26 +2,14 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { branchApi, movieApi, reportsApi, userApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
-import { DownloadIcon, RotateCcwIcon } from '../../components/Common/CinemaIcons';
-import { SkeletonBox } from '../../components/Common/Skeleton';
-import './RevenueReportPage.css';
-import { formatCinema } from '../../utils/cinemaTime';
+import { DownloadIcon } from '../../components/Common/CinemaIcons';
+import { Code, DataTable, DateLabel, Field, FilterBar, Money, OpsButton, OpsPage,
+  OpsPanel, Segmented, Select, ShowTime, StatStrip, StateBlock, TextInput } from '../../components/Ops';
+import { addDaysToDateKey, cinemaTodayKey } from '../../utils/cinemaTime';
 
-const businessDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
-const dateDaysAgo = (days) => {
-  const date = new Date(businessDate.format(new Date()));
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString().slice(0, 10);
-};
-
-const firstDayOfMonth = (today) => `${today.slice(0, 7)}-01`;
-
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
-    .format(Number(amount || 0));
-
-const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
-const formatDateTime = (value) => formatCinema(value, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, day: '2-digit', month: '2-digit', year: 'numeric' }, '-');
+const dateDaysAgo = days => addDaysToDateKey(cinemaTodayKey(), -days);
+const firstDayOfMonth = today => today.slice(0, 7) + '-01';
+const formatNumber = value => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 const shareFormatter = new Intl.NumberFormat('vi-VN', { style: 'percent', maximumFractionDigits: 1 });
 const paymentLabels = { CASH: 'Tiền mặt', CARD: 'Thẻ', VNPAY: 'VNPay' };
 const groups = [
@@ -94,21 +82,21 @@ const RevenueReportPage = () => {
   const cards = [
     {
       label: 'Tổng doanh thu',
-      value: formatCurrency(summary.revenue),
+      value: <Money value={summary.revenue} />,
       note: `${formatNumber(summary.bookings)} đơn hoàn tất`,
     },
     {
       label: 'Doanh thu vé',
-      value: formatCurrency(summary.ticketRevenue),
+      value: <Money value={summary.ticketRevenue} />,
       note: `${formatNumber(summary.ticketsSold)} vé đã bán`,
     },
     {
       label: 'Doanh thu bắp nước',
-      value: formatCurrency(summary.foodRevenue),
+      value: <Money value={summary.foodRevenue} />,
     },
     {
       label: 'Giá trị đơn trung bình',
-      value: formatCurrency(summary.averageOrderValue),
+      value: <Money value={summary.averageOrderValue} />,
     },
   ];
 
@@ -148,231 +136,94 @@ const RevenueReportPage = () => {
   const breakdownRows = report?.[group.key] || [];
   const error = rangeInvalid ? 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.' : currentResponse?.error;
 
+
+  const activeFilters = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS());
+  const reset = () => setFilters(DEFAULT_FILTERS());
+  const retry = () => setFilters(current => ({ ...current }));
+  const isPaymentGroup = group.key === 'paymentBreakdown';
+  const breakdownColumns = [
+    { key: 'name', header: isPaymentGroup ? 'Phương thức' : group.label, render: row =>
+      isPaymentGroup ? paymentLabels[row.paymentMethod] || row.paymentMethod || '—' : row.name },
+    { key: 'bookings', header: 'Số đơn', align: 'end', render: row => formatNumber(row.bookings) },
+    ...(!isPaymentGroup ? [{ key: 'tickets', header: 'Số vé', align: 'end', render: row => formatNumber(row.ticketsSold) }] : []),
+    { key: 'revenue', header: 'Doanh thu', align: 'end', render: row => <Money value={row.revenue} /> },
+    { key: 'share', header: 'Tỷ trọng', align: 'end', render: row => {
+      const share = Number(summary.revenue) > 0 ? Number(row.revenue || 0) / Number(summary.revenue) : 0;
+      return <span className="o-metric"><progress max={1} value={Math.max(0, share)} className="o-progress" aria-label="Tỷ trọng doanh thu" />
+        {shareFormatter.format(share)}</span>;
+    } },
+  ];
+  const transactionColumns = [
+    { key: 'code', header: 'Đơn đặt vé', render: row => <><Code>{row.bookingCode || '#' + row.bookingId}</Code>
+      <small className="o-subline"><DateLabel value={row.paidAt} /> <ShowTime value={row.paidAt} /></small></> },
+    { key: 'total', header: 'Tổng tiền', align: 'end', render: row => <Money value={row.totalAmount} /> },
+    { key: 'movie', header: 'Phim / chi nhánh', render: row => <>{row.movieName || '—'}<small className="o-subline">{row.branchName}</small></> },
+    { key: 'staff', header: 'Nhân viên', render: row => row.staffUsername || 'Trực tuyến' },
+    { key: 'payment', header: 'Thanh toán', render: row => paymentLabels[row.paymentMethod] || row.paymentMethod || '—' },
+    { key: 'ticket', header: 'Tiền vé', align: 'end', render: row => <Money value={row.ticketAmount} /> },
+    { key: 'food', header: 'Bắp nước', align: 'end', render: row => <Money value={row.foodAmount} /> },
+  ];
+  const tableState = loading ? 'loading' : 'ready';
   return (
-    <div className="revenue-report">
-      <header className="revenue-heading">
-        <h1>Doanh thu chi tiết</h1>
-        <button type="button" className="revenue-button revenue-button--primary" onClick={exportExcel} disabled={exporting || rangeInvalid}>
-          <DownloadIcon size={16} aria-hidden="true" />
-          {exporting ? 'Đang xuất…' : 'Xuất Excel'}
-        </button>
-      </header>
-
-      <section className="revenue-filters" aria-label="Bộ lọc doanh thu">
-        <div className="revenue-filter-period">
-          <div className="revenue-date-fields">
-            <label>
-              Từ ngày
-              <input type="date" value={filters.from} onChange={(event) => updateFilter('from', event.target.value)} />
-            </label>
-            <label>
-              Đến ngày
-              <input type="date" value={filters.to} onChange={(event) => updateFilter('to', event.target.value)} />
-            </label>
-          </div>
-          <div className="revenue-presets" role="group" aria-label="Khoảng ngày nhanh">
-            {presets.map((preset) => (
-              <button key={preset.label} type="button" aria-pressed={activePreset === preset} onClick={() => applyPreset(preset.from)}>
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="revenue-filter-details" data-branch-filter={isAdmin || undefined}>
-          {isAdmin && (
-            <div className="revenue-field">
-              <label htmlFor="revenue-branch">Chi nhánh</label>
-              <select id="revenue-branch" value={filters.branchId} onChange={(event) => updateFilter('branchId', event.target.value)}>
-                <option value="">Tất cả chi nhánh</option>
-                {branches.map((branch) => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="revenue-field">
-            <label htmlFor="revenue-movie">Phim</label>
-            <select id="revenue-movie" value={filters.movieId} onChange={(event) => updateFilter('movieId', event.target.value)}>
-              <option value="">Tất cả phim</option>
-              {movies.map((movie) => <option key={movie.movieId || movie.id} value={movie.movieId || movie.id}>{movie.movieName}</option>)}
-            </select>
-          </div>
-          <div className="revenue-field">
-            <label htmlFor="revenue-staff">Nhân viên</label>
-            <select id="revenue-staff" value={filters.staffId} onChange={(event) => updateFilter('staffId', event.target.value)}>
-              <option value="">Tất cả</option>
-              {staff.map((item) => <option key={item.id} value={item.id}>{item.fullName || item.username}</option>)}
-            </select>
-          </div>
-          <div className="revenue-field">
-            <label htmlFor="revenue-payment">Thanh toán</label>
-            <select id="revenue-payment" value={filters.paymentMethod} onChange={(event) => updateFilter('paymentMethod', event.target.value)}>
-              <option value="">Mọi phương thức</option>
-              {Object.entries(paymentLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-            </select>
-          </div>
-          <button type="button" className="revenue-button" onClick={() => setFilters(DEFAULT_FILTERS())}>
-            <RotateCcwIcon size={15} aria-hidden="true" />
-            Đặt lại
-          </button>
-        </div>
-      </section>
-
-      {error ? (
-        <p className="revenue-error" role="alert">{error}</p>
-      ) : (
-        <>
-          <dl className="revenue-summary" aria-label="Tổng hợp doanh thu" aria-busy={loading}>
-            {cards.map((card) => (
-              <div key={card.label}>
-                <dt>{card.label}</dt>
-                {loading ? (
-                  <dd><SkeletonBox width="75%" height="28px" /></dd>
-                ) : (
-                  <>
-                    <dd className="revenue-stat-value">{card.value}</dd>
-                    {card.note && <dd className="revenue-stat-note">{card.note}</dd>}
-                  </>
-                )}
-              </div>
-            ))}
-          </dl>
-
-          <section className="revenue-panel" aria-labelledby="revenue-breakdown" aria-busy={loading}>
-            <header className="revenue-panel-heading">
-              <h2 id="revenue-breakdown">Phân tích doanh thu</h2>
-              <div className="revenue-groups" role="group" aria-label="Phân nhóm doanh thu">
-                {groups.map((item) => (
-                  <button key={item.key} type="button" aria-pressed={group === item} onClick={() => setGroup(item)}>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </header>
-            {group.key === 'paymentBreakdown' ? (
-              <PaymentTable rows={breakdownRows} total={summary.revenue} loading={loading} />
-            ) : (
-              <BreakdownTable title={group.label} rows={breakdownRows} total={summary.revenue} loading={loading} />
-            )}
-          </section>
-
-          <section className="revenue-panel" aria-labelledby="revenue-transactions" aria-busy={loading}>
-            <header className="revenue-panel-heading">
-              <h2 id="revenue-transactions">Giao dịch</h2>
-              {!loading && (
-                <p>
-                  {summary.bookings > transactionRows.length
-                    ? `${formatNumber(transactionRows.length)} / ${formatNumber(summary.bookings)} giao dịch gần nhất`
-                    : `${formatNumber(transactionRows.length)} giao dịch`}
-                </p>
-              )}
-            </header>
-            <div className="revenue-table-scroll revenue-transactions-scroll" role="region" tabIndex={0} aria-labelledby="revenue-transactions">
-              <table className="revenue-table revenue-transactions-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Đơn đặt vé</th>
-                    <th scope="col" className="revenue-number">Tổng tiền</th>
-                    <th scope="col">Phim / Chi nhánh</th>
-                    <th scope="col">Nhân viên</th>
-                    <th scope="col">Thanh toán</th>
-                    <th scope="col" className="revenue-number">Tiền vé</th>
-                    <th scope="col" className="revenue-number">Bắp nước</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading || transactionRows.length === 0 ? (
-                    <tr><td colSpan={7} className="revenue-table-message">{loading ? 'Đang tải giao dịch…' : 'Không có giao dịch trong kỳ này.'}</td></tr>
-                  ) : transactionRows.map((row) => (
-                    <tr key={row.bookingId}>
-                      <th scope="row">
-                        <span className="revenue-code">{row.bookingCode || `#${row.bookingId}`}</span>
-                        <span className="revenue-cell-note">{formatDateTime(row.paidAt)}</span>
-                      </th>
-                      <td className="revenue-number revenue-total">{formatCurrency(row.totalAmount)}</td>
-                      <td>
-                        {row.movieName || '–'}
-                        <span className="revenue-cell-note">{row.branchName || '–'}</span>
-                      </td>
-                      <td>{row.staffUsername || 'Online'}</td>
-                      <td>{paymentLabels[row.paymentMethod] || row.paymentMethod || '–'}</td>
-                      <td className="revenue-number">{formatCurrency(row.ticketAmount)}</td>
-                      <td className="revenue-number">{formatCurrency(row.foodAmount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      )}
-    </div>
+    <OpsPage title="Doanh thu chi tiết"
+      actions={<OpsButton variant="primary" icon={<DownloadIcon size={16} />} loading={exporting} disabled={rangeInvalid}
+        onClick={exportExcel}>Xuất XLSX</OpsButton>}>
+      <div className="o-actions">
+        <Segmented label="Khoảng ngày" value={activePreset?.label}
+          options={presets.map(preset => ({ value: preset.label, label: preset.label }))}
+          onChange={label => applyPreset(presets.find(preset => preset.label === label).from)} />
+      </div>
+      <FilterBar filtered={activeFilters} onReset={reset}>
+        <Field label="Từ ngày">
+          <TextInput type="date" value={filters.from} onChange={event => updateFilter('from', event.target.value)} />
+        </Field>
+        <Field label="Đến ngày" error={rangeInvalid ? error : undefined}>
+          <TextInput type="date" value={filters.to} onChange={event => updateFilter('to', event.target.value)} />
+        </Field>
+        {isAdmin && <Field label="Chi nhánh">
+          <Select value={filters.branchId} onChange={event => updateFilter('branchId', event.target.value)}>
+            <option value="">Tất cả chi nhánh</option>
+            {branches.map(branch => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
+          </Select>
+        </Field>}
+        <Field label="Phim">
+          <Select value={filters.movieId} onChange={event => updateFilter('movieId', event.target.value)}>
+            <option value="">Tất cả phim</option>
+            {movies.map(movie => <option key={movie.movieId || movie.id} value={movie.movieId || movie.id}>{movie.movieName}</option>)}
+          </Select>
+        </Field>
+        <Field label="Nhân viên">
+          <Select value={filters.staffId} onChange={event => updateFilter('staffId', event.target.value)}>
+            <option value="">Tất cả</option>
+            {staff.map(item => <option key={item.id} value={item.id}>{item.fullName || item.username}</option>)}
+          </Select>
+        </Field>
+        <Field label="Thanh toán">
+          <Select value={filters.paymentMethod} onChange={event => updateFilter('paymentMethod', event.target.value)}>
+            <option value="">Mọi phương thức</option>
+            {Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select>
+        </Field>
+      </FilterBar>
+      {error ? <StateBlock state="error" title={error} onRetry={rangeInvalid ? undefined : retry} /> : <>
+        <StatStrip items={cards} loading={loading} />
+        <OpsPanel flush title="Phân tích doanh thu"
+          actions={<Segmented label="Phân nhóm doanh thu" value={group.key}
+            options={groups.map(item => ({ value: item.key, label: item.label }))}
+            onChange={key => setGroup(groups.find(item => item.key === key))} />}>
+          <DataTable caption={'Doanh thu theo ' + group.label.toLocaleLowerCase('vi')} columns={breakdownColumns}
+            rows={breakdownRows} rowKey={row => row.id ?? row.name ?? row.paymentMethod} state={tableState}
+            empty={{ title: 'Không có doanh thu trong kỳ này', action: { label: 'Đặt lại', onClick: reset } }} />
+        </OpsPanel>
+        <OpsPanel flush title="Giao dịch" description={!loading && (summary.bookings > transactionRows.length
+          ? formatNumber(transactionRows.length) + ' trong ' + formatNumber(summary.bookings) + ' giao dịch gần nhất'
+          : formatNumber(transactionRows.length) + ' giao dịch')}>
+          <DataTable caption="Giao dịch" columns={transactionColumns} rows={transactionRows} rowKey="bookingId" state={tableState}
+            empty={{ title: 'Không có giao dịch trong kỳ này', action: { label: 'Đặt lại', onClick: reset } }} />
+        </OpsPanel>
+      </>}
+    </OpsPage>
   );
 };
-
-const RevenueShare = ({ amount, total }) => {
-  const share = Number(total) > 0 ? Number(amount || 0) / Number(total) : 0;
-  return (
-    <div className="revenue-share">
-      <span aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(share * 100, 100))}%` }} /></span>
-      {shareFormatter.format(share)}
-    </div>
-  );
-};
-
-const BreakdownTable = ({ title, rows, total, loading }) => (
-  <div className="revenue-table-scroll" role="region" tabIndex={0} aria-label={`Doanh thu theo ${title.toLowerCase()}`}>
-    <table className="revenue-table revenue-breakdown-table">
-      <thead>
-        <tr>
-          <th scope="col">{title}</th>
-          <th scope="col" className="revenue-number">Số đơn</th>
-          <th scope="col" className="revenue-number">Số vé</th>
-          <th scope="col" className="revenue-number">Doanh thu</th>
-          <th scope="col" className="revenue-number">Tỷ trọng</th>
-        </tr>
-      </thead>
-      <tbody>
-        {loading || rows.length === 0 ? (
-          <tr><td colSpan={5} className="revenue-table-message">{loading ? 'Đang tải doanh thu…' : 'Không có doanh thu trong kỳ này.'}</td></tr>
-        ) : rows.map((row) => (
-          <tr key={row.id ?? row.name}>
-            <th scope="row">{row.name}</th>
-            <td className="revenue-number">{formatNumber(row.bookings)}</td>
-            <td className="revenue-number">{formatNumber(row.ticketsSold)}</td>
-            <td className="revenue-number revenue-total">{formatCurrency(row.revenue)}</td>
-            <td className="revenue-number"><RevenueShare amount={row.revenue} total={total} /></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
-const PaymentTable = ({ rows, total, loading }) => (
-  <div className="revenue-table-scroll" role="region" tabIndex={0} aria-label="Doanh thu theo thanh toán">
-    <table className="revenue-table revenue-breakdown-table">
-      <thead>
-        <tr>
-          <th scope="col">Phương thức</th>
-          <th scope="col" className="revenue-number">Số đơn</th>
-          <th scope="col" className="revenue-number">Doanh thu</th>
-          <th scope="col" className="revenue-number">Tỷ trọng</th>
-        </tr>
-      </thead>
-      <tbody>
-        {loading || rows.length === 0 ? (
-          <tr><td colSpan={4} className="revenue-table-message">{loading ? 'Đang tải doanh thu…' : 'Không có khoản thanh toán trong kỳ này.'}</td></tr>
-        ) : rows.map((row) => (
-          <tr key={row.paymentMethod}>
-            <th scope="row">{paymentLabels[row.paymentMethod] || row.paymentMethod || '–'}</th>
-            <td className="revenue-number">{formatNumber(row.bookings)}</td>
-            <td className="revenue-number revenue-total">{formatCurrency(row.revenue)}</td>
-            <td className="revenue-number"><RevenueShare amount={row.revenue} total={total} /></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
 
 export default RevenueReportPage;

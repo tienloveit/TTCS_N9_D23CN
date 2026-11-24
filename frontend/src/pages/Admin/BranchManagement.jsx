@@ -2,19 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { branchApi, roomApi, seatApi } from '../../api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
-import Badge from '../../components/Common/Badge';
-import Button from '../../components/Common/Button';
-import ConfirmDialog from '../../components/Common/ConfirmDialog';
-import useModalDialog from '../../components/Common/useModalDialog';
-import './BranchManagement.css';
-import {
-  ArmchairIcon,
-  EditIcon,
-  PlusIcon,
-  SearchIcon,
-  TrashIcon,
-  XIcon,
-} from '../../components/Common/CinemaIcons';
+import { ArmchairIcon, EditIcon, PlusIcon, TrashIcon } from '../../components/Common/CinemaIcons';
+import { Code, DataTable, Field, FilterBar, OpsButton, OpsConfirm, OpsDialog, OpsPage,
+  OpsPanel, Select, StateBlock, StatusBadge, TextInput } from '../../components/Ops';
 
 const roomTypeMap = {
   STANDARD: 'Standard',
@@ -42,30 +32,18 @@ const roomStatusTone = {
   MAINTENANCE: 'warning',
 };
 
-const seatTypeClass = {
-  VIP: 'seat-editor-seat--vip',
-  COUPLE: 'seat-editor-seat--couple',
-};
-
-const Icon = ({ name }) => {
-  if (name === 'plus') return <PlusIcon size={18} />;
-  if (name === 'edit') return <EditIcon size={15} />;
-  if (name === 'trash') return <TrashIcon size={15} />;
-  return <ArmchairIcon size={15} />;
-};
-
 const BranchManagement = () => {
   const { isAdmin } = useAuth();
   const [branchModal, setBranchModal] = useState(false);
   const [roomModal, setRoomModal] = useState(false);
   const [seatMapModal, setSeatMapModal] = useState(false);
-  const branchDialog = useModalDialog(branchModal, () => setBranchModal(false));
-  const roomDialog = useModalDialog(roomModal, () => setRoomModal(false));
-  // Sơ đồ ghế có thay đổi chưa lưu: không đóng bằng Esc/click nền, chỉ bằng nút trong modal.
-  const seatMapDialog = useModalDialog(seatMapModal, null, { disabled: true });
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [seatMapError, setSeatMapError] = useState('');
+  const [destination, setDestination] = useState('');
 
   const [editingBranch, setEditingBranch] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
@@ -132,11 +110,15 @@ const BranchManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const [branchRes, roomRes] = await Promise.allSettled([branchApi.getAll(), roomApi.getAll()]);
-      setBranches(branchRes.status === 'fulfilled' ? branchRes.value.data.result : []);
-      setRooms(roomRes.status === 'fulfilled' ? roomRes.value.data.result : []);
+      setBranches(branchRes.status === 'fulfilled' ? branchRes.value.data.result || [] : []);
+      setRooms(roomRes.status === 'fulfilled' ? roomRes.value.data.result || [] : []);
+      if (branchRes.status === 'rejected' || roomRes.status === 'rejected') {
+        setLoadError('Không tải được đầy đủ danh sách chi nhánh và phòng.');
+      }
     } catch {
-      toast.error('Lỗi khi tải dữ liệu');
+      setLoadError('Không tải được danh sách chi nhánh và phòng.');
     } finally {
       setLoading(false);
     }
@@ -163,7 +145,7 @@ const BranchManagement = () => {
       setRoomForm({ ...room });
     } else {
       setEditingRoom(null);
-      setRoomForm({ code: '', name: '', roomTechnology: 'STANDARD', seatCapacity: 100, branchId: '', status: 'ACTIVE' });
+      setRoomForm({ code: '', name: '', roomTechnology: 'STANDARD', seatCapacity: 100, branchId: roomBranchFilter === 'ALL' ? (branches.length === 1 ? String(branches[0].branchId) : '') : roomBranchFilter, status: 'ACTIVE' });
     }
     setRoomModal(true);
   };
@@ -172,6 +154,8 @@ const BranchManagement = () => {
     setSeatMapRoom(room);
     setSeatMapModal(true);
     setSeatMapLoading(true);
+    setSeatMapError('');
+    setDestination('');
     setSelectedSeatId(null);
     setExtraColumns(2);
     try {
@@ -184,7 +168,7 @@ const BranchManagement = () => {
       setSeats(roomSeats);
       setSelectedSeatId(roomSeats[0]?.seatId || null);
     } catch {
-      toast.error('Không tải được sơ đồ ghế');
+      setSeatMapError('Không tải được sơ đồ ghế.');
       setSeats([]);
     } finally {
       setSeatMapLoading(false);
@@ -193,6 +177,8 @@ const BranchManagement = () => {
 
   const handleBranchSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
     try {
       if (editingBranch) {
         await branchApi.update(editingBranch.branchId, branchForm);
@@ -203,13 +189,17 @@ const BranchManagement = () => {
       }
       setBranchModal(false);
       fetchData();
-    } catch {
-      toast.error('Thực hiện thất bại');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không lưu được thay đổi');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleRoomSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
     try {
       const payload = {
         ...roomForm,
@@ -225,8 +215,10 @@ const BranchManagement = () => {
       }
       setRoomModal(false);
       fetchData();
-    } catch {
-      toast.error('Thực hiện thất bại');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không lưu được thay đổi');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -279,7 +271,7 @@ const BranchManagement = () => {
     );
   };
 
-  const getRoomCount = (branchId) => rooms.filter((room) => room.branchId === branchId).length;
+  const getRoomCount = branchId => rooms.filter(room => String(room.branchId) === String(branchId)).length;
 
   const getSeatAt = (rowLabel, seatNumber) =>
     seats.find((seat) => seat.rowLabel === rowLabel && Number(seat.seatNumber) === Number(seatNumber));
@@ -308,6 +300,7 @@ const BranchManagement = () => {
       }),
     );
     setSelectedSeatId(seatId);
+    setDestination('');
   };
 
   const handleDrop = (rowLabel, seatNumber) => {
@@ -328,7 +321,7 @@ const BranchManagement = () => {
   };
 
   const saveSeatLayout = async () => {
-    if (!seatMapRoom) return;
+    if (!seatMapRoom || savingSeatMap) return;
     try {
       setSavingSeatMap(true);
       const payload = {
@@ -350,6 +343,7 @@ const BranchManagement = () => {
   };
 
   const closeSeatMapModal = () => {
+    if (savingSeatMap) return;
     setSeatMapModal(false);
     setSeatMapRoom(null);
     setSeats([]);
@@ -357,471 +351,197 @@ const BranchManagement = () => {
     setDraggedSeatId(null);
   };
 
-  if (loading && branches.length === 0) {
-    return (
-      <div className="loading">
-        <div className="spinner" />
-      </div>
-    );
-  }
 
+  const selectedBranch = branches.find(branch => String(branch.branchId) === roomBranchFilter);
+  const title = 'Rạp và phòng';
+  const resetRoomFilters = () => { setRoomSearch(''); setRoomTypeFilter('ALL'); setRoomBranchFilter('ALL'); };
+  const roomColumns = [
+    { key: 'code', header: 'Mã phòng', render: room => <Code>{room.code}</Code> },
+    { key: 'name', header: 'Tên phòng' },
+    { key: 'type', header: 'Công nghệ', render: room => roomTypeMap[room.roomTechnology] || room.roomTechnology },
+    { key: 'seatCapacity', header: 'Sức chứa', align: 'end' },
+    ...(!selectedBranch ? [{ key: 'branch', header: 'Chi nhánh', render: room =>
+      branches.find(item => String(item.branchId) === String(room.branchId))?.name || '—' }] : []),
+    { key: 'status', header: 'Trạng thái', render: room => <StatusBadge tone={roomStatusTone[room.status]}>
+      {roomStatusMap[room.status] || room.status}
+    </StatusBadge> },
+    { key: 'actions', header: 'Thao tác', render: room => <div className="o-actions">
+      <OpsButton variant="ghost" icon={<ArmchairIcon size={16} />} aria-label={'Sửa sơ đồ ghế ' + room.name}
+        onClick={() => openSeatMapModal(room)} />
+      <OpsButton variant="ghost" icon={<EditIcon size={16} />} aria-label={'Sửa phòng ' + room.name}
+        onClick={() => openRoomModal(room)} />
+      <OpsButton variant="ghost-danger" icon={<TrashIcon size={16} />} aria-label={'Xóa phòng ' + room.name}
+        onClick={() => handleDeleteRoom(room.id, room.name)} />
+    </div> },
+  ];
+  const updateBranch = key => event => setBranchForm(current => ({ ...current, [key]: event.target.value }));
+  const updateRoom = key => event => setRoomForm(current => ({ ...current, [key]: event.target.value }));
+  const deleteLabel = confirmTarget?.type === 'BRANCH' ? 'Xóa chi nhánh' : 'Xóa phòng chiếu';
   return (
-    <div>
-      <div className="page-header page-header--split">
-        <div>
-          <h1 className="page-title">Quản lý rạp &amp; phòng</h1>
-          <p className="page-subtitle">
-            <strong>{branches.length}</strong> chi nhánh, <strong>{rooms.length}</strong> phòng chiếu
-          </p>
-        </div>
-        <div className="page-header-actions">
-          <Button icon={<Icon name="plus" />} onClick={() => openRoomModal()}>
-            Thêm phòng
-          </Button>
-          {isAdmin && (
-            <Button variant="primary" icon={<Icon name="plus" />} onClick={() => openBranchModal()}>
-              Thêm chi nhánh
-            </Button>
-          )}
+    <OpsPage title={title} description={branches.length + ' chi nhánh, ' + rooms.length + ' phòng chiếu'}
+      actions={<>
+        <OpsButton variant={isAdmin ? 'secondary' : 'primary'} icon={<PlusIcon size={16} />} disabled={!branches.length}
+          onClick={() => openRoomModal()}>Thêm phòng</OpsButton>
+        {isAdmin && <OpsButton variant="primary" icon={<PlusIcon size={16} />} onClick={() => openBranchModal()}>Thêm chi nhánh</OpsButton>}
+      </>}>
+      {loadError && <StateBlock state="error" title={loadError} onRetry={fetchData} />}
+      <div className="o-branch-layout">
+        <OpsPanel title="Chi nhánh">
+          {loading && !branches.length ? <StateBlock state="loading" title="Đang tải chi nhánh" /> :
+            branches.length ? <>
+              <div className="o-branch-select">
+                <Field label="Chi nhánh đang xem"><Select value={roomBranchFilter} onChange={event => setRoomBranchFilter(event.target.value)}>
+                  <option value="ALL">Tất cả chi nhánh</option>
+                  {branches.map(branch => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
+                </Select></Field>
+              </div>
+              <div className="o-branch-list" role="group" aria-label="Chọn chi nhánh">
+                <OpsButton aria-pressed={roomBranchFilter === 'ALL'} onClick={() => setRoomBranchFilter('ALL')}>Tất cả chi nhánh</OpsButton>
+                {branches.map(branch => <OpsButton key={branch.branchId} aria-pressed={roomBranchFilter === String(branch.branchId)}
+                  onClick={() => setRoomBranchFilter(String(branch.branchId))}>
+                  {branch.name} <small className="o-subline">{getRoomCount(branch.branchId)} phòng</small>
+                </OpsButton>)}
+              </div>
+            </> : <StateBlock title="Chưa có chi nhánh" action={isAdmin ? { label: 'Thêm chi nhánh', onClick: () => openBranchModal() } : undefined} />}
+        </OpsPanel>
+        <div className="o-form">
+          {selectedBranch && <OpsPanel title={selectedBranch.name} actions={<>
+            <OpsButton icon={<EditIcon size={16} />} onClick={() => openBranchModal(selectedBranch)}>Sửa chi nhánh</OpsButton>
+            {isAdmin && <OpsButton variant="ghost-danger" icon={<TrashIcon size={16} />}
+              onClick={() => handleDeleteBranch(selectedBranch.branchId, selectedBranch.name)}>Xóa chi nhánh</OpsButton>}
+          </>}>
+            <dl className="o-facts">
+              <div><dt>Mã chi nhánh</dt><dd><Code>{selectedBranch.branchCode}</Code></dd></div>
+              <div><dt>Thành phố</dt><dd>{selectedBranch.city || '—'}</dd></div>
+              <div><dt>Địa chỉ</dt><dd>{selectedBranch.address || '—'}</dd></div>
+              <div><dt>Điện thoại</dt><dd>{selectedBranch.phone || '—'}</dd></div>
+              <div><dt>Số phòng</dt><dd>{getRoomCount(selectedBranch.branchId)}</dd></div>
+            </dl>
+          </OpsPanel>}
+          <FilterBar search={roomSearch} onSearchChange={setRoomSearch} searchLabel="Tìm mã hoặc tên phòng"
+            filtered={Boolean(roomSearch || roomTypeFilter !== 'ALL' || roomBranchFilter !== 'ALL')}
+            onReset={resetRoomFilters} resultLabel={filteredRooms.length + ' phòng'}>
+            <Field label="Công nghệ"><Select value={roomTypeFilter} onChange={event => setRoomTypeFilter(event.target.value)}>
+              <option value="ALL">Mọi công nghệ</option>
+              {Object.entries(roomTypeMap).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </Select></Field>
+          </FilterBar>
+          <OpsPanel flush title="Phòng chiếu">
+            <DataTable caption="Phòng chiếu" columns={roomColumns} rows={filteredRooms} rowKey="id"
+              state={loading ? 'loading' : 'ready'} stackOnMobile
+              empty={{ title: 'Không có phòng chiếu phù hợp', action: { label: 'Xóa bộ lọc', onClick: resetRoomFilters } }} />
+          </OpsPanel>
         </div>
       </div>
 
-      <div className="admin-table-card admin-table-card--spaced">
-        <div className="table-header">
-          <h3 className="admin-section-title">Chi nhánh</h3>
-        </div>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Mã chi nhánh</th>
-              <th>Tên chi nhánh</th>
-              <th>Thành phố</th>
-              <th>Địa chỉ</th>
-              <th>SĐT</th>
-              <th>Số phòng</th>
-              <th>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {branches.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="admin-table-empty">
-                  Chưa có chi nhánh. Bấm “Thêm chi nhánh” để tạo rạp đầu tiên.
-                </td>
-              </tr>
-            ) : (
-              branches.map((branch, index) => (
-                <tr key={branch.branchId || index}>
-                  <td className="cell-index">{index + 1}</td>
-                  <td><span className="movie-badge">{branch.branchCode}</span></td>
-                  <td className="cell-strong">{branch.name}</td>
-                  <td>{branch.city || '-'}</td>
-                  <td className="cell-truncate" title={branch.address || undefined}>
-                    {branch.address || '-'}
-                  </td>
-                  <td>{branch.phone || '-'}</td>
-                  <td className="cell-strong">{getRoomCount(branch.branchId)}</td>
-                  <td>
-                    <div className="action-btns">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="Sửa chi nhánh"
-                        aria-label={`Sửa chi nhánh ${branch.name}`}
-                        icon={<Icon name="edit" />}
-                        onClick={() => openBranchModal(branch)}
-                      />
-                      {isAdmin && (
-                        <Button
-                          variant="ghost-danger"
-                          size="sm"
-                          title="Xóa chi nhánh"
-                          aria-label={`Xóa chi nhánh ${branch.name}`}
-                          icon={<Icon name="trash" />}
-                          onClick={() => handleDeleteBranch(branch.branchId, branch.name)}
-                        />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <OpsDialog open={branchModal} title={editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh'} onClose={() => setBranchModal(false)} disabled={saving}
+        footer={<><OpsButton disabled={saving} onClick={() => setBranchModal(false)}>Quay lại</OpsButton>
+          <OpsButton type="submit" form="o-branch-form" variant="primary" loading={saving}>{editingBranch ? 'Lưu thay đổi' : 'Thêm chi nhánh'}</OpsButton></>}>
+        <form className="o-form-grid" id="o-branch-form" onSubmit={handleBranchSubmit}>
+          <Field label="Mã chi nhánh" required><TextInput value={branchForm.branchCode} onChange={updateBranch('branchCode')} /></Field>
+          <Field label="Tên rạp" required><TextInput value={branchForm.name} onChange={updateBranch('name')} /></Field>
+          <Field label="Thành phố"><TextInput value={branchForm.city || ''} onChange={updateBranch('city')} /></Field>
+          <Field label="Điện thoại"><TextInput value={branchForm.phone || ''} type="tel" onChange={updateBranch('phone')} /></Field>
+          <Field label="Địa chỉ" className="o-form-grid__wide"><TextInput value={branchForm.address || ''} onChange={updateBranch('address')} /></Field>
+          <Field label="Trạng thái rạp"><Select value={branchForm.status || 'ACTIVE'} onChange={updateBranch('status')}>
+            <option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Tạm dừng</option>
+          </Select></Field>
+        </form>
+      </OpsDialog>
+      <OpsDialog open={roomModal} title={editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng'} onClose={() => setRoomModal(false)} disabled={saving}
+        footer={<><OpsButton disabled={saving} onClick={() => setRoomModal(false)}>Quay lại</OpsButton>
+          <OpsButton type="submit" form="o-room-form" variant="primary" loading={saving}>{editingRoom ? 'Lưu thay đổi' : 'Thêm phòng'}</OpsButton></>}>
+        <form className="o-form-grid" id="o-room-form" onSubmit={handleRoomSubmit}>
+          <Field label="Chi nhánh" required className="o-form-grid__wide"><Select value={roomForm.branchId || ''} onChange={updateRoom('branchId')}>
+            <option value="">Chọn rạp</option>
+            {branches.map(branch => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
+          </Select></Field>
+          <Field label="Mã phòng" required><TextInput value={roomForm.code || ''} onChange={updateRoom('code')} /></Field>
+          <Field label="Tên phòng" required><TextInput value={roomForm.name || ''} onChange={updateRoom('name')} /></Field>
+          <Field label="Công nghệ phòng"><Select value={roomForm.roomTechnology || 'STANDARD'} onChange={updateRoom('roomTechnology')}>
+            {Object.entries(roomTypeMap).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select></Field>
+          <Field label="Tổng số ghế" required><TextInput type="number" min={1} value={roomForm.seatCapacity ?? ''} onChange={updateRoom('seatCapacity')} /></Field>
+          <Field label="Trạng thái phòng"><Select value={roomForm.status || 'ACTIVE'} onChange={updateRoom('status')}>
+            {Object.entries(roomStatusMap).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select></Field>
+        </form>
+      </OpsDialog>
 
-      <div className="admin-table-card">
-        <div className="console-toolbar">
-          <h3 className="admin-section-title">
-            Phòng chiếu ({filteredRooms.length})
-          </h3>
-          <div className="admin-toolbar-filters">
-            <div className="admin-search">
-              <SearchIcon size={15} className="input-leading-icon" aria-hidden="true" />
-              <input
-                type="search"
-                className="input input-sm"
-                placeholder="Tìm mã, tên phòng..."
-                aria-label="Tìm phòng chiếu theo mã hoặc tên"
-                value={roomSearch}
-                onChange={(e) => setRoomSearch(e.target.value)}
-              />
-            </div>
-            <select
-              className="input input-sm input-auto"
-              aria-label="Lọc theo chi nhánh"
-              value={roomBranchFilter}
-              onChange={(e) => setRoomBranchFilter(e.target.value)}
-            >
-              <option value="ALL">Tất cả chi nhánh</option>
-              {branches.map((b) => (
-                <option key={b.branchId} value={b.branchId}>{b.name}</option>
-              ))}
-            </select>
-            <select
-              className="input input-sm input-auto"
-              aria-label="Lọc theo công nghệ phòng"
-              value={roomTypeFilter}
-              onChange={(e) => setRoomTypeFilter(e.target.value)}
-            >
-              <option value="ALL">Mọi công nghệ phòng</option>
-              {Object.entries(roomTypeMap).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Mã phòng</th>
-              <th>Tên phòng</th>
-              <th>Công nghệ phòng</th>
-              <th>Sức chứa</th>
-              <th>Chi nhánh</th>
-              <th>Trạng thái</th>
-              <th>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRooms.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="admin-table-empty">
-                  Không tìm thấy phòng chiếu phù hợp. Thử bỏ bớt bộ lọc.
-                </td>
-              </tr>
-            ) : (
-              filteredRooms.map((room, index) => {
-                const branch = branches.find((item) => item.branchId === room.branchId);
-                return (
-                  <tr key={room.id || index}>
-                    <td className="cell-index">{index + 1}</td>
-                    <td><span className="movie-badge">{room.code}</span></td>
-                    <td className="cell-strong">{room.name}</td>
-                    <td>
-                      <Badge tone="info">{roomTypeMap[room.roomTechnology] || room.roomTechnology}</Badge>
-                    </td>
-                    <td>{room.seatCapacity || '-'}</td>
-                    <td>{branch?.name || '-'}</td>
-                    <td>
-                      <Badge tone={roomStatusTone[room.status] || 'neutral'} dot>
-                        {roomStatusMap[room.status] || room.status}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div className="action-btns">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Sơ đồ ghế"
-                          aria-label={`Sửa sơ đồ ghế ${room.name}`}
-                          icon={<Icon name="seat" />}
-                          onClick={() => openSeatMapModal(room)}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Sửa phòng"
-                          aria-label={`Sửa phòng ${room.name}`}
-                          icon={<Icon name="edit" />}
-                          onClick={() => openRoomModal(room)}
-                        />
-                        <Button
-                          variant="ghost-danger"
-                          size="sm"
-                          title="Xóa phòng"
-                          aria-label={`Xóa phòng ${room.name}`}
-                          icon={<Icon name="trash" />}
-                          onClick={() => handleDeleteRoom(room.id, room.name)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {branchModal && (
-        <div className="modal-overlay" {...branchDialog.overlayProps}>
-          <div className="modal-content admin-modal admin-modal--md" {...branchDialog.contentProps}>
-            <div className="admin-modal-header">
-              <h2 id={branchDialog.titleId}>{editingBranch ? 'Sửa chi nhánh' : 'Thêm chi nhánh mới'}</h2>
-              <button type="button" className="modal-close modal-close--inline" onClick={() => setBranchModal(false)} aria-label="Đóng">
-                <XIcon size={16} />
-              </button>
-            </div>
-            <form onSubmit={handleBranchSubmit} className="admin-form">
-              <div className="form-group">
-                <label className="form-label">Mã chi nhánh</label>
-                <input className="input" value={branchForm.branchCode} onChange={(e) => setBranchForm({ ...branchForm, branchCode: e.target.value })} placeholder="VD: MPT-HANOI" required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Tên rạp</label>
-                <input className="input" value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} placeholder="VD: MoviePTIT Cầu Giấy" required />
-              </div>
-              <div className="admin-form-row">
-                <div className="form-group">
-                  <label className="form-label">Thành phố</label>
-                  <input className="input" value={branchForm.city || ''} onChange={(e) => setBranchForm({ ...branchForm, city: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Điện thoại</label>
-                  <input className="input" value={branchForm.phone || ''} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Địa chỉ</label>
-                <input className="input" value={branchForm.address || ''} onChange={(e) => setBranchForm({ ...branchForm, address: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Trạng thái rạp</label>
-                <select className="input" value={branchForm.status || 'ACTIVE'} onChange={(e) => setBranchForm({ ...branchForm, status: e.target.value })}>
-                  <option value="ACTIVE">Hoạt động</option>
-                  <option value="INACTIVE">Tạm dừng</option>
-                </select>
-              </div>
-              <div className="admin-form-actions">
-                <Button onClick={() => setBranchModal(false)}>Hủy</Button>
-                <Button type="submit" variant="primary">{editingBranch ? 'Lưu chi nhánh' : 'Thêm chi nhánh'}</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {roomModal && (
-        <div className="modal-overlay" {...roomDialog.overlayProps}>
-          <div className="modal-content admin-modal admin-modal--md" {...roomDialog.contentProps}>
-            <div className="admin-modal-header">
-              <h2 id={roomDialog.titleId}>{editingRoom ? 'Sửa phòng chiếu' : 'Thêm phòng mới'}</h2>
-              <button type="button" className="modal-close modal-close--inline" onClick={() => setRoomModal(false)} aria-label="Đóng">
-                <XIcon size={16} />
-              </button>
-            </div>
-            <form onSubmit={handleRoomSubmit} className="admin-form">
-              <div className="form-group">
-                <label className="form-label">Thuộc chi nhánh</label>
-                <select className="input" value={roomForm.branchId || ''} onChange={(e) => setRoomForm({ ...roomForm, branchId: e.target.value })} required>
-                  <option value="">-- Chọn rạp --</option>
-                  {branches.map((branch) => (
-                    <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="admin-form-row">
-                <div className="form-group">
-                  <label className="form-label">Mã phòng</label>
-                  <input className="input" value={roomForm.code || ''} onChange={(e) => setRoomForm({ ...roomForm, code: e.target.value })} placeholder="P01" required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Tên phòng</label>
-                  <input className="input" value={roomForm.name || ''} onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })} placeholder="Phòng số 1" required />
-                </div>
-              </div>
-              <div className="admin-form-row">
-                <div className="form-group">
-                  <label className="form-label">Công nghệ phòng</label>
-                  <select className="input" value={roomForm.roomTechnology || 'STANDARD'} onChange={(e) => setRoomForm({ ...roomForm, roomTechnology: e.target.value })}>
-                    {Object.entries(roomTypeMap).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Tổng số ghế</label>
-                  <input type="number" className="input" value={roomForm.seatCapacity || 1} onChange={(e) => setRoomForm({ ...roomForm, seatCapacity: e.target.value })} min="1" required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Trạng thái phòng</label>
-                  <select className="input" value={roomForm.status || 'ACTIVE'} onChange={(e) => setRoomForm({ ...roomForm, status: e.target.value })}>
-                    <option value="ACTIVE">Hoạt động</option>
-                    <option value="INACTIVE">Tạm dừng</option>
-                    <option value="MAINTENANCE">Bảo trì</option>
-                  </select>
-                </div>
-              </div>
-              <div className="admin-form-actions">
-                <Button onClick={() => setRoomModal(false)}>Hủy</Button>
-                <Button type="submit" variant="primary">{editingRoom ? 'Lưu phòng' : 'Thêm phòng'}</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {seatMapModal && (
-        <div className="modal-overlay">
-          <div className="modal-content seat-editor" {...seatMapDialog.contentProps}>
-            <div className="seat-editor-header">
-              <div>
-                <h2 id={seatMapDialog.titleId}>Sơ đồ ghế: {seatMapRoom?.name}</h2>
-                <p>
-                  {sortedSeats.length} ghế. Kéo ghế sang ô trống để tạo lối đi, kéo vào ghế khác để đổi chỗ.
-                </p>
-              </div>
-              <div className="page-header-actions">
-                <Button onClick={() => setExtraColumns((value) => value + 1)}>Thêm cột trống</Button>
-                <Button onClick={closeSeatMapModal}>Đóng</Button>
-                <Button variant="primary" onClick={saveSeatLayout} disabled={savingSeatMap || seatMapLoading}>
-                  {savingSeatMap ? 'Đang lưu...' : 'Lưu sơ đồ'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="seat-editor-body">
-              <div className="seat-editor-canvas">
-                <div className="seat-editor-stage">
-                  <div className="seat-editor-screen">Màn hình</div>
-
-                  {seatMapLoading ? (
-                    <div className="seat-editor-state">
-                      <div className="spinner" />
-                    </div>
-                  ) : seatRows.length === 0 ? (
-                    <div className="seat-editor-state">Phòng này chưa có ghế.</div>
-                  ) : (
-                    <div className="seat-editor-grid">
-                      {seatRows.map((rowLabel) => (
-                        <div key={rowLabel} className="seat-editor-row" style={{ '--seat-cols': gridColumns.length }}>
-                          <div className="seat-editor-row-label">{rowLabel}</div>
-                          {gridColumns.map((seatNumber) => {
-                            const seat = getSeatAt(rowLabel, seatNumber);
-                            const isSelected = seat?.seatId === selectedSeatId;
-                            return (
-                              <div
-                                key={`${rowLabel}-${seatNumber}`}
-                                className={`seat-editor-cell${seat ? '' : ' seat-editor-cell--empty'}`}
-                                onDragOver={(event) => event.preventDefault()}
-                                onDrop={() => handleDrop(rowLabel, seatNumber)}
-                              >
-                                {seat && (
-                                  <button
-                                    type="button"
-                                    draggable
-                                    className={['seat-editor-seat', seatTypeClass[seat.seatType], isSelected && 'is-selected']
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    aria-pressed={isSelected}
-                                    onDragStart={() => setDraggedSeatId(seat.seatId)}
-                                    onDragEnd={() => setDraggedSeatId(null)}
-                                    onClick={() => setSelectedSeatId(seat.seatId)}
-                                    title={`${seat.seatCode} - ${seatTypeMap[seat.seatType] || seat.seatType}`}
-                                  >
-                                    {seat.seatCode}
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <aside className="seat-editor-panel">
-                <h3>Thuộc tính ghế</h3>
-                {selectedSeat ? (
-                  <div className="seat-editor-panel-body">
-                    <div className="seat-editor-current">
-                      <small>Ghế đang chọn</small>
-                      <strong>{selectedSeat.seatCode}</strong>
-                      <p>Hàng {selectedSeat.rowLabel}, cột {selectedSeat.seatNumber}</p>
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="seat-editor-type">Loại ghế</label>
-                      <select
-                        id="seat-editor-type"
-                        className="input"
-                        value={selectedSeat.seatType || 'STANDARD'}
-                        onChange={(event) => updateSeatLocal(selectedSeat.seatId, { seatType: event.target.value })}
-                      >
-                        {Object.entries(seatTypeMap).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="seat-editor-bulk">
-                      <p>Đổi cả hàng {selectedSeat.rowLabel} sang</p>
-                      <div className="seat-editor-bulk-actions">
-                        {Object.entries(seatTypeMap).map(([value, label]) => (
-                          <Button
-                            key={value}
-                            size="xs"
-                            onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: value })}
-                          >
-                            {label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="seat-editor-legend">
-                      <div className="seat-editor-legend-item">
-                        <span className="seat-editor-swatch" aria-hidden="true" />
-                        <span>Ghế thường</span>
-                      </div>
-                      <div className="seat-editor-legend-item">
-                        <span className="seat-editor-swatch seat-editor-swatch--vip" aria-hidden="true" />
-                        <span>Ghế VIP</span>
-                      </div>
-                      <div className="seat-editor-legend-item">
-                        <span className="seat-editor-swatch seat-editor-swatch--couple" aria-hidden="true" />
-                        <span>Ghế đôi</span>
-                      </div>
-                    </div>
+      <OpsDialog open={seatMapModal} size="lg" title={'Sơ đồ ghế ' + (seatMapRoom?.name || '')}
+        description="Kéo ghế đến vị trí mới hoặc chọn vị trí trong mục Thuộc tính ghế."
+        onClose={closeSeatMapModal} disabled={savingSeatMap}
+        footer={<>
+          <OpsButton disabled={savingSeatMap || seatMapLoading} onClick={() => setExtraColumns(value => value + 1)}>Thêm cột trống</OpsButton>
+          <OpsButton disabled={savingSeatMap} onClick={closeSeatMapModal}>Đóng</OpsButton>
+          <OpsButton variant="primary" loading={savingSeatMap} disabled={seatMapLoading || Boolean(seatMapError)}
+            onClick={saveSeatLayout}>Lưu sơ đồ</OpsButton>
+        </>}>
+        {seatMapLoading ? <StateBlock state="loading" title="Đang tải sơ đồ ghế" /> :
+          seatMapError ? <StateBlock state="error" title={seatMapError} onRetry={() => openSeatMapModal(seatMapRoom)} /> :
+          !seatRows.length ? <StateBlock title="Phòng này chưa có ghế" /> :
+          <div className="o-seat-editor">
+            <div className="o-seat-editor__canvas" role="region" aria-label="Sơ đồ ghế" tabIndex={0}>
+              <p className="o-seat-editor__screen">Màn hình</p>
+              <div className="o-seat-editor__grid">
+                {seatRows.map(rowLabel => (
+                  <div key={rowLabel} className="o-seat-editor__row" style={{ '--o-seat-cols': gridColumns.length }}>
+                    <span>{rowLabel}</span>
+                    {gridColumns.map(seatNumber => {
+                      const seat = getSeatAt(rowLabel, seatNumber);
+                      return <div key={seatNumber} className="o-seat-editor__cell" data-empty={!seat || undefined}
+                        onDragOver={event => event.preventDefault()} onDrop={() => !savingSeatMap && handleDrop(rowLabel, seatNumber)}>
+                        {seat && <button type="button" draggable={!savingSeatMap} className="o-seat-editor__seat" data-tier={seat.seatType}
+                          aria-label={seat.seatCode + ', ' + (seatTypeMap[seat.seatType] || seat.seatType)}
+                          aria-pressed={seat.seatId === selectedSeatId}
+                          onDragStart={() => setDraggedSeatId(seat.seatId)} onDragEnd={() => setDraggedSeatId(null)}
+                          onClick={() => { setSelectedSeatId(seat.seatId); setDestination(''); }}>{seat.seatCode}</button>}
+                      </div>;
+                    })}
                   </div>
-                ) : (
-                  <p className="seat-editor-hint">Chọn một ghế để đổi loại ghế.</p>
-                )}
-              </aside>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={Boolean(confirmTarget)}
-        title={confirmTarget?.type === 'BRANCH' ? 'Xóa chi nhánh' : 'Xóa phòng chiếu'}
-        message={
-          confirmTarget?.type === 'BRANCH'
-            ? `Xóa chi nhánh "${confirmTarget?.name || ''}" sẽ ảnh hưởng đến các phòng chiếu thuộc rạp. Tiếp tục?`
-            : `Bạn có chắc chắn muốn xóa phòng "${confirmTarget?.name || ''}"?`
-        }
-        confirmText="Xóa"
-        loading={deleting}
-        onConfirm={executeConfirmDelete}
-        onCancel={() => setConfirmTarget(null)}
-      />
-    </div>
+            <div className="o-form">
+              <h3>Thuộc tính ghế</h3>
+              {selectedSeat && <>
+                <p>Ghế <Code>{selectedSeat.seatCode}</Code></p>
+                <Field label="Loại ghế"><Select value={selectedSeat.seatType || 'STANDARD'} disabled={savingSeatMap}
+                  onChange={event => updateSeatLocal(selectedSeat.seatId, { seatType: event.target.value })}>
+                  {Object.entries(seatTypeMap).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </Select></Field>
+                <Field label="Chuyển vị trí" hint="Nếu vị trí đã có ghế, hai ghế sẽ đổi chỗ."><Select value={destination}
+                  disabled={savingSeatMap} onChange={event => setDestination(event.target.value)}>
+                  <option value="">Chọn vị trí</option>
+                  {seatRows.map(row => <optgroup key={row} label={'Hàng ' + row}>
+                    {gridColumns.map(column => <option key={column} value={row + '/' + column}
+                      disabled={row === selectedSeat.rowLabel && column === selectedSeat.seatNumber}>{row}{column}</option>)}
+                  </optgroup>)}
+                </Select></Field>
+                <OpsButton disabled={!destination || savingSeatMap} onClick={() => {
+                  const [row, column] = destination.split('/');
+                  moveSeatTo(selectedSeat.seatId, row, Number(column));
+                }}>Chuyển ghế</OpsButton>
+                <div>
+                  <p>Đổi cả hàng {selectedSeat.rowLabel}</p>
+                  <div className="o-actions">
+                    {Object.entries(seatTypeMap).map(([value, label]) => <OpsButton size="sm" key={value} disabled={savingSeatMap}
+                      onClick={() => updateRowSeatsLocal(selectedSeat.rowLabel, { seatType: value })}>{label}</OpsButton>)}
+                  </div>
+                </div>
+              </>}
+              <ul className="o-seat-editor__legend" aria-label="Chú thích loại ghế">
+                {Object.entries(seatTypeMap).map(([value, label]) => <li key={value}>
+                  <span className="o-seat-editor__swatch" data-tier={value} aria-hidden="true" />{label}
+                </li>)}
+              </ul>
+            </div>
+          </div>}
+      </OpsDialog>
+      <OpsConfirm open={Boolean(confirmTarget)} title={deleteLabel}
+        message={confirmTarget && deleteLabel + ' ' + confirmTarget.name + '? Thao tác này không thể hoàn tác.'}
+        confirmLabel={deleteLabel} loading={deleting} onConfirm={executeConfirmDelete} onClose={() => setConfirmTarget(null)} />
+    </OpsPage>
   );
 };
 

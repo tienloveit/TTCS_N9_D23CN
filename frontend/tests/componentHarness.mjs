@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { transformWithOxc } from 'vite';
+import * as cinemaTime from '../src/utils/cinemaTime.js';
+import * as paymentStatus from '../src/utils/paymentStatus.js';
 import * as bookingStatus from '../src/utils/bookingStatus.js';
 
 // Execute the actual page with lightweight hooks and a JSX tree, without browser I/O.
@@ -34,9 +36,13 @@ export async function loadPage(path, initialState, services = {}) {
     '../../context/useAuth': { useAuth: () => ({ isAdmin: true, isManager: false }) },
     '../../components/Common/Badge': { default: 'Badge' },
     '../../components/Common/ConfirmDialog': { default: 'ConfirmDialog' },
+    '../../components/Ops': Object.fromEntries(['Code', 'DataTable', 'Field', 'FilterBar', 'Money', 'OpsButton',
+      'OpsConfirm', 'OpsDrawer', 'OpsPage', 'OpsPanel', 'Pagination', 'Select', 'StatStrip', 'StatusBadge',
+      'Textarea', 'TextInput'].map(name => [name, name])),
+    '../../utils/cinemaTime': { ...cinemaTime },
+    '../../utils/paymentStatus': { ...paymentStatus },
     '../../components/Common/Skeleton': { SkeletonBox: 'SkeletonBox' },
     '../../utils/bookingStatus': { ...bookingStatus },
-    './BookingManagement.css': {},
     './ProfilePage.css': {},
     '../../components/Common/CinemaIcons': Object.fromEntries(icons.map(name => [`${name}Icon`, `${name}Icon`])),
   };
@@ -60,7 +66,7 @@ export async function loadPage(path, initialState, services = {}) {
 export function find(tree, predicate) {
   if (Array.isArray(tree)) return tree.flatMap(child => find(child, predicate));
   if (!tree || typeof tree !== 'object') return [];
-  return [...(predicate(tree) ? [tree] : []), ...find(tree.props?.children, predicate)];
+  return [...(predicate(tree) ? [tree] : []), ...['children', 'actions', 'footer'].flatMap(prop => find(tree.props?.[prop], predicate))];
 }
 
 export function textContent(tree) {
