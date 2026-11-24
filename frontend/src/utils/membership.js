@@ -54,3 +54,23 @@ export function getTierLadder(tier, spending) {
     steps,
   };
 }
+
+/**
+ * Các mốc của đường hạng, xếp từ thấp lên cao, kèm phần đã tô của đoạn ray đi tới mốc kế tiếp.
+ * Nhận kết quả của getTierLadder, trả null nếu ladder null.
+ * [{ code, name, minSpending, state, fill }]
+ * - fill trong [0, 1] cho đoạn từ mốc này tới mốc sau; null ở mốc cuối.
+ * - Mốc dưới hạng hiện tại: 1. Mốc hiện tại: ladder.fill (0 nếu thiếu chi tiêu). Mốc trên: 0.
+ */
+export function getTierTrack(ladder) {
+  if (!ladder) return null;
+  const stops = [...ladder.steps].reverse();
+  const currentIndex = stops.findIndex((stop) => stop.state === 'current');
+  return stops.map((stop, index) => {
+    let fill = 0;
+    if (index === stops.length - 1) fill = null;
+    else if (index < currentIndex) fill = 1;
+    else if (index === currentIndex) fill = ladder.fill ?? 0;
+    return { ...stop, fill };
+  });
+}

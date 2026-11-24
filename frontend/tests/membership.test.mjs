@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTierLadder, MEMBERSHIP_TIERS, tierName } from '../src/utils/membership.js';
+import { getTierLadder, getTierTrack, MEMBERSHIP_TIERS, tierName } from '../src/utils/membership.js';
 
 const states = (ladder) => ladder.steps.map((step) => `${step.code}:${step.state}`);
 
@@ -63,4 +63,27 @@ test('backend tier wins when spending lags behind it', () => {
   assert.equal(ladder.fill, 0);
   // Tính theo hạng kế tiếp của Vàng (Bạch Kim, 5.000.000 đ).
   assert.equal(ladder.remaining, 4900000);
+});
+
+const near = (actual, expected) => Math.abs(actual - expected) < 1e-3;
+
+test('tier track lists stops low to high with the fill of each rail segment', () => {
+  const track = getTierTrack(getTierLadder('SILVER', 720000));
+  assert.deepEqual(track.map((stop) => stop.code), ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']);
+  assert.deepEqual(track.map((stop) => stop.state), ['reached', 'current', 'next', 'locked']);
+  assert.equal(track[0].fill, 1);
+  assert.ok(near(track[1].fill, 0.14667));
+  assert.equal(track[2].fill, 0);
+  assert.equal(track[3].fill, null);
+});
+
+test('tier track fills for the edge tiers and missing spending', () => {
+  const fills = (tier, spending) => getTierTrack(getTierLadder(tier, spending)).map((stop) => stop.fill);
+  assert.deepEqual(fills('BRONZE', 0), [0, 0, 0, null]);
+  assert.deepEqual(fills('GOLD', null), [1, 1, 0, null]);
+  assert.deepEqual(fills('PLATINUM', 6000000), [1, 1, 1, null]);
+});
+
+test('tier track is null for an unknown tier', () => {
+  assert.equal(getTierTrack(getTierLadder('UNKNOWN', 100)), null);
 });

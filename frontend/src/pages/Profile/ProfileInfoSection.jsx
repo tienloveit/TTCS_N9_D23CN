@@ -153,9 +153,9 @@ export default function ProfileInfoSection({ profile, onSaved }) {
   ];
 
   return (
-    <section className="ac-section" aria-labelledby="ac-info-title">
-      <div className="ac-section__head">
-        <h2 id="ac-info-title" className="ac-section__title" tabIndex={-1}>Thông tin cá nhân</h2>
+    <section className="ac-info-panel">
+      <div className="ac-panel__head">
+        <h2 id="ac-info-title" className="ac-panel__title" tabIndex={-1}>Thông tin cá nhân</h2>
         {!editing && (
           <Button variant="secondary" ref={editButton} icon={<EditIcon size={16} />} onClick={startEdit}>
             Sửa thông tin
