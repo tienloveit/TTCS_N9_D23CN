@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from './context/useAuth';
 import { ROLE_HOME_PATHS } from './context/roleHomePaths';
 import Layout from './components/Layout/Layout';
@@ -52,18 +52,25 @@ const pageVariants = {
 
 const MotionDiv = motion.div;
 
-const PageWrapper = ({ children }) => (
-  <MotionDiv
-    variants={pageVariants}
-    initial="initial"
-    animate="animate"
-    exit="exit"
-    transition={{ duration: 0.3, ease: "easeInOut" }}
-    style={{ width: '100%' }}
-  >
-    {children}
-  </MotionDiv>
-);
+const PageWrapper = ({ children, respectReducedMotion = false }) => {
+  const reduceMotion = useReducedMotion();
+  if (respectReducedMotion && reduceMotion) {
+    return <div style={{ width: '100%' }}>{children}</div>;
+  }
+
+  return (
+    <MotionDiv
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      style={{ width: '100%' }}
+    >
+      {children}
+    </MotionDiv>
+  );
+};
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -208,7 +215,7 @@ const AnimatedRoutes = () => {
           <Route path="/movie/:id" element={<PageWrapper><MovieDetailPage /></PageWrapper>} />
           <Route path="/branches" element={<PageWrapper><SchedulePage /></PageWrapper>} />
           <Route path="/branch/:branchId" element={<PageWrapper><LegacyBranchRedirect /></PageWrapper>} />
-          <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage isReload={location === reloadedLocation} /></PageWrapper></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><PageWrapper respectReducedMotion><ProfilePage isReload={location === reloadedLocation} /></PageWrapper></PrivateRoute>} />
           <Route path="/my-bookings" element={<PrivateRoute><PageWrapper><MyBookingsPage /></PageWrapper></PrivateRoute>} />
           <Route path="/booking/:bookingId/payment" element={<PrivateRoute><PageWrapper><PaymentPage /></PageWrapper></PrivateRoute>} />
           <Route path="/payment/vnpay-return" element={<PageWrapper><PaymentResultPage /></PageWrapper>} />

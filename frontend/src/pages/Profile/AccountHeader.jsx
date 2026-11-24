@@ -2,6 +2,7 @@ import Button from '../../components/Common/Button';
 import { LogoutIcon, TicketIcon } from '../../components/Common/CinemaIcons';
 import useLogout from '../../context/useLogout';
 import { dateKeyParts, toCinemaDateKey } from '../../utils/cinemaTime';
+import MembershipLadder from './MembershipLadder';
 
 /** "11/2025" theo giờ rạp. Intl của vi-VN ra "tháng 11, 2025" nên ghép từ khóa ngày. */
 function joinedMonth(createdAt) {
@@ -19,22 +20,25 @@ export default function AccountHeader({ profile }) {
   const joined = joinedMonth(profile?.createdAt);
 
   return (
-    <header className="ac-head">
-      <h1 className="ac-head__title">
-        {name ? <><span className="sr-only">Tài khoản của </span>{name}</> : 'Tài khoản của tôi'}
-      </h1>
-      {(username || joined) && (
-        <p className="ac-head__meta">
-          {username && <span>@{username}</span>}
-          {joined && <span>Thành viên từ {joined}</span>}
-        </p>
-      )}
-      <div className="ac-head__actions">
-        <Button variant="secondary" className="ac-head__button" to="/my-bookings" icon={<TicketIcon size={18} />}>Vé của tôi</Button>
-        <Button variant="ghost" icon={<LogoutIcon size={18} />} onClick={logout} disabled={pending}>
-          {pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
-        </Button>
+    <header className={profile ? 'ac-head' : 'ac-head ac-head--single'}>
+      <div className="ac-head__identity">
+        <h1 id="ac-account-title" className="ac-head__title" tabIndex={-1}>
+          {name ? <><span className="sr-only">Tài khoản của </span>{name}</> : 'Tài khoản của tôi'}
+        </h1>
+        {(username || joined) && (
+          <p className="ac-head__meta">
+            {username && <span>@{username}</span>}
+            {joined && <span>Thành viên từ {joined}</span>}
+          </p>
+        )}
+        <div className="ac-head__actions">
+          <Button variant="secondary" to="/my-bookings" icon={<TicketIcon size={18} />}>Vé của tôi</Button>
+          <Button variant="ghost" icon={<LogoutIcon size={18} />} onClick={logout} disabled={pending}>
+            {pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
+          </Button>
+        </div>
       </div>
+      {profile && <MembershipLadder tier={profile.membershipTier} spending={profile.totalSpending} />}
     </header>
   );
 }
