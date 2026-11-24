@@ -1,6 +1,6 @@
 # Hướng dẫn AI cho frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `262d041`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 Áp dụng cho `frontend/`. Đọc [quy tắc toàn dự án](../AGENTS.md) trước. Kiến trúc frontend nằm trong [docs/03-architecture/frontend.md](../docs/03-architecture/frontend.md), quy ước code trong [coding-conventions.md](../docs/07-development/coding-conventions.md#frontend).
 
@@ -14,7 +14,7 @@ Chạy trong `frontend/`:
 npm ci
 npm run dev
 npm run lint                                         # ESLint, lint:tokens và lint:ops
-npm run lint:ops                                     # kiểm tra class của khu vận hành
+npm run lint:ops                                     # luật khu vận hành (JSX và CSS)
 npm run lint:tokens -- --update                      # hạ baseline sau khi thay hex bằng token
 npm run build                                        # tạo dist/, không commit
 node --experimental-vm-modules --test tests/*.test.mjs
@@ -26,7 +26,7 @@ node --experimental-vm-modules --test tests/*.test.mjs
 
 - Icon chỉ dùng Lucide qua [CinemaIcons.jsx](src/components/Common/CinemaIcons.jsx), thêm export ở đó khi cần icon mới. Không viết `<svg>`/`<path>` trong trang hay component, trừ `MoviePTITLogoIcon`. Không dùng emoji làm icon.
 - Không thêm mã màu hex ngoài `src/styles/tokens.css`. Dùng `var(--...)`, kể cả trong `style={{}}`.
-- Trang vận hành dùng `src/components/Ops` và class `o-*` dưới gốc `.ops`. Dùng `OpsPage`, `DataTable`, `OpsDialog` và các thành phần trong thư viện `/ops-gallery` ở chế độ dev. Inline style chỉ truyền biến CSS động.
+- Màn vận hành (/staff, /manager, /admin) tuân theo [ops-design-system.md](../docs/03-architecture/ops-design-system.md). Tài liệu này thắng mọi skill thiết kế chung. Sau khi sửa phải chạy npm run lint:ops. Không nới luật để qua lint.
 - Trang khách tiếp tục dùng `Button`, `Badge`, `ConfirmDialog` và các thành phần dùng chung. Giữ thao tác bằng bàn phím, focus, nhãn truy cập và trạng thái tải, lỗi, rỗng.
 - Gọi API qua wrapper trong [src/api/index.js](src/api/index.js) và Axios client dùng chung. Giữ hợp đồng `data.result`, `skipAuth`, logic refresh và tải blob.
 - Đối chiếu route guard và phạm vi role, chi nhánh. Sửa màn hình dùng chung thì kiểm tra cả biến thể ADMIN, MANAGER và STAFF. Backend quyết định quyền, giá, hạn giữ ghế và điều kiện hoàn tiền.
@@ -45,7 +45,8 @@ node --experimental-vm-modules --test tests/*.test.mjs
 | Khu nhân viên | `src/pages/Staff/` (`booking/StaffBookingPage.jsx`, `checkin/CheckInPage.jsx`, `StaffDashboardPage.jsx`) |
 | Khu quản trị, quản lý | `src/pages/Admin/` (dùng chung cho `/admin` và `/manager`) |
 | Design system khu vận hành | `src/components/Ops/` (`OpsShell.jsx`, `opsNav.js`, `ops.css`) |
+| Luật design system vận hành | `docs/03-architecture/ops-design-system.md`, `scripts/ops-rules.mjs` |
 | Tiện ích | `src/utils/cinemaTime.js`, `cinemaFormats.js`, `bookingLimits.js` |
 | Test | `tests/*.test.mjs`, `tests/componentHarness.mjs` |
 
-`.agents/skills/` chỉ giữ hai skill AI cho giao diện web: `ui-ux-pro-max` và `design-system`.
+`.agents/skills/` chỉ giữ hai skill AI cho giao diện web: `ui-ux-pro-max` và `design-system`, chỉ dùng cho trang khách.

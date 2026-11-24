@@ -1,6 +1,6 @@
 # Thêm một trang frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `ef70b10`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 Ví dụ: thêm trang `/manager/vouchers-report` cho ADMIN và MANAGER.
 
@@ -26,7 +26,7 @@ Ví dụ: thêm trang `/manager/vouchers-report` cho ADMIN và MANAGER.
   - Lỗi: thông báo kèm nút thử lại. Lỗi thao tác dùng `toast.error`.
   - Rỗng: `StateBlock` hoặc `EmptyState` ở trang khách.
   - Nhiều lần gọi chồng nhau: chỉ nhận phản hồi của lần gọi mới nhất.
-- [ ] **6. Dùng thành phần có sẵn:** dùng `DataTable` trong `OpsPanel flush`, `FilterBar` cho tìm và lọc, `Field` cho form, `OpsDialog` hoặc `OpsDrawer` cho lớp nổi. Icon lấy từ `CinemaIcons.jsx`. CSS vận hành dùng class `o-*`, kiểm tra bằng `npm run lint:ops`. Danh sách ở [frontend.md](../../03-architecture/frontend.md#thành-phần-dùng-chung).
+- [ ] **6. Dùng thành phần có sẵn:** dùng `DataTable` trong `OpsPanel flush`, `FilterBar` cho tìm và lọc, `Field` cho form, `OpsDialog` hoặc `OpsDrawer` cho lớp nổi. Icon lấy từ `CinemaIcons.jsx`. Luật đầy đủ ở [ops-design-system.md](../../03-architecture/ops-design-system.md), kiểm tra bằng `npm run lint:ops`.
 - [ ] **7. Dùng token màu** `var(--...)`, không thêm mã hex. Thời gian dùng `src/utils/cinemaTime.js`.
 - [ ] **8. Kiểm tra quyền:** đăng nhập bằng từng role được phép và một role không được phép. Nhớ rằng guard chỉ để điều hướng, backend phải tự chặn.
 - [ ] **9. Kiểm tra:** `npm run lint`, `npm run build`. Hàm thuần mới nên có test trong `frontend/tests/`.

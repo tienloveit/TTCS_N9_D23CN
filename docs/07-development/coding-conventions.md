@@ -1,6 +1,6 @@
 # Quy ước viết code
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `ef70b10`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 ## Chung
 
@@ -94,7 +94,7 @@ Trang lớn giữ state, effect và gọi API ở component cha. Component con c
 
 - Không thêm mã màu hex ngoài `src/styles/tokens.css`. Dùng `var(--...)`, kể cả trong `style={{}}`.
 - `npm run lint` chạy `lint:tokens`, lệnh này thất bại khi một file có nhiều mã hex hơn mức trong `design-tokens-baseline.json`. Sau khi thay mã hex bằng token, chạy `npm run lint:tokens -- --update` để hạ mức. Mức chỉ được giảm.
-- CSS vận hành nằm dưới gốc `.ops`. Class mới có tiền tố `o-`, trạng thái dùng ARIA hoặc `data-*`, inline style chỉ truyền biến CSS động. Dùng `--o-*` cho màu và mật độ, `--seat-*` và `--tier-*` cho ghế. `npm run lint:ops` kiểm tra class cũ trong khu vận hành.
+- Khu vận hành theo [ops-design-system.md](../03-architecture/ops-design-system.md), kiểm bằng `npm run lint:ops`.
 - Không dùng Tailwind hay PostCSS.
 
 ### Component và trải nghiệm

@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `f89017e`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -169,7 +169,7 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 ## CSS
 
 - Token dùng chung nằm trong `src/styles/tokens.css`. Khu vận hành dùng Archivo và nhóm `--o-*` trong cây `.ops`. Gốc có `data-density="touch"` ở khu Staff, `desk` ở khu Manager và Admin.
-- `components/Ops/ops.css` là điểm nạp CSS của khu vận hành. CSS bố cục riêng nằm trong `src/styles/ops/` và dùng class `o-*`. Khung có sidebar từ 1280px, dải icon từ 1024px, menu dạng drawer ở màn hẹp.
+- `components/Ops/ops.css` là điểm nạp CSS của khu vận hành, CSS bố cục riêng nằm trong `src/styles/ops/`. Khung có sidebar từ 1280px, dải icon từ 1024px, menu dạng drawer ở màn hẹp. Luật token, CSS, thành phần và chữ của khu vận hành nằm trong [ops-design-system.md](ops-design-system.md).
 - `/ops-gallery` chỉ có khi chạy Vite dev. Dùng trang này để xem trạng thái component ở cả hai mật độ. Trang khách dùng Inter và CSS chung.
 
 Quy tắc viết CSS, icon và component nằm trong [coding-conventions.md](../07-development/coding-conventions.md#frontend).

@@ -1,6 +1,6 @@
 # Kiểm thử
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `f89017e`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
 
 ## Lệnh
 
