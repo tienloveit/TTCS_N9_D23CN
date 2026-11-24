@@ -1,6 +1,6 @@
 # Quy trình Git
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `95aefaa`.
 
 Remote: `git@github.com:tienloveit/TTCS_N9_D23CN.git`.
 
@@ -67,7 +67,7 @@ Mỗi commit là một thay đổi có nghĩa và build được. Không gộp s
 
 ### Điều kiện merge
 
-Repo chưa có CI, nên chạy các kiểm tra sau ở máy trước khi merge:
+CI `frontend` phải xanh. Workflow [frontend.yml](../../.github/workflows/frontend.yml) chạy `npm run lint` (gồm `lint:ops`), test frontend thường và với `TZ=UTC`, và `npm run build` cho pull request đổi `frontend/`. Backend chưa có CI, nên chạy các kiểm tra sau ở máy trước khi merge:
 
 - [ ] `.\mvnw.cmd test` pass trong `backend/` (gồm Spotless).
 - [ ] `npm run lint`, `npm run build` và `node --experimental-vm-modules --test tests/*.test.mjs` pass trong `frontend/`.

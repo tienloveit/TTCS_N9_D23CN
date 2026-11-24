@@ -1,6 +1,6 @@
 # Kiểm thử
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `95aefaa`.
 
 ## Lệnh
 
@@ -107,4 +107,4 @@ Chưa có test end-to-end tự động. Các luồng sau cần thử tay trên t
 
 ## Trước khi merge
 
-Danh sách kiểm tra nằm ở [git-workflow.md](git-workflow.md#điều-kiện-merge). Tối thiểu: test backend và frontend pass, `npm run lint` và `npm run build` pass, đã thử tay luồng bị ảnh hưởng với đúng role.
+CI `frontend` phải xanh, xem [frontend.yml](../../.github/workflows/frontend.yml). Danh sách kiểm tra nằm ở [git-workflow.md](git-workflow.md#điều-kiện-merge). Tối thiểu: test backend và frontend pass, `npm run lint` và `npm run build` pass, đã thử tay luồng bị ảnh hưởng với đúng role.
