@@ -10,8 +10,8 @@ import RegisterPage from './pages/Register/RegisterPage';
 import HomePage from './pages/Home/HomePage';
 import MovieListPage from './pages/MovieList/MovieListPage';
 import MovieDetailPage from './pages/MovieDetail/MovieDetailPage';
-import BranchListPage from './pages/Branch/BranchListPage';
-import BranchDetailPage from './pages/Branch/BranchDetailPage';
+import SchedulePage from './pages/Schedule/SchedulePage';
+import LegacyBranchRedirect from './pages/Schedule/LegacyBranchRedirect';
 import MyBookingsPage from './pages/MyBookings/MyBookingsPage';
 import PaymentPage from './pages/Payment/PaymentPage';
 import PaymentResultPage from './pages/Payment/PaymentResultPage';
@@ -203,8 +203,8 @@ const AnimatedRoutes = () => {
           <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />
           <Route path="/movies" element={<PageWrapper><MovieListPage /></PageWrapper>} />
           <Route path="/movie/:id" element={<PageWrapper><MovieDetailPage /></PageWrapper>} />
-          <Route path="/branches" element={<PageWrapper><BranchListPage /></PageWrapper>} />
-          <Route path="/branch/:branchId" element={<PageWrapper><BranchDetailPage /></PageWrapper>} />
+          <Route path="/branches" element={<PageWrapper><SchedulePage /></PageWrapper>} />
+          <Route path="/branch/:branchId" element={<PageWrapper><LegacyBranchRedirect /></PageWrapper>} />
           <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage /></PageWrapper></PrivateRoute>} />
           <Route path="/my-bookings" element={<PrivateRoute><PageWrapper><MyBookingsPage /></PageWrapper></PrivateRoute>} />
           <Route path="/booking/:bookingId/payment" element={<PrivateRoute><PageWrapper><PaymentPage /></PageWrapper></PrivateRoute>} />
