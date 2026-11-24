@@ -4,15 +4,15 @@
 }
 
 .pf-layout {
-  max-width: 1312px;
+  max-width: var(--account-max-width);
   margin-inline: auto;
-  padding-inline: clamp(14px, 3vw, 36px);
+  padding-inline: var(--account-gutter);
 }
 .pf-page svg { flex-shrink: 0; }
 .pf-page [hidden] { display: none; }
 .pf-page :is(a, button, input, select, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .pf-page-header { margin-bottom: clamp(20px, 3vw, 32px); }
-.pf-page-header h1 { font-size: clamp(1.85rem, 4vw, 3rem); line-height: 1.12; font-weight: var(--fw-bold); letter-spacing: -.045em; }
+.pf-page-header h1 { font-size: var(--account-title-size); line-height: 1.12; font-weight: var(--fw-bold); letter-spacing: -.045em; }
 .pf-page-header p { margin-top: 7px; color: var(--ink-muted); }
 
 .pf-dashboard,

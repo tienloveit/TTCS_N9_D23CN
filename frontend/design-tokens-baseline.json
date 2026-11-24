@@ -16,8 +16,7 @@
   "src/pages/Admin/ShowtimeCalendar.css": 13,
   "src/pages/Admin/ShowtimeManagement.jsx": 1,
   "src/pages/Branch/BranchPages.css": 42,
-  "src/pages/MyBookings/MyBookingsPage.css": 102,
+  "src/pages/MyBookings/MyBookingsPage.css": 88,
   "src/pages/Profile/ProfilePage.css": 40,
-  "src/pages/SeatSelect/SeatSelectPage.jsx": 1,
   "src/pages/Staff/booking/staffBookingUtils.js": 6
 }

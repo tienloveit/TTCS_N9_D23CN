@@ -13,6 +13,7 @@ import {
 } from '../../utils/cinemaTime';
 import { StaffSkeleton, StaffState } from './StaffUI';
 import useNow from './useNow';
+import { BOOKING_STATUS_META } from '../../utils/bookingStatus';
 
 // Tự làm mới khi tab đang mở, để suất kế tiếp và đơn chờ thanh toán không bị cũ.
 const REFRESH_INTERVAL_MS = 60_000;
@@ -22,11 +23,6 @@ const number = new Intl.NumberFormat('vi-VN');
 const decimal = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
 const todayLabel = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full', timeZone: 'Asia/Ho_Chi_Minh' });
 const format = (formatter, value) => value == null ? '—' : formatter.format(value);
-const bookingStatuses = {
-  COMPLETED: ['Hoàn tất', 'success'], PENDING: ['Chờ thanh toán', 'warning'],
-  CANCELLED: ['Đã hủy', 'neutral'], EXPIRED: ['Hết hạn', 'neutral'],
-  REFUND_REQUESTED: ['Yêu cầu hoàn tiền', 'warning'], REFUNDED: ['Đã hoàn tiền', 'neutral'],
-};
 const paymentMethods = { CASH: 'Tiền mặt', VNPAY: 'VNPay', CARD: 'Thẻ' };
 
 const QUICK_ACTIONS = [
@@ -312,7 +308,7 @@ function RecentBookings({ bookings }) {
             <tbody>
               {bookings.map((booking) => {
                 const code = booking.bookingCode || `#${booking.bookingId}`;
-                const [label, tone] = bookingStatuses[booking.status] || [booking.status || '—', 'neutral'];
+                const { label, tone } = BOOKING_STATUS_META[booking.status] || { label: booking.status || '—', tone: 'neutral' };
                 return (
                   <tr key={booking.bookingId}>
                     <td><strong>{code}</strong><small>{booking.username || 'Khách tại quầy'}</small></td>

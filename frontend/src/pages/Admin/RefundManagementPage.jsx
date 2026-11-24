@@ -12,6 +12,7 @@ import {
   XIcon,
 } from '../../components/Common/CinemaIcons';
 import { formatCinema } from '../../utils/cinemaTime';
+import { bookingStatusTone } from '../../utils/bookingStatus';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
@@ -166,7 +167,7 @@ const RefundManagementPage = () => {
                 </td>
                 <td className="cell-wrap">{booking.refundReason || '-'}</td>
                 <td>
-                  <Badge tone={booking.status === 'REFUND_REQUESTED' ? 'warning' : 'success'} dot>
+                  <Badge tone={bookingStatusTone(booking.status)} dot>
                     {booking.status === 'REFUND_REQUESTED' ? 'Chờ xử lý' : 'Đã hoàn tiền'}
                   </Badge>
                 </td>

@@ -133,6 +133,12 @@
   --space-7: 48px;
   --space-8: 64px;
 
+  /* ---------- Khu tài khoản (Hồ sơ, Vé của tôi) ----------
+     Dùng chung để mép nội dung và cỡ tiêu đề không nhảy khi chuyển trang. */
+  --account-max-width: 1312px;
+  --account-gutter: clamp(14px, 3vw, 36px);
+  --account-title-size: clamp(1.85rem, 4vw, 3rem);
+
   /* ---------- Bo góc theo thứ bậc ---------- */
   --radius-sm: 6px;      /* input, chip, ghế */
   --radius-md: 10px;     /* nút, thẻ */

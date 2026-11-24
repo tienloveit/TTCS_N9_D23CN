@@ -478,6 +478,16 @@ export default function SeatSelectPage() {
             {bookingStep === 2 && (
               <>
                 {/* Food Selection */}
+            {foods.length === 0 && !foodError && (
+              <div className="card food-select-card">
+                <div className="food-select-header">
+                  <div>
+                    <h2>Chọn đồ ăn</h2>
+                    <p>Suất này chưa có bắp nước. Bạn có thể thanh toán vé ngay hoặc quay lại đổi ghế.</p>
+                  </div>
+                </div>
+              </div>
+            )}
             {(foods.length > 0 || foodError) && (
               <div className="card food-select-card">
                 <div className="food-select-header">
@@ -519,7 +529,7 @@ export default function SeatSelectPage() {
                           {food.description && <p>{food.description}</p>}
                           <strong>{formatCurrency(food.price)}</strong>
                           {limited && (
-                            <small style={{ display: 'block', color: soldOut ? '#ef4444' : 'var(--text-muted)' }}>
+                            <small style={{ display: 'block', color: soldOut ? 'var(--danger)' : 'var(--text-muted)' }}>
                               {soldOut ? 'Hết hàng' : `Còn ${food.stockQuantity} phần`}
                             </small>
                           )}
@@ -625,9 +635,15 @@ export default function SeatSelectPage() {
           {bookingStep === 1 ? (
             <button className="btn btn-primary" onClick={() => setBookingStep(2)}>Tiếp tục</button>
           ) : (
-            <button className="btn btn-primary" onClick={handleBooking} disabled={booking}>
-              {booking ? 'Đang xử lý...' : 'Thanh toán'}
-            </button>
+            <>
+              {/* Sidebar chứa nút "Quay lại" bị ẩn trên mobile, nên thanh dưới cần đường quay về bước chọn ghế. */}
+              <button type="button" className="btn btn-secondary" onClick={() => setBookingStep(1)} disabled={booking}>
+                Đổi ghế
+              </button>
+              <button className="btn btn-primary" onClick={handleBooking} disabled={booking}>
+                {booking ? 'Đang xử lý...' : 'Thanh toán'}
+              </button>
+            </>
           )}
         </div>
       )}

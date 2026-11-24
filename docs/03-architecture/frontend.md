@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-24, commit `afcb552`.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -36,7 +36,7 @@ frontend/src/
 │   └── roleHomePaths.js   Trang mặc định theo role
 ├── components/
 │   ├── Common/            Button, Badge, CinemaIcons, ConfirmDialog, EmptyState, ErrorBoundary,
-│   │                      SafeImage, Skeleton, BookingReceipt, useModalDialog
+│   │                      SafeImage, Skeleton, BookingReceipt, PasswordField, useModalDialog
 │   ├── Layout/, Navbar/   Khung trang khách
 │   ├── MovieCard/         Thẻ phim
 │   └── Ticket/            DigitalTicket (vé số)
@@ -52,7 +52,9 @@ frontend/src/
 ├── utils/
 │   ├── cinemaTime.js      Thời gian theo giờ rạp
 │   ├── cinemaFormats.js   Nhãn công nghệ phòng, định dạng chiếu
-│   └── bookingLimits.js   MAX_FOOD_QUANTITY = 50
+│   ├── bookingLimits.js   MAX_FOOD_QUANTITY = 50
+│   ├── bookingStatus.js   Nhãn và tone Badge cho booking.status, dùng chung mọi màn
+│   └── ageRatings.js      Danh mục phân loại độ tuổi P, K, T13, T16, T18
 └── index.css              CSS chung
 ```
 
@@ -144,7 +146,8 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | Thành phần | Cách dùng |
 | --- | --- |
 | `Button` | `variant` primary, secondary, ghost, danger, ghost-danger. `size` xs, sm, md, lg. `to` để render `Link`. Nút chỉ có icon phải có `aria-label`. |
-| `Badge` | `tone` neutral, success, warning, danger, info, brand. `dot` để hiện chấm. |
+| `Badge` | `tone` neutral, success, warning, danger, info, brand. `dot` để hiện chấm. Tone của trạng thái đơn lấy từ `BOOKING_STATUS_META` trong `utils/bookingStatus.js`, không khai báo lại trong từng trang. |
+| `PasswordField` | Ô mật khẩu có nút hiện/ẩn (vùng bấm 40px, tên nút theo trạng thái), nhãn gắn `htmlFor`/`id`. Dùng cho đăng nhập, đăng ký, quên mật khẩu. |
 | `useModalDialog(open, onClose, { disabled })` | Trả `overlayProps`, `contentProps`, `titleId` để gắn vào `.modal-overlay`, `.modal-content`. Xử lý Esc (chỉ modal trên cùng), giữ Tab trong modal, focus phần tử đầu, trả focus khi đóng, chỉ đóng khi nhấn và thả chuột đều ở nền. Modal sơ đồ ghế truyền `disabled: true`. |
 | `ConfirmDialog`, `EmptyState`, `Skeleton`, `SafeImage`, `ErrorBoundary`, `BookingReceipt` | Hộp xác nhận, trạng thái rỗng, khung đang tải, ảnh có ảnh dự phòng, bắt lỗi render, phiếu thanh toán. |
 | `StaffUI.jsx` | `StaffPageHeading`, `StaffState`, `StaffSkeleton`, `StaffChips` (nhóm nút lọc chọn một, dùng `aria-pressed`). |

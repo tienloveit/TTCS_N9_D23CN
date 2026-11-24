@@ -3,7 +3,8 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { authApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
-import { EyeIcon, EyeOffIcon, MailIcon, KeyIcon } from '../../components/Common/CinemaIcons';
+import { MailIcon, KeyIcon } from '../../components/Common/CinemaIcons';
+import PasswordField from '../../components/Common/PasswordField';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -12,8 +13,6 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loadingSend, setLoadingSend] = useState(false);
   const [loadingReset, setLoadingReset] = useState(false);
@@ -89,10 +88,12 @@ export default function ForgotPasswordPage() {
 
         <form className="auth-form" onSubmit={handleSendOtp}>
           <div className="form-group">
-            <label className="form-label">Email tài khoản</label>
+            <label className="form-label" htmlFor="forgot-email">Email tài khoản</label>
             <div className="auth-input-wrap">
               <MailIcon width={20} height={20} />
               <input
+                id="forgot-email"
+                autoComplete="email"
                 className="input auth-input-with-icon"
                 type="email"
                 placeholder="Nhập email đã đăng ký"
@@ -117,10 +118,12 @@ export default function ForgotPasswordPage() {
         {otpSent && (
           <form className="auth-form forgot-reset-form" onSubmit={handleResetPassword}>
             <div className="form-group">
-              <label className="form-label">Mã OTP</label>
+              <label className="form-label" htmlFor="forgot-otp">Mã OTP</label>
               <div className="auth-input-wrap">
                 <KeyIcon width={20} height={20} />
                 <input
+                  id="forgot-otp"
+                  autoComplete="one-time-code"
                   className="input auth-input-with-icon"
                   type="text"
                   inputMode="numeric"
@@ -132,53 +135,29 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Mật khẩu mới</label>
-              <div className="auth-input-wrap">
-                <input
-                  className="input"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu mới"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={6}
-                  required
-                  style={{ paddingRight: '40px' }}
-                />
-                <button
-                  type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                >
-                  {showPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
-                </button>
-              </div>
-            </div>
+            <PasswordField
+              id="forgot-new-password"
+              label="Mật khẩu mới"
+              toggleLabel="mật khẩu mới"
+              placeholder="Nhập mật khẩu mới"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              minLength={6}
+              required
+            />
 
-            <div className="form-group">
-              <label className="form-label">Xác nhận mật khẩu mới</label>
-              <div className="auth-input-wrap">
-                <input
-                  className="input"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Nhập lại mật khẩu mới"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={6}
-                  required
-                  style={{ paddingRight: '40px' }}
-                />
-                <button
-                  type="button"
-                  className="auth-password-toggle"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
-                >
-                  {showConfirmPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
-                </button>
-              </div>
-            </div>
+            <PasswordField
+              id="forgot-confirm-password"
+              label="Xác nhận mật khẩu mới"
+              toggleLabel="mật khẩu xác nhận"
+              placeholder="Nhập lại mật khẩu mới"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              minLength={6}
+              required
+            />
 
             <button
               className="btn btn-primary"

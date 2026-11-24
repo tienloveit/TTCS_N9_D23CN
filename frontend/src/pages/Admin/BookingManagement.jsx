@@ -18,6 +18,7 @@ import {
   TicketIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { BOOKING_STATUS_META } from '../../utils/bookingStatus';
 import './BookingManagement.css';
 
 const PAGE_SIZE = 15;
@@ -25,14 +26,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 const EMPTY_FILTERS = { branch: '', from: '', to: '', payment: '' };
 const EMPTY_PAGE = { totalElements: 0, totalPages: 0, summary: { completed: 0, refundRequested: 0, paidAmount: 0 } };
 const DASH = '—';
-const BOOKING_STATUS = {
-  PENDING: { label: 'Chờ xử lý', tone: 'warning' },
-  COMPLETED: { label: 'Hoàn tất', tone: 'success' },
-  REFUND_REQUESTED: { label: 'Yêu cầu hoàn tiền', tone: 'warning' },
-  REFUNDED: { label: 'Đã hoàn tiền', tone: 'info' },
-  CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
-  EXPIRED: { label: 'Hết hạn', tone: 'neutral' },
-};
+const BOOKING_STATUS = BOOKING_STATUS_META;
 const PAYMENT_STATUS = {
   PENDING: { label: 'Chờ thanh toán', tone: 'warning' },
   PAID: { label: 'Đã thanh toán', tone: 'success' },

@@ -1,5 +1,6 @@
 // Thời gian theo giờ rạp nằm trong utils/cinemaTime.js; re-export để giữ API cũ.
 import { parseLocalDateTime } from '../../utils/cinemaTime.js';
+import { bookingStatusTone } from '../../utils/bookingStatus.js';
 
 export {
   parseLocalDateTime,
@@ -76,17 +77,19 @@ export const getBookingPhase = (booking, now) => {
   }
 };
 
+// Tone theo bộ của <Badge>. Giai đoạn suy ra trực tiếp từ booking.status lấy tone từ
+// BOOKING_STATUS_META để cùng một trạng thái có cùng màu ở trang khách, quầy và quản trị.
 export const PHASE_META = {
-  upcoming: { label: 'Sắp chiếu', tone: 'green' },
-  in_progress: { label: 'Đang chiếu', tone: 'blue' },
-  paid: { label: 'Đã thanh toán', tone: 'blue' },
+  upcoming: { label: 'Sắp chiếu', tone: 'success' },
+  in_progress: { label: 'Đang chiếu', tone: 'info' },
+  paid: { label: 'Đã thanh toán', tone: 'info' },
   checked_in: { label: 'Đã check-in', tone: 'neutral' },
-  pending: { label: 'Chờ thanh toán', tone: 'amber' },
+  pending: { label: 'Chờ thanh toán', tone: bookingStatusTone('PENDING') },
   watched: { label: 'Đã chiếu', tone: 'neutral' },
-  refund_requested: { label: 'Chờ duyệt hoàn tiền', tone: 'orange' },
-  refunded: { label: 'Đã hoàn tiền', tone: 'violet' },
-  cancelled: { label: 'Đã hủy', tone: 'red' },
-  expired: { label: 'Hết hạn thanh toán', tone: 'neutral' },
+  refund_requested: { label: 'Chờ duyệt hoàn tiền', tone: bookingStatusTone('REFUND_REQUESTED') },
+  refunded: { label: 'Đã hoàn tiền', tone: bookingStatusTone('REFUNDED') },
+  cancelled: { label: 'Đã hủy', tone: bookingStatusTone('CANCELLED') },
+  expired: { label: 'Hết hạn thanh toán', tone: bookingStatusTone('EXPIRED') },
   other: { label: 'Không xác định', tone: 'neutral' },
 };
 

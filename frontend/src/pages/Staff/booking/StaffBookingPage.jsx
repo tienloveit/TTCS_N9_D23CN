@@ -436,7 +436,7 @@ export default function StaffBookingPage() {
           movieId: st.movieId,
           movieName: st.movieName || meta.movieName || 'Phim chưa rõ tên',
           thumbnailUrl: st.thumbnailUrl || meta.thumbnailUrl || meta.posterUrl || '',
-          ageRating: st.ageRating || meta.ageRating || 'P',
+          ageRating: st.ageRating || meta.ageRating || null,
           duration: meta.duration || meta.durationMinutes || null,
           language: meta.language || null,
           branches: new Map(),

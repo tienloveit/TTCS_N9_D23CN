@@ -1,5 +1,6 @@
 import { formatScreening } from '../../../utils/cinemaFormats';
 import { parseLocalDateTime } from '../../../utils/cinemaTime';
+import { AGE_RATING_UNKNOWN } from '../../../utils/ageRatings';
 import Button from '../../../components/Common/Button';
 import SafeImage from '../../../components/Common/SafeImage';
 import { SearchIcon } from '../../../components/Common/CinemaIcons';
@@ -166,7 +167,9 @@ export default function StaffShowtimeStep({
                 <div className="counter-movie-body">
                   <div className="counter-movie-head">
                     <h3>{movie.movieName}</h3>
-                    {movie.ageRating && <span className="counter-age">{movie.ageRating}</span>}
+                    <span className="counter-age" title={movie.ageRating ? `Phân loại ${movie.ageRating}` : 'Phim chưa có phân loại độ tuổi'}>
+                      {movie.ageRating || AGE_RATING_UNKNOWN}
+                    </span>
                     <span className="counter-movie-meta">
                       {[movie.duration && `${movie.duration} phút`, movie.language].filter(Boolean).join(' · ')}
                     </span>
