@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/frontend/scripts/ops-guard.mjs\"", "timeout": 30 }
+        ]
+      }
+    ]
+  }
+}
