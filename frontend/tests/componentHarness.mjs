@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { transformWithOxc } from 'vite';
+import * as bookingStatus from '../src/utils/bookingStatus.js';
 
 // Execute the actual page with lightweight hooks and a JSX tree, without browser I/O.
 export async function loadPage(path, initialState, services = {}) {
@@ -34,6 +35,7 @@ export async function loadPage(path, initialState, services = {}) {
     '../../components/Common/Badge': { default: 'Badge' },
     '../../components/Common/ConfirmDialog': { default: 'ConfirmDialog' },
     '../../components/Common/Skeleton': { SkeletonBox: 'SkeletonBox' },
+    '../../utils/bookingStatus': { ...bookingStatus },
     './BookingManagement.css': {},
     './ProfilePage.css': {},
     '../../components/Common/CinemaIcons': Object.fromEntries(icons.map(name => [`${name}Icon`, `${name}Icon`])),

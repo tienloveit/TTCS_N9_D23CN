@@ -62,7 +62,7 @@ export default function MovieDetailPage() {
   const [userComment, setUserComment] = useState('');
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSaving, setRatingSaving] = useState(false);
-  const [ratingMessage, setRatingMessage] = useState('');
+  const [ratingMessage, setRatingMessage] = useState(null); // { tone: 'success' | 'danger', text }
   const [reviews, setReviews] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey());
   const [dateWindowOffset, setDateWindowOffset] = useState(0);
@@ -346,7 +346,7 @@ export default function MovieDetailPage() {
       return;
     }
     setUserRating(score);
-    setRatingMessage('');
+    setRatingMessage(null);
   };
 
   const handleRateMovie = async (score = userRating) => {
@@ -357,7 +357,7 @@ export default function MovieDetailPage() {
     if (!score) return;
 
     setRatingSaving(true);
-    setRatingMessage('');
+    setRatingMessage(null);
 
     try {
       const res = await movieApi.rate(id, score, userComment);
@@ -373,11 +373,11 @@ export default function MovieDetailPage() {
           }
           : prev
       );
-      setRatingMessage('Đã lưu đánh giá của bạn.');
+      setRatingMessage({ tone: 'success', text: 'Đã lưu đánh giá của bạn.' });
       // Refresh reviews list
       movieApi.getRatings(id).then((r) => setReviews(r.data.result || [])).catch(() => { });
     } catch {
-      setRatingMessage('Không thể lưu đánh giá. Vui lòng thử lại.');
+      setRatingMessage({ tone: 'danger', text: 'Không thể lưu đánh giá. Vui lòng thử lại.' });
     } finally {
       setRatingSaving(false);
     }
@@ -492,7 +492,14 @@ export default function MovieDetailPage() {
           >
             {ratingSaving ? 'Đang gửi...' : 'Gửi đánh giá'}
           </button>
-          {ratingMessage && <small style={{ color: 'var(--green)', fontWeight: 600 }}>{ratingMessage}</small>}
+          {ratingMessage && (
+            <small
+              role={ratingMessage.tone === 'danger' ? 'alert' : 'status'}
+              style={{ color: ratingMessage.tone === 'danger' ? 'var(--danger)' : 'var(--success)', fontWeight: 600 }}
+            >
+              {ratingMessage.text}
+            </small>
+          )}
         </div>
       </div>
     </div>

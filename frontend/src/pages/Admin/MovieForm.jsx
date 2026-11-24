@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import axiosClient, { API_BASE_URL } from '../../api/axiosClient';
 import { CalendarIcon, FilmIcon, ImageFileIcon, PlusIcon, XIcon } from '../../components/Common/CinemaIcons';
+import { AGE_RATINGS } from '../../utils/ageRatings';
 import './MovieForm.css';
 
 const mediaUrl = (url) => url?.startsWith('/movie/media/') ? `${API_BASE_URL}${url}` : url;
@@ -159,8 +160,8 @@ export default function MovieForm({ movie, genres, directors, onSave, onClose })
           </div>
           {field('Thời lượng (phút)', 'durationMinutes', '120', { required: true, type: 'number' })}
           <label className="movie-form-field"><span>Phân loại độ tuổi</span><select name="ageRating" value={form.ageRating} onChange={input}>
-            <option value="">Chọn độ tuổi</option><option value="P">P - Mọi độ tuổi</option><option value="K">K - Có người giám hộ</option>
-            <option value="T13">T13 - Từ 13 tuổi</option><option value="T16">T16 - Từ 16 tuổi</option><option value="T18">T18 - Từ 18 tuổi</option>
+            <option value="">Chọn độ tuổi</option>
+            {AGE_RATINGS.map((rating) => <option key={rating.code} value={rating.code}>{rating.option}</option>)}
           </select></label>
           {field('Ngôn ngữ', 'language', 'Tiếng Anh, Tiếng Việt...', { maxLength: 100 })}
           <label className="movie-form-field"><span>Đạo diễn</span><input name="directorName" value={form.directorName} onChange={input} list="movie-directors" placeholder="Tên đạo diễn" maxLength={255} />

@@ -12,6 +12,7 @@ import {
   SparkIcon,
   XIcon,
 } from '../../components/Common/CinemaIcons';
+import { AGE_RATINGS } from '../../utils/ageRatings';
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'Tất cả phim', icon: FilmIcon },
@@ -32,42 +33,50 @@ export default function MovieListPage() {
   const [sortBy, setSortBy] = useState('DEFAULT');
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'ALL');
 
-  // Sync filters when URL query params change (e.g. navbar search or dropdown navigation)
-  useEffect(() => {
-    const urlStatus = searchParams.get('status') || 'ALL';
-    const urlSearch = searchParams.get('movieName') || '';
-
-    setStatusFilter(urlStatus);
-    setSearchTerm(urlSearch);
-    setCurrentPage(1);
-  }, [searchParams]);
-
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [movieRes, genreRes] = await Promise.allSettled([
-          movieApi.getAll(),
-          genreApi.getAll()
-        ]);
+  // Sync filters when URL query params change (e.g. navbar search or dropdown navigation).
+  // Điều chỉnh state ngay trong lúc render thay cho effect, tránh render thừa.
+  const [syncedParams, setSyncedParams] = useState(searchParams);
+  if (searchParams !== syncedParams) {
+    setSyncedParams(searchParams);
+    setStatusFilter(searchParams.get('status') || 'ALL');
+    setSearchTerm(searchParams.get('movieName') || '');
+    setCurrentPage(1);
+  }
 
-        if (movieRes.status === 'fulfilled') {
-          setMovies(movieRes.value.data.result || []);
-        }
-        if (genreRes.status === 'fulfilled') {
-          setGenres(genreRes.value.data.result || []);
-        }
-      } catch (err) {
-        console.error('Lỗi khi tải danh sách phim', err);
-      } finally {
-        setLoading(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.allSettled([movieApi.getAll(), genreApi.getAll()]).then(([movieRes, genreRes]) => {
+      if (!active) return;
+      if (movieRes.status === 'fulfilled') {
+        setMovies(movieRes.value.data.result || []);
+      } else {
+        // Không có dữ liệu phim thì không thể nói là "không khớp bộ lọc".
+        setLoadError(true);
       }
+      if (genreRes.status === 'fulfilled') {
+        setGenres(genreRes.value.data.result || []);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
     };
-    fetchData();
-  }, []);
+  }, [reloadKey]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(false);
+    setReloadKey((key) => key + 1);
+  };
 
   const handleStatusChange = (nextStatus) => {
     setStatusFilter(nextStatus);
@@ -179,9 +188,11 @@ export default function MovieListPage() {
                 ? 'Phim sắp chiếu'
                 : 'Danh sách phim'}
           </h1>
-          <p className="page-subtitle">
-            {filteredMovies.length} phim
-          </p>
+          {!loadError && (
+            <p className="page-subtitle">
+              {filteredMovies.length} phim
+            </p>
+          )}
         </div>
 
         {/* ================= FILTER & SORT TOOLBAR ================= */}
@@ -244,10 +255,7 @@ export default function MovieListPage() {
                 }}
               >
                 <option value="ALL">Mọi độ tuổi</option>
-                <option value="P">P - Phổ biến</option>
-                <option value="T13">T13 - Từ 13 tuổi</option>
-                <option value="T16">T16 - Từ 16 tuổi</option>
-                <option value="T18">T18 - Từ 18 tuổi</option>
+                {AGE_RATINGS.map((rating) => <option key={rating.code} value={rating.code}>{rating.option}</option>)}
               </select>
 
               <select
@@ -297,7 +305,16 @@ export default function MovieListPage() {
         </div>
 
         {/* ================= GRID ================= */}
-        {filteredMovies.length === 0 ? (
+        {loadError ? (
+          <div role="alert">
+            <CatalogEmpty
+              title="Không tải được danh sách phim"
+              message="Đã có lỗi khi kết nối tới hệ thống. Vui lòng thử lại sau ít phút."
+              action="Thử lại"
+              onAction={retryLoad}
+            />
+          </div>
+        ) : filteredMovies.length === 0 ? (
           <CatalogEmpty
             title="Không tìm thấy phim phù hợp"
             message="Không có bộ phim nào khớp với bộ lọc hiện tại. Hãy thử đặt lại bộ lọc hoặc đổi từ khoá khác."

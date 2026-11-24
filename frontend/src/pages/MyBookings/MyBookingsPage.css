@@ -9,9 +9,9 @@
 }
 
 .mt-wrap {
-  max-width: 1192px;
+  max-width: var(--account-max-width);
   margin-inline: auto;
-  padding-inline: clamp(14px, 3vw, 36px);
+  padding-inline: var(--account-gutter);
 }
 
 .mt-page svg { flex-shrink: 0; }
@@ -29,10 +29,10 @@
   margin-bottom: clamp(20px, 3vw, 32px);
 }
 .mt-heading {
-  font-size: clamp(2.2rem, 4.4vw, 3.5rem);
+  font-size: var(--account-title-size);
   font-weight: var(--fw-bold);
   letter-spacing: -.045em;
-  line-height: 1.15;
+  line-height: 1.12;
 }
 .mt-subheading { margin-top: 5px; color: var(--mt-muted); font-size: .93rem; }
 
@@ -199,13 +199,12 @@
   font-weight: var(--fw-bold);
   line-height: 1.4;
 }
-.mt-tone--green { background: #e6f6ec; color: #17623d; }
-.mt-tone--amber { background: #fdf2d5; color: #804209; }
-.mt-tone--orange { background: #fff0e6; color: #97320e; }
-.mt-tone--blue { background: #eaf1ff; color: #21427b; }
-.mt-tone--violet { background: #f2ebfe; color: #5b2597; }
-.mt-tone--red { background: #fce9e9; color: #992525; }
-.mt-tone--neutral { background: #eef1f6; color: #40516a; }
+/* Cùng bộ tone với <Badge> (components.css) */
+.mt-tone--success { background: var(--success-soft); color: var(--success); }
+.mt-tone--warning { background: var(--warning-soft); color: var(--warning-strong); }
+.mt-tone--info { background: var(--info-soft); color: var(--info); }
+.mt-tone--danger { background: var(--danger-soft); color: var(--danger); }
+.mt-tone--neutral { background: var(--surface-sunken); color: var(--ink-secondary); }
 .mt-code { color: var(--mt-muted); font-size: .78rem; overflow-wrap: anywhere; }
 .mt-code b { margin-left: 4px; font-family: ui-monospace, monospace; letter-spacing: .04em; }
 .mt-title { margin: 4px 0; font-size: clamp(1.1rem, 2.2vw, 1.47rem); line-height: 1.2; font-weight: var(--fw-bold); overflow-wrap: anywhere; }
