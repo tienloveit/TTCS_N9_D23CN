@@ -121,10 +121,10 @@ const PromotionManagement = () => {
       };
       if (editingPromo) {
         await promotionApi.update(editingPromo.id, payload);
-        toast.success(`Cập nhật khuyến mãi "${formData.code}" thành công!`);
+        toast.success(`Đã cập nhật khuyến mãi "${formData.code}"`);
       } else {
         await promotionApi.create(payload);
-        toast.success(`Thêm khuyến mãi "${formData.code}" thành công!`);
+        toast.success(`Đã thêm khuyến mãi "${formData.code}"`);
       }
       handleCloseModal();
       fetchPromotions();
@@ -146,7 +146,7 @@ const PromotionManagement = () => {
     setDeleting(true);
     try {
       await promotionApi.delete(deleteTarget.id);
-      toast.success(`Đã vô hiệu hóa "${deleteTarget.code}"!`);
+      toast.success(`Đã vô hiệu hóa "${deleteTarget.code}"`);
       setDeleteTarget(null);
       fetchPromotions();
     } catch (err) {

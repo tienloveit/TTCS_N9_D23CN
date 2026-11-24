@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `ef70b10`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `f89017e`.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -69,7 +69,7 @@ frontend/src/
 └── index.css              CSS chung
 ```
 
-`frontend/tests/` chứa test Node, `frontend/scripts/check-design-tokens.mjs` kiểm tra mã màu hex và `frontend/scripts/check-ops-classes.mjs` kiểm tra class vận hành. Xem [testing.md](../07-development/testing.md).
+`frontend/tests/` chứa test Node, `frontend/scripts/check-design-tokens.mjs` kiểm tra mã màu hex và `frontend/scripts/check-ops-classes.mjs` kiểm tra luật khu vận hành: JSX và CSS. Xem [testing.md](../07-development/testing.md).
 
 ## Định tuyến và guard
 

@@ -271,8 +271,6 @@
 
 /* ---------- Màn xuất vé ---------- */
 .o-staff-sale-complete { width: min(100%, 860px); margin-inline: auto; padding: clamp(15px, 3vw, 32px); background: var(--o-surface); border: 1px solid var(--o-line); border-radius: var(--o-r-3); }
-.o-staff-sale-complete .staff-page-heading { margin-bottom: 22px; }
-.o-staff-sale-complete .staff-heading-icon { color: var(--ink-inverse); background: var(--success); }
 .o-staff-sale-complete .digital-ticket { border: 1px solid var(--o-line); }
 .o-staff-sale-actions { margin-top: 22px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .o-staff-sale-foods { margin-top: 20px; padding-top: 18px; border-top: 2px dashed var(--o-line); text-align: left; }
