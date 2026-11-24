@@ -1,11 +1,9 @@
+import { DataTable, FilterBar, OpsButton, OpsConfirm, OpsDialog, OpsPage, OpsPanel, Segmented, StatusBadge, Field, ChoiceCards } from '../../components/Ops';
 import { useState, useEffect, useMemo } from 'react';
 import { branchApi, userApi } from '../../api';
 import { toast } from 'react-toastify';
+import PasswordField from '../../components/Common/PasswordField';
 import { useAuth } from '../../context/useAuth';
-import Badge from '../../components/Common/Badge';
-import Button from '../../components/Common/Button';
-import ConfirmDialog from '../../components/Common/ConfirmDialog';
-import useModalDialog from '../../components/Common/useModalDialog';
 import {
   EditIcon as LucideEditIcon,
   LockIcon as LucideLockIcon,
@@ -56,6 +54,7 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -67,7 +66,6 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState(null);   // null = add mode
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
-  const dialog = useModalDialog(isModalOpen, () => closeModal(), { disabled: submitting });
   const roleOptions = isManager
     ? ROLE_OPTIONS.filter((option) => option.value === 'STAFF')
     : ROLE_OPTIONS;
@@ -79,6 +77,7 @@ const UserManagement = () => {
       const result = res.data.result;
       setUsers(result?.data || result || []);
     } catch (err) {
+      setLoadError(true);
       console.error('Lỗi khi tải người dùng:', err);
       toast.error('Không thể tải danh sách người dùng');
     } finally {
@@ -151,7 +150,7 @@ const UserManagement = () => {
           branchId: ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.update(editingUser.id, payload);
-        toast.success(`Cập nhật người dùng "${formData.username}" thành công!`);
+        toast.success(`Đã cập nhật người dùng "${formData.username}"`);
       } else {
         // Thêm mới: dùng CreateUserRequest
         const payload = {
@@ -166,7 +165,7 @@ const UserManagement = () => {
           branchId: ['MANAGER', 'STAFF'].includes(isManager ? 'STAFF' : formData.role) ? Number(formData.branchId) : null,
         };
         await userApi.create(payload);
-        toast.success(`Tạo tài khoản "${formData.username}" thành công!`);
+        toast.success(`Đã tạo tài khoản "${formData.username}"`);
       }
       closeModal();
       fetchUsers();
@@ -235,29 +234,18 @@ const UserManagement = () => {
     });
   }, [users, roleFilter, statusFilter, searchTerm]);
 
-  if (loading) return <div className="loading"><div className="spinner" /></div>;
 
   /* ─────────── RENDER ─────────── */
   return (
-    <div>
-      {/* Page header */}
-      <div className="page-header page-header--split">
-        <div>
-          <h1 className="page-title">Quản lý người dùng</h1>
-          <p className="page-subtitle">
-            Tổng cộng <strong>{users.length}</strong> tài khoản trong hệ thống.
-          </p>
-        </div>
-        <Button variant="primary" icon={<PlusIcon />} onClick={openAddModal}>
+    <OpsPage title="Quản lý người dùng" description={isManager ? 'Quản lý nhân viên tại chi nhánh.' : 'Quản lý tài khoản trên toàn hệ thống.'} actions={<OpsButton variant="primary" icon={<PlusIcon />} onClick={openAddModal}>
           Thêm người dùng
-        </Button>
-      </div>
+        </OpsButton>}>
+      {/* Page header */}
 
       {/* Table card */}
-      <div className="admin-table-card">
-        <div className="console-toolbar">
-          <div className="console-status-tabs">
-            {(isManager
+      <FilterBar search={searchTerm} onSearchChange={setSearchTerm} searchLabel="Tìm người dùng" searchPlaceholder="Tìm username, tên, email, SĐT..."
+        filtered={Boolean(searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL')} onReset={() => { setSearchTerm(''); setRoleFilter('ALL'); setStatusFilter('ALL'); }} resultLabel={`${filtered.length} người dùng`}>
+        <Segmented label="Vai trò" value={roleFilter} onChange={setRoleFilter} options={(isManager
               ? [{ key: 'ALL', label: 'Tất cả' }, { key: 'STAFF', label: 'Staff' }]
               : [
                   { key: 'ALL', label: 'Tất cả' },
@@ -265,29 +253,15 @@ const UserManagement = () => {
                   { key: 'MANAGER', label: 'Manager' },
                   { key: 'STAFF', label: 'Staff' },
                   { key: 'USER', label: 'User' },
-                ]
-            ).map((tab) => {
-              const count =
+                ]).map(tab => {
+                const count =
                 tab.key === 'ALL'
                   ? users.length
                   : users.filter((u) => u.role === tab.key).length;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  className={`console-status-tab ${roleFilter === tab.key ? 'is-active' : ''}`}
-                  onClick={() => setRoleFilter(tab.key)}
-                >
-                  <span>{tab.label}</span>
-                  <span className="console-status-count">{count}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="admin-toolbar-filters">
-            <select
-              className="input input-sm input-auto"
+                return { value: tab.key, label: tab.label, count };
+              })} />
+        <Field label="Trạng thái tài khoản"><select
+              className="o-input"
               aria-label="Lọc theo trạng thái tài khoản"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -295,76 +269,37 @@ const UserManagement = () => {
               <option value="ALL">Mọi trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="BLOCKED">Bị khóa</option>
-            </select>
+            </select></Field>
+      </FilterBar>
+      <OpsPanel flush title="Người dùng">
 
-            <div className="admin-search">
-              <SearchIcon size={16} className="input-leading-icon" aria-hidden="true" />
-              <input
-                type="search"
-                className="input input-sm"
-                placeholder="Tìm username, tên, email, SĐT..."
-                aria-label="Tìm người dùng"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th className="col-index">#</th>
-              <th>Tài khoản</th>
-              <th>Họ tên</th>
-              <th>Email</th>
-              <th>SĐT</th>
-              <th>Vai trò</th>
-              <th>Trạng thái</th>
-              <th>Ngày tạo</th>
-              <th className="col-actions">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan="9" className="admin-table-empty">
-                  {searchTerm ? 'Không tìm thấy người dùng phù hợp. Thử từ khóa khác.' : 'Chưa có người dùng nào.'}
-                </td>
-              </tr>
-            ) : (
-              filtered.map((user, idx) => {
-                const roleInfo = getRoleInfo(user.role);
-                return (
-                  <tr key={user.id || idx}>
-                    <td className="cell-index">{idx + 1}</td>
-                    <td>
-                      <div className="admin-media-cell">
-                        <div className="admin-avatar" aria-hidden="true">
+        <DataTable caption="Người dùng" rows={filtered} rowKey={user => user.id}
+          state={loading ? 'loading' : loadError ? 'error' : 'ready'} onRetry={fetchUsers}
+          empty={{ title: 'Không có người dùng phù hợp', action: { label: 'Làm mới', onClick: fetchUsers } }}
+          columns={[
+            { key: 'index', header: "#", render: (user, idx) => idx + 1 },
+            { key: 'tai_khoan', header: "Tài khoản", render: user => <> <div className="o-media">
+                        <div className="o-account__avatar" aria-hidden="true">
                           {(user.username || 'U').charAt(0).toUpperCase()}
                         </div>
-                        <span className="cell-strong">{user.username}</span>
-                      </div>
-                    </td>
-                    <td>{user.fullName || '—'}</td>
-                    <td className="cell-muted cell-break">{user.email || '—'}</td>
-                    <td>{user.phoneNumber || '—'}</td>
-                    <td>
-                      <Badge tone={roleInfo.tone}>{roleInfo.label}</Badge>
-                    </td>
-                    <td>
-                      <Badge
+                        <span className="o-table-value">{user.username}</span>
+                      </div> </> },
+            { key: 'ho_ten', header: "Họ tên", render: user => user.fullName || '—' },
+            { key: 'email', header: "Email", render: user => user.email || '—' },
+            { key: 'sdt', header: "SĐT", render: user => user.phoneNumber || '—' },
+            { key: 'vai_tro', header: "Vai trò", render: user => {
+              const roleInfo = getRoleInfo(user.role);
+              return (<> <StatusBadge>{roleInfo.label}</StatusBadge> </>);
+            } },
+            { key: 'trang_thai', header: "Trạng thái", render: user => <> <StatusBadge
                         tone={user.status === 'ACTIVE' ? 'success' : user.status === 'BLOCKED' ? 'danger' : 'warning'}
-                        dot
                       >
                         {user.status === 'ACTIVE' ? 'Hoạt động' : user.status === 'BLOCKED' ? 'Bị khóa' : user.status || '—'}
-                      </Badge>
-                    </td>
-                    <td>{formatDate(user.createdAt)}</td>
-                    <td>
-                      <div className="action-btns">
+                      </StatusBadge> </> },
+            { key: 'ngay_tao', header: "Ngày tạo", render: user => formatDate(user.createdAt) },
+            { key: 'hanh_dong', header: "Hành động", render: user => <> <div className="o-actions">
                         {/* Sửa */}
-                        <Button
+                        <OpsButton
                           variant="ghost"
                           size="sm"
                           title="Sửa người dùng"
@@ -374,7 +309,7 @@ const UserManagement = () => {
                         />
 
                         {/* Khóa / Mở khóa */}
-                        <Button
+                        <OpsButton
                           variant="ghost"
                           size="sm"
                           title={user.status === 'BLOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
@@ -384,7 +319,7 @@ const UserManagement = () => {
                         />
 
                         {/* Xóa */}
-                        <Button
+                        <OpsButton
                           variant="ghost-danger"
                           size="sm"
                           title="Xóa tài khoản"
@@ -392,46 +327,26 @@ const UserManagement = () => {
                           icon={<TrashIcon />}
                           onClick={() => handleDelete(user)}
                         />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                      </div> </> }
+          ]} />
+      </OpsPanel>
 
       {/* ─── Modal Thêm / Sửa ─── */}
       {isModalOpen && (
-        <div className="modal-overlay" {...dialog.overlayProps}>
-          <div className="modal-content admin-modal admin-modal--md" {...dialog.contentProps}>
-            {/* Header */}
-            <div className="admin-modal-header">
-              <div>
-                <h2 id={dialog.titleId}>
-                  {editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
-                </h2>
-                <p>
-                  {editingUser
-                    ? `Tài khoản: ${editingUser.username}`
-                    : 'Trường có dấu * là bắt buộc.'}
-                </p>
-              </div>
-              <button type="button" onClick={closeModal} className="modal-close modal-close--inline modal-close--lg" aria-label="Đóng">
-                <XIcon size={18} />
-              </button>
-            </div>
+        <OpsDialog open title={editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'} onClose={closeModal} disabled={submitting} size="md" footer={<><OpsButton onClick={closeModal} disabled={submitting}>Hủy</OpsButton>
+                <OpsButton type="submit" form="o-user-form" variant="primary" disabled={submitting}>
+                  {submitting ? 'Đang lưu...' : editingUser ? 'Lưu tài khoản' : 'Tạo tài khoản'}
+                </OpsButton></>}>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="admin-form admin-form--grid">
+            <form id="o-user-form" onSubmit={handleSubmit} className="o-form-grid">
 
               {/* Username — chỉ hiển thị khi thêm mới */}
               {!editingUser && (
-                <div className="form-group">
-                  <label className="form-label" htmlFor="user-username">Tên đăng nhập <span className="required-mark" aria-hidden="true">*</span></label>
+                <div className="o-field">
+                  <label className="o-field__label" htmlFor="user-username">Tên đăng nhập <span className="o-required" aria-hidden="true">*</span></label>
                   <input
-                    id="user-username" type="text" name="username" className="input"
+                    id="user-username" type="text" name="username" className="o-input"
                     value={formData.username} onChange={handleInputChange}
                     required placeholder="Ví dụ: nguyenvana"
                   />
@@ -440,92 +355,66 @@ const UserManagement = () => {
 
               {/* Password — chỉ bắt buộc khi thêm mới */}
               {!editingUser && (
-                <div className="form-group">
-                  <label className="form-label" htmlFor="user-password">Mật khẩu <span className="required-mark" aria-hidden="true">*</span></label>
-                  <input
-                    id="user-password" type="password" name="password" className="input"
-                    value={formData.password} onChange={handleInputChange}
-                    required minLength={6} placeholder="Tối thiểu 6 ký tự"
-                  />
-                </div>
+                <PasswordField appearance="ops" id="user-password" label="Mật khẩu" name="password"
+                  autoComplete="new-password" value={formData.password} onChange={handleInputChange}
+                  placeholder="Tối thiểu 6 ký tự" minLength={6} required />
               )}
 
               {/* Họ tên */}
-              <div className={`form-group${editingUser ? '' : ' span-full'}`}>
-                <label className="form-label" htmlFor="user-fullname">Họ và tên</label>
+              <div className={`o-field${editingUser ? '' : ' o-form-grid__wide'}`}>
+                <label className="o-field__label" htmlFor="user-fullname">Họ và tên</label>
                 <input
-                  id="user-fullname" type="text" name="fullName" className="input"
+                  id="user-fullname" type="text" name="fullName" className="o-input"
                   value={formData.fullName} onChange={handleInputChange}
                   placeholder="Nguyễn Văn A"
                 />
               </div>
 
               {/* Email */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="user-email">Email</label>
+              <Field label="Email">
                 <input
-                  id="user-email" type="email" name="email" className="input"
+                  id="user-email" type="email" name="email" className="o-input"
                   value={formData.email} onChange={handleInputChange}
                   placeholder="example@gmail.com"
                 />
-              </div>
+              </Field>
 
               {/* SĐT */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="user-phone">Số điện thoại</label>
+              <Field label="Số điện thoại">
                 <input
-                  id="user-phone" type="tel" name="phoneNumber" className="input"
+                  id="user-phone" type="tel" name="phoneNumber" className="o-input"
                   value={formData.phoneNumber} onChange={handleInputChange}
                   placeholder="0901234567"
                 />
-              </div>
+              </Field>
 
               {/* Giới tính */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="user-gender">Giới tính</label>
-                <select id="user-gender" name="gender" className="input" value={formData.gender} onChange={handleInputChange}>
+              <Field label="Giới tính">
+                <select id="user-gender" name="gender" className="o-input" value={formData.gender} onChange={handleInputChange}>
                   {GENDER_OPTIONS.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
-              </div>
+              </Field>
 
               {/* Ngày sinh */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="user-dob">Ngày sinh</label>
+              <Field label="Ngày sinh">
                 <input
-                  id="user-dob" type="date" name="dob" className="input"
+                  id="user-dob" type="date" name="dob" className="o-input"
                   value={formData.dob} onChange={handleInputChange}
                 />
-              </div>
+              </Field>
 
               {/* Vai trò — chỉ admin mới assign */}
-              <fieldset className="form-group span-full">
-                <legend className="form-label">Vai trò</legend>
-                <div className="admin-choice-group">
-                  {roleOptions.map(o => (
-                    <label
-                      key={o.value}
-                      className={`admin-choice${formData.role === o.value ? ' is-checked' : ''}`}
-                    >
-                      <input
-                        type="radio" name="role" value={o.value}
-                        checked={formData.role === o.value}
-                        onChange={handleInputChange}
-                      />
-                      <span>{o.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <ChoiceCards className="o-form-grid__wide" name="role" label="Vai trò" options={roleOptions}
+                value={formData.role} onChange={role => handleInputChange({ target: { name: 'role', value: role } })} />
 
               {['MANAGER', 'STAFF'].includes(formData.role) && (
-                <div className="form-group span-full">
-                  <label className="form-label" htmlFor="user-branch">Chi nhánh quản lý</label>
-                  <select
+                <Field label="Chi nhánh quản lý" className="o-form-grid__wide">
+                <select
                     id="user-branch"
                     name="branchId"
-                    className="input"
+                    className="o-input"
                     value={formData.branchId}
                     onChange={handleInputChange}
                     required
@@ -537,22 +426,16 @@ const UserManagement = () => {
                       </option>
                     ))}
                   </select>
-                </div>
+              </Field>
               )}
 
               {/* Buttons */}
-              <div className="admin-form-actions span-full">
-                <Button onClick={closeModal}>Hủy</Button>
-                <Button type="submit" variant="primary" disabled={submitting}>
-                  {submitting ? 'Đang lưu...' : editingUser ? 'Lưu tài khoản' : 'Tạo tài khoản'}
-                </Button>
-              </div>
+
             </form>
-          </div>
-        </div>
+          </OpsDialog>
       )}
 
-      <ConfirmDialog
+      <OpsConfirm
         open={Boolean(confirmState)}
         title={
           confirmState?.type === 'DELETE'
@@ -568,7 +451,7 @@ const UserManagement = () => {
               ? `Mở khóa hoạt động cho tài khoản "${confirmState?.payload?.username}"?`
               : `Khóa quyền truy cập của tài khoản "${confirmState?.payload?.username}"?`
         }
-        confirmText="Xác nhận"
+        confirmText={confirmState?.type === 'DELETE' ? 'Xóa tài khoản' : confirmState?.payload?.status === 'BLOCKED' ? 'Mở khóa' : 'Khóa tài khoản'}
         variant={
           confirmState?.type === 'STATUS' && confirmState?.payload?.status === 'BLOCKED'
             ? 'primary'
@@ -578,7 +461,7 @@ const UserManagement = () => {
         onConfirm={executeConfirmedAction}
         onCancel={() => setConfirmState(null)}
       />
-    </div>
+    </OpsPage>
   );
 };
 

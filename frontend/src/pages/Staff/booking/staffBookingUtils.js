@@ -31,7 +31,7 @@ export const escapeHtml = (value) =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/'/g, '&apos;');
 
 export const buildPrintDocument = (booking) => {
   const seatCodes = booking.seatCodes || (booking.tickets || []).map((ticket) => ticket.seatCode);
@@ -58,16 +58,16 @@ export const buildPrintDocument = (booking) => {
         <title>${escapeHtml(booking.bookingCode || 'Hoa don')}</title>
         <style>
           * { box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; margin: 0; color: #111827; }
+          body { font-family: Arial, sans-serif; margin: 0; color: CanvasText; }
           .ticket { width: 80mm; padding: 14px; }
-          .brand { text-align: center; border-bottom: 1px dashed #9ca3af; padding-bottom: 10px; margin-bottom: 10px; }
+          .brand { text-align: center; border-bottom: 1px dashed GrayText; padding-bottom: 10px; margin-bottom: 10px; }
           .brand h1 { font-size: 18px; margin: 0 0 4px; }
-          .brand p, .muted { color: #6b7280; font-size: 12px; margin: 0; }
+          .brand p, .muted { color: CanvasText; font-size: 12px; margin: 0; }
           .row { display: flex; justify-content: space-between; gap: 12px; margin: 7px 0; font-size: 13px; }
           .row strong { text-align: right; }
-          .section { border-top: 1px dashed #9ca3af; margin-top: 10px; padding-top: 10px; }
+          .section { border-top: 1px dashed GrayText; margin-top: 10px; padding-top: 10px; }
           table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          td, th { padding: 5px 0; border-bottom: 1px solid #e5e7eb; text-align: left; }
+          td, th { padding: 5px 0; border-bottom: 1px solid GrayText; text-align: left; }
           td:last-child, th:last-child { text-align: right; }
           .total { font-size: 18px; font-weight: 800; text-align: right; margin-top: 10px; }
           .code { font-family: monospace; font-size: 13px; text-align: center; margin-top: 12px; }
@@ -133,15 +133,6 @@ export const formatStartsIn = (startMs, nowMs) => {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return rest ? `còn ${hours} giờ ${rest} phút` : `còn ${hours} giờ`;
-};
-
-/** Mức lấp đầy (%) và tông màu theo số ghế còn trống. Ngưỡng "sắp hết" khớp màn chọn suất. */
-export const LOW_SEAT_THRESHOLD = 15;
-export const seatFill = (availableSeats, totalSeats) => {
-  if (availableSeats == null || !totalSeats) return null;
-  const percent = Math.min(100, Math.max(0, Math.round(((totalSeats - availableSeats) / totalSeats) * 100)));
-  const tone = availableSeats === 0 ? 'full' : availableSeats <= LOW_SEAT_THRESHOLD ? 'low' : 'ok';
-  return { percent, tone };
 };
 
 const ticketStatus = (ticket) => ticket.displayStatus || ticket.ticketStatus;

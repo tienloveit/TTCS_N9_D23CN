@@ -89,11 +89,13 @@ select:disabled {
 
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: var(--ink-inverse);
 }
 
+/* Đặt lại màu chữ khi hover: nút render bằng <Link> sẽ nhận a:hover (đổi chữ sang --accent-hover, trùng nền). */
 .btn-primary:hover {
   background: var(--accent-hover);
+  color: var(--ink-inverse);
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
 }
@@ -106,6 +108,7 @@ select:disabled {
 
 .btn-secondary:hover {
   background: var(--bg-card-hover);
+  color: var(--text-primary);
   border-color: var(--text-muted);
 }
 
@@ -1850,13 +1853,22 @@ select:disabled {
   padding-left: 42px;
 }
 
+.auth-input-with-toggle {
+  padding-right: 48px;
+}
+
+/* Vùng bấm 40x40 cho nút hiện/ẩn mật khẩu */
 .auth-password-toggle {
   position: absolute;
-  right: 10px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
   padding: 0;
   color: var(--text-secondary);
   background: none;
@@ -3048,6 +3060,10 @@ select:disabled {
 
 .payment-result-icon--error {
   color: var(--accent);
+}
+
+.payment-result-icon--pending {
+  color: var(--warning);
 }
 
 .booking-list {

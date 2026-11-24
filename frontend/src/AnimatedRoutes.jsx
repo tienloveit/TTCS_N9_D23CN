@@ -40,6 +40,7 @@ import StaffBookingPage from './pages/Staff/booking/StaffBookingPage';
 import CheckInPage from './pages/Staff/checkin/CheckInPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 
+const OpsGallery = import.meta.env.DEV ? lazy(() => import('./components/Ops/OpsGallery')) : null;
 const SeatSelectPage = lazy(() => import('./pages/SeatSelect/SeatSelectPage'));
 
 // Animation variants
@@ -119,6 +120,7 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        {OpsGallery && <Route path="/ops-gallery" element={<Suspense><OpsGallery /></Suspense>} />}
         {/* Auth pages */}
         <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
         <Route path="/oauth2/callback" element={<PageWrapper><OAuth2CallbackPage /></PageWrapper>} />
@@ -155,20 +157,20 @@ const AnimatedRoutes = () => {
             </AdminRoute>
           }
         >
-          <Route index element={<AdminOnlyRoute><PageWrapper><AdminDashboard /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="movies" element={<AdminOnlyRoute><PageWrapper><MovieManagement /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="showtimes" element={<AdminOnlyRoute><PageWrapper><ShowtimeManagement /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
-          <Route path="users" element={<AdminOnlyRoute><PageWrapper><UserManagement /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="bookings" element={<AdminOnlyRoute><PageWrapper><BookingManagement /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="foods" element={<AdminOnlyRoute><PageWrapper><FoodManagement /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="promotions" element={<AdminOnlyRoute><PageWrapper><PromotionManagement /></PageWrapper></AdminOnlyRoute>} />
-          <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
-          <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
-          <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
-          <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
-          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
-          <Route path="settings" element={<AdminOnlyRoute><PageWrapper><SystemSettingsPage /></PageWrapper></AdminOnlyRoute>} />
+          <Route index element={<AdminOnlyRoute><AdminDashboard /></AdminOnlyRoute>} />
+          <Route path="movies" element={<AdminOnlyRoute><MovieManagement /></AdminOnlyRoute>} />
+          <Route path="showtimes" element={<AdminOnlyRoute><ShowtimeManagement /></AdminOnlyRoute>} />
+          <Route path="branches" element={<BranchManagement />} />
+          <Route path="users" element={<AdminOnlyRoute><UserManagement /></AdminOnlyRoute>} />
+          <Route path="bookings" element={<AdminOnlyRoute><BookingManagement /></AdminOnlyRoute>} />
+          <Route path="foods" element={<AdminOnlyRoute><FoodManagement /></AdminOnlyRoute>} />
+          <Route path="promotions" element={<AdminOnlyRoute><PromotionManagement /></AdminOnlyRoute>} />
+          <Route path="operations" element={<OperationsReportPage />} />
+          <Route path="refunds" element={<RefundManagementPage />} />
+          <Route path="revenue" element={<RevenueReportPage />} />
+          <Route path="audit-logs" element={<AuditLogPage />} />
+          <Route path="notifications" element={<NotificationPage />} />
+          <Route path="settings" element={<AdminOnlyRoute><SystemSettingsPage /></AdminOnlyRoute>} />
         </Route>
 
         {/* Manager routes */}
@@ -180,19 +182,19 @@ const AnimatedRoutes = () => {
             </AdminRoute>
           }
         >
-          <Route index element={<PageWrapper><AdminDashboard /></PageWrapper>} />
+          <Route index element={<AdminDashboard />} />
           <Route path="movies" element={<Navigate to="/manager" replace />} />
-          <Route path="showtimes" element={<PageWrapper><ShowtimeManagement /></PageWrapper>} />
-          <Route path="branches" element={<PageWrapper><BranchManagement /></PageWrapper>} />
-          <Route path="users" element={<PageWrapper><UserManagement /></PageWrapper>} />
-          <Route path="bookings" element={<PageWrapper><BookingManagement /></PageWrapper>} />
-          <Route path="foods" element={<PageWrapper><FoodManagement /></PageWrapper>} />
-          <Route path="promotions" element={<PageWrapper><PromotionManagement /></PageWrapper>} />
-          <Route path="operations" element={<PageWrapper><OperationsReportPage /></PageWrapper>} />
-          <Route path="refunds" element={<PageWrapper><RefundManagementPage /></PageWrapper>} />
-          <Route path="revenue" element={<PageWrapper><RevenueReportPage /></PageWrapper>} />
-          <Route path="audit-logs" element={<PageWrapper><AuditLogPage /></PageWrapper>} />
-          <Route path="notifications" element={<PageWrapper><NotificationPage /></PageWrapper>} />
+          <Route path="showtimes" element={<ShowtimeManagement />} />
+          <Route path="branches" element={<BranchManagement />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="bookings" element={<BookingManagement />} />
+          <Route path="foods" element={<FoodManagement />} />
+          <Route path="promotions" element={<PromotionManagement />} />
+          <Route path="operations" element={<OperationsReportPage />} />
+          <Route path="refunds" element={<RefundManagementPage />} />
+          <Route path="revenue" element={<RevenueReportPage />} />
+          <Route path="audit-logs" element={<AuditLogPage />} />
+          <Route path="notifications" element={<NotificationPage />} />
           <Route path="settings" element={<Navigate to="/manager" replace />} />
         </Route>
 

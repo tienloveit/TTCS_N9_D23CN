@@ -11,12 +11,6 @@
   --brand-soft: #fff1e8;       /* nền tab/chip đang chọn; chữ --brand trên nền này: 5.23:1 */
   --brand-glow: rgba(185, 56, 12, 0.2);
 
-  /* Khu vận hành (/admin, /manager) dùng xanh cho màn dày dữ liệu */
-  --ops: #0756a6;              /* 7.26:1 trên nền trắng */
-  --ops-strong: #034a91;
-  --ops-soft: #e8f2ff;
-  --ops-glow: rgba(7, 86, 166, 0.14);
-
   /* ---------- Chữ ---------- */
   --ink: #172033;              /* 15.29:1 trên --surface-page */
   --ink-secondary: #334155;
@@ -73,34 +67,6 @@
   --seat-booked-line: #cbd5e1;
   --seat-booked-ink: #64748b;
 
-  /* ---------- Cổng nhân viên (/staff) ----------
-     Tông ấm riêng cho quầy vé và soát vé; màu nhấn vẫn là --brand. */
-  --staff-bg: #f6f5f1;
-  --staff-surface: var(--surface);
-  --staff-surface-muted: #faf7f0;
-  --staff-surface-sunken: #f0ede7;
-  --staff-tint: #fbefdf;
-  --staff-border: #e2dfd9;
-  --staff-border-strong: #dab89c;
-  --staff-ink: #242124;              /* 15.2:1 trên --staff-bg */
-  --staff-ink-secondary: #56504c;
-  --staff-muted: #65605d;            /* 5.9:1 trên --staff-bg */
-  --staff-sidebar: #211f20;
-  --staff-sidebar-raised: #353031;
-  --staff-on-dark: #fff6e9;
-  --staff-on-dark-muted: #e5d9ca;
-  --staff-on-dark-line: rgba(255, 255, 255, 0.13);
-  --staff-on-dark-border: rgba(255, 255, 255, 0.35);
-  --staff-amber: #ffc07a;
-  --staff-glass: rgba(37, 34, 36, 0.85);
-  --staff-overlay: rgba(8, 19, 35, 0.67);
-  --staff-shadow-sm: 0 1px 2px rgba(33, 31, 32, 0.04);
-  --staff-shadow: 0 8px 24px rgba(33, 31, 32, 0.09);
-  --staff-shadow-up: 0 -2px 12px rgba(20, 43, 80, 0.07);
-  --staff-marquee-fade: linear-gradient(90deg, #222023 15%, rgba(34, 32, 35, 0.96) 39%, rgba(34, 32, 35, 0.58) 64%, rgba(23, 21, 26, 0.13));
-  --staff-screen: linear-gradient(#746358, rgba(217, 198, 175, 0.4));
-  --staff-screen-glow: 0 6px 16px rgba(116, 89, 61, 0.13);
-
   /* ---------- Chữ ---------- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -133,6 +99,12 @@
   --space-7: 48px;
   --space-8: 64px;
 
+  /* ---------- Khu tài khoản (Hồ sơ, Vé của tôi) ----------
+     Dùng chung để mép nội dung và cỡ tiêu đề không nhảy khi chuyển trang. */
+  --account-max-width: 1312px;
+  --account-gutter: clamp(14px, 3vw, 36px);
+  --account-title-size: clamp(1.85rem, 4vw, 3rem);
+
   /* ---------- Bo góc theo thứ bậc ---------- */
   --radius-sm: 6px;      /* input, chip, ghế */
   --radius-md: 10px;     /* nút, thẻ */
@@ -163,6 +135,47 @@
   /* Breakpoint quy ước (CSS variable không dùng được trong @media):
      480px · 768px · 1024px · 1280px */
 
+  /* ---------- Khu vận hành "Bảng suất chiếu" (/staff, /manager, /admin) ----------
+     Chỉ dùng trong cây .ops. Mật độ (--o-control-h...) nằm ở components/Ops/ops.css. */
+  --o-canvas: #f3f4f6;
+  --o-surface: #ffffff;
+  --o-sunken: #e9ecef;
+  --o-line: #d9dde3;           /* trang trí, 1.36:1 */
+  --o-control-line: #868e9a;   /* viền mang nghĩa: 3.31:1 trên surface */
+  --o-ink: #15171c;            /* 16.29:1 trên canvas */
+  --o-ink-hover: #2b2f37;
+  --o-ink-2: #3b414b;          /* 9.34:1 */
+  --o-muted: #5a6270;          /* 5.18:1 trên sunken */
+  --o-mark: var(--brand);      /* "đang ở đây" và "bây giờ": 5.78:1 */
+  --o-mark-soft: var(--brand-soft);
+  --o-scrim: rgba(21, 23, 28, 0.48);
+  --o-shadow-float: 0 12px 32px rgba(21, 23, 28, 0.16), 0 2px 6px rgba(21, 23, 28, 0.08);
+
+  --o-font: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --o-stretch-data: 87.5%;
+  --o-stretch-time: 75%;
+  --o-fs-xs: 0.75rem;
+  --o-fs-sm: 0.8125rem;
+  --o-fs-md: 0.875rem;
+  --o-fs-lg: 1rem;
+  --o-fs-xl: 1.25rem;
+  --o-fs-2xl: 1.5rem;
+  --o-fs-3xl: 2rem;
+  --o-fs-time: 2.5rem;
+
+  --o-r-1: 4px;
+  --o-r-2: 6px;
+  --o-r-3: 10px;
+
+  --o-dur-1: 120ms;
+  --o-dur-2: 200ms;
+  --o-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Biểu đồ: một chuỗi dùng ink-2, phần đang chọn hoặc hôm nay dùng mark; chuỗi thứ hai dùng chart-2 */
+  --o-chart-1: var(--o-ink-2);
+  --o-chart-2: #a8afb9;
+  --o-chart-grid: var(--o-line);
+
   /* ============================================================
      Tên cũ: giữ để các màn hiện có tiếp tục chạy.
      Code mới dùng tên ở trên; tên cũ sẽ được thay dần.
@@ -183,7 +196,7 @@
 
   --gold: var(--tier-vip);
   --green: var(--success);
-  --blue: var(--ops);
+  --blue: var(--info);
   --purple: var(--tier-couple);
 
   --border: var(--line);
