@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-24, commit `afcb552`.
+> Đối chiếu mã nguồn ngày 2026-11-24, commit `262d041`.
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -39,6 +39,7 @@ frontend/src/
 │   │                      SafeImage, Skeleton, BookingReceipt, PasswordField, useModalDialog
 │   ├── Layout/, Navbar/   Khung trang khách
 │   ├── MovieCard/         Thẻ phim
+│   ├── Ops/               Bảng suất chiếu: khung trang, menu, component vận hành
 │   └── Ticket/            DigitalTicket (vé số)
 ├── pages/
 │   ├── Home/, MovieList/, MovieDetail/, Branch/     Khám phá
@@ -48,7 +49,8 @@ frontend/src/
 │   └── Staff/             Khu nhân viên: booking/ (bán vé), checkin/ (soát vé)
 ├── styles/
 │   ├── tokens.css         Design token: màu, chữ, khoảng cách, bo góc, đổ bóng, z-index
-│   └── components.css     Biến thể nút và badge
+│   ├── components.css     Biến thể nút và badge
+│   └── ops/               Lịch chiếu, quầy vé, soát vé và sơ đồ ghế
 ├── utils/
 │   ├── cinemaTime.js      Thời gian theo giờ rạp
 │   ├── cinemaFormats.js   Nhãn công nghệ phòng, định dạng chiếu
@@ -58,7 +60,7 @@ frontend/src/
 └── index.css              CSS chung
 ```
 
-`frontend/tests/` chứa test Node, `frontend/scripts/check-design-tokens.mjs` kiểm tra mã màu hex. Xem [testing.md](../07-development/testing.md).
+`frontend/tests/` chứa test Node, `frontend/scripts/check-design-tokens.mjs` kiểm tra mã màu hex và `frontend/scripts/check-ops-classes.mjs` kiểm tra class vận hành. Xem [testing.md](../07-development/testing.md).
 
 ## Định tuyến và guard
 
@@ -133,9 +135,9 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | Thanh toán | `Payment/PaymentPage.jsx`, `PaymentResultPage.jsx` | Đếm ngược theo `expiresAt` của backend. Thiếu `expiresAt` thì hiện cảnh báo, không tự ước tính. Áp hoặc bỏ mã, lấy URL VNPay. Trang kết quả gửi query string về backend và chỉ hiển thị kết quả backend xác nhận. |
 | Vé của tôi | `MyBookings/MyBookingsPage.jsx`, `BookingCard.jsx`, `TicketPassModal.jsx`, `RefundDialog.jsx` | Suất sắp chiếu gần nhất nổi lên đầu và không lặp lại trong danh sách. Tab Sắp tới, Đã xem, Hoàn tiền, Đã hủy, Tất cả, mặc định Sắp tới nếu còn vé dùng được. Tab Tất cả xếp đơn cần xử lý lên trước, đơn hủy xuống cuối. Có tìm kiếm và phân trang. Điều kiện mở QR, thanh toán, hủy, hoàn tiền dùng chung trong `BookingCard`. `TicketPassModal` mở QR và tải ảnh vé, `bookingFormat.js` phân loại vé và đọc hạn hoàn, `bookingChanges.js` ghi nhận thay đổi khi làm mới. |
 | Hồ sơ | `Profile/ProfilePage.jsx` | Chỉ gửi các trường của `UpdateProfileRequest`: `fullName`, `dob`, `phoneNumber`, `gender`, `email`. |
-| Bán vé tại quầy | `Staff/booking/StaffBookingPage.jsx` | Ba bước `SELECTION` → `SEATS` → `CHECKOUT`. Trang cha giữ state, effect, STOMP và handler. Component con chỉ nhận props: `StaffShowtimeStep` (bộ lọc mặc định Hôm nay, dải "Sắp bắt đầu", bấm một lần mở sơ đồ ghế), `StaffSeatStep` (tab Sơ đồ ghế / Bắp nước, nút "Chọn nhanh"), `StaffAddonsStep`, `StaffCheckoutStep` (thông tin khách, phương thức thanh toán dạng radio, khối tiền mặt), `StaffReceiptSidebar` ("Phiếu bán vé" ở bước 1–2, "Tóm tắt đơn" có mã khuyến mãi ở bước thu tiền), `StaffVnpayPanel`, `StaffSaleComplete`. Hàm thuần ở `staffBookingUtils.js`: định dạng, phiếu in, `TIME_FILTERS`, `pickAdjacentSeats` (cụm ghế trống liền số, cùng loại, ưu tiên hàng giữa), `formatStartsIn`, `seatFill`. `?showtime={id}` chọn sẵn suất rồi bỏ tham số khỏi URL. Mã khuyến mãi khả dụng tải một lần khi vào bước thu tiền, `appliedPromo` là mã backend đã xác nhận, `promoCode` chỉ là ô nhập. Tra cứu khách gọi `staffApi.lookupCustomer` lúc rời ô và trước khi thu tiền, đổi SĐT/email xóa xác nhận. VNPay tại quầy hỏi `bookingApi.getById` mỗi 3 giây: `COMPLETED`/`PAID` thì xuất vé, `CANCELLED`/`EXPIRED`/`REFUND_REQUESTED` thì báo không hoàn tất. |
+| Bán vé tại quầy | `Staff/booking/StaffBookingPage.jsx` | Bốn bước hiển thị: suất chiếu, ghế, bắp nước, thu tiền. Ghế và bắp nước dùng cùng giỏ hàng trong `SEATS`. Trang cha giữ state, effect, STOMP và handler. Component con chỉ nhận props: `StaffShowtimeStep` (bộ lọc mặc định Hôm nay, `ShowtimeRail` mở sơ đồ ghế), `StaffSeatStep` (nút "Chọn nhanh"), `StaffAddonsStep`, `StaffCheckoutStep` (thông tin khách, phương thức thanh toán dạng radio, khối tiền mặt), `StaffReceiptSidebar` ("Phiếu bán vé" ở bước 1–2, "Tóm tắt đơn" có mã khuyến mãi ở bước thu tiền), `StaffVnpayPanel`, `StaffSaleComplete`. Hàm thuần ở `staffBookingUtils.js`: định dạng, phiếu in, `TIME_FILTERS`, `pickAdjacentSeats` (cụm ghế trống liền số, cùng loại, ưu tiên hàng giữa), `formatStartsIn`. Tổng quan ca gửi `showtimeId` qua router state. Liên kết `?showtime={id}` vẫn được hỗ trợ. Dưới 1024px, thanh tổng tiền mở phiếu bán vé trong drawer. Mã khuyến mãi khả dụng tải một lần khi vào bước thu tiền, `appliedPromo` là mã backend đã xác nhận, `promoCode` chỉ là ô nhập. Tra cứu khách gọi `staffApi.lookupCustomer` lúc rời ô và trước khi thu tiền, đổi SĐT/email xóa xác nhận. VNPay tại quầy hỏi `bookingApi.getById` mỗi 3 giây: `COMPLETED`/`PAID` thì xuất vé, `CANCELLED`/`EXPIRED`/`REFUND_REQUESTED` thì báo không hoàn tất. |
 | Soát vé | `Staff/checkin/CheckInPage.jsx` | Giữ state, camera (jsQR) và gọi API. Giao diện tách ở `CheckInScannerTab`, `CheckInLookupTab`, `CheckInVerdictPanel`, `CheckInHistoryLog`, hàm định dạng và phiên soát lưu localStorage ở `checkInUtils.js`. Tab tra cứu gọi `bookingApi.search` (đơn `COMPLETED`/`PAID`, từ khóa, `showtimeDate` hôm nay khi lọc Hôm nay, tối đa 25 đơn). Lúc mở trang, lịch sử phiên được bổ sung từ đơn có vé soát hôm nay (`checkedInDate`). |
-| Dashboard nhân viên | `Staff/StaffDashboardPage.jsx` | Tự làm mới mỗi 60 giây khi tab đang hiện, chỉ nhận phản hồi của lần gọi mới nhất. Thao tác nhanh; chỉ số doanh thu và vé bán của nhân viên, check-in theo chi nhánh (không ghép thành tỷ lệ với vé bán); suất kế tiếp kèm đếm ngược và mức lấp đầy (`availableSeats` chỉ đếm ghế trống); khối "Cần xử lý" (đơn `PENDING` trong `recentBookings` đếm ngược theo `expiresAt`, cộng số `refundRequests`); đối soát két. Nút "Bán vé suất này" mở `/staff/booking?showtime={id}`. `Staff/useNow.js` là đồng hồ dùng chung cho dashboard và màn bán vé. |
+| Tổng quan ca | `Staff/StaffDashboardPage.jsx` | Làm mới mỗi 60 giây khi tab hiện. `ShowtimeRail` lấy lịch trong ngày qua `useShiftSchedule.js`, đọc giờ rạp và mở bước chọn ghế từ suất còn bán. Dữ liệu ca gồm đơn cần xử lý, giao dịch gần đây, doanh thu, vé đã bán, vé đã soát và đối soát két. Hạn giữ ghế lấy từ `expiresAt`. Đồng hồ chung ở `utils/useNow.js`. |
 | Quản lý đơn | `Admin/BookingManagement.jsx` | Dùng chung cho ADMIN, MANAGER và STAFF. 15 đơn mỗi trang, ô tìm kiếm chờ 300 ms. Dòng đã chọn giữ qua các trang để xuất XLSX trên trình duyệt. Có nút "Yêu cầu hoàn thay khách" cho đơn tại quầy. |
 | Phim và suất chiếu | `Admin/MovieManagement.jsx`, `MovieForm.jsx`, `ShowtimeManagement.jsx` | Upload poster/banner qua `POST /movie/media`. Lịch suất theo ngày/phòng và chế độ danh sách. |
 | Hoàn tiền | `Admin/RefundManagementPage.jsx` | Chỉ báo thành công khi đơn trả về `REFUNDED`. |
@@ -150,14 +152,13 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 | `PasswordField` | Ô mật khẩu có nút hiện/ẩn (vùng bấm 40px, tên nút theo trạng thái), nhãn gắn `htmlFor`/`id`. Dùng cho đăng nhập, đăng ký, quên mật khẩu. |
 | `useModalDialog(open, onClose, { disabled })` | Trả `overlayProps`, `contentProps`, `titleId` để gắn vào `.modal-overlay`, `.modal-content`. Xử lý Esc (chỉ modal trên cùng), giữ Tab trong modal, focus phần tử đầu, trả focus khi đóng, chỉ đóng khi nhấn và thả chuột đều ở nền. Modal sơ đồ ghế truyền `disabled: true`. |
 | `ConfirmDialog`, `EmptyState`, `Skeleton`, `SafeImage`, `ErrorBoundary`, `BookingReceipt` | Hộp xác nhận, trạng thái rỗng, khung đang tải, ảnh có ảnh dự phòng, bắt lỗi render, phiếu thanh toán. |
-| `StaffUI.jsx` | `StaffPageHeading`, `StaffState`, `StaffSkeleton`, `StaffChips` (nhóm nút lọc chọn một, dùng `aria-pressed`). |
-| `Admin.css` | Modal: `.modal-content.admin-modal`, `admin-modal--md` (650px), `admin-modal--lg` (700px), `admin-modal-header`. Form: `admin-form`, `admin-form-row` (2–3 trường một hàng, tự xuống dòng), `admin-form--grid` với `span-full`, `admin-form-actions`, `admin-check`, `admin-choice-group`/`admin-choice` (radio dạng thẻ), `required-mark`, `admin-detail-grid` (thông tin chỉ đọc), `admin-notice`. Bảng: `admin-table`, `admin-table-card` (cuộn ngang, thanh công cụ đứng yên), `admin-table-empty`, `cell-index`, `cell-strong`, `cell-truncate`. Lọc: `admin-toolbar-filters`, `admin-search`, `input-sm`, `input-auto`. `Button` chỉ có icon tự thêm `btn-icon-only`. Mẫu tham chiếu: `BranchManagement.jsx`, `FoodManagement.jsx`, `UserManagement.jsx`, `PromotionManagement.jsx`, `RefundManagementPage.jsx`. |
+| `components/Ops` | `OpsShell` và `opsNav.js` dùng chung cho Staff, Manager, Admin. `OpsPage` đặt tiêu đề và `document.title`. `DataTable`, `FilterBar`, `StatStrip`, `StatusBadge`, `Field` và `OpsDialog`/`OpsDrawer` dùng cho danh sách, form và chi tiết. `ShowtimeRail` dùng cho lịch theo phòng. |
 | `index.css` | CSS chung, gồm `.modal-close--inline` (nút đóng trong header modal form) và `.input-leading-icon` (icon trong ô tìm kiếm). Class `pos-receipt-*`, `pos-seat-chip` thuộc `components/Common/BookingReceipt.css`. |
 
 ## CSS
 
-- Token nằm trong `src/styles/tokens.css`. Khu `/admin` và `/manager` chỉ đổi `--accent` sang `--ops` trong `Admin.css`. Khu nhân viên dùng nhóm `--staff-*`.
-- CSS khu nhân viên chia theo màn: `Staff/StaffPortal.css`, `Staff/booking/StaffBooking.css` (class `counter-*`, `staff-vnpay-*`, `staff-sale-*`), `Staff/checkin/CheckIn.css` (class `gate-*`). Mỗi trang tự import file của mình.
-- CSS được gộp chung toàn ứng dụng, nên class dùng chung với trang khách (`.seat-legend`, `.food-option`...) phải viết kèm class cha của khu đang sửa.
+- Token dùng chung nằm trong `src/styles/tokens.css`. Khu vận hành dùng Archivo và nhóm `--o-*` trong cây `.ops`. Gốc có `data-density="touch"` ở khu Staff, `desk` ở khu Manager và Admin.
+- `components/Ops/ops.css` là điểm nạp CSS của khu vận hành. CSS bố cục riêng nằm trong `src/styles/ops/` và dùng class `o-*`. Khung có sidebar từ 1280px, dải icon từ 1024px, menu dạng drawer ở màn hẹp.
+- `/ops-gallery` chỉ có khi chạy Vite dev. Dùng trang này để xem trạng thái component ở cả hai mật độ. Trang khách dùng Inter và CSS chung.
 
 Quy tắc viết CSS, icon và component nằm trong [coding-conventions.md](../07-development/coding-conventions.md#frontend).
