@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint . && npm run lint:tokens",
+    "lint": "eslint . && npm run lint:tokens && npm run lint:ops",
     "lint:tokens": "node scripts/check-design-tokens.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint:ops": "node scripts/check-ops-classes.mjs"
   },
   "dependencies": {
     "@stomp/stompjs": "^7.3.0",
