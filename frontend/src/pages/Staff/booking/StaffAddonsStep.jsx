@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Button from '../../../components/Common/Button';
+import { OpsButton } from '../../../components/Ops';
 import { PopcornIcon } from '../../../components/Common/CinemaIcons';
 import { formatCurrency } from './staffBookingUtils';
 
@@ -21,39 +21,39 @@ export default function StaffAddonsStep({
   updateFoodQuantity,
 }) {
   return (
-    <section className="counter-card counter-food" aria-label="Bắp nước">
-      <div className="counter-section-head">
+    <section className="o-counter-card o-counter-food" aria-label="Bắp nước">
+      <div className="o-counter-section-head">
         <h2>Bắp nước kèm</h2>
         {foodQuantity > 0 ? (
-          <Button size="sm" variant="ghost" onClick={() => setSelectedFoods({})}>Xóa bắp nước</Button>
+          <OpsButton size="sm" variant="ghost" onClick={() => setSelectedFoods({})}>Xóa bắp nước</OpsButton>
         ) : (
           <span>Không bắt buộc. Tồn kho được kiểm tra khi thu tiền.</span>
         )}
       </div>
 
-      {foodError && <div className="error-message" role="alert">{foodError}</div>}
-      {!foodError && foods.length === 0 && <p className="counter-muted">Chi nhánh chưa có món nào đang bán.</p>}
+      {foodError && <div className="o-field__error" role="alert">{foodError}</div>}
+      {!foodError && foods.length === 0 && <p className="o-counter-muted">Chi nhánh chưa có món nào đang bán.</p>}
 
-      <div className="counter-food-grid">
+      <div className="o-counter-food-grid">
         {foods.map((food) => {
           const quantity = selectedFoods[food.id] || 0;
           const limited = food.stockQuantity != null;
           const soldOut = limited && food.stockQuantity <= 0;
           const atLimit = limited && quantity >= food.stockQuantity;
-          const stockTone = soldOut ? ' counter-food-stock--out' : limited && food.stockQuantity <= 3 ? ' counter-food-stock--low' : '';
+          const stockTone = soldOut ? ' o-counter-food-stock--out' : limited && food.stockQuantity <= 3 ? ' o-counter-food-stock--low' : '';
           return (
-            <div key={food.id} className={'counter-food-item' + (quantity > 0 ? ' is-selected' : '') + (soldOut ? ' is-out' : '')}>
-              <div className="counter-food-info">
-                <span className="counter-food-thumb"><FoodThumb src={food.imageUrl} alt={food.name} /></span>
+            <div key={food.id} className="o-counter-food-item" data-selected={quantity > 0 || undefined} data-sold-out={soldOut || undefined}>
+              <div className="o-counter-food-info">
+                <span className="o-counter-food-thumb"><FoodThumb src={food.imageUrl} alt={food.name} /></span>
                 <div>
                   <strong>{food.name}</strong>
                   <span>{formatCurrency(food.price)}</span>
-                  <small className={'counter-food-stock' + stockTone}>
+                  <small className={'o-counter-food-stock' + stockTone}>
                     {!limited ? 'Còn hàng' : soldOut ? 'Hết hàng' : `Còn ${food.stockQuantity} phần`}
                   </small>
                 </div>
               </div>
-              <div className="counter-stepper">
+              <div className="o-counter-stepper">
                 <button type="button" aria-label={`Giảm số lượng ${food.name}`}
                   onClick={() => updateFoodQuantity(food.id, -1)} disabled={quantity === 0 || submitting}>−</button>
                 <output aria-live="polite">{quantity}</output>

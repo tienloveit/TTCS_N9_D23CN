@@ -1,34 +1,28 @@
 # Quy trình Git
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `3ae857c`.
 
-Remote: `git@github.com:tienloveit/TTCS_N9_D23CN.git`.
+Remote: `git@github.com:tienloveit/TTCS_N9_D23CN.git`. Quy tắc Git bắt buộc cho AI agent nằm trong [AGENTS.md](../../AGENTS.md#quy-tắc-git).
 
 ## Nhánh
 
-| Nhánh | Vai trò | Ai đẩy vào |
-| --- | --- | --- |
-| `main` | Bản ổn định, dùng để nộp và demo | Chỉ merge từ `dev` khi tới mốc |
-| `dev` | Nhánh tích hợp hằng ngày | Merge từ nhánh tính năng qua pull request |
-| `feature/<tên>` | Chức năng mới | Một người hoặc một nhóm nhỏ |
-| `fix/<tên>` | Sửa lỗi | |
-| `chore/<tên>` | Cấu hình, dọn dẹp, tài liệu | |
+| Nhánh | Tên rút gọn được chấp nhận | Vai trò | Tách từ | Merge về |
+| --- | --- | --- | --- | --- |
+| `main` | | Chỉ chứa bản ổn định, sẵn sàng triển khai production | | |
+| `dev` | | Nhánh tích hợp các tính năng đang phát triển (trong Git Flow gọi là `develop`) | `main` (một lần) | |
+| `feature/<tên>` | `feat/<tên>` | Tính năng mới | `dev` | `dev` |
+| `bugfix/<tên>` | `fix/<tên>` | Sửa lỗi trong quá trình phát triển | `dev` | `dev` |
+| `release/<x.y.z>` | | Chuẩn bị phát hành: sửa lỗi nhỏ, cập nhật phiên bản, tài liệu | `dev` | `main` và `dev` |
+| `hotfix/<tên>` | | Sửa lỗi khẩn cấp trên production | `main` | `main` và `dev` |
 
-Ví dụ trong repo: `feature/manager`, `fix/booking-module-hardening`, `chore/jwt-filter-and-ui-cleanup`. Tên nhánh viết thường, kebab-case, mô tả việc làm.
+Việc không phải tính năng hay sửa lỗi thì đặt tiền tố bằng `type` commit tương ứng: `chore/`, `docs/`, `ci/`, `build/`, `refactor/`, `perf/`, `test/`. Các nhánh này tách từ `dev` và merge về `dev`.
 
-Tạo nhánh mới từ `dev` mới nhất:
+Tên đầy đủ và tên rút gọn có giá trị như nhau, chọn một kiểu là được. Không đổi tên nhánh đã có trên remote chỉ để đổi kiểu tiền tố. Mọi nhánh trừ `main` và `dev` là nhánh ngắn hạn, phải xóa sau khi merge.
 
-```powershell
-git switch dev
-git pull
-git switch -c feature/ten-chuc-nang
-```
+## Đặt tên
 
-Không commit thẳng lên `main`. Không force-push lên `main` hay `dev`.
-
-## Commit
-
-Dùng Conventional Commits, mô tả tiếng Anh ở thể mệnh lệnh, viết thường:
+- Tên nhánh viết bằng tiếng Anh, chữ thường, kebab-case, mô tả việc làm: `feature/counter-refund-dialog`, `feat/ops-design-system`, `fix/seat-hold-expiry`, `chore/jwt-filter-and-ui-cleanup`, `hotfix/vnpay-return-signature`, `release/1.1.0`.
+- Commit theo [Conventional Commits](https://www.conventionalcommits.org/), mô tả tiếng Anh ở thể mệnh lệnh, viết thường:
 
 ```text
 <type>(<scope>): <mô tả ngắn>
@@ -38,36 +32,52 @@ Dùng Conventional Commits, mô tả tiếng Anh ở thể mệnh lệnh, viết
 | --- | --- |
 | `feat` | Chức năng mới |
 | `fix` | Sửa lỗi |
-| `perf` | Cải thiện hiệu năng, không đổi hành vi |
 | `refactor` | Đổi cấu trúc code, không đổi hành vi |
+| `perf` | Cải thiện hiệu năng, không đổi hành vi |
 | `test` | Thêm hoặc sửa test |
 | `docs` | Chỉ tài liệu |
-| `chore` | Cấu hình, script, phụ thuộc |
+| `build` | Hệ thống build, phụ thuộc (`pom.xml`, `package.json`) |
+| `ci` | Cấu hình CI (`.github/workflows`) |
+| `chore` | Việc khác không đổi mã chạy: cấu hình công cụ, script, dọn dẹp |
 
-`scope` thường gặp: `backend`, `frontend`, `auth`, `booking`, `admin`. Có thể bỏ scope khi thay đổi trải rộng.
-
-Ví dụ từ lịch sử:
+`scope` thường gặp: `backend`, `frontend`, `auth`, `booking`, `admin`. Có thể bỏ scope khi thay đổi trải rộng. Ví dụ từ lịch sử:
 
 ```text
 fix(auth): end the refresh session on logout
 perf(backend): make many-to-one associations lazy with batch fetching
-feat(frontend): redesign staff dashboard and counter booking steps
+ci(frontend): run lint, operations rules, tests and build on pull requests
 feat: paginate the booking management list on the server
 ```
 
-Mỗi commit là một thay đổi có nghĩa và build được. Không gộp sửa định dạng hàng loạt với thay đổi nghiệp vụ. Không commit `.env`, `target/`, `dist/`, `node_modules/`, thư mục `uploads/` (đã có trong `.gitignore`).
+Mỗi commit là một thay đổi có nghĩa và build được. Không gộp sửa định dạng hàng loạt với thay đổi nghiệp vụ. Không commit `.env`, secrets, credentials, `target/`, `dist/`, `node_modules/`, `uploads/` (đã có trong `.gitignore`).
 
-## Pull request
+## Làm một thay đổi
 
-1. Đẩy nhánh lên remote và mở pull request vào `dev`.
-2. Mô tả: làm gì, vì sao, cách kiểm tra, ảnh chụp nếu đổi giao diện. Ghi rõ nếu có migration mới hay biến môi trường mới.
-3. Ít nhất một thành viên khác review. Người review chạy thử luồng bị ảnh hưởng, không chỉ đọc diff.
-4. Sửa theo góp ý bằng commit mới trên cùng nhánh.
-5. Người mở PR merge sau khi được duyệt. Lịch sử hiện dùng merge commit.
+1. Đồng bộ nhánh nguồn rồi tách nhánh:
+
+   ```powershell
+   git switch dev
+   git pull
+   git switch -c feature/ten-chuc-nang
+   ```
+
+2. Không commit hoặc push trực tiếp vào `main` và `dev`. Không force-push lên hai nhánh này. Mọi thay đổi vào đó đi qua pull request.
+3. Trước khi mở pull request, chạy lint, build và test liên quan theo [testing.md](testing.md).
+4. Đẩy nhánh và mở pull request vào `dev` (`hotfix/*` và `release/*` xem bên dưới). Mô tả làm gì, vì sao, cách kiểm tra, ảnh chụp nếu đổi giao diện. Ghi rõ nếu có migration mới hay biến môi trường mới.
+5. Ít nhất một thành viên khác review. Người review chạy thử luồng bị ảnh hưởng, không chỉ đọc diff. Sửa theo góp ý bằng commit mới trên cùng nhánh.
+6. Người mở pull request merge sau khi CI xanh và được duyệt. Lịch sử dùng merge commit.
+7. Xóa nhánh trên remote sau khi merge, rồi dọn ở máy:
+
+   ```powershell
+   git switch dev
+   git pull
+   git branch -d feature/ten-chuc-nang
+   git fetch --prune
+   ```
 
 ### Điều kiện merge
 
-Repo chưa có CI, nên chạy các kiểm tra sau ở máy trước khi merge:
+Chỉ merge khi CI thành công và đã có review duyệt. CI `frontend` ([frontend.yml](../../.github/workflows/frontend.yml)) chạy `npm run lint` (gồm `lint:ops`), test frontend thường và với `TZ=UTC`, và `npm run build` cho pull request đổi `frontend/`. Backend chưa có CI, nên chạy các kiểm tra sau ở máy trước khi merge:
 
 - [ ] `.\mvnw.cmd test` pass trong `backend/` (gồm Spotless).
 - [ ] `npm run lint`, `npm run build` và `node --experimental-vm-modules --test tests/*.test.mjs` pass trong `frontend/`.
@@ -77,8 +87,27 @@ Repo chưa có CI, nên chạy các kiểm tra sau ở máy trước khi merge:
 - [ ] Tài liệu trong `docs/` đã cập nhật cùng thay đổi.
 - [ ] Không có bí mật trong diff.
 
-Chi tiết từng lệnh ở [testing.md](testing.md).
+## Phát hành
 
-## Đưa lên `main`
+Phiên bản theo [Semantic Versioning](https://semver.org/) `MAJOR.MINOR.PATCH`: tăng `MAJOR` khi phá vỡ hợp đồng API hoặc dữ liệu, `MINOR` khi thêm chức năng, `PATCH` khi chỉ sửa lỗi. Mỗi bản phát hành có một annotated tag `vX.Y.Z` trên `main`. Tag `v1.0` có từ trước quy ước này và được giữ nguyên. Bản kế tiếp đánh số từ `v1.1.0`.
 
-Khi `dev` đạt một mốc (nộp báo cáo, demo), mở PR từ `dev` vào `main`, chạy lại toàn bộ kiểm tra và demo các luồng chính theo [test-cases](../09-report/test-cases/). Gắn tag nếu cần đánh dấu bản nộp, ví dụ `git tag -a v1.0-bao-cao -m "Bản nộp báo cáo"`.
+### Release
+
+1. Tách `release/<x.y.z>` từ `dev` mới nhất. Trên nhánh này chỉ sửa lỗi, cập nhật phiên bản và tài liệu, không thêm chức năng.
+2. Chạy lại toàn bộ kiểm tra và demo các luồng chính theo [test-cases](../09-report/test-cases/).
+3. Mở pull request `release/<x.y.z>` vào `main`. Sau khi merge, gắn tag trên `main`:
+
+   ```powershell
+   git switch main
+   git pull
+   git tag -a v1.1.0 -m "Release 1.1.0"
+   git push origin v1.1.0
+   ```
+
+4. Mở pull request `release/<x.y.z>` vào `dev` để đưa các sửa lỗi về, rồi xóa nhánh release.
+
+### Hotfix
+
+1. Tách `hotfix/<tên>` từ `main` mới nhất.
+2. Mở pull request vào `main`. Sau khi merge, gắn tag tăng `PATCH`, ví dụ `v1.1.1`.
+3. Mở pull request `hotfix/<tên>` vào `dev` (hoặc vào `release/*` đang mở, nếu có), rồi xóa nhánh hotfix.

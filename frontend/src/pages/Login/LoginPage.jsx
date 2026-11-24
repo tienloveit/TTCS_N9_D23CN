@@ -4,10 +4,9 @@ import { authApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
 import { ROLE_HOME_PATHS } from '../../context/roleHomePaths';
 import { toast } from 'react-toastify';
-import { EyeIcon, EyeOffIcon } from '../../components/Common/CinemaIcons';
+import PasswordField from '../../components/Common/PasswordField';
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -51,50 +50,28 @@ export default function LoginPage() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Tên đăng nhập</label>
+            <label className="form-label" htmlFor="login-username">Tên đăng nhập</label>
             <input
+              id="login-username"
               className="input"
               type="text"
               placeholder="Nhập tên đăng nhập"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Mật khẩu</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="input"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Nhập mật khẩu"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ paddingRight: '40px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: 0
-                }}
-              >
-                {showPassword ? <EyeOffIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />}
-              </button>
-            </div>
-          </div>
+          <PasswordField
+            id="login-password"
+            label="Mật khẩu"
+            placeholder="Nhập mật khẩu"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           <button
             className="btn btn-primary"
