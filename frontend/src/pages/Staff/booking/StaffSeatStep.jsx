@@ -1,8 +1,7 @@
-import Button from '../../../components/Common/Button';
+import { OpsButton, StateBlock } from '../../../components/Ops';
 import { formatScreening } from '../../../utils/cinemaFormats';
 import { parseLocalDateTime } from '../../../utils/cinemaTime';
-import { StaffState } from '../StaffUI';
-import useNow from '../useNow';
+import useNow from '../../../utils/useNow';
 import StaffAddonsStep from './StaffAddonsStep';
 import { formatCurrency, formatStartsIn, formatTime } from './staffBookingUtils';
 
@@ -29,7 +28,6 @@ const seatLabel = (ticket, status, selected) => [
 /** Bước 2: sơ đồ ghế và bắp nước của suất đã chọn, chuyển qua lại bằng hai tab. */
 export default function StaffSeatStep({
   addonsProps,
-  foodQuantity,
   getSeatClass,
   loadingTickets,
   onChangeShowtime,
@@ -43,7 +41,6 @@ export default function StaffSeatStep({
   selectedSeats,
   selectedShowtime,
   setQuickCount,
-  setSeatTab,
   setSelectedSeats,
   showtimeId,
   siblingShowtimes,
@@ -58,18 +55,18 @@ export default function StaffSeatStep({
     formatScreening(selectedShowtime.screeningFormat, selectedShowtime.roomTechnology),
     selectedShowtime.ageRating,
     start && formatStartsIn(start.getTime(), now).replace(/^còn/, 'Bắt đầu sau'),
-  ].filter(Boolean).join(' · ');
+  ].filter(Boolean);
   const maxQuick = Math.max(1, seatMapStats.available);
 
   return (
     <>
-      <section className="counter-card counter-showtime-bar" aria-label="Suất đang bán">
-        <div className="counter-showtime-info">
+      <section className="o-counter-card o-counter-showtime-bar" aria-label="Suất đang bán">
+        <div className="o-counter-showtime-info">
           <strong>{selectedShowtime?.movieName || 'Suất chiếu'}</strong>
-          {details && <p>{details}</p>}
+          {details && <ul className="o-seat-details">{details.map(detail => <li key={detail}>{detail}</li>)}</ul>}
         </div>
         {siblingShowtimes.length > 1 && (
-          <div className="counter-times" role="group" aria-label="Đổi giờ cùng phim, cùng ngày">
+          <div className="o-counter-times" role="group" aria-label="Đổi giờ cùng phim, cùng ngày">
             <span>Đổi giờ</span>
             {siblingShowtimes.map((showtime) => {
               const active = String(showtime.showtimeId) === String(showtimeId);
@@ -82,54 +79,45 @@ export default function StaffSeatStep({
             })}
           </div>
         )}
-        <button type="button" className="counter-link-button" onClick={onChangeShowtime}>Đổi suất khác</button>
+        <button type="button" className="o-counter-link-button" onClick={onChangeShowtime}>Đổi suất khác</button>
       </section>
 
-      <div className="counter-tabs" role="group" aria-label="Nội dung bán">
-        <button type="button" aria-pressed={seatTab === 'seats'} onClick={() => setSeatTab('seats')}>
-          Sơ đồ ghế · {selectedSeats.length}
-        </button>
-        <button type="button" aria-pressed={seatTab === 'food'} onClick={() => setSeatTab('food')}>
-          Bắp nước · {foodQuantity}
-        </button>
-      </div>
-
       {seatTab === 'food' ? <StaffAddonsStep {...addonsProps} /> : (
-        <section className="counter-card counter-seat-card" aria-label="Sơ đồ ghế">
-          <div className="counter-seat-toolbar">
-            <div className="counter-seat-stats">
+        <section className="o-counter-card o-counter-seat-card" aria-label="Sơ đồ ghế">
+          <div className="o-counter-seat-toolbar">
+            <div className="o-counter-seat-stats">
               <span>Trống <strong>{seatMapStats.available - selectedSeats.length}</strong></span>
-              <span className="counter-stat--selected">Đang chọn <strong>{selectedSeats.length}</strong></span>
-              <span className="counter-stat--holding">Đang giữ <strong>{seatMapStats.holding}</strong></span>
+              <span className="o-counter-stat--selected">Đang chọn <strong>{selectedSeats.length}</strong></span>
+              <span className="o-counter-stat--holding">Đang giữ <strong>{seatMapStats.holding}</strong></span>
               <span>Đã bán <strong>{seatMapStats.booked}</strong></span>
             </div>
-            <div className="counter-quick" role="group" aria-label="Chọn nhanh ghế liền nhau">
+            <div className="o-counter-quick" role="group" aria-label="Chọn nhanh ghế liền nhau">
               <span>Chọn nhanh</span>
               <button type="button" aria-label="Giảm số ghế chọn nhanh" disabled={quickCount <= 1}
                 onClick={() => setQuickCount(Math.max(1, quickCount - 1))}>−</button>
               <output aria-live="polite">{quickCount}</output>
               <button type="button" aria-label="Tăng số ghế chọn nhanh" disabled={quickCount >= maxQuick}
                 onClick={() => setQuickCount(Math.min(maxQuick, quickCount + 1))}>+</button>
-              <button type="button" className="counter-quick-apply" disabled={loadingTickets || Boolean(ticketError)}
+              <button type="button" className="o-counter-quick-apply" disabled={loadingTickets || Boolean(ticketError)}
                 onClick={onQuickPick}>Gợi ý ghế liền nhau</button>
             </div>
             {selectedSeats.length > 0 && (
-              <Button size="sm" variant="ghost" onClick={() => setSelectedSeats([])}>Bỏ chọn tất cả</Button>
+              <OpsButton size="sm" variant="ghost" onClick={() => setSelectedSeats([])}>Bỏ chọn tất cả</OpsButton>
             )}
           </div>
 
           {ticketError ? (
-            <StaffState title={ticketError} error onRetry={onRetryTickets} />
+            <StateBlock title={ticketError} state="error" onRetry={onRetryTickets} />
           ) : loadingTickets ? (
-            <div className="loading" role="status" aria-label="Đang tải sơ đồ ghế"><div className="spinner" /></div>
+            <StateBlock state="loading" title="Đang tải sơ đồ ghế" />
           ) : (
             <>
-              <div className="counter-screen" aria-hidden="true"><span /><small>Màn hình</small></div>
-              <div className="counter-seatmap" role="region" aria-label="Các hàng ghế" tabIndex={0}>
-                <div className="counter-seatmap-rows">
+              <div className="o-counter-screen" aria-hidden="true"><span /><small>Màn hình</small></div>
+              <div className="o-counter-seatmap" role="region" aria-label="Các hàng ghế" tabIndex={0}>
+                <div className="o-counter-seatmap-rows">
                   {sortedRows.map(([row, seats]) => (
-                    <div key={row} className="counter-seat-row">
-                      <span className="counter-row-label" aria-hidden="true">{row}</span>
+                    <div key={row} className="o-counter-seat-row">
+                      <span className="o-counter-row-label" aria-hidden="true">{row}</span>
                       {seats.map((ticket) => {
                         const status = ticket.displayStatus || ticket.ticketStatus;
                         const selected = selectedSeats.includes(ticket.seatId);
@@ -142,20 +130,20 @@ export default function StaffSeatStep({
                             aria-pressed={selected}
                             aria-label={label}
                             title={label}
-                            className={getSeatClass(ticket) + (ticket.seatType === 'COUPLE' ? ' counter-seat--couple' : '')}
+                            className={getSeatClass(ticket) + (ticket.seatType === 'COUPLE' ? ' o-counter-seat--couple' : '')}
                             onClick={() => toggleSeat(ticket)}
                           >
                             {ticket.seatNumber || ''}
                           </button>
                         );
                       })}
-                      <span className="counter-row-label" aria-hidden="true">{row}</span>
+                      <span className="o-counter-row-label" aria-hidden="true">{row}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <ul className="counter-legend" aria-label="Chú thích sơ đồ ghế">
+              <ul className="o-counter-legend" aria-label="Chú thích sơ đồ ghế">
                 {TIER_LEGEND.filter(([type]) => seatPrices[type] != null).map(([type, tone, label]) => (
                   <li key={type}>
                     <span className={'seat-legend-dot' + (tone ? ` seat-legend-dot--${tone}` : '')} aria-hidden="true" />

@@ -2,74 +2,26 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { bookingApi, branchApi } from '../../api';
 import { useAuth } from '../../context/useAuth';
-import Badge from '../../components/Common/Badge';
-import ConfirmDialog from '../../components/Common/ConfirmDialog';
-import {
-  BellIcon,
-  CheckIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CreditCardIcon,
-  DownloadIcon,
-  EyeIcon,
-  ListIcon,
-  RefreshIcon,
-  SearchIcon,
-  TicketIcon,
-  XIcon,
-} from '../../components/Common/CinemaIcons';
-import './BookingManagement.css';
+import { CheckIcon, CreditCardIcon, DownloadIcon, RefreshIcon, XIcon } from '../../components/Common/CinemaIcons';
+import { Code, DataTable, Field, FilterBar, Money, OpsButton, OpsConfirm, OpsDrawer, OpsPage,
+  OpsPanel, Pagination, Select, StatStrip, StatusBadge, Textarea, TextInput } from '../../components/Ops';
+import { PAYMENT_STATUS_META as PAYMENT_STATUS } from '../../utils/paymentStatus';
+import { formatDate, formatDateTime, parseLocalDateTime, toCinemaDateKey, formatCinema } from '../../utils/cinemaTime';
+import { BOOKING_STATUS_META } from '../../utils/bookingStatus';
 
 const PAGE_SIZE = 15;
-const SEARCH_DEBOUNCE_MS = 300;
 const EMPTY_FILTERS = { branch: '', from: '', to: '', payment: '' };
 const EMPTY_PAGE = { totalElements: 0, totalPages: 0, summary: { completed: 0, refundRequested: 0, paidAmount: 0 } };
 const DASH = '—';
-const BOOKING_STATUS = {
-  PENDING: { label: 'Chờ xử lý', tone: 'warning' },
-  COMPLETED: { label: 'Hoàn tất', tone: 'success' },
-  REFUND_REQUESTED: { label: 'Yêu cầu hoàn tiền', tone: 'warning' },
-  REFUNDED: { label: 'Đã hoàn tiền', tone: 'info' },
-  CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
-  EXPIRED: { label: 'Hết hạn', tone: 'neutral' },
-};
-const PAYMENT_STATUS = {
-  PENDING: { label: 'Chờ thanh toán', tone: 'warning' },
-  PAID: { label: 'Đã thanh toán', tone: 'success' },
-  REFUNDED: { label: 'Đã hoàn tiền', tone: 'info' },
-  CANCELLED: { label: 'Đã hủy', tone: 'neutral' },
-  FAILED: { label: 'Thất bại', tone: 'danger' },
-  NO_TRANSACTION: { label: 'Chưa có giao dịch', tone: 'neutral' },
-};
+const BOOKING_STATUS = BOOKING_STATUS_META;
 const PAYMENT_METHOD = { CASH: 'Tiền mặt', CARD: 'Thẻ', VNPAY: 'VNPay' };
 
-const timeZone = 'Asia/Ho_Chi_Minh';
-const dateKeyFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone, dateStyle: 'short' });
-const dateFormatter = new Intl.DateTimeFormat('vi-VN', { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' });
-const timeFormatter = new Intl.DateTimeFormat('vi-VN', { timeZone, timeStyle: 'short' });
-const exportTimeFormatter = new Intl.DateTimeFormat('vi-VN', { timeZone, timeStyle: 'medium' });
 const currencyFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency', currency: 'VND', maximumFractionDigits: 0,
 });
 const numberFormatter = new Intl.NumberFormat('vi-VN');
 
-function parseBookingDate(value) {
-  if (!value) return null;
-  // The API returns LocalDateTime values in cinema time, without an offset.
-  const timestamp = value.length > 10 && !/[Zz]$|[+-]\d{2}:\d{2}$/.test(value) ? value + '+07:00' : value;
-  const date = new Date(timestamp);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 const formatCurrency = (amount) => currencyFormatter.format(amount ?? 0);
-const formatDate = (value) => {
-  const date = parseBookingDate(value);
-  return date ? dateFormatter.format(date) : DASH;
-};
-const formatDateTime = (value) => {
-  const date = parseBookingDate(value);
-  return date ? dateFormatter.format(date) + ' · ' + timeFormatter.format(date) : DASH;
-};
 const bookingCode = (booking) => booking.bookingCode || '#' + booking.bookingId;
 const customerName = (booking) => booking.username || 'Khách tại quầy';
 const seats = (booking) => (booking.seatCodes || []).filter(Boolean).join(', ');
@@ -84,19 +36,14 @@ const canRequestRefundForCustomer = (booking) => Boolean(booking)
 const searchParams = (params) => Object.fromEntries(
   Object.entries(params).filter(([, value]) => value !== '' && value != null));
 
-function StatusBadge({ statuses, value }) {
-  const status = statuses[value] || { label: value || 'Chưa có dữ liệu', tone: 'neutral' };
-  return <span className={'booking-badge booking-tone--' + status.tone}>{status.label}</span>;
-}
-
 function StatusSelect({ label, statuses, value, onChange, all = '' }) {
   return (
-    <label>{label}
-      <select className="input" value={value} onChange={(event) => onChange(event.target.value)}>
+    <Field label={label}>
+      <Select value={value} onChange={(event) => onChange(event.target.value)}>
         <option value={all}>Tất cả</option>
         {Object.entries(statuses).map(([key, status]) => <option key={key} value={key}>{status.label}</option>)}
-      </select>
-    </label>
+      </Select>
+    </Field>
   );
 }
 
@@ -104,9 +51,9 @@ async function downloadBookings(bookings) {
   const { default: writeXlsxFile } = await import('write-excel-file/browser');
   const textCell = (value) => ({ value: value || '' });
   const dateCell = (value) => {
-    const date = parseBookingDate(value);
+    const date = parseLocalDateTime(value);
     if (!date) return null;
-    const local = dateKeyFormatter.format(date) + 'T' + exportTimeFormatter.format(date) + 'Z';
+    const local = toCinemaDateKey(date) + 'T' + formatCinema(date, {timeStyle: 'medium', hour12: false}) + 'Z';
     return { value: new Date(local), format: 'dd/mm/yyyy hh:mm:ss' };
   };
   const headings = [
@@ -114,7 +61,7 @@ async function downloadBookings(bookings) {
     'Suất chiếu', 'Tổng tiền (VND)', 'Trạng thái đơn', 'Thanh toán', 'Phương thức', 'Thời điểm thanh toán',
   ];
   const data = [
-    headings.map((value) => ({ ...textCell(value), fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: '#0756A6' })),
+    headings.map((value) => ({ ...textCell(value), fontWeight: 'bold' })),
     ...bookings.map((booking) => [
       textCell(bookingCode(booking)),
       textCell(customerName(booking)),
@@ -136,7 +83,7 @@ async function downloadBookings(bookings) {
     sheet: 'Đơn đặt vé',
     stickyRowsCount: 1,
     columns: [23, 24, 35, 28, 21, 18, 20, 23, 23, 20, 23, 22, 18, 25].map((width) => ({ width })),
-  }).toFile('don-dat-ve-' + dateKeyFormatter.format(new Date()) + '.xlsx');
+  }).toFile('don-dat-ve-' + toCinemaDateKey(new Date()) + '.xlsx');
 }
 
 const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
@@ -162,8 +109,6 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const openedRequest = useRef(null);
   const latestRequest = useRef(0);
-  const drawer = useRef(null);
-  const closeButton = useRef(null);
   const pageCheckbox = useRef(null);
 
   const invalidRange = Boolean(filters.from && filters.to && filters.from > filters.to);
@@ -203,20 +148,18 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
     } catch (err) {
       if (request !== latestRequest.current) return;
       console.error('Lỗi khi tải đơn đặt vé:', err);
-      if (staff) setLoadError(err.response?.data?.message || 'Không thể tải danh sách đơn đặt vé.');
-      else toast.error('Không thể tải danh sách đơn đặt vé');
+      setLoadError(err.response?.data?.message || 'Không tải được danh sách đơn. Kiểm tra kết nối rồi thử lại.');
     } finally {
       if (request === latestRequest.current) setLoading(false);
     }
-  }, [debouncedSearch, filters, invalidRange, page, staff, statusFilter]);
+  }, [debouncedSearch, filters, invalidRange, page, statusFilter]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchTerm), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
+    setDebouncedSearch(searchTerm);
   }, [searchTerm]);
 
   // Chỉ ADMIN chọn chi nhánh; STAFF/MANAGER luôn bị backend giới hạn trong chi nhánh của mình.
@@ -334,32 +277,17 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
   const stats = pageInfo.summary;
   const totalPages = Math.max(1, pageInfo.totalPages);
   const currentPage = Math.min(page, totalPages);
-  const firstRow = (currentPage - 1) * PAGE_SIZE;
   const paginated = bookings;
   // Đơn đã chọn giữ qua các trang (theo ID) để xuất Excel một lần.
   const selectedBookings = [...selectedIds.values()];
   const selectedOnPage = paginated.filter((booking) => selectedIds.has(booking.bookingId)).length;
   const pageSelected = paginated.length > 0 && selectedOnPage === paginated.length;
   const hasFilters = Boolean(searchTerm || statusFilter !== 'ALL' || Object.values(filters).some(Boolean));
-  const drawerOpen = Boolean(detailBooking);
   const confirming = Boolean(confirmState);
 
   useEffect(() => {
     if (pageCheckbox.current) pageCheckbox.current.indeterminate = selectedOnPage > 0 && !pageSelected;
   }, [selectedOnPage, pageSelected, loading]);
-
-  useEffect(() => {
-    const dialog = drawer.current;
-    if (!dialog) return;
-    if (drawerOpen && !dialog.open) dialog.showModal();
-    if (!drawerOpen && dialog.open) dialog.close();
-  }, [drawerOpen]);
-
-  useEffect(() => {
-    if (!drawerOpen) return;
-    if (confirming) drawer.current?.querySelector('.modal-overlay button')?.focus();
-    else closeButton.current?.focus();
-  }, [drawerOpen, confirming]);
 
   const resetSelection = () => {
     setPage(1);
@@ -394,211 +322,105 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
     }
   };
 
-  const summary = [
-    { label: 'Tổng đơn', value: numberFormatter.format(totalElements), icon: <TicketIcon size={21} />, tone: 'info' },
-    { label: 'Đơn hoàn tất', value: numberFormatter.format(stats.completed), icon: <CheckIcon size={21} />, tone: 'success' },
-    { label: 'Yêu cầu hoàn tiền', value: numberFormatter.format(stats.refundRequested), icon: <BellIcon size={21} />, tone: 'warning' },
-    { label: 'Tổng tiền đã thanh toán', value: formatCurrency(stats.paidAmount), icon: <CreditCardIcon size={21} />, tone: 'success' },
+  const clearFilters = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
+    setStatusFilter('ALL');
+    setFilters(EMPTY_FILTERS);
+    resetSelection();
+  };
+
+  const columns = [
+    ...(isAdmin ? [{
+      key: 'selection',
+      header: <input ref={pageCheckbox} type="checkbox" aria-label="Chọn tất cả đơn trên trang này"
+        checked={pageSelected} disabled={!paginated.length} onChange={event => toggleSelection(paginated, event.target.checked)} />,
+      render: booking => <input type="checkbox" aria-label={'Chọn đơn ' + bookingCode(booking)}
+        checked={selectedIds.has(booking.bookingId)} onClick={event => event.stopPropagation()}
+        onChange={event => toggleSelection([booking], event.target.checked)} />,
+    }] : []),
+    { key: 'code', header: 'Mã đơn / Khách', render: booking => <><Code>{bookingCode(booking)}</Code><small className="o-subline">{customerName(booking)}</small></> },
+    { key: 'movie', header: staff ? 'Phim / Suất chiếu' : 'Phim / Rạp', render: booking => <>
+      <strong>{booking.movieName || DASH}</strong>
+      {staff && <small className="o-subline">{formatDateTime(booking.showtimeStart)}</small>}
+      <small className="o-subline">{[booking.branchName, booking.roomName].filter(Boolean).join(', ')}</small></> },
+    { key: 'created', header: 'Ngày đặt', render: booking => formatDate(booking.createdAt) },
+    { key: 'total', header: 'Tổng tiền', align: 'end', render: booking => <Money value={booking.totalAmount} /> },
+    { key: 'status', header: 'Trạng thái đơn', render: booking => <StatusBadge kind="booking" value={booking.status} /> },
+    { key: 'payment', header: 'Thanh toán', render: booking => <StatusBadge kind="payment" value={booking.paymentStatus || 'NO_TRANSACTION'} /> },
   ];
 
   return (
-    <div className="dashboard-container booking-management">
-      <header className="dashboard-header booking-header">
-        <div className={staff ? 'staff-heading-copy' : undefined}>
-          {staff && <span className="staff-heading-icon"><ListIcon size={24} /></span>}
-          <div>
-            <h1 className="page-title">{staff ? 'Tra cứu đơn vé' : 'Quản lý đơn đặt vé'}</h1>
-            <p className="page-subtitle">Theo dõi đơn đặt vé, giao dịch và yêu cầu hoàn tiền.</p>
-          </div>
-        </div>
-        <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => {
-          setSelectedIds(new Map());
-          fetchBookings();
-        }}>
-          <RefreshIcon size={17} /> Làm mới
-        </button>
-      </header>
-
-      <section className="booking-kpis" aria-label="Thống kê theo bộ lọc" aria-busy={loading}>
-        {summary.map(({ label, value, icon, tone }) => (
-          <article className="booking-kpi" key={label}>
-            <span className={'booking-kpi-icon booking-tone--' + tone}>{icon}</span>
-            <div><span>{label}</span><strong>{loading || (loadError && !bookings.length) ? DASH : value}</strong></div>
-          </article>
-        ))}
-      </section>
-
-      <section className="admin-table-card booking-list" aria-labelledby="booking-list-title" aria-busy={loading}>
-        <div className="booking-list-heading">
-          <div>
-            <h2 id="booking-list-title">Danh sách đơn</h2>
-            <p role="status">{loading ? 'Đang tải…' : loadError && !bookings.length ? 'Chưa tải được dữ liệu' : numberFormatter.format(totalElements) + ' đơn phù hợp'}</p>
-          </div>
-          {isAdmin && (
-            <button type="button" className="btn btn-primary" disabled={loading || exporting || !selectedBookings.length} onClick={exportSelection}>
-              <DownloadIcon size={17} />
-              {exporting ? 'Đang xuất…' : 'Xuất Excel' + (selectedBookings.length ? ' (' + selectedBookings.length + ')' : '')}
-            </button>
-          )}
-        </div>
-
-        <div className="booking-filters">
-          <label>Tìm kiếm
-            <span className="booking-search"><SearchIcon size={17} />
-              <input type="search" className="input" placeholder="Mã đơn, mã vé, ghế, khách, phim" value={searchTerm}
-                onChange={(event) => { setSearchTerm(event.target.value); resetSelection(); }} />
-            </span>
-          </label>
-          {isAdmin && (
-            <label>Chi nhánh
-              <select className="input" value={filters.branch} onChange={(event) => updateFilter('branch', event.target.value)}>
-                <option value="">Tất cả chi nhánh</option>
-                {branches.map((branch) => (
-                  <option key={branch.branchId} value={String(branch.branchId)}>{branch.name || 'Chi nhánh #' + branch.branchId}</option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label>Đặt từ ngày
-            <input type="date" className="input" value={filters.from} max={filters.to || undefined}
-              aria-invalid={invalidRange} onChange={(event) => updateFilter('from', event.target.value)} />
-          </label>
-          <label>Đặt đến ngày
-            <input type="date" className="input" value={filters.to} min={filters.from || undefined}
-              aria-invalid={invalidRange} onChange={(event) => updateFilter('to', event.target.value)} />
-          </label>
-          <StatusSelect label="Trạng thái đơn" statuses={BOOKING_STATUS} value={statusFilter} all="ALL"
-            onChange={(value) => { setStatusFilter(value); resetSelection(); }} />
-          <StatusSelect label="Thanh toán" statuses={PAYMENT_STATUS} value={filters.payment}
-            onChange={(value) => updateFilter('payment', value)} />
-          {hasFilters && (
-            <button type="button" className="btn btn-ghost booking-clear-filters" onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('ALL');
-              setFilters(EMPTY_FILTERS);
-              resetSelection();
-            }}>Xóa bộ lọc</button>
-          )}
-          {invalidRange && <p className="booking-filter-error" role="alert">Ngày kết thúc phải từ ngày bắt đầu trở đi.</p>}
-        </div>
-
-        {isAdmin && selectedBookings.length > 0 && (
-          <div className="booking-selection">
-            <strong role="status">Đã chọn {numberFormatter.format(selectedBookings.length)} đơn</strong>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Map())}>Bỏ chọn</button>
-          </div>
-        )}
-
-        {lookupNotice && <p className="staff-booking-notice" role="status">{lookupNotice}</p>}
-        {loadError && <div className="staff-state staff-state--error" role="alert">
-          <strong>{loadError}</strong><button type="button" className="btn btn-secondary" onClick={fetchBookings}>Thử lại</button>
-        </div>}
-        {loading ? <div className="booking-empty" role="status">Đang tải đơn đặt vé…</div> : (!loadError || bookings.length > 0) && (
-          <div className="booking-table-scroll" tabIndex={0} role="region" aria-label="Bảng đơn đặt vé">
-            <table className="admin-table booking-table">
-              <thead>
-                <tr>
-                  {isAdmin && (
-                    <th scope="col" className="booking-checkbox-cell">
-                      <input ref={pageCheckbox} type="checkbox" aria-label="Chọn tất cả đơn trên trang này"
-                        checked={pageSelected} disabled={!paginated.length}
-                        onChange={(event) => toggleSelection(paginated, event.target.checked)} />
-                    </th>
-                  )}
-                  <th scope="col" className="booking-order-column">Mã đơn / Khách</th>
-                  <th scope="col">{staff ? 'Phim / Suất chiếu' : 'Phim / Rạp'}</th>
-                  <th scope="col" className="booking-date">Ngày đặt</th>
-                  <th scope="col" className="booking-money">Tổng tiền</th>
-                  <th scope="col" className="booking-status-column">Trạng thái đơn</th>
-                  <th scope="col" className="booking-status-column">Thanh toán</th>
-                  <th scope="col" className="booking-action-cell"><span className="booking-sr-only">Thao tác</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {!paginated.length && (
-                  <tr><td colSpan={isAdmin ? 8 : 7}><div className="booking-empty"><ListIcon size={25} />
-                    {hasFilters ? 'Không có đơn phù hợp với bộ lọc' : 'Chưa có đơn đặt vé'}
-                  </div></td></tr>
-                )}
-                {paginated.map((booking) => {
-                  const code = bookingCode(booking);
-                  const selected = selectedIds.has(booking.bookingId);
-                  const location = [booking.branchName, booking.roomName].filter(Boolean).join(' · ');
-                  return (
-                    <tr key={booking.bookingId} className={selected ? 'is-selected' : undefined}>
-                      {isAdmin && (
-                        <td className="booking-checkbox-cell"><input type="checkbox" checked={selected}
-                          aria-label={'Chọn đơn ' + code} onChange={(event) => toggleSelection([booking], event.target.checked)} /></td>
-                      )}
-                      <td>
-                        <button type="button" className="booking-order-link" title={code} onClick={() => setDetailBooking(booking)}>{code}</button>
-                        <span className="booking-cell-secondary" title={customerName(booking)}>{customerName(booking)}</span>
-                      </td>
-                      <td>
-                        <strong className="booking-cell-main" title={booking.movieName}>{booking.movieName || DASH}</strong>
-                        {staff && booking.showtimeStart && <span className="booking-cell-secondary">{formatDateTime(booking.showtimeStart)}</span>}
-                        <span className="booking-cell-secondary" title={location}>{location || DASH}</span>
-                      </td>
-                      <td className="booking-date" title={formatDateTime(booking.createdAt)}>{formatDate(booking.createdAt)}</td>
-                      <td className="booking-money">{formatCurrency(booking.totalAmount)}</td>
-                      <td><StatusBadge statuses={BOOKING_STATUS} value={booking.status} /></td>
-                      <td><StatusBadge statuses={PAYMENT_STATUS} value={booking.paymentStatus || 'NO_TRANSACTION'} /></td>
-                      <td className="booking-action-cell">
-                        <button type="button" className="btn btn-ghost btn-sm booking-icon-button" title="Xem chi tiết"
-                          aria-label={'Xem chi tiết đơn ' + code} onClick={() => setDetailBooking(booking)}>
-                          <EyeIcon size={17} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {!loading && totalElements > 0 && (
-          <footer className="booking-pagination">
-            <span>Hiển thị {firstRow + 1}–{firstRow + paginated.length} / {numberFormatter.format(totalElements)} đơn</span>
-            {totalPages > 1 && (
-              <nav aria-label="Phân trang đơn đặt vé">
-                <button type="button" className="btn btn-secondary btn-sm booking-icon-button" aria-label="Trang trước"
-                  disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}><ChevronLeftIcon size={17} /></button>
-                <span>Trang {currentPage} / {totalPages}</span>
-                <button type="button" className="btn btn-secondary btn-sm booking-icon-button" aria-label="Trang sau"
-                  disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRightIcon size={17} /></button>
-              </nav>
+    <OpsPage title={staff ? 'Tra cứu đơn vé' : 'Quản lý đơn đặt vé'}
+      description={isAdmin ? 'Tìm đơn đặt vé và theo dõi giao dịch của mọi chi nhánh.' : 'Tìm đơn đặt vé và theo dõi giao dịch tại chi nhánh.'}
+      actions={<>
+        <OpsButton disabled={loading} onClick={() => { setSelectedIds(new Map()); fetchBookings(); }}><RefreshIcon size={16} /> Làm mới</OpsButton>
+        {isAdmin && <OpsButton variant="primary" disabled={loading || exporting || !selectedBookings.length} onClick={exportSelection}>
+          <DownloadIcon size={16} />{exporting ? 'Đang xuất…' : 'Xuất Excel' + (selectedBookings.length ? ' (' + selectedBookings.length + ')' : '')}
+        </OpsButton>}
+      </>}>
+      <StatStrip loading={loading} items={[
+        { label: 'Tổng đơn', value: numberFormatter.format(totalElements) },
+        { label: 'Đơn hoàn tất', value: numberFormatter.format(stats.completed) },
+        { label: 'Yêu cầu hoàn tiền', value: numberFormatter.format(stats.refundRequested), tone: stats.refundRequested ? 'warning' : undefined },
+        { label: 'Tổng tiền đã thanh toán', value: <Money value={stats.paidAmount} /> },
+      ]} />
+      <FilterBar search={searchTerm} onSearchChange={value => { setSearchTerm(value); resetSelection(); }}
+        searchLabel="Tìm đơn đặt vé" searchPlaceholder="Mã đơn, mã vé, ghế, khách, phim"
+        filtered={hasFilters} onReset={clearFilters} resultLabel={numberFormatter.format(totalElements) + ' đơn phù hợp'}>
+        {isAdmin && <Field label="Chi nhánh"><Select value={filters.branch} onChange={event => updateFilter('branch', event.target.value)}>
+          <option value="">Tất cả chi nhánh</option>
+          {branches.map(branch => <option key={branch.branchId} value={branch.branchId}>{branch.name || 'Chi nhánh #' + branch.branchId}</option>)}
+        </Select></Field>}
+        <Field label="Đặt từ ngày"><TextInput type="date" value={filters.from} max={filters.to || undefined}
+          onChange={event => updateFilter('from', event.target.value)} /></Field>
+        <Field label="Đặt đến ngày" error={invalidRange ? 'Ngày kết thúc phải từ ngày bắt đầu trở đi.' : undefined}>
+          <TextInput type="date" value={filters.to} min={filters.from || undefined} onChange={event => updateFilter('to', event.target.value)} /></Field>
+        <StatusSelect label="Trạng thái đơn" statuses={BOOKING_STATUS} value={statusFilter} all="ALL"
+          onChange={value => { setStatusFilter(value); resetSelection(); }} />
+        <StatusSelect label="Thanh toán" statuses={PAYMENT_STATUS} value={filters.payment} onChange={value => updateFilter('payment', value)} />
+      </FilterBar>
+      {lookupNotice && <p role="status">{lookupNotice}</p>}
+      <OpsPanel title="Danh sách đơn" flush actions={selectedBookings.length > 0 && <OpsButton variant="ghost"
+        onClick={() => setSelectedIds(new Map())}>Bỏ chọn {selectedBookings.length} đơn</OpsButton>}>
+        <DataTable caption="Danh sách đơn" columns={columns} rows={paginated} rowKey={booking => booking.bookingId}
+          state={loading ? 'loading' : loadError ? 'error' : 'ready'} onRetry={fetchBookings}
+          empty={{ title: hasFilters ? 'Không có đơn phù hợp với bộ lọc' : 'Chưa có đơn đặt vé',
+            action: hasFilters ? { label: 'Xóa bộ lọc', onClick: clearFilters } : { label: 'Làm mới', onClick: fetchBookings } }}
+          selectedKey={detailBooking?.bookingId} onRowOpen={setDetailBooking} />
+        {!loading && totalElements > 0 && <Pagination page={currentPage - 1} pageSize={PAGE_SIZE}
+          totalItems={totalElements} noun="đơn" onPageChange={value => setPage(value + 1)} />}
+      </OpsPanel>
+      {detailBooking && <OpsDrawer open title={'Đơn ' + bookingCode(detailBooking)} onClose={() => setDetailBooking(null)}
+        description={'Ngày đặt ' + formatDateTime(detailBooking.createdAt)} disabled={confirming} footer={<>
+            {canRequestRefundForCustomer(detailBooking) && (
+              <>
+                <OpsButton disabled={Boolean(processingRefund)}
+                  onClick={() => requestCustomerRefund(detailBooking)}>
+                  <CreditCardIcon size={16} /><span>Yêu cầu hoàn thay khách</span>
+                </OpsButton>
+              </>
             )}
-          </footer>
-        )}
-      </section>
-
-      <dialog ref={drawer} className="booking-drawer" aria-labelledby="booking-drawer-title"
-        onClick={(event) => {
-          if (event.target === event.currentTarget && !confirming) setDetailBooking(null);
-        }}
-        onCancel={(event) => {
-          event.preventDefault();
-          if (processingRefund) return;
-          if (confirming) setConfirmState(null);
-          else setDetailBooking(null);
-        }}>
-        {detailBooking && (
-          <div className="booking-drawer-panel" inert={confirming || undefined}>
-            <header className="booking-drawer-header">
-              <div>
-                <h2 id="booking-drawer-title">Đơn {bookingCode(detailBooking)}</h2>
-                <p>Ngày đặt {formatDateTime(detailBooking.createdAt)}</p>
+            {canProcessRefund && detailBooking.status === 'REFUND_REQUESTED' && (
+              <>
+                <OpsButton onClick={() => requestProcessRefund(detailBooking, false)}
+                  disabled={Boolean(processingRefund) || ['PROCESSING', 'UNKNOWN'].includes(detailBooking.refundGatewayStatus)}>
+                  <XIcon size={16} /><span>Từ chối</span>
+                </OpsButton>
+                <OpsButton variant="primary" disabled={Boolean(processingRefund)}
+                  onClick={() => requestProcessRefund(detailBooking, true)}>
+                  <CheckIcon size={16} />
+                  {['PROCESSING', 'UNKNOWN'].includes(detailBooking.refundGatewayStatus) ? 'Kiểm tra kết quả'
+                    : detailBooking.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt hoàn tiền'}
+                </OpsButton>
+              </>
+            )}
+        </>}>
+              <div className="o-summary-pair">
+                <div><span>Trạng thái đơn</span><StatusBadge kind="booking" value={detailBooking.status} /></div>
+                <div><span>Thanh toán</span><StatusBadge kind="payment" value={detailBooking.paymentStatus || 'NO_TRANSACTION'} /></div>
               </div>
-              <button ref={closeButton} type="button" className="btn btn-ghost booking-icon-button"
-                aria-label="Đóng chi tiết đơn" onClick={() => setDetailBooking(null)}><XIcon size={21} /></button>
-            </header>
-            <div className="booking-drawer-body">
-              <div className="booking-drawer-status">
-                <div><span>Trạng thái đơn</span><StatusBadge statuses={BOOKING_STATUS} value={detailBooking.status} /></div>
-                <div><span>Thanh toán</span><StatusBadge statuses={PAYMENT_STATUS} value={detailBooking.paymentStatus || 'NO_TRANSACTION'} /></div>
-              </div>
-              <section className="booking-detail-section">
+              <section className="o-detail">
                 <h3>Thông tin vé</h3>
                 <dl>
                   <div><dt>Khách hàng</dt><dd>{customerName(detailBooking)}</dd></div>
@@ -610,38 +432,38 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                 </dl>
               </section>
               {staff && detailBooking.tickets?.length > 0 && (
-                <section className="booking-detail-section">
+                <section className="o-detail">
                   <h3>Trạng thái từng vé</h3>
-                  <ul className="booking-food-list">
+                  <ul className="o-line-list">
                     {detailBooking.tickets.map((ticket) => (
                       <li key={ticket.id ?? ticket.seatId}>
-                        <span>{ticket.seatCode || DASH}{ticket.id != null ? ' · Vé #' + ticket.id : ''}</span>
-                        <Badge tone={ticket.checkedInAt ? 'success' : 'neutral'}>
-                          {ticket.checkedInAt ? 'Đã check-in · ' + formatDateTime(ticket.checkedInAt)
+                        <span>{ticket.seatCode || DASH}{ticket.id != null ? ', Vé #' + ticket.id : ''}</span>
+                        <StatusBadge tone={ticket.checkedInAt ? 'success' : 'neutral'}>
+                          {ticket.checkedInAt ? 'Đã check-in, ' + formatDateTime(ticket.checkedInAt)
                             : detailBooking.status === 'REFUNDED' ? 'Đơn đã hoàn tiền'
                             : detailBooking.status === 'CANCELLED' ? 'Đơn đã hủy'
                             : ticket.ticketStatus === 'BOOKED' ? 'Chưa check-in'
                             : ticket.ticketStatus === 'HOLDING' ? 'Đang giữ' : 'Chưa xác nhận'}
-                        </Badge>
+                        </StatusBadge>
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
               {detailBooking.foods?.length > 0 && (
-                <section className="booking-detail-section">
+                <section className="o-detail">
                   <h3>Bắp, nước và combo</h3>
-                  <ul className="booking-food-list">
+                  <ul className="o-line-list">
                     {detailBooking.foods.map((food, index) => (
                       <li key={food.foodId ?? index}>
                         <span>{food.quantity} × {food.foodName || 'Sản phẩm'}</span>
-                        <strong>{formatCurrency(food.subtotal ?? food.unitPrice * food.quantity)}</strong>
+                        <strong>{food.subtotal == null ? DASH : formatCurrency(food.subtotal)}</strong>
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
-              <section className="booking-detail-section">
+              <section className="o-detail">
                 <h3>Thông tin giao dịch</h3>
                 <dl>
                   <div><dt>Phương thức</dt><dd>{PAYMENT_METHOD[detailBooking.paymentMethod] || detailBooking.paymentMethod || DASH}</dd></div>
@@ -649,13 +471,13 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                   {detailBooking.providerTxnId && <div><dt>Mã giao dịch</dt><dd>{detailBooking.providerTxnId}</dd></div>}
                   {Number(detailBooking.discountAmount) > 0 && <div><dt>Giảm giá</dt><dd>{formatCurrency(detailBooking.discountAmount)}</dd></div>}
                 </dl>
-                <div className="booking-detail-total"><span>Tổng tiền đơn</span><strong>{formatCurrency(detailBooking.totalAmount)}</strong></div>
+                <div className="o-detail-total"><span>Tổng tiền đơn</span><strong>{formatCurrency(detailBooking.totalAmount)}</strong></div>
               </section>
               {(detailBooking.refundReason || detailBooking.refundProcessNote || detailBooking.refundGatewayMessage ||
                 detailBooking.status === 'REFUND_REQUESTED' || detailBooking.status === 'REFUNDED') && (
-                <section className="booking-detail-section">
+                <section className="o-detail">
                   <h3>Hoàn tiền</h3>
-                  <dl className="booking-refund-fields">
+                  <dl className="o-detail-list">
                     {detailBooking.refundReason && <div><dt>Lý do yêu cầu</dt><dd>{detailBooking.refundReason}</dd></div>}
                     {detailBooking.refundProcessNote && <div><dt>Ghi chú xử lý</dt><dd>{detailBooking.refundProcessNote}</dd></div>}
                     {detailBooking.refundGatewayMessage && <div><dt>Thông tin giao dịch hoàn tiền</dt><dd>{detailBooking.refundGatewayMessage}</dd></div>}
@@ -664,33 +486,8 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                   </dl>
                 </section>
               )}
-            </div>
-            {canRequestRefundForCustomer(detailBooking) && (
-              <footer className="booking-drawer-footer">
-                <button type="button" className="btn btn-secondary" disabled={Boolean(processingRefund)}
-                  onClick={() => requestCustomerRefund(detailBooking)}>
-                  <CreditCardIcon size={16} /><span>Yêu cầu hoàn thay khách</span>
-                </button>
-              </footer>
-            )}
-            {canProcessRefund && detailBooking.status === 'REFUND_REQUESTED' && (
-              <footer className="booking-drawer-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => requestProcessRefund(detailBooking, false)}
-                  disabled={Boolean(processingRefund) || ['PROCESSING', 'UNKNOWN'].includes(detailBooking.refundGatewayStatus)}>
-                  <XIcon size={16} /><span>Từ chối</span>
-                </button>
-                <button type="button" className="btn btn-primary" disabled={Boolean(processingRefund)}
-                  onClick={() => requestProcessRefund(detailBooking, true)}>
-                  <CheckIcon size={16} />
-                  {['PROCESSING', 'UNKNOWN'].includes(detailBooking.refundGatewayStatus) ? 'Kiểm tra kết quả'
-                    : detailBooking.refundGatewayStatus === 'FAILED' ? 'Thử lại hoàn tiền' : 'Duyệt hoàn tiền'}
-                </button>
-              </footer>
-            )}
-          </div>
-        )}
-
-        <ConfirmDialog
+      </OpsDrawer>}
+        <OpsConfirm
           open={confirming}
           title={confirmState?.kind === 'request' ? 'Yêu cầu hoàn tiền thay khách'
             : confirmState?.approved ? 'Duyệt yêu cầu hoàn tiền' : 'Từ chối yêu cầu hoàn tiền'}
@@ -700,26 +497,25 @@ const BookingManagement = ({ staff = false, requestedBookingId } = {}) => {
                 Đơn {confirmState.bookingCode} bán tại quầy. Quản lý chi nhánh sẽ duyệt yêu cầu
                 {confirmState.cash ? '; tiền mặt hoàn tại quầy sau khi được duyệt.' : '.'}
               </span>
-              <label className="booking-refund-reason">
+              <label className="o-field">
                 <span>Lý do hoàn tiền</span>
-                <textarea className="input" rows={3} maxLength={500} value={refundReason}
+                <Textarea rows={3} maxLength={500} value={refundReason}
                   placeholder="Ví dụ: bán nhầm suất chiếu, khách đổi ý trước giờ chiếu"
                   disabled={Boolean(processingRefund)} onChange={(event) => setRefundReason(event.target.value)} />
               </label>
-              {refundError && <span className="booking-refund-error" role="alert">Lỗi: {refundError}</span>}
+              {refundError && <span className="o-field-error" role="alert">Lỗi: {refundError}</span>}
             </>
           ) : (confirmState?.approved
             ? 'Xác nhận xử lý hoàn tiền cho đơn ' + confirmState.bookingCode + '?'
             : 'Xác nhận từ chối yêu cầu hoàn tiền của đơn ' + confirmState?.bookingCode + '?') +
             (refundError ? '\n\nLỗi: ' + refundError : '')}
-          confirmText={confirmState?.kind === 'request' ? 'Gửi yêu cầu' : confirmState?.approved ? 'Xác nhận' : 'Từ chối'}
-          variant={confirmState?.kind === 'request' || confirmState?.approved ? 'primary' : 'danger'}
+          confirmLabel={confirmState?.kind === 'request' ? 'Gửi yêu cầu' : confirmState?.approved ? 'Duyệt hoàn tiền' : 'Từ chối'}
+          tone={confirmState?.kind === 'request' || confirmState?.approved ? 'primary' : 'danger'}
           loading={Boolean(processingRefund)}
           onConfirm={executeProcessRefund}
-          onCancel={() => setConfirmState(null)}
+          onClose={() => setConfirmState(null)}
         />
-      </dialog>
-    </div>
+    </OpsPage>
   );
 };
 

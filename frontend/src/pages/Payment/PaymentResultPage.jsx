@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { vnpayApi } from '../../api';
 import confetti from 'canvas-confetti';
-import { CheckCircleIcon, TicketIcon, XCircleIcon } from '../../components/Common/CinemaIcons';
+import { AlertTriangleIcon, CheckCircleIcon, RefreshIcon, TicketIcon, XCircleIcon } from '../../components/Common/CinemaIcons';
 import { useAuth } from '../../context/useAuth';
 
 export default function PaymentResultPage() {
@@ -35,23 +35,32 @@ export default function PaymentResultPage() {
     }, 250);
   };
 
+  const [verifyAttempt, setVerifyAttempt] = useState(0);
+
   useEffect(() => {
     const params = Object.fromEntries(searchParams.entries());
+    let active = true;
 
     vnpayApi.handleReturn(params)
       .then((res) => {
+        if (!active) return;
+        // Backend trả code 200 khi đã ghi nhận thanh toán, 97/99 khi chữ ký sai hoặc giao dịch không thành công.
         if (res.data.code === 200) {
           setStatus('success');
-          // Trigger celebration
           handleCelebrate();
         } else {
           setStatus('error');
         }
       })
       .catch(() => {
-        setStatus('error');
+        // Không gọi được backend: chưa biết kết quả giao dịch, không được báo thất bại.
+        if (active) setStatus('unverified');
       });
-  }, [searchParams]);
+
+    return () => {
+      active = false;
+    };
+  }, [searchParams, verifyAttempt]);
 
 
 
@@ -97,6 +106,29 @@ export default function PaymentResultPage() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <button className="btn btn-primary" onClick={() => navigate(isStaffOrAdmin ? '/staff/booking' : '/')}>Quay lại {isStaffOrAdmin ? 'đặt vé' : 'Trang chủ'}</button>
+            </div>
+          </div>
+        ) : status === 'unverified' ? (
+          <div className="card" role="alert" style={{ padding: 48, borderTop: '8px solid var(--warning)' }}>
+            <AlertTriangleIcon className="payment-result-icon payment-result-icon--pending" />
+            <h1 className="page-title" style={{ color: 'var(--warning-strong)', fontSize: '1.8rem' }}>Chưa xác minh được giao dịch</h1>
+            <p className="page-subtitle" style={{ marginBottom: 40 }}>
+              Không kết nối được tới hệ thống để kiểm tra kết quả thanh toán. Giao dịch có thể đã thành công,
+              vui lòng không thanh toán lại. {isStaffOrAdmin
+                ? 'Kiểm tra lại hoặc xem trạng thái đơn trên màn bán vé.'
+                : 'Kiểm tra lại hoặc xem trạng thái đơn trong "Vé của tôi".'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <button className="btn btn-primary" onClick={() => {
+                setStatus('processing');
+                setVerifyAttempt((n) => n + 1);
+              }}>
+                <RefreshIcon className="btn-icon" />
+                Kiểm tra lại
+              </button>
+              <button className="btn btn-secondary" onClick={() => navigate(isStaffOrAdmin ? '/staff/booking' : '/my-bookings')}>
+                {isStaffOrAdmin ? 'Quay lại bán vé' : 'Mở Vé của tôi'}
+              </button>
             </div>
           </div>
         ) : (

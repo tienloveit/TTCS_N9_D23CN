@@ -1,108 +1,41 @@
-import Badge from '../../../components/Common/Badge';
-import Button from '../../../components/Common/Button';
-import {
-  ArmchairIcon,
-  ClockIcon,
-  MapPinIcon,
-  RefreshIcon,
-  SearchIcon,
-} from '../../../components/Common/CinemaIcons';
-import { StaffChips, StaffSkeleton, StaffState } from '../StaffUI';
+import { Code, DataTable, OpsButton, Segmented, StatusBadge, TextInput } from '../../../components/Ops';
 import { formatShowtime } from './checkInUtils';
 
-const LOOKUP_FILTERS = [
-  { key: 'TODAY', label: 'Suất hôm nay' },
-  { key: 'ALL', label: 'Tất cả đơn đã thanh toán' },
+const filters = [
+  { value: 'TODAY', label: 'Suất hôm nay' },
+  { value: 'ALL', label: 'Tất cả đơn đã thanh toán' },
 ];
+const seatCodes = booking => booking.seatCodes?.length ? booking.seatCodes :
+  (booking.tickets || []).map(ticket => ticket.seatCode).filter(Boolean);
 
-/** Tab tra cứu nhanh đơn theo mã, tên, email hoặc số điện thoại. */
 export default function CheckInLookupTab({
-  checking,
-  fetchBookingsForLookup,
-  filteredLookupBookings,
-  loadingBookings,
-  lookupError,
-  lookupFilter,
-  lookupQuery,
-  performCodeCheckIn,
-  setLookupFilter,
-  setLookupQuery,
+  checking, fetchBookingsForLookup, filteredLookupBookings, loadingBookings, lookupError,
+  lookupFilter, lookupQuery, lookupInputRef, performCodeCheckIn, setLookupFilter, setLookupQuery,
 }) {
+  const columns = [
+    { key: 'code', header: 'Mã đơn / khách', render: b => <><Code>{b.bookingCode}</Code><small className="o-subline">{b.username || 'Khách tại quầy'}</small></> },
+    { key: 'show', header: 'Suất chiếu', render: b => <>{b.movieName}<small className="o-subline">{formatShowtime(b.showtimeStart)}</small><small className="o-subline">{b.roomName || b.branchName}</small></> },
+    { key: 'seats', header: 'Ghế', render: b => seatCodes(b).join(', ') },
+    { key: 'action', header: 'Thao tác', render: b => {
+      const checked = (b.tickets || []).filter(ticket => ticket.checkedInAt).length;
+      const count = b.tickets?.length || seatCodes(b).length;
+      return count > 0 && checked === count
+        ? <StatusBadge tone="warning">Đã vào rạp ({checked}/{count})</StatusBadge>
+        : <OpsButton disabled={checking} aria-label={'Soát vé đơn ' + b.bookingCode} onClick={() => performCodeCheckIn(b.bookingCode)}>Soát vé</OpsButton>;
+    } },
+  ];
   return (
-    <div className="gate-lookup">
-      <div className="gate-lookup-toolbar">
-        <div className="gate-lookup-search">
-          <SearchIcon aria-hidden="true" />
-          <input
-            type="search"
-            className="input"
-            aria-label="Tìm đơn để soát vé"
-            placeholder="Tìm theo mã đơn (BK...), tài khoản khách, tên phim, số ghế..."
-            value={lookupQuery}
-            onChange={(e) => setLookupQuery(e.target.value)}
-          />
-        </div>
-        <div className="gate-lookup-filters">
-          <StaffChips label="Phạm vi tra cứu" options={LOOKUP_FILTERS} value={lookupFilter} onChange={setLookupFilter} />
-          <Button
-            icon={<RefreshIcon size={15} />}
-            aria-label="Làm mới danh sách tra cứu"
-            onClick={fetchBookingsForLookup}
-            disabled={loadingBookings}
-          />
-        </div>
+    <div className="o-form">
+      <TextInput ref={lookupInputRef} type="search" aria-label="Tìm đơn để soát vé"
+        placeholder="Mã đơn, tên khách, phim, số ghế" value={lookupQuery} onChange={event => setLookupQuery(event.target.value)} />
+      <div className="o-actions">
+        <Segmented label="Phạm vi tra cứu" options={filters} value={lookupFilter} onChange={setLookupFilter} />
+        <OpsButton onClick={fetchBookingsForLookup} disabled={loadingBookings}>Làm mới</OpsButton>
       </div>
-
-      {loadingBookings ? (
-        <StaffSkeleton label="Đang tải danh sách đơn để soát vé" />
-      ) : lookupError ? (
-        <StaffState title={lookupError} error onRetry={fetchBookingsForLookup} />
-      ) : filteredLookupBookings.length === 0 ? (
-        <p className="gate-empty">Không tìm thấy đơn đã thanh toán nào khớp với điều kiện.</p>
-      ) : (
-        <ul className="gate-lookup-list">
-          {filteredLookupBookings.slice(0, 25).map((b) => {
-            const seats =
-              b.seatCodes?.length > 0
-                ? b.seatCodes
-                : (b.tickets || []).map((t) => t.seatCode).filter(Boolean);
-            const checkedInCount = (b.tickets || []).filter((t) => t.checkedInAt).length;
-            const totalTickets = b.tickets?.length || seats.length || 0;
-            const allChecked = totalTickets > 0 && checkedInCount === totalTickets;
-
-            return (
-              <li key={b.bookingId} className="gate-lookup-item">
-                <div className="gate-lookup-info">
-                  <div>
-                    <span className="gate-lookup-code">{b.bookingCode}</span>
-                    {b.username && <span className="gate-lookup-customer">· Khách: {b.username}</span>}
-                  </div>
-                  <div className="gate-lookup-movie">{b.movieName}</div>
-                  <div className="gate-lookup-meta">
-                    <span><ClockIcon size={13} aria-hidden="true" /> {formatShowtime(b.showtimeStart)}</span>
-                    <span><MapPinIcon size={13} aria-hidden="true" /> {b.roomName || b.branchName}</span>
-                    <span><ArmchairIcon size={13} aria-hidden="true" /> Ghế: <strong>{seats.join(', ')}</strong></span>
-                  </div>
-                </div>
-
-                {allChecked ? (
-                  <Badge tone="warning">Đã vào rạp ({checkedInCount}/{totalTickets})</Badge>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    disabled={checking}
-                    aria-label={`Soát vé đơn ${b.bookingCode}`}
-                    onClick={() => performCodeCheckIn(b.bookingCode)}
-                  >
-                    Soát vé
-                  </Button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <DataTable caption="Đơn đã thanh toán" columns={columns} rows={filteredLookupBookings}
+        rowKey={b => b.bookingId} state={loadingBookings ? 'loading' : lookupError ? 'error' : 'ready'}
+        error={lookupError} onRetry={fetchBookingsForLookup} stackOnMobile
+        empty={{ title: 'Không tìm thấy đơn đã thanh toán', action: { label: 'Xóa từ khóa', onClick: () => { setLookupQuery(''); lookupInputRef.current?.focus(); } } }} />
     </div>
   );
 }

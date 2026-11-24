@@ -11,9 +11,17 @@ dist/
 # IDE and local AI/tooling state
 .idea/
 .vscode/
-.claude/
 .ai/
 .tmp/
+
+# Claude Code: chia sẻ hook, rule và skill của dự án; giữ cấu hình cá nhân ở máy
+.claude/*
+!.claude/settings.json
+!.claude/rules/
+!.claude/skills/
+
+# Plan làm việc của AI, không phải tài liệu dự án
+docs/superpowers/
 
 # Runtime files
 *.log
