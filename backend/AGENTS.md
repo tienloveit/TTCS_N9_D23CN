@@ -44,7 +44,7 @@ Mã nguồn ở `src/main/java/com/ltweb/backend/`.
 | Cấu hình, bảo mật | `config/SecurityConfig`, `JwtAuthenticationFilter`, `JwtDecoderConfig`, `JwtAuthenticationEntryPoint`, `OAuth2LoginSuccessHandler`, `TimeConfig`, `WebSocketConfig`, `AppConfig` (timeout RestTemplate) |
 | Xác thực | `service/AuthService`, `JwtService`, `PasswordRecoveryService`, `OTPService`, `CurrentUserProvider` |
 | Đặt vé | `service/BookingService` → `BookingCheckoutService`, `BookingCommandService`, `BookingQueryService`, `BookingRefundService`, `BookingMembershipService`; `BookingPricingService`, `BookingReleaseService`, `BookingTransactionEffects`, `StaffCustomerService`; policy `BookingAccessPolicy`, `RefundPolicy` |
-| Thanh toán | `service/VnpayService`, `VnpayRefundGateway`, `PaymentEventService`, `util/VnpayUtil` |
+| Thanh toán | `service/VnpayService`, `VnpayCallbackService`, `VnpayRefundGateway`, `PaymentEventService`, `util/VnpayUtil` |
 | Vé, check-in, suất chiếu | `service/TicketService`, `ShowtimeService`, `SeatService`, `RoomService` |
 | Sự kiện sau thanh toán | `event/BookingPaidEvent`, `service/BookingTicketEmailListener`, `MembershipUpdateListener`, `EmailService` |
 | Job | `job/BookingCleanupJob`, `job/DataConsistencyJob`, `ShowtimeService.autoCloseExpiredShowtimes` |

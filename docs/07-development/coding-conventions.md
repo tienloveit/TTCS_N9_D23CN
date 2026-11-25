@@ -1,6 +1,6 @@
 # Quy ước viết code
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 ## Chung
 
@@ -44,7 +44,7 @@ Endpoint:
 ### Nghiệp vụ
 
 - Inject bằng constructor (`@RequiredArgsConstructor` của Lombok).
-- `@PreAuthorize` cho role, kiểm tra chủ sở hữu và chi nhánh trong service bằng `CurrentUserProvider`, `BookingAccessPolicy`, `RefundPolicy`.
+- `@PreAuthorize` cho role đặt trên controller, không đặt trên service. Kiểm tra chủ sở hữu và chi nhánh trong service bằng `CurrentUserProvider`, `BookingAccessPolicy`, `RefundPolicy`. Đã đăng nhập nhưng không đủ quyền thì ném `ACCESS_DENIED` (403), không dùng `UNAUTHORIZED` (401) vì frontend gặp 401 sẽ đi refresh token.
 - Ném `AppException(ErrorCode.X)`. Mã lỗi mới chọn đúng HTTP status, thông báo cho người dùng viết tiếng Việt.
 - Thời gian: `LocalDateTime.now(clock)` với `Clock` được inject. Không gọi `LocalDateTime.now()` trong nghiệp vụ.
 - Tác động ngoài (STOMP, Redis, email) chạy sau commit. Xem [backend.md](../03-architecture/backend.md#transaction).

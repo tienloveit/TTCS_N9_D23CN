@@ -30,7 +30,8 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    # In câu SQL ra log khi debug: đặt SPRING_JPA_SHOW_SQL=true trong .env.
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
     # Không giữ EntityManager mở tới hết request: mọi truy cập quan hệ lazy phải nằm trong
     # transaction của service. ReadEndpointsSmokeTest gọi các API đọc để bắt lỗi lazy loading.
     open-in-view: false
@@ -44,9 +45,6 @@ spring:
     redis:
       host: localhost
       port: 6379
-
-  cache:
-    type: redis
 
   mail:
     host: smtp.gmail.com
@@ -83,6 +81,9 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
 
 app:
+  cors:
+    # Origin của frontend được gọi API và mở /ws, cách nhau bằng dấu phẩy.
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000}
   oauth2:
     redirect-success-url: ${APP_OAUTH2_SUCCESS_URL:http://localhost:5173/oauth2/callback}
     redirect-failure-url: ${APP_OAUTH2_FAILURE_URL:http://localhost:5173/login}

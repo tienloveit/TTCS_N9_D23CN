@@ -31,6 +31,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
+  private final java.time.Clock clock;
   private final ShowtimeRepository showtimeRepository;
   private final BookingRepository bookingRepository;
   private final TicketRepository ticketRepository;
@@ -84,7 +85,7 @@ public class DataSeeder implements CommandLineRunner {
   // ══════════════════════════════════════════════════════
   private void cleanOldData() {
     String cutoff =
-        LocalDateTime.now()
+        LocalDateTime.now(clock)
             .minusDays(30)
             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     log.info("Cleaning data older than {}", cutoff);
@@ -148,7 +149,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     int created = 0;
-    LocalDate today = LocalDate.now();
+    LocalDate today = LocalDate.now(clock);
 
     // Seed từ -7 ngày (quá khứ) đến +14 ngày (tương lai)
     // Quá khứ để có booking mẫu, tương lai để đặt vé
@@ -188,7 +189,7 @@ public class DataSeeder implements CommandLineRunner {
             .filter(
                 b ->
                     b.getCreatedAt() != null
-                        && b.getCreatedAt().isAfter(LocalDateTime.now().minusDays(7)))
+                        && b.getCreatedAt().isAfter(LocalDateTime.now(clock).minusDays(7)))
             .count();
     if (recent >= 20) {
       log.info("Already {} recent bookings — skip.", recent);
@@ -205,8 +206,8 @@ public class DataSeeder implements CommandLineRunner {
       return;
     }
 
-    LocalDateTime from = LocalDateTime.now().minusDays(7);
-    LocalDateTime to = LocalDateTime.now().minusHours(1);
+    LocalDateTime from = LocalDateTime.now(clock).minusDays(7);
+    LocalDateTime to = LocalDateTime.now(clock).minusHours(1);
 
     List<Showtime> past =
         showtimeRepository.findAll().stream()
@@ -360,8 +361,8 @@ public class DataSeeder implements CommandLineRunner {
             .filter(u -> u.getRole() == UserRole.ADMIN || u.getRole() == UserRole.MANAGER)
             .findFirst();
 
-    LocalDateTime from = LocalDateTime.now().minusDays(14);
-    LocalDateTime to = LocalDateTime.now().minusDays(1);
+    LocalDateTime from = LocalDateTime.now(clock).minusDays(14);
+    LocalDateTime to = LocalDateTime.now(clock).minusDays(1);
 
     List<Showtime> past =
         showtimeRepository.findAll().stream()
@@ -526,7 +527,7 @@ public class DataSeeder implements CommandLineRunner {
   }
 
   private String bookingCode(Showtime st, User user, int idx) {
-    String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+    String date = LocalDate.now(clock).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     return String.format(
         "BK%s%d%d%s",
         date,

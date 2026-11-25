@@ -1,6 +1,6 @@
 # Kiến trúc frontend
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `6935249` và thay đổi đang làm việc.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Mã nguồn ở `frontend/src/`. Ứng dụng là một SPA React 19 build bằng Vite 8, không dùng TypeScript, PostCSS hay Tailwind. CSS viết thuần.
 
@@ -106,7 +106,7 @@ Trên desktop, tên đăng nhập ở Navbar là nút mở menu tài khoản g�
 - Gắn `Authorization: Bearer <accessToken>` cho mọi request, trừ request có `skipAuth: true`.
 - Khi nhận 401, thử lại request đó tối đa một lần. Nhiều request lỗi cùng lúc dùng chung một lần gọi `/auth/refresh` (biến `refreshRequest`). Phản hồi 401 đến muộn của request gửi bằng token cũ dùng lại token đã làm mới, không refresh thêm.
 - Refresh thất bại thì xóa token và chuyển tới `/login`.
-- Ngoại lệ: `POST /auth/change-password` trả 401 với `message = "Password incorrect"` được trả thẳng về form để người dùng nhập lại, không refresh.
+- Mật khẩu hiện tại sai khi đổi mật khẩu trả 400 (`Password incorrect`), nên không kích hoạt refresh.
 - 403 không kích hoạt refresh.
 
 `authApi.logout` dùng `skipAuth` và gửi cả `accessToken`, `refreshToken` trong body để backend kết thúc phiên refresh. Access token hết hạn không kích hoạt refresh lúc đăng xuất.

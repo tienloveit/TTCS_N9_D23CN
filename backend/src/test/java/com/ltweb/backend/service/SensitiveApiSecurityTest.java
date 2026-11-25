@@ -10,7 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ltweb.backend.config.*;
 import com.ltweb.backend.controller.AuthController;
 import com.ltweb.backend.controller.CleanupController;
+import com.ltweb.backend.controller.DirectorController;
+import com.ltweb.backend.controller.GenreController;
 import com.ltweb.backend.controller.MovieController;
+import com.ltweb.backend.controller.ShowtimeController;
 import com.ltweb.backend.controller.UserController;
 import com.ltweb.backend.controller.VnpayController;
 import com.ltweb.backend.dto.response.UserResponse;
@@ -135,9 +138,61 @@ class SensitiveApiSecurityTest {
                   mockMvc(ctx.getSourceApplicationContext(), ctx.getBean(FilterChainProxy.class));
               mvc.perform(request("GET", "/v1/vnpay/return", null)).andExpect(status().isOk());
               mvc.perform(request("GET", "/v1/vnpay/ipn", null)).andExpect(status().isOk());
-              verify(ctx.getBean(VnpayService.class)).processReturnUrl(anyMap());
-              verify(ctx.getBean(VnpayService.class)).processIpn(anyMap());
+              verify(ctx.getBean(VnpayCallbackService.class)).processReturnUrl(anyMap());
+              verify(ctx.getBean(VnpayCallbackService.class)).processIpn(anyMap());
             });
+  }
+
+  @Test
+  void controllerRoleChecksGuardCatalogShowtimeAndUserManagement() {
+    context("default", false)
+        .run(
+            ctx -> {
+              MockMvc mvc =
+                  mockMvc(ctx.getSourceApplicationContext(), ctx.getBean(FilterChainProxy.class));
+              String[][] adminOnly = {
+                {"POST", "/genre", "{\"name\":\"Hành động\"}"},
+                {"PUT", "/genre/1", "{\"name\":\"Hành động\"}"},
+                {"DELETE", "/genre/1", null},
+                {"POST", "/director", "{\"name\":\"Lý Hải\"}"},
+                {"PUT", "/director/1", "{\"name\":\"Lý Hải\"}"},
+                {"DELETE", "/director/1", null},
+                {"DELETE", "/showtime/1", null}
+              };
+              for (String[] route : adminOnly) {
+                for (String role : new String[] {"USER", "STAFF", "MANAGER"}) {
+                  mvc.perform(withBody(request(route[0], route[1], role), route[2]))
+                      .andExpect(status().isForbidden());
+                }
+              }
+              String[][] adminOrManager = {
+                {"GET", "/users", null},
+                {"GET", "/users/1", null},
+                {"PUT", "/users/1", "{\"fullName\":\"Nhân viên\"}"},
+                {"DELETE", "/users/1", null}
+              };
+              for (String[] route : adminOrManager) {
+                for (String role : new String[] {"USER", "STAFF"}) {
+                  mvc.perform(withBody(request(route[0], route[1], role), route[2]))
+                      .andExpect(status().isForbidden());
+                }
+              }
+              verifyNoInteractions(
+                  ctx.getBean(GenreService.class),
+                  ctx.getBean(DirectorService.class),
+                  ctx.getBean(ShowtimeService.class),
+                  ctx.getBean(UserService.class));
+
+              mvc.perform(request("DELETE", "/showtime/1", "ADMIN")).andExpect(status().isOk());
+              verify(ctx.getBean(ShowtimeService.class)).delete(1L);
+              mvc.perform(request("GET", "/users/1", "MANAGER")).andExpect(status().isOk());
+              verify(ctx.getBean(UserService.class)).getUserById(1L);
+            });
+  }
+
+  private static MockHttpServletRequestBuilder withBody(
+      MockHttpServletRequestBuilder request, String body) {
+    return body == null ? request : request.content(body);
   }
 
   @Test
@@ -263,7 +318,10 @@ class SensitiveApiSecurityTest {
     SecurityConfig.class,
     AuthController.class,
     CleanupController.class,
+    DirectorController.class,
+    GenreController.class,
     MovieController.class,
+    ShowtimeController.class,
     UserController.class,
     VnpayController.class
   })
@@ -281,6 +339,21 @@ class SensitiveApiSecurityTest {
     @Bean
     UserService users() {
       return mock(UserService.class);
+    }
+
+    @Bean
+    GenreService genres() {
+      return mock(GenreService.class);
+    }
+
+    @Bean
+    DirectorService directors() {
+      return mock(DirectorService.class);
+    }
+
+    @Bean
+    ShowtimeService showtimes() {
+      return mock(ShowtimeService.class);
     }
 
     @Bean
@@ -316,6 +389,11 @@ class SensitiveApiSecurityTest {
     @Bean
     VnpayService vnpay() {
       return mock(VnpayService.class);
+    }
+
+    @Bean
+    VnpayCallbackService vnpayCallbacks() {
+      return mock(VnpayCallbackService.class);
     }
 
     @Bean

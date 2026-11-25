@@ -31,7 +31,6 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,7 +53,6 @@ public class TicketService {
   private final QRCodeReaderService qrCodeReaderService;
   private final AuditLogService auditLogService;
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public void createTicket(Showtime showtime) {
     List<Seat> seats = seatRepository.findByRoomId(showtime.getRoom().getId());
@@ -168,7 +166,6 @@ public class TicketService {
     return ticketMapper.toTicketResponse(ticketRepository.save(ticket));
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional
   public TicketCheckInResponse checkIn(CheckInTicketRequest request) {
     String code = request.getCode().trim();
@@ -216,7 +213,6 @@ public class TicketService {
     return buildCheckInResponse(booking, booking.getTickets(), alreadyCheckedIn);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional
   public TicketCheckInResponse checkInByQRImage(MultipartFile qrImage) {
     // Decode QR code from image
@@ -254,14 +250,14 @@ public class TicketService {
       return;
     }
     if (!isBranchOperator(currentUser) || currentUser.getBranchId() == null) {
-      throw new AppException(ErrorCode.UNAUTHORIZED);
+      throw new AppException(ErrorCode.ACCESS_DENIED);
     }
     Showtime showtime =
         showtimeRepository
             .findById(showtimeId)
             .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
     if (!isShowtimeInBranch(showtime, currentUser.getBranchId())) {
-      throw new AppException(ErrorCode.UNAUTHORIZED);
+      throw new AppException(ErrorCode.ACCESS_DENIED);
     }
   }
 
@@ -284,7 +280,7 @@ public class TicketService {
         && isTicketInBranch(ticket, currentUser.getBranchId())) {
       return;
     }
-    throw new AppException(ErrorCode.UNAUTHORIZED);
+    throw new AppException(ErrorCode.ACCESS_DENIED);
   }
 
   private void requireBookingCheckInAccess(Booking booking) {
@@ -305,7 +301,7 @@ public class TicketService {
         throw new AppException(ErrorCode.TICKET_WRONG_BRANCH);
       }
     }
-    throw new AppException(ErrorCode.UNAUTHORIZED);
+    throw new AppException(ErrorCode.ACCESS_DENIED);
   }
 
   private boolean isBookingInBranch(Booking booking, Long branchId) {

@@ -87,7 +87,8 @@ class PaymentPersistenceIntegrationTest {
             ticketRepository,
             userRepository,
             Mappers.getMapper(ShowtimeMapper.class),
-            mock(TicketService.class));
+            mock(TicketService.class),
+            mock(BookingReleaseService.class));
     var response =
         service.update(
             showtimeId,

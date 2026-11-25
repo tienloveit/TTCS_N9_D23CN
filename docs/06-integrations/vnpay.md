@@ -1,12 +1,13 @@
 # Tích hợp VNPay
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Dự án dùng môi trường sandbox của VNPay, API phiên bản `2.1.0`. Quy tắc nghiệp vụ (khi nào xuất vé, khi nào hoàn) nằm trong [payment-refund.md](../02-domain/payment-refund.md). File này mô tả phần kỹ thuật.
 
 | Thành phần | File |
 | --- | --- |
-| Tạo URL, xử lý return và IPN, truy vấn giao dịch | [VnpayService.java](../../backend/src/main/java/com/ltweb/backend/service/VnpayService.java) |
+| Tạo URL thanh toán, truy vấn giao dịch, hoàn tiền trực tiếp | [VnpayService.java](../../backend/src/main/java/com/ltweb/backend/service/VnpayService.java) |
+| Xử lý return URL và IPN | [VnpayCallbackService.java](../../backend/src/main/java/com/ltweb/backend/service/VnpayCallbackService.java) |
 | Gửi và xác minh lệnh hoàn tiền, truy vấn kết quả hoàn | [VnpayRefundGateway.java](../../backend/src/main/java/com/ltweb/backend/service/VnpayRefundGateway.java) |
 | HMAC-SHA512, mã hóa tham số | [VnpayUtil.java](../../backend/src/main/java/com/ltweb/backend/util/VnpayUtil.java) |
 | Endpoint | [VnpayController.java](../../backend/src/main/java/com/ltweb/backend/controller/VnpayController.java) |
@@ -66,7 +67,7 @@ Ký URL:
 
 ## Kiểm chữ ký callback
 
-Return URL và IPN gửi cùng bộ tham số. `VnpayService.verifyCallback`:
+Return URL và IPN gửi cùng bộ tham số. `VnpayCallbackService.verifyCallback`:
 
 1. Bỏ `vnp_SecureHash` và `vnp_SecureHashType`.
 2. Sắp xếp tên tham số, bỏ giá trị rỗng, mã hóa **cả tên và giá trị** rồi nối `ten=gia_tri` bằng `&`.

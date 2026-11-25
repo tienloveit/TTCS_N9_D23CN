@@ -46,15 +46,15 @@ public class ReportExportController {
     List<List<String>> rows = new ArrayList<>();
     rows.add(
         List.of(
-            "Thoi gian",
-            "Ma don",
-            "Chi nhanh",
+            "Thời gian",
+            "Mã đơn",
+            "Chi nhánh",
             "Phim",
-            "Nhan vien",
-            "Thanh toan",
-            "Ve",
-            "Bap nuoc",
-            "Tong"));
+            "Nhân viên",
+            "Thanh toán",
+            "Vé",
+            "Bắp nước",
+            "Tổng"));
     report
         .getRows()
         .forEach(
@@ -81,15 +81,15 @@ public class ReportExportController {
     OperationsReportResponse report = operationsReportService.getDailyReport(date, branchId);
     List<List<String>> rows = new ArrayList<>();
     rows.add(
-        List.of("Bao cao van hanh", text(report.getReportDate()), text(report.getBranchName())));
+        List.of("Báo cáo vận hành", text(report.getReportDate()), text(report.getBranchName())));
     rows.add(List.of());
-    rows.add(List.of("Chi so", "Gia tri"));
+    rows.add(List.of("Chỉ số", "Giá trị"));
     var summary = report.getSummary();
     rows.add(List.of("Doanh thu", text(summary.getRevenue())));
-    rows.add(List.of("Doanh thu ve", text(summary.getTicketRevenue())));
-    rows.add(List.of("Doanh thu bap nuoc", text(summary.getFoodRevenue())));
-    rows.add(List.of("Don hoan tat", text(summary.getCompletedBookings())));
-    rows.add(List.of("Yeu cau hoan tien", text(summary.getRefundRequests())));
+    rows.add(List.of("Doanh thu vé", text(summary.getTicketRevenue())));
+    rows.add(List.of("Doanh thu bắp nước", text(summary.getFoodRevenue())));
+    rows.add(List.of("Đơn hoàn tất", text(summary.getCompletedBookings())));
+    rows.add(List.of("Yêu cầu hoàn tiền", text(summary.getRefundRequests())));
     rows.add(List.of());
     return xlsx("operations-report.xlsx", xlsxExportService.singleSheet("Operations", rows));
   }

@@ -18,7 +18,7 @@ Trên Linux/macOS thay `.\mvnw.cmd` bằng `sh ./mvnw`. Cài đặt và biến m
 ## Quy tắc bắt buộc
 
 - Giữ thay đổi trong phạm vi yêu cầu. Quy tắc với working tree và Git ở mục [Quy tắc Git](#quy-tắc-git).
-- Quyền luôn được kiểm ở backend: role bằng `SecurityConfig` và `@PreAuthorize`, chủ sở hữu và chi nhánh trong service. Route guard ở frontend chỉ để điều hướng. Xem [roles-permissions.md](docs/02-domain/roles-permissions.md).
+- Quyền luôn được kiểm ở backend: role bằng `SecurityConfig` và `@PreAuthorize` trên controller, chủ sở hữu và chi nhánh trong service. Route guard ở frontend chỉ để điều hướng. Xem [roles-permissions.md](docs/02-domain/roles-permissions.md).
 - Backend quyết định giá, hạn giữ ghế, tồn bắp nước và thời hạn hoàn. Frontend hiển thị giá trị backend trả về, không tự tính lại.
 - Schema chỉ đổi bằng một file Flyway mới `V{n}__mo_ta.sql`. Không sửa migration đã phát hành, không bật `ddl-auto: update`. Xem [add-migration.md](docs/07-development/how-to/add-migration.md).
 - Giữ hợp đồng JSON: frontend đọc `data.result`, các trường thanh toán vẫn phẳng trong `BookingResponse`. Đổi API thì đối chiếu controller, DTO, mapper, client Axios và mọi màn hình dùng dữ liệu đó. Xem [add-endpoint.md](docs/07-development/how-to/add-endpoint.md).
@@ -49,7 +49,7 @@ Quy trình đầy đủ ở [git-workflow.md](docs/07-development/git-workflow.m
 | Ứng dụng backend, cấu hình | [BackendApplication.java](backend/src/main/java/com/ltweb/backend/BackendApplication.java), [application.yaml](backend/src/main/resources/application.yaml) |
 | Bảo mật, JWT | `config/SecurityConfig.java`, `config/JwtAuthenticationFilter.java`, `service/JwtService.java` |
 | Đặt vé, hủy, hoàn | `service/BookingService.java` → `BookingCheckoutService`, `BookingCommandService`, `BookingQueryService`, `BookingRefundService` |
-| VNPay | `service/VnpayService.java`, `service/VnpayRefundGateway.java` |
+| VNPay | `service/VnpayService.java` (tạo URL, truy vấn), `service/VnpayCallbackService.java` (return, IPN), `service/VnpayRefundGateway.java` |
 | Ghế realtime | `config/WebSocketConfig.java`, `BookingTransactionEffects`, `frontend/src/pages/SeatSelect/SeatSelectPage.jsx` |
 | Schema | [backend/src/main/resources/db/migration](backend/src/main/resources/db/migration) |
 

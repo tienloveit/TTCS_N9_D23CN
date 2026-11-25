@@ -145,11 +145,6 @@ final class BackendServiceFixtures {
       VnpayProperties props,
       RestTemplate http,
       BookingRepository bookings,
-      TicketRepository tickets,
-      RedisTemplate<String, String> redis,
-      SimpMessagingTemplate messaging,
-      ApplicationEventPublisher events,
-      FoodStockService stock,
       UserRepository users,
       BookingRefundService refunds) {
     return new VnpayService(
@@ -159,14 +154,29 @@ final class BackendServiceFixtures {
         props,
         http,
         bookings,
+        refunds);
+  }
+
+  static VnpayCallbackService vnpayCallbacks(
+      VnpayProperties props,
+      BookingRepository bookings,
+      TicketRepository tickets,
+      RedisTemplate<String, String> redis,
+      SimpMessagingTemplate messaging,
+      ApplicationEventPublisher events,
+      FoodStockService stock) {
+    return new VnpayCallbackService(
+        CLOCK,
+        props,
+        new BookingAccessPolicy(),
+        bookings,
         tickets,
         redis,
         messaging,
         events,
         new BookingReleaseService(tickets, messaging, redis, stock, mock(PromotionService.class)),
         mock(NotificationService.class),
-        mock(PaymentEventService.class),
-        refunds);
+        mock(PaymentEventService.class));
   }
 
   static TicketService ticket(

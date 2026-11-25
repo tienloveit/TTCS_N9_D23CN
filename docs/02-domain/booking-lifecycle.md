@@ -1,6 +1,6 @@
 # Vòng đời đơn đặt vé
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 File này mô tả một đơn từ lúc có suất chiếu tới khi khách vào phòng. Phần tiền (VNPay, hoàn tiền) nằm trong [payment-refund.md](payment-refund.md). Các con số như thời gian giữ ghế là giá trị mặc định, ADMIN đổi được ở [tham số nghiệp vụ](overview.md#tham-số-nghiệp-vụ).
 
@@ -10,7 +10,8 @@ File này mô tả một đơn từ lúc có suất chiếu tới khi khách và
 - Hai suất cùng phòng phải cách nhau ít nhất 15 phút. Backend kiểm tra trùng giờ trên khoảng `[start − 15 phút, end + 15 phút]`.
 - Khi lưu suất, `TicketService.createTicket` tạo sẵn một `Ticket` cho mỗi ghế của phòng, trạng thái `AVAILABLE`, giá bằng `ticketPrice` của suất. Mọi ghế trong một suất có cùng giá, kể cả ghế `VIP` và `COUPLE`.
 - Đổi giá suất chỉ được khi mọi vé của suất còn `AVAILABLE` và chưa gắn đơn. Ngược lại backend trả `SHOWTIME_PRICE_LOCKED`.
-- Xóa suất chỉ ADMIN làm được và chỉ khi suất chưa có đơn (`SHOWTIME_HAS_BOOKINGS`).
+- Xóa suất chỉ ADMIN làm được và chỉ khi suất chưa có đơn (`SHOWTIME_HAS_BOOKINGS`). Suất đã có đơn thì chuyển trạng thái sang `CANCELLED`.
+- Khi suất chuyển sang `CANCELLED`, mọi đơn `PENDING` của suất bị hủy và trả ghế, bắp nước, lượt khuyến mãi trong cùng transaction. Đơn đã thanh toán giữ nguyên. Từ đó backend không tạo URL VNPay cho đơn của suất (`SHOWTIME_CANCELLED`), và tiền VNPay báo về cho suất này đi vào [thanh toán trễ](payment-refund.md#thanh-toán-trễ) thay vì xuất vé.
 - Job chạy mỗi 5 phút chuyển suất `OPEN` đã qua giờ kết thúc sang `CLOSED`.
 
 Một suất **còn bán được** khi đủ các điều kiện: suất `OPEN`, phim `isPublic = true`, phòng `ACTIVE`, chi nhánh `ACTIVE`, và thời điểm hiện tại còn trước giờ chiếu. Riêng bán tại quầy được bán tiếp tới 15 phút sau giờ chiếu cho khách đến muộn. Suất không đạt điều kiện bị báo `SHOWTIME_NOT_FOUND`.
@@ -24,7 +25,7 @@ stateDiagram-v2
     [*] --> PENDING: Tạo đơn online, hoặc đơn quầy chọn VNPay
     [*] --> COMPLETED: Đơn quầy thu tiền mặt
     PENDING --> COMPLETED: VNPay thành công, ghế còn giữ cho đơn
-    PENDING --> CANCELLED: Hủy, hết hạn, hoặc VNPay báo thất bại
+    PENDING --> CANCELLED: Hủy, hết hạn, suất bị hủy, hoặc VNPay báo thất bại
     PENDING --> REFUND_REQUESTED: VNPay thành công nhưng ghế đã mất
     CANCELLED --> REFUND_REQUESTED: VNPay thành công sau khi đơn đã hủy
     COMPLETED --> REFUND_REQUESTED: Gửi yêu cầu hoàn trong thời hạn
@@ -39,8 +40,8 @@ stateDiagram-v2
 | — | `PENDING` | Khách (`POST /booking`), nhân viên chọn VNPay ở quầy | Xem [kiểm tra khi tạo đơn](#kiểm-tra-khi-tạo-đơn-online). |
 | — | `COMPLETED` | Nhân viên thu tiền mặt (`POST /booking/staff`, `paymentMethod` là `CASH` hoặc bỏ trống) | Như trên, thêm quyền bán tại chi nhánh. |
 | `PENDING` | `COMPLETED` | Callback VNPay thành công | Payment còn `PENDING` và mọi vé của đơn còn `HOLDING` cho đúng đơn này. Callback tới sau `expiresAt` vẫn được chấp nhận nếu ghế còn giữ. |
-| `PENDING` | `CANCELLED` | Chủ đơn, STAFF cùng chi nhánh hoặc ADMIN hủy; job dọn hết hạn; callback VNPay thất bại | Chỉ hủy được đơn `PENDING`. |
-| `PENDING`, `CANCELLED` | `REFUND_REQUESTED` | Callback VNPay thành công khi đơn không còn ghế | Tiền đã bị trừ nên đơn được đưa vào hàng chờ hoàn. Xem [thanh toán trễ](payment-refund.md#thanh-toán-trễ). |
+| `PENDING` | `CANCELLED` | Chủ đơn, STAFF cùng chi nhánh hoặc ADMIN hủy; job dọn hết hạn; callback VNPay thất bại; suất chuyển sang `CANCELLED` | Chỉ hủy được đơn `PENDING`. |
+| `PENDING`, `CANCELLED` | `REFUND_REQUESTED` | Callback VNPay thành công khi đơn không còn ghế hoặc suất đã bị hủy | Tiền đã bị trừ nên đơn được đưa vào hàng chờ hoàn. Xem [thanh toán trễ](payment-refund.md#thanh-toán-trễ). |
 | `COMPLETED` | `REFUND_REQUESTED` | Chủ đơn, hoặc nhân viên gửi thay khách cho đơn tại quầy | Xem [điều kiện yêu cầu hoàn](payment-refund.md#yêu-cầu-hoàn-tiền). |
 | `REFUND_REQUESTED` | `COMPLETED` | ADMIN hoặc MANAGER từ chối | Không có lần hoàn VNPay nào đang `PROCESSING` hoặc `UNKNOWN`. |
 | `REFUND_REQUESTED` | `REFUNDED` | ADMIN hoặc MANAGER duyệt và cổng xác nhận (hoặc xác nhận đã trả tiền mặt) | Chưa có vé nào được check-in. |

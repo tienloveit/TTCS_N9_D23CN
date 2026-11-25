@@ -8,7 +8,6 @@ import com.ltweb.backend.dto.response.BookingPageResponse;
 import com.ltweb.backend.dto.response.BookingResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,19 +25,16 @@ public class BookingService {
     return bookingCheckoutService.createBooking(request);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   @Transactional
   public BookingResponse createStaffBooking(StaffBookingRequest request) {
     return bookingCheckoutService.createStaffBooking(request);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF','MANAGER')")
   @Transactional(readOnly = true)
   public BookingPageResponse searchBookings(BookingSearchRequest request) {
     return bookingQueryService.searchBookings(request);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional(readOnly = true)
   public List<BookingResponse> getRefundBookings() {
     return bookingQueryService.getRefundBookings();
@@ -59,7 +55,6 @@ public class BookingService {
     return bookingQueryService.getMyBookingsList();
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   @Transactional
   public BookingResponse updateBooking(Long bookingId, UpdateBookingRequest request) {
     return bookingCommandService.updateBooking(bookingId, request);
@@ -95,12 +90,10 @@ public class BookingService {
   }
 
   /** Admin/Manager duyệt hoặc từ chối yêu cầu hoàn tiền. */
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public BookingResponse processRefund(Long bookingId, boolean approved) {
     return processRefund(bookingId, approved, null);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public BookingResponse processRefund(Long bookingId, boolean approved, String note) {
     return bookingRefundService.processRefund(bookingId, approved, note);
   }

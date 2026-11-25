@@ -1,6 +1,6 @@
 # Kiến trúc backend
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Mã nguồn ở `backend/src/main/java/com/ltweb/backend/`. Điểm vào là [BackendApplication.java](../../backend/src/main/java/com/ltweb/backend/BackendApplication.java) (`@EnableScheduling`, nạp `VnpayProperties`). Cấu hình runtime ở [application.yaml](../../backend/src/main/resources/application.yaml), giải thích trong [configuration.md](../01-getting-started/configuration.md).
 
@@ -19,7 +19,7 @@ Mã nguồn ở `backend/src/main/java/com/ltweb/backend/`. Điểm vào là [Ba
 | `exception` | `AppException`, `ErrorCode`, `GlobalExceptionHandler`. | |
 | `event` | Sự kiện miền. | `BookingPaidEvent` |
 | `job` | Công việc định kỳ. | `BookingCleanupJob`, `DataConsistencyJob` |
-| `util` | Hàm tiện ích không có trạng thái. | `VnpayUtil` |
+| `util` | Hàm tiện ích không có trạng thái. | `VnpayUtil`, `TicketQrCode` |
 
 Luồng chuẩn: `controller` → `service` → `repository`, và `mapper` dựng DTO bên trong transaction của service.
 
@@ -92,13 +92,13 @@ Thông báo được lọc ngay trong truy vấn `findVisibleCandidates` (gửi 
 
 Chuỗi filter được cấu hình trong [SecurityConfig.java](../../backend/src/main/java/com/ltweb/backend/config/SecurityConfig.java):
 
-1. CORS cho `localhost` và `127.0.0.1` ở cổng 5173, 5174, 3000, các method GET/POST/PUT/PATCH/DELETE/OPTIONS. CSRF tắt vì API dùng Bearer token, không dùng cookie phiên.
+1. CORS cho các origin trong `app.cors.allowed-origins` (mặc định `localhost` và `127.0.0.1` ở cổng 5173, 5174, 3000, đổi bằng `APP_CORS_ALLOWED_ORIGINS`), các method GET/POST/PUT/PATCH/DELETE/OPTIONS. WebSocket `/ws` dùng cùng danh sách origin. CSRF tắt vì API dùng Bearer token, không dùng cookie phiên.
 2. `JwtAuthenticationFilter` được đặt vào vị trí của `BearerTokenAuthenticationFilter` (không dùng `oauth2ResourceServer`). Filter đọc header bằng `DefaultBearerTokenResolver`, xác minh qua `JwtAuthenticationProvider` với `JwtDecoderConfig`, rồi lưu kết quả vào `SecurityContext` của request (`RequestAttributeSecurityContextRepository`, không dùng session). Request không có Bearer đi tiếp để quy tắc truy cập quyết định, nhờ vậy route công khai và OAuth2 Google vẫn chạy.
 3. `JwtDecoderConfig` gọi `JwtService.verifyToken`: kiểm tra thuật toán HS512, chữ ký, các claim bắt buộc (`sub`, `jti`, `iat`, `exp`, `role`, `token_use`), `token_use = access` và access token chưa bị thu hồi. Không truy cập Redis trước khi chữ ký và claim hợp lệ.
 4. Claim `role` được chuyển thành authority `ROLE_<role>` cho `hasRole` và `@PreAuthorize`.
 5. Lỗi xác thực trả JSON 401 qua `JwtAuthenticationEntryPoint`. Đã xác thực JWT mà thiếu role trả 403 qua `BearerTokenAccessDeniedHandler`, kèm header `WWW-Authenticate`.
 
-`@EnableMethodSecurity` bật `@PreAuthorize` ở cả controller và service. Một số controller (thể loại, đạo diễn, người dùng, xóa suất chiếu) không có annotation, quyền nằm ở service. Đọc cả hai khi xác định quyền của một endpoint. Danh sách đầy đủ ở [endpoints.md](../04-api/endpoints.md).
+Role của mỗi endpoint được kiểm bằng `@PreAuthorize` trên method của controller (`@EnableMethodSecurity`). Service không khai báo `@PreAuthorize`, chỉ kiểm chủ sở hữu và chi nhánh. `RoleCheckPlacementTest` giữ quy ước này. Danh sách đầy đủ ở [endpoints.md](../04-api/endpoints.md).
 
 ## Xử lý lỗi
 

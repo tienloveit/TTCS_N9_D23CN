@@ -49,7 +49,7 @@ test('an incorrect current password reaches the form without refreshing the sess
   try {
     const reject = fixture.client.interceptors.response.handlers[0].rejected;
     const config = { url: '/auth/change-password', headers: { Authorization: 'Bearer old-access' } };
-    const incorrect = { response: { status: 401, data: { message: 'Password incorrect' } }, config };
+    const incorrect = { response: { status: 400, data: { message: 'Password incorrect' } }, config };
     await assert.rejects(reject(incorrect), (error) => error === incorrect);
     assert.equal(refreshCalls, 0);
     assert.equal(fixture.storage.get('accessToken'), 'old-access');

@@ -20,6 +20,7 @@ class DemoSeedConfigurationTest {
             .withInitializer(c -> c.getEnvironment().setActiveProfiles(profiles.split(",")))
             .withUserConfiguration(ApplicationInitConfig.class, DataSeeder.class)
             .withBean(DataSeedService.class, () -> mock(DataSeedService.class))
+            .withBean(java.time.Clock.class, () -> BackendServiceFixtures.CLOCK)
             .withBean(ShowtimeRepository.class, () -> mock(ShowtimeRepository.class))
             .withBean(BookingRepository.class, () -> mock(BookingRepository.class))
             .withBean(TicketRepository.class, () -> mock(TicketRepository.class))

@@ -44,7 +44,7 @@ test('a short new password is rejected before calling the API', async () => {
 
 test('a wrong current password shows the error under the field and keeps the input', async () => {
   const { view, input, type, submit } = await mount(async () => {
-    throw { response: { status: 401, data: { message: 'Password incorrect' } } };
+    throw { response: { status: 400, data: { message: 'Password incorrect' } } };
   });
   type('currentPassword', 'wrong-secret');
   type('newPassword', 'new-secret');

@@ -4,14 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ltweb.backend.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.filter.CorsFilter;
 
 class PromotionCorsTest {
   @Test
   void browserPreflightAllowsAuthenticatedPatchFromFrontend() throws Exception {
     var config = new SecurityConfig(null, null, null, null, null);
+    ReflectionTestUtils.setField(config, "allowedOrigins", defaultAllowedOrigins());
     var request = new MockHttpServletRequest("OPTIONS", "/api/booking/5/apply-promotion");
     request.addHeader("Origin", "http://localhost:5173");
     request.addHeader("Access-Control-Request-Method", "PATCH");
@@ -31,5 +37,16 @@ class PromotionCorsTest {
     assertThat(response.getHeader("Access-Control-Allow-Headers"))
         .containsIgnoringCase("authorization")
         .containsIgnoringCase("content-type");
+  }
+
+  /** Danh sách origin mặc định trong application.yaml, khi không đặt APP_CORS_ALLOWED_ORIGINS. */
+  private static String[] defaultAllowedOrigins() {
+    var yaml = new YamlPropertiesFactoryBean();
+    yaml.setResources(new ClassPathResource("application.yaml"));
+    var environment = new StandardEnvironment();
+    environment
+        .getPropertySources()
+        .addFirst(new PropertiesPropertySource("app", yaml.getObject()));
+    return environment.getRequiredProperty("app.cors.allowed-origins", String[].class);
   }
 }

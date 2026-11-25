@@ -8,6 +8,7 @@ import com.ltweb.backend.service.DirectorService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class DirectorController {
   }
 
   @PostMapping
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<DirectorResponse> createDirector(
       @RequestBody @Valid CreateDirectorRequest request) {
     ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
@@ -47,6 +49,7 @@ public class DirectorController {
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<DirectorResponse> updateDirector(
       @PathVariable Long id, @RequestBody @Valid UpdateDirectorRequest request) {
     ApiResponse<DirectorResponse> apiResponse = new ApiResponse<>();
@@ -56,6 +59,7 @@ public class DirectorController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<String> deleteDirector(@PathVariable Long id) {
     directorService.deleteDirector(id);
     ApiResponse<String> apiResponse = new ApiResponse<>();

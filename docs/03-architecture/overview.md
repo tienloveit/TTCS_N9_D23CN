@@ -1,6 +1,6 @@
 # Tổng quan kiến trúc
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 MoviePTIT gồm một SPA React và một ứng dụng Spring Boot. Hai phần chạy độc lập, nói chuyện qua REST và WebSocket. Backend là nơi duy nhất quyết định quyền, giá, trạng thái ghế và tiền.
 
@@ -77,7 +77,7 @@ flowchart LR
 | `otp:limit:{email}` | Bộ đếm | 1 phút, đặt lại sau mỗi lần tăng | Từ chối khi vượt 5 lần gửi OTP. |
 | `seat_hold:{showtimeId}:{seatId}` | Mã đơn đang giữ | `booking.holdMinutes` (mặc định 6 phút) | Giữ ghế. Chỉ đơn sở hữu mới xóa được. Xem [ADR-0002](../08-decisions/0002-seat-hold-redis-and-db-lock.md). |
 
-`spring.cache.type: redis` có trong cấu hình nhưng ứng dụng không bật `@EnableCaching` và không dùng `@Cacheable`. Entity `RedisToken` (hash `redis_tokens`) là mô hình token cũ, luồng xác thực hiện tại không dùng. Mất dữ liệu Redis làm mọi người phải đăng nhập lại và mất khóa giữ ghế đang có. DB vẫn giữ trạng thái `HOLDING` của vé cho tới khi job dọn đơn hết hạn.
+Ứng dụng không dùng Redis làm cache (không có `@EnableCaching` hay `@Cacheable`). Mất dữ liệu Redis làm mọi người phải đăng nhập lại và mất khóa giữ ghế đang có. DB vẫn giữ trạng thái `HOLDING` của vé cho tới khi job dọn đơn hết hạn.
 
 ## Luồng liên tầng
 

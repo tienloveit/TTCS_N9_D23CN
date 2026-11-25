@@ -84,7 +84,7 @@ export default function PasswordSection() {
       focusTarget.current = 'title';
     } catch (error) {
       const response = error?.response;
-      if (response?.status === 401 && response.data?.message === 'Password incorrect') {
+      if (response?.status === 400 && response.data?.message === 'Password incorrect') {
         setErrors({ currentPassword: 'Mật khẩu hiện tại không đúng.' });
         focusTarget.current = 'currentPassword';
       } else {

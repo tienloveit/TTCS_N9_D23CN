@@ -1,6 +1,6 @@
 # Danh sách endpoint
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a` và thay đổi đang làm việc.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Đường dẫn tính từ `http://localhost:8081/api`. Quy ước phản hồi, lỗi và phân trang ở [conventions.md](conventions.md). Dự án chưa có Swagger/OpenAPI, nên file này là danh mục chính.
 

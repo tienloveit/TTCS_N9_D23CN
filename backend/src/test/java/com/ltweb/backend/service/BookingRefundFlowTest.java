@@ -273,7 +273,8 @@ class BookingRefundFlowTest {
 
   @Test
   void refundingAPaymentThatArrivedTooLateLeavesSpendingUntouched() {
-    // VnpayService ghi nhận thanh toán trễ với spendingRecorded = FALSE: chưa từng cộng chi tiêu.
+    // VnpayCallbackService ghi nhận thanh toán trễ với spendingRecorded = FALSE: chưa từng cộng chi
+    // tiêu.
     booking.getPayment().setPaymentMethod(PaymentMethod.CASH);
     booking.setStatus(BookingStatus.REFUND_REQUESTED);
     booking.setSpendingRecorded(false);

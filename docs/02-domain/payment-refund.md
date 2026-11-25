@@ -1,6 +1,6 @@
 # Thanh toán và hoàn tiền
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Trạng thái `Booking`, `Ticket` và `Payment` được vẽ trong [booking-lifecycle.md](booking-lifecycle.md#trạng-thái). Cách cấu hình và ký với VNPay nằm trong [vnpay.md](../06-integrations/vnpay.md). File này mô tả quy tắc nghiệp vụ.
 
@@ -15,6 +15,7 @@ Backend tính `totalAmount` khi tạo đơn và lưu vào `Payment.amount`. Fron
 `POST /v1/vnpay/payment-url` với `bookingId`. Backend chỉ tạo URL khi:
 
 - Người gọi là chủ đơn, người bán đơn tại quầy, hoặc ADMIN.
+- Suất của đơn chưa bị hủy. Suất `CANCELLED` trả `SHOWTIME_CANCELLED`.
 - Đơn `PENDING`, payment `PENDING` và `expiresAt` chưa qua.
 
 Backend đặt `paymentMethod = VNPAY`, ghi `paymentCreatedAt` nếu chưa có, rồi ký URL. `vnp_TxnRef` là ID đơn, `vnp_CreateDate` là `paymentCreatedAt` để các lệnh truy vấn và hoàn tiền sau này dùng lại đúng mốc, `vnp_ExpireDate` là `expiresAt`. Sau khi URL được cấp, không thể đổi mã khuyến mãi nữa vì số tiền đã được ký.
@@ -36,8 +37,8 @@ Backend luôn kiểm tra chữ ký, sau đó tìm đơn theo `vnp_TxnRef` và so
 | Không tìm thấy đơn | Không đổi gì | `01` |
 | Sai số tiền | Không đổi gì | `04` |
 | Payment đã `PAID` (callback lặp lại) | Không đổi gì, trả kết quả cũ | `02` |
-| Thành công, đơn `PENDING` và ghế còn giữ cho đơn | Booking `COMPLETED`, Payment `PAID`, lưu `providerTxnId` và `paidAt`, vé `BOOKED` kèm QR, nhả khóa Redis và phát trạng thái ghế sau commit, phát `BookingPaidEvent` | `00` |
-| Thành công nhưng đơn đã hủy hoặc mất ghế | [Thanh toán trễ](#thanh-toán-trễ) | `00` |
+| Thành công, đơn `PENDING`, ghế còn giữ cho đơn và suất chưa bị hủy | Booking `COMPLETED`, Payment `PAID`, lưu `providerTxnId` và `paidAt`, vé `BOOKED` kèm QR, nhả khóa Redis và phát trạng thái ghế sau commit, phát `BookingPaidEvent` | `00` |
+| Thành công nhưng đơn đã hủy, mất ghế, hoặc suất đã bị hủy | [Thanh toán trễ](#thanh-toán-trễ) | `00` |
 | Thành công nhưng đơn ở trạng thái khác (ví dụ `REFUNDED` mà payment chưa `PAID`) | Không ghi đè | `02` |
 | Thất bại, đơn còn hạn và còn giữ ghế | Booking và Payment `CANCELLED`, trả ghế, bắp nước, lượt khuyến mãi | `00` |
 | Thất bại, đơn đã hết hạn hoặc đã hủy | Không đổi gì, job dọn dẹp hoặc lệnh hủy đã trả tài nguyên | `02` |
@@ -46,13 +47,13 @@ Backend luôn kiểm tra chữ ký, sau đó tìm đơn theo `vnp_TxnRef` và so
 
 ### Thanh toán trễ
 
-VNPay chỉ cho khách trả trước `vnp_ExpireDate`, nhưng IPN có thể tới sau khi job đã hủy đơn, hoặc ghế đã bị người khác đặt. Lúc đó tiền đã bị trừ nên hệ thống không được bỏ qua. `recordLatePayment`:
+VNPay chỉ cho khách trả trước `vnp_ExpireDate`, nhưng IPN có thể tới sau khi job đã hủy đơn, ghế đã bị người khác đặt, hoặc suất đã bị hủy. Lúc đó tiền đã bị trừ nên hệ thống không được bỏ qua. `recordLatePayment`:
 
 1. Trả tài nguyên còn lại nếu đơn vẫn `PENDING`.
 2. Lưu `providerTxnId`, Payment `PAID`, `paidAt`.
-3. Đặt Booking `REFUND_REQUESTED`, lý do hoàn `LATE_PAYMENT_REFUND_REASON`, `refundAmount` bằng số tiền đơn, `spendingRecorded = false` (đơn không được cộng vào chi tiêu).
+3. Đặt Booking `REFUND_REQUESTED`, lý do hoàn `LATE_PAYMENT_REFUND_REASON` (suất đã hủy: `SHOWTIME_CANCELLED_REFUND_REASON`), `refundAmount` bằng số tiền đơn, `spendingRecorded = false` (đơn không được cộng vào chi tiêu).
 4. Gửi thông báo `REFUND_REQUEST` cho ADMIN và MANAGER chi nhánh.
-5. Trả `00` cho VNPay. Trang kết quả hiển thị "Thanh toán đến sau khi đơn đã hết thời gian giữ ghế nên không xuất vé".
+5. Trả `00` cho VNPay. Trang kết quả hiển thị "Thanh toán đến sau khi đơn đã hết thời gian giữ ghế nên không xuất vé", hoặc "Suất chiếu đã bị hủy nên không xuất vé" khi suất đã hủy.
 
 Đơn này đi tiếp qua luồng duyệt hoàn tiền bình thường.
 
@@ -162,6 +163,7 @@ Nếu có vé đã check-in, hoàn tất bị chặn với `BOOKING_CANNOT_REFUN
 | --- | --- |
 | IPN tới sau `expiresAt`, ghế còn giữ | Vẫn xuất vé. |
 | IPN tới sau khi đơn bị hủy | Thanh toán trễ, chờ hoàn. |
+| IPN thành công cho suất đã bị hủy | Không xuất vé dù ghế còn giữ. Thanh toán trễ, chờ hoàn. |
 | IPN và return URL cùng tới | Lần sau nhận `02`, không ghi nhận hai lần. |
 | Khách đóng trình duyệt trên trang VNPay | IPN vẫn cập nhật đơn. Không có IPN thì job hủy đơn khi hết hạn. |
 | VNPay timeout khi hoàn | `UNKNOWN`, bấm lại để truy vấn. |
