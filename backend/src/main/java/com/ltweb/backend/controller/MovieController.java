@@ -6,6 +6,11 @@ import com.ltweb.backend.dto.request.UpdateMovieRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
 import com.ltweb.backend.dto.response.MovieRatingResponse;
 import com.ltweb.backend.dto.response.MovieResponse;
+import com.ltweb.backend.dto.response.PageResponse;
+import com.ltweb.backend.enums.AgeRating;
+import com.ltweb.backend.enums.MovieCatalogSort;
+import com.ltweb.backend.enums.MovieStatus;
+import com.ltweb.backend.repository.MovieCatalogSpecifications;
 import com.ltweb.backend.service.MovieService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,11 +42,28 @@ public class MovieController {
     return apiResponse;
   }
 
+  /** Toàn bộ phim, dùng cho danh sách chọn ở khu vận hành. Trang khách dùng {@code /catalog}. */
   @GetMapping
   public ApiResponse<List<MovieResponse>> getAllMovies(
-      @org.springframework.web.bind.annotation.RequestParam(required = false) String movieName) {
+      @RequestParam(required = false) String movieName) {
     ApiResponse<List<MovieResponse>> apiResponse = new ApiResponse<>();
     apiResponse.setResult(movieService.getAllMovies(movieName));
+    return apiResponse;
+  }
+
+  @GetMapping("/catalog")
+  public ApiResponse<PageResponse<List<MovieResponse>>> getCatalog(
+      @RequestParam(required = false) String movieName,
+      @RequestParam(required = false) MovieStatus status,
+      @RequestParam(required = false) Long genreId,
+      @RequestParam(required = false) AgeRating ageRating,
+      @RequestParam(defaultValue = "DEFAULT") MovieCatalogSort sort,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "8") int size) {
+    var filter =
+        new MovieCatalogSpecifications.Filter(movieName, status, genreId, ageRating, sort, false);
+    ApiResponse<PageResponse<List<MovieResponse>>> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(movieService.getCatalog(filter, page, size));
     return apiResponse;
   }
 
@@ -102,9 +125,12 @@ public class MovieController {
   }
 
   @GetMapping("/{id}/ratings")
-  public ApiResponse<List<MovieRatingResponse>> getMovieRatings(@PathVariable("id") Long id) {
-    ApiResponse<List<MovieRatingResponse>> apiResponse = new ApiResponse<>();
-    apiResponse.setResult(movieService.getMovieRatings(id));
+  public ApiResponse<PageResponse<List<MovieRatingResponse>>> getMovieRatings(
+      @PathVariable("id") Long id,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    ApiResponse<PageResponse<List<MovieRatingResponse>>> apiResponse = new ApiResponse<>();
+    apiResponse.setResult(movieService.getMovieRatings(id, page, size));
     return apiResponse;
   }
 }

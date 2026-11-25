@@ -1,6 +1,6 @@
 # Cấu hình môi trường
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Backend đọc [application.yaml](../../backend/src/main/resources/application.yaml), sau đó nạp thêm file `.env` dạng `KEY=VALUE` nếu có, ở `./.env` hoặc `./backend/.env` tính từ thư mục chạy lệnh. Vì vậy chạy từ `backend/` hay từ gốc repo đều dùng được `backend/.env`. Biến môi trường của hệ điều hành ghi đè giá trị trong YAML. Frontend đọc `frontend/.env` khi Vite khởi động.
 
@@ -28,6 +28,8 @@ if (-not (Test-Path frontend/.env)) { Copy-Item frontend/.env.example frontend/.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Khi dùng Google login | `GOOGLE_CLIENT_SECRET` | giá trị giả | OAuth client của Google. Xem [google-oauth.md](../06-integrations/google-oauth.md). |
 | `APP_OAUTH2_SUCCESS_URL` | Không | | `http://localhost:5173/oauth2/callback` | Trang frontend nhận token sau khi đăng nhập Google. |
 | `APP_OAUTH2_FAILURE_URL` | Không | | `http://localhost:5173/login` | Trang frontend nhận lỗi đăng nhập Google. |
+| `APP_CORS_ALLOWED_ORIGINS` | Không | | `http://localhost:5173,http://localhost:5174,http://localhost:3000` và ba origin tương ứng với `127.0.0.1` | Origin frontend được gọi API và mở WebSocket `/ws`, cách nhau bằng dấu phẩy. Ghi đè `app.cors.allowed-origins`. |
+| `SPRING_JPA_SHOW_SQL` | Không | | `false` | Đặt `true` để in câu SQL ra log khi debug. |
 | `SERVER_PORT` | Không | | `8081` | Cổng backend. Đổi thì cập nhật `VITE_API_BASE_URL`. |
 | `APP_MOVIE_MEDIA_DIRECTORY` | Không | | `uploads/movies` | Thư mục lưu poster/banner upload, tính từ thư mục chạy backend. |
 | `SPRING_PROFILES_ACTIVE` | Không | | trống | Đặt `dev` khi cần seed hoặc API cleanup. Profile `prod` chặn cả hai. |

@@ -1,6 +1,6 @@
 # Chạy dự án ở máy local
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Thứ tự: MySQL → Redis → backend → frontend. Trước khi bắt đầu, cài đủ phần mềm theo [requirements.md](requirements.md) và tạo `.env` theo [configuration.md](configuration.md).
 
@@ -54,7 +54,7 @@ npm ci
 npm run dev
 ```
 
-Mở URL Vite in ra, mặc định `http://localhost:5173`. Nếu cổng 5173 bận, Vite tự chọn 5174. Backend chỉ cho phép CORS từ các cổng 5173, 5174 và 3000.
+Mở URL Vite in ra, mặc định `http://localhost:5173`. Nếu cổng 5173 bận, Vite tự chọn 5174. Mặc định backend chỉ cho phép CORS từ các cổng 5173, 5174 và 3000. Dùng cổng khác thì thêm origin vào `APP_CORS_ALLOWED_ORIGINS` (xem [configuration.md](configuration.md)).
 
 ## 5. Xác nhận hệ thống chạy đúng
 

@@ -71,18 +71,7 @@ class VnpayManagementSecurityTest {
                 new com.fasterxml.jackson.databind.ObjectMapper()),
             transactions,
             mock(jakarta.persistence.EntityManager.class));
-    service =
-        BackendServiceFixtures.vnpay(
-            props,
-            http,
-            bookings,
-            mock(TicketRepository.class),
-            mock(org.springframework.data.redis.core.RedisTemplate.class),
-            mock(org.springframework.messaging.simp.SimpMessagingTemplate.class),
-            mock(org.springframework.context.ApplicationEventPublisher.class),
-            mock(FoodStockService.class),
-            users,
-            refunds);
+    service = BackendServiceFixtures.vnpay(props, http, bookings, users, refunds);
     operator =
         User.builder()
             .username("operator")

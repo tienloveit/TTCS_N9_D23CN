@@ -7,6 +7,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Ticket;
+import com.ltweb.backend.util.TicketQrCode;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.io.ByteArrayOutputStream;
@@ -81,7 +82,7 @@ public class EmailService {
       Ticket ticket = tickets.get(i);
       helper.addInline(
           getQrContentId(i),
-          new ByteArrayResource(generateQrCodePng(getTicketQrValue(booking, ticket))),
+          new ByteArrayResource(generateQrCodePng(TicketQrCode.of(booking, ticket))),
           "image/png");
     }
 
@@ -125,7 +126,7 @@ public class EmailService {
           .append("</div>")
           .append("<div style=\"font-size:13px;color:#64748b;margin-top:8px;\">Mã vé</div>")
           .append("<div style=\"font-family:monospace;font-size:14px;color:#111827;\">")
-          .append(escapeHtml(getTicketQrValue(booking, ticket)))
+          .append(escapeHtml(TicketQrCode.of(booking, ticket)))
           .append("</div>")
           .append("</td>")
           .append("<td width=\"150\" style=\"text-align:right;vertical-align:top;\">")
@@ -192,18 +193,6 @@ public class EmailService {
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     MatrixToImageWriter.writeToStream(bitMatrix, "PNG", outputStream);
     return outputStream.toByteArray();
-  }
-
-  private String getTicketQrValue(Booking booking, Ticket ticket) {
-    if (StringUtils.hasText(ticket.getQrCode())) {
-      return ticket.getQrCode();
-    }
-    return "CINEMAHUB|BOOKING="
-        + nullToEmpty(booking.getBookingCode())
-        + "|TICKET="
-        + ticket.getId()
-        + "|SEAT="
-        + (ticket.getSeat() == null ? "" : nullToEmpty(ticket.getSeat().getSeatCode()));
   }
 
   private String getQrContentId(int index) {

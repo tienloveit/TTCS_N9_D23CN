@@ -64,6 +64,7 @@ public class ShowtimeController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
   public ApiResponse<String> delete(@PathVariable Long id) {
     ApiResponse<String> apiResponse = new ApiResponse<>();
     showtimeService.delete(id);
@@ -98,9 +99,6 @@ public class ShowtimeController {
       @PathVariable Long branchId,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate date) {
-    if (date == null) {
-      date = LocalDate.now();
-    }
     ApiResponse<List<Map<String, Object>>> apiResponse = new ApiResponse<>();
     apiResponse.setResult(showtimeService.getByBranch(branchId, date));
     return apiResponse;

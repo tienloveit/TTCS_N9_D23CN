@@ -163,6 +163,7 @@ class ShowtimePricingTest {
         tickets,
         mock(UserRepository.class),
         mapper,
-        mock(TicketService.class));
+        mock(TicketService.class),
+        mock(BookingReleaseService.class));
   }
 }

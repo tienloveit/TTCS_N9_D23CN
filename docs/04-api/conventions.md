@@ -1,6 +1,6 @@
 # Quy ước API
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Dự án chưa có Swagger/OpenAPI. Hợp đồng JSON là DTO trong `backend/.../dto` cùng mapper tương ứng. Đọc DTO, không đọc tên field của entity. Danh sách endpoint nằm trong [endpoints.md](endpoints.md).
 
@@ -8,7 +8,7 @@ Dự án chưa có Swagger/OpenAPI. Hợp đồng JSON là DTO trong `backend/..
 
 - Base URL: `http://localhost:8081/api`. `/api` là context path của Spring (`server.servlet.context-path`). Controller không lặp lại `/api`.
 - Tất cả đường dẫn trong tài liệu API tính từ base URL. Ví dụ `GET /movie/now-showing` là `http://localhost:8081/api/movie/now-showing`.
-- CORS cho phép origin `http://localhost` và `http://127.0.0.1` ở cổng 5173, 5174, 3000, method GET/POST/PUT/PATCH/DELETE/OPTIONS, mọi header, có credentials.
+- CORS cho phép các origin trong `app.cors.allowed-origins` (mặc định `http://localhost` và `http://127.0.0.1` ở cổng 5173, 5174, 3000, đổi bằng `APP_CORS_ALLOWED_ORIGINS`), method GET/POST/PUT/PATCH/DELETE/OPTIONS, mọi header, có credentials.
 
 ## Phản hồi thành công
 
@@ -52,7 +52,7 @@ Mọi lỗi trả `ErrorResponse` với HTTP status tương ứng:
 }
 ```
 
-JSON không có tên mã lỗi (`TICKET_NOT_AVAILABLE`), chỉ có `code` số và `message`. Frontend hiển thị `message` hoặc thông báo riêng theo HTTP status. Một vài mã cũ có `code` khác HTTP status (ví dụ `SEATTYPE_EXIST` có `code` 401 nhưng HTTP 400), nên dựa vào HTTP status khi phân nhánh.
+JSON không có tên mã lỗi (`TICKET_NOT_AVAILABLE`), chỉ có `code` số và `message`. Frontend hiển thị `message` hoặc thông báo riêng theo HTTP status. Khi phân nhánh, dựa vào HTTP status.
 
 ### Bảng mã lỗi
 
@@ -60,22 +60,21 @@ Nguồn: [ErrorCode.java](../../backend/src/main/java/com/ltweb/backend/exceptio
 
 | HTTP | Mã | Khi nào |
 | --- | --- | --- |
-| 401 | `UNAUTHORIZED` | Thiếu, sai hoặc hết hạn access token. Cũng dùng khi không có quyền với đơn hoặc vé cụ thể. |
+| 401 | `UNAUTHORIZED` | Thiếu, sai hoặc hết hạn access token. |
 | 401 | `LOGIN_FAILED` | Sai tài khoản hoặc mật khẩu, tài khoản bị khóa. |
 | 401 | `TOKEN_INVALID` | Refresh token không hợp lệ hoặc đã dùng. |
-| 401 | `PASSWORD_INCORRECT` | Mật khẩu hiện tại sai khi đổi mật khẩu. |
-| 401 | `OTP_INVALID` | OTP sai hoặc hết hạn. |
 | 401 | `OAUTH2_EMAIL_NOT_VERIFIED` | Email Google chưa xác minh. |
-| 403 | `ACCESS_DENIED` | Đủ token nhưng thiếu role, hoặc sai chi nhánh. |
+| 403 | `ACCESS_DENIED` | Đủ token nhưng thiếu role, sai chi nhánh, hoặc không phải chủ đơn hay vé. |
 | 403 | `TICKET_WRONG_BRANCH` | Soát vé của chi nhánh khác. |
 | 429 | `OTP_RATE_LIMIT` | Gửi OTP quá 5 lần cho một email trong khoảng 1 phút. |
 | 409 | `CUSTOMER_CONFIRMATION_REQUIRED`, `CUSTOMER_CONTACT_CONFLICT` | Xác định khách tại quầy. Xem [bán tại quầy](../02-domain/booking-lifecycle.md#xác-định-khách-tại-quầy). |
 | 409 | `RESOURCE_IN_USE` | Xóa dữ liệu còn được tham chiếu (MySQL 1451). Nên ngừng hoạt động thay vì xóa. |
 | 409 | `DUPLICATE_VALUE` | Trùng giá trị unique (MySQL 1062). |
-| 400 | `VALIDATION_ERROR` | Body không hợp lệ, danh sách ghế hoặc món trùng, khóa cấu hình không tồn tại. |
+| 400 | `VALIDATION_ERROR` | Body không hợp lệ, danh sách ghế hoặc món trùng, khóa cấu hình không tồn tại, tham số query hoặc path sai kiểu (ví dụ `?status=FOO`). |
 | 400 | `USER_EXISTED`, `USER_NOT_FOUND` | Đăng ký trùng, không tìm thấy tài khoản hoặc email. |
 | 400 | `SHOWTIME_NOT_FOUND` | Suất không tồn tại **hoặc không còn bán được**. |
 | 400 | `SHOWTIME_TIME_OVERLAP`, `SHOWTIME_PRICE_LOCKED`, `SHOWTIME_HAS_BOOKINGS`, `ROOM_NOT_AVAILABLE`, `ROOM_HAS_SHOWTIMES` | Quản lý suất và phòng. |
+| 400 | `SHOWTIME_CANCELLED` | Tạo URL VNPay cho đơn của suất đã bị hủy. |
 | 400 | `TICKET_NOT_AVAILABLE`, `TICKET_NOT_FOUND`, `MAX_TICKET_PER_TRANSACTION`, `BOOKING_PENDING_LIMIT` | Tạo đơn. |
 | 400 | `FOOD_NOT_FOUND`, `FOOD_OUT_OF_STOCK` | Bắp nước không bán ở suất này, hết hàng. |
 | 400 | `BOOKING_NOT_FOUND`, `BOOKING_CANNOT_CANCEL`, `INVALID_PAYMENT_STATUS` | Thao tác trên đơn ở trạng thái không phù hợp. |
@@ -119,20 +118,22 @@ Quy trình phía client khi gặp 401 (gộp request, thử lại một lần) n
 | Route cần đăng nhập, không có header `Authorization` | 401 |
 | Header Bearer sai định dạng, token sai chữ ký, hết hạn, đã thu hồi, hoặc là refresh token | 401, kể cả ở route công khai |
 | Token hợp lệ nhưng role không đủ | 403, kèm header `WWW-Authenticate` |
-| Token hợp lệ, role đủ nhưng sai chi nhánh hoặc không phải chủ đơn | 403 `ACCESS_DENIED` hoặc 401 `UNAUTHORIZED` tùy service |
+| Token hợp lệ, role đủ nhưng sai chi nhánh hoặc không phải chủ đơn | 403 `ACCESS_DENIED` (soát vé sai chi nhánh: 403 `TICKET_WRONG_BRANCH`) |
 
 Frontend chỉ làm mới token khi gặp 401, không làm mới khi gặp 403.
 
 ## Phân trang và sắp xếp
 
-Không có tham số phân trang chung. Chỉ hai endpoint có phân trang, và quy ước số trang khác nhau:
+Không có tham số phân trang chung. Các endpoint có phân trang và quy ước số trang của từng cái:
 
 | Endpoint | Tham số | Trang đầu | Mặc định | Phản hồi |
 | --- | --- | --- | --- | --- |
 | `GET /booking/search` | `page`, `size` (tối đa 100) | `0` | `size = 15` | `BookingPageResponse`: `content`, `page`, `size`, `totalElements`, `totalPages`, `summary {completed, refundRequested, paidAmount}` |
 | `GET /users` | `page`, `size`, `username`, `email`, `phone` | `1` | `size = 10` | `PageResponse`: `data`, `page` (từ 1), `size`, `totalElements`, `totalPages` |
+| `GET /movie/catalog` | `page`, `size` (tối đa 50), `movieName`, `status`, `genreId`, `ageRating`, `sort` | `1` | `size = 8`, `sort = DEFAULT` | `PageResponse` |
+| `GET /movie/{id}/ratings` | `page`, `size` (tối đa 50) | `1` | `size = 10` | `PageResponse` |
 
-Cả hai sắp xếp cố định theo `createdAt` giảm dần, không nhận tham số `sort`. Các danh sách khác trả toàn bộ, hoặc giới hạn cố định (thông báo và nhật ký: 100 bản ghi mới nhất).
+`GET /booking/search`, `GET /users` và `GET /movie/{id}/ratings` sắp xếp cố định theo `createdAt` giảm dần. `GET /movie/catalog` nhận `sort`: `DEFAULT` (thứ tự thêm phim), `RATING` (điểm trung bình giảm dần, phim chưa có đánh giá tính là 0), `NEWEST` (ngày khởi chiếu mới nhất), `DURATION` (thời lượng dài nhất). Từ khóa `movieName` không phân biệt hoa thường, `%` và `_` được hiểu đúng nghĩa đen. `size` vượt trần bị kẹp về trần, `page` nhỏ hơn 1 được coi là 1. Các danh sách khác trả toàn bộ, hoặc giới hạn cố định (thông báo và nhật ký: 100 bản ghi mới nhất).
 
 Tham số lọc của `GET /booking/search`: `q` (mã đơn, tài khoản khách, phim, chi nhánh, mã ghế, mã vé), `status`, `paymentStatus` (tên `PaymentStatus` hoặc `NO_TRANSACTION`), `branchId` (chỉ ADMIN), `from`, `to` (ngày đặt, gồm cả hai đầu), `showtimeDate`, `checkedInDate`.
 

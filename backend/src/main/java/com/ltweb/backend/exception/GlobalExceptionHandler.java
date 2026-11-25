@@ -16,6 +16,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 @Slf4j(topic = "Global-Exception")
@@ -94,6 +95,15 @@ public class GlobalExceptionHandler {
             .path(request.getDescription(false).replace("uri=", ""))
             .build();
 
+    return ResponseEntity.badRequest().body(response);
+  }
+
+  /** Tham số query hoặc path sai kiểu, ví dụ {@code ?status=FOO} hay {@code ?page=abc}. */
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleArgumentTypeMismatch(
+      MethodArgumentTypeMismatchException exception, WebRequest request) {
+    ErrorResponse response = buildErrorCodeResponse(ErrorCode.VALIDATION_ERROR, request);
+    response.setMessage("Tham số '" + exception.getName() + "' không hợp lệ");
     return ResponseEntity.badRequest().body(response);
   }
 

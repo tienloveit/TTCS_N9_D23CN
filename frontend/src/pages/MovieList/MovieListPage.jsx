@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { movieApi, genreApi } from '../../api';
 import MovieCard, { CatalogEmpty } from '../../components/MovieCard/MovieCard';
@@ -13,6 +13,7 @@ import {
   XIcon,
 } from '../../components/Common/CinemaIcons';
 import { AGE_RATINGS } from '../../utils/ageRatings';
+import { buildCatalogQuery } from '../../utils/movieCatalog';
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'Tất cả phim', icon: FilmIcon },
@@ -20,10 +21,12 @@ const STATUS_TABS = [
   { key: 'UPCOMING', label: 'Sắp chiếu', icon: CalendarIcon },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function MovieListPage() {
-  const [movies, setMovies] = useState([]);
+  // Một trang phim từ backend: { data, page, size, totalElements, totalPages }.
+  const [catalog, setCatalog] = useState(null);
   const [genres, setGenres] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Filters - read initial status from URL
@@ -47,36 +50,63 @@ export default function MovieListPage() {
     setCurrentPage(1);
   }
 
-  const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  // Kết quả của lần tải gần nhất: { key, error }. So key với yêu cầu hiện tại để biết đang tải.
+  const [loaded, setLoaded] = useState(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchTerm), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     let active = true;
-
-    Promise.allSettled([movieApi.getAll(), genreApi.getAll()]).then(([movieRes, genreRes]) => {
-      if (!active) return;
-      if (movieRes.status === 'fulfilled') {
-        setMovies(movieRes.value.data.result || []);
-      } else {
-        // Không có dữ liệu phim thì không thể nói là "không khớp bộ lọc".
-        setLoadError(true);
-      }
-      if (genreRes.status === 'fulfilled') {
-        setGenres(genreRes.value.data.result || []);
-      }
-      setLoading(false);
-    });
-
+    genreApi
+      .getAll()
+      .then((res) => active && setGenres(res.data.result || []))
+      .catch(() => {});
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, []);
 
-  const retryLoad = () => {
-    setLoading(true);
-    setLoadError(false);
-    setReloadKey((key) => key + 1);
-  };
+  const query = buildCatalogQuery({
+    search: debouncedSearch,
+    status: statusFilter,
+    genre: selectedGenre,
+    age: ageFilter,
+    sort: sortBy,
+    page: currentPage,
+    size: itemsPerPage,
+  });
+  const queryKey = JSON.stringify(query);
+  const requestKey = `${queryKey}#${reloadKey}`;
+
+  useEffect(() => {
+    let active = true;
+    movieApi
+      .getCatalog(JSON.parse(queryKey))
+      .then((res) => {
+        if (!active) return;
+        setCatalog(res.data.result || null);
+        setLoaded({ key: requestKey, error: false });
+      })
+      .catch(() => {
+        // Không có dữ liệu phim thì không thể nói là "không khớp bộ lọc".
+        if (active) setLoaded({ key: requestKey, error: true });
+      });
+    return () => {
+      active = false;
+    };
+    // requestKey gồm queryKey và reloadKey: đổi bộ lọc hoặc bấm Thử lại đều tải lại.
+  }, [queryKey, requestKey]);
+
+  const loading = loaded === null;
+  const loadError = loaded?.key === requestKey && loaded.error;
+  const fetching = loaded !== null && loaded.key !== requestKey;
+
+  const retryLoad = () => setReloadKey((key) => key + 1);
 
   const handleStatusChange = (nextStatus) => {
     setStatusFilter(nextStatus);
@@ -115,45 +145,10 @@ export default function MovieListPage() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  // Filter + Sort Logic
-  const filteredMovies = useMemo(() => {
-    const list = movies.filter((movie) => {
-      const matchSearch = movie.movieName?.toLocaleLowerCase('vi').includes(searchTerm.trim().toLocaleLowerCase('vi'));
-      const matchGenre =
-        selectedGenre === 'ALL'
-          ? true
-          : movie.genres?.some(
-              (g) =>
-                String(g.id) === String(selectedGenre) ||
-                String(g.genreId) === String(selectedGenre) ||
-                g.name === selectedGenre
-            );
-      const matchStatus = statusFilter === 'ALL' ? true : movie.status === statusFilter;
-      const matchAge = ageFilter === 'ALL' ? true : movie.ageRating === ageFilter;
-
-      return matchSearch && matchGenre && matchStatus && matchAge;
-    });
-
-    if (sortBy === 'RATING') {
-      return [...list].sort((a, b) => Number(b.averageRating || 0) - Number(a.averageRating || 0));
-    }
-    if (sortBy === 'NEWEST') {
-      return [...list].sort(
-        (a, b) => new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime()
-      );
-    }
-    if (sortBy === 'DURATION') {
-      return [...list].sort((a, b) => Number(b.durationMinutes || 0) - Number(a.durationMinutes || 0));
-    }
-    return list;
-  }, [movies, searchTerm, selectedGenre, statusFilter, ageFilter, sortBy]);
-
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredMovies.length / itemsPerPage);
-  const paginatedMovies = filteredMovies.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Lọc, sắp xếp và phân trang đều do backend làm (GET /movie/catalog).
+  const paginatedMovies = catalog?.data || [];
+  const totalMovies = catalog?.totalElements || 0;
+  const totalPages = catalog?.totalPages || 0;
 
   if (loading) {
     return (
@@ -190,7 +185,7 @@ export default function MovieListPage() {
           </h1>
           {!loadError && (
             <p className="page-subtitle">
-              {filteredMovies.length} phim
+              {totalMovies} phim
             </p>
           )}
         </div>
@@ -286,7 +281,7 @@ export default function MovieListPage() {
                 Tất cả thể loại
               </button>
               {genres.map((g) => {
-                const val = g.name || g.genreId;
+                const val = String(g.id ?? g.genreId);
                 const isActive = String(selectedGenre) === String(val);
                 return (
                   <button
@@ -314,7 +309,7 @@ export default function MovieListPage() {
               onAction={retryLoad}
             />
           </div>
-        ) : filteredMovies.length === 0 ? (
+        ) : paginatedMovies.length === 0 && !fetching ? (
           <CatalogEmpty
             title="Không tìm thấy phim phù hợp"
             message="Không có bộ phim nào khớp với bộ lọc hiện tại. Hãy thử đặt lại bộ lọc hoặc đổi từ khoá khác."
@@ -323,7 +318,7 @@ export default function MovieListPage() {
           />
         ) : (
           <>
-            <div className="catalog-grid">
+            <div className="catalog-grid" aria-busy={fetching}>
               {paginatedMovies.map((movie) => <MovieCard key={movie.movieId} movie={movie} />)}
             </div>
 

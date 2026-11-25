@@ -1,6 +1,6 @@
 # Cập nhật ghế realtime
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Khi một ghế đổi trạng thái, backend phát sự kiện tới mọi trình duyệt đang mở sơ đồ ghế của suất đó, gồm cả trang khách và màn bán vé tại quầy. Sự kiện chỉ để cập nhật giao diện. Backend vẫn kiểm tra lại ghế khi tạo đơn.
 
@@ -9,10 +9,10 @@ Khi một ghế đổi trạng thái, backend phát sự kiện tới mọi trì
 | Thành phần | Giá trị | Nơi cấu hình |
 | --- | --- | --- |
 | Endpoint SockJS | `${VITE_API_BASE_URL}/ws`, mặc định `http://localhost:8081/api/ws` | `WebSocketConfig.registerStompEndpoints` |
-| Origin được phép | Mọi origin (`setAllowedOriginPatterns("*")`), cấu hình riêng với CORS của REST | `WebSocketConfig` |
+| Origin được phép | Cùng danh sách với CORS của REST (`app.cors.allowed-origins`) | `WebSocketConfig` |
 | Xác thực | Không. `/ws/**` là route công khai, client không gửi token. | `SecurityConfig` |
 | Broker | Simple broker trong bộ nhớ, prefix `/topic` | `configureMessageBroker` |
-| Prefix gửi lên server | `/app`. Hiện không có `@MessageMapping` nào, client chỉ đăng ký nhận. | |
+| Gửi lên server | Không cho phép. `StompInboundGuard` từ chối mọi frame `SEND`, để client không phát trạng thái ghế giả lên `/topic`. Không có `@MessageMapping` nào. | `WebSocketConfig.configureClientInboundChannel` |
 | Topic ghế | `/topic/showtime/{showtimeId}/seats` | |
 
 Simple broker chạy trong tiến trình backend. Nếu chạy nhiều bản backend, client chỉ nhận sự kiện từ bản mà nó kết nối. Muốn mở rộng cần chuyển sang broker ngoài (RabbitMQ, ActiveMQ).
@@ -40,7 +40,7 @@ Mọi sự kiện được phát **sau khi transaction commit** (`BookingTransac
 | --- | --- | --- |
 | Tạo đơn online, hoặc đơn quầy chọn VNPay | `HOLDING` | `BookingCheckoutService.assignTickets` |
 | Đơn quầy thu tiền mặt | `BOOKED` | `BookingCheckoutService.assignTickets` |
-| Thanh toán VNPay thành công | `BOOKED` | `VnpayService.confirmPaid` |
+| Thanh toán VNPay thành công | `BOOKED` | `VnpayCallbackService.confirmPaid` |
 | Hủy đơn, job hết hạn, VNPay thất bại, thanh toán trễ, hoàn tiền thành công | `AVAILABLE` | `BookingReleaseService.releaseSeats` |
 
 Khóa Redis hết TTL tự nhiên **không** phát sự kiện. Ghế chỉ được phát `AVAILABLE` khi job dọn đơn hết hạn chạy, tối đa khoảng 2 phút sau `expiresAt`.

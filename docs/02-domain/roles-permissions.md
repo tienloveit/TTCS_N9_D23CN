@@ -1,6 +1,6 @@
 # Vai trò và quyền
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 ## Ba lớp kiểm tra
 
@@ -9,7 +9,7 @@ Quyền được kiểm tra ở ba nơi. Chỉ hai lớp backend có giá trị 
 | Lớp | Nơi | Kiểm tra gì |
 | --- | --- | --- |
 | Route guard (frontend) | `PrivateRoute`, `AdminRoute`, `AdminOnlyRoute`, `StaffRoute` trong [AnimatedRoutes.jsx](../../frontend/src/AnimatedRoutes.jsx) | Đã đăng nhập chưa, role trong access token có được vào khu này không. Người dùng có thể bỏ qua lớp này bằng cách gọi API trực tiếp. |
-| Filter và method security (backend) | `SecurityConfig`, `@PreAuthorize` trên controller và service | Route công khai hay cần đăng nhập, role có đủ không. Thiếu hoặc sai token trả 401, đủ token nhưng thiếu role trả 403. |
+| Filter và method security (backend) | `SecurityConfig`, `@PreAuthorize` trên controller | Route công khai hay cần đăng nhập, role có đủ không. Thiếu hoặc sai token trả 401, đủ token nhưng thiếu role trả 403. |
 | Quy tắc trong service (backend) | `BookingAccessPolicy`, `RefundPolicy`, các hàm `require...Access` trong service | Đơn có phải của người gọi không, dữ liệu có thuộc chi nhánh được phân công không, trạng thái tài khoản còn hoạt động không. |
 
 STAFF và MANAGER luôn gắn với một chi nhánh qua `User.branchId`. Backend đọc chi nhánh từ database ở mỗi request, không tin giá trị `branchId` trong token. MANAGER hoặc STAFF chưa được gán chi nhánh bị từ chối ở hầu hết thao tác quản lý.

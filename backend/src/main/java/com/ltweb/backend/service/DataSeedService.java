@@ -1,31 +1,18 @@
 package com.ltweb.backend.service;
 
-import com.ltweb.backend.entity.Branch;
-import com.ltweb.backend.entity.Director;
 import com.ltweb.backend.entity.Food;
-import com.ltweb.backend.entity.Genre;
 import com.ltweb.backend.entity.Movie;
 import com.ltweb.backend.entity.Room;
 import com.ltweb.backend.entity.Seat;
 import com.ltweb.backend.entity.Showtime;
 import com.ltweb.backend.entity.Ticket;
 import com.ltweb.backend.entity.User;
-import com.ltweb.backend.enums.AgeRating;
-import com.ltweb.backend.enums.BranchStatus;
 import com.ltweb.backend.enums.MovieStatus;
-import com.ltweb.backend.enums.RoomStatus;
-import com.ltweb.backend.enums.RoomTechnology;
-import com.ltweb.backend.enums.SeatType;
 import com.ltweb.backend.enums.ShowtimeStatus;
 import com.ltweb.backend.enums.TicketStatus;
 import com.ltweb.backend.enums.UserRole;
 import com.ltweb.backend.enums.UserStatus;
-import com.ltweb.backend.repository.BranchRepository;
-import com.ltweb.backend.repository.DirectorRepository;
 import com.ltweb.backend.repository.FoodRepository;
-import com.ltweb.backend.repository.GenreRepository;
-import com.ltweb.backend.repository.MovieRepository;
-import com.ltweb.backend.repository.RoomRepository;
 import com.ltweb.backend.repository.SeatRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
@@ -34,12 +21,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -53,27 +36,23 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DataSeedService {
 
+  private final java.time.Clock clock;
   private final PasswordEncoder passwordEncoder;
   private final UserRepository userRepository;
   private final FoodRepository foodRepository;
-  private final DirectorRepository directorRepository;
-  private final GenreRepository genreRepository;
-  private final MovieRepository movieRepository;
-  private final BranchRepository branchRepository;
-  private final RoomRepository roomRepository;
   private final SeatRepository seatRepository;
   private final ShowtimeRepository showtimeRepository;
   private final TicketRepository ticketRepository;
+  private final DemoCatalogSeeder catalogSeeder;
+  private final DemoVenueSeeder venueSeeder;
 
   @Transactional
   public void seedInitialData() {
     seedUsers();
     seedFoods();
 
-    Map<String, Genre> genres = seedGenres();
-    List<Director> directors = seedDirectors();
-    List<Movie> movies = seedMovies(genres, directors);
-    List<Room> rooms = seedBranchesRoomsAndSeats();
+    List<Movie> movies = catalogSeeder.seed();
+    List<Room> rooms = venueSeeder.seed();
     seedShowtimesAndTickets(movies, rooms);
 
     log.info("Demo seed data has been checked and refreshed.");
@@ -220,339 +199,6 @@ public class DataSeedService {
     foodRepository.save(food);
   }
 
-  private Map<String, Genre> seedGenres() {
-    List<GenreSeed> genreSeeds =
-        List.of(
-            new GenreSeed("Hanh dong", "Hành động"),
-            new GenreSeed("Phieu luu", "Phiêu lưu"),
-            new GenreSeed("Hai", "Hài"),
-            new GenreSeed("Kinh di", "Kinh dị"),
-            new GenreSeed("Tam ly", "Tâm lý"),
-            new GenreSeed("Gia dinh", "Gia đình"),
-            new GenreSeed("Khoa hoc vien tuong", "Khoa học viễn tưởng"),
-            new GenreSeed("Hoat hinh", "Hoạt hình"),
-            new GenreSeed("Tinh cam", "Tình cảm"),
-            new GenreSeed("Bi an", "Bí ẩn"));
-
-    Map<String, Genre> genres = new HashMap<>();
-    for (GenreSeed seed : genreSeeds) {
-      Genre genre =
-          genreRepository
-              .findFirstByNameIgnoreCase(seed.legacyName())
-              .or(() -> genreRepository.findFirstByNameIgnoreCase(seed.name()))
-              .orElseGet(Genre::new);
-      genre.setName(seed.name());
-      Genre savedGenre = genreRepository.save(genre);
-      genres.put(seed.legacyName(), savedGenre);
-      genres.put(seed.name(), savedGenre);
-    }
-
-    return genres;
-  }
-
-  private List<Director> seedDirectors() {
-    List<String> directorNames =
-        List.of(
-            "Lý Hải",
-            "Trấn Thành",
-            "Denis Villeneuve",
-            "Kelsey Mann",
-            "Shawn Levy",
-            "Mike Mitchell",
-            "James Wan",
-            "Christopher Nolan",
-            "Joss Whedon");
-
-    List<Director> directors = new ArrayList<>();
-    for (String directorName : directorNames) {
-      Director director =
-          directorRepository.findFirstByNameIgnoreCase(directorName).orElseGet(Director::new);
-      director.setName(directorName);
-      directors.add(directorRepository.save(director));
-    }
-
-    return directors;
-  }
-
-  private List<Movie> seedMovies(Map<String, Genre> genres, List<Director> directors) {
-    LocalDate today = LocalDate.now();
-
-    List<MovieSeed> movieSeeds =
-        List.of(
-            new MovieSeed(
-                "Nguoi Bao Ve Thanh Pho",
-                "Lật Mặt 7: Một Điều Ước",
-                "Bộ phim gia đình của Lý Hải xoay quanh tình mẫu tử, những lựa chọn của các người con trưởng thành và một điều ước giản dị kéo cả nhà lại gần nhau.",
-                138,
-                AgeRating.P,
-                "Tiếng Việt",
-                null,
-                today.minusDays(12),
-                today.plusDays(38),
-                MovieStatus.NOW_SHOWING,
-                "https://image.sggp.org.vn/w680/Uploaded/2026/chuabhu/2024_03_13/lat-mat-7-6-8426.jpg.webp",
-                "dQw4w9WgXcQ",
-                Set.of("Gia đình", "Tâm lý")),
-            new MovieSeed(
-                "Cuoc Phieu Luu Ngoai Vu Tru",
-                "Mai",
-                "Câu chuyện đời và tình yêu của Mai, một người phụ nữ từng trải, khi cô gặp lại hy vọng trong một mối quan hệ mới nhưng vẫn phải đối diện những tổn thương cũ.",
-                131,
-                AgeRating.T16,
-                "Tiếng Việt",
-                null,
-                today.minusDays(8),
-                today.plusDays(45),
-                MovieStatus.NOW_SHOWING,
-                "https://upload.wikimedia.org/wikipedia/vi/3/36/Mai_2024_poster.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Tình cảm", "Tâm lý")),
-            new MovieSeed(
-                "Gia Dinh Sieu Quay",
-                "Dune: Part Two",
-                "Paul Atreides hợp lực cùng người Fremen trên hành tinh Arrakis, bước vào cuộc chiến khốc liệt để trả thù và giành quyền kiểm soát tương lai của đế chế.",
-                166,
-                AgeRating.T13,
-                "Tiếng Anh",
-                "Phụ đề tiếng Việt",
-                today.minusDays(4),
-                today.plusDays(34),
-                MovieStatus.NOW_SHOWING,
-                "https://upload.wikimedia.org/wikipedia/en/5/52/Dune_Part_Two_poster.jpeg",
-                "dQw4w9WgXcQ",
-                Set.of("Khoa học viễn tưởng", "Phiêu lưu")),
-            new MovieSeed(
-                "Bi Mat Can Phong So 7",
-                "Inside Out 2",
-                "Riley bước vào tuổi thiếu niên và tâm trí cô xuất hiện thêm những cảm xúc mới, khiến nhóm cảm xúc quen thuộc phải học cách cùng tồn tại.",
-                96,
-                AgeRating.P,
-                "Tiếng Anh",
-                "Lồng tiếng Việt",
-                today.minusDays(3),
-                today.plusDays(28),
-                MovieStatus.NOW_SHOWING,
-                "https://upload.wikimedia.org/wikipedia/en/f/f7/Inside_Out_2_poster.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Hoạt hình", "Gia đình")),
-            new MovieSeed(
-                "Mua Roi Tren Pho Cu",
-                "Deadpool & Wolverine",
-                "Deadpool buộc phải hợp tác với Wolverine trong một nhiệm vụ xuyên đa vũ trụ, vừa hỗn loạn vừa đầy những pha hành động châm biếm kiểu Marvel.",
-                128,
-                AgeRating.T18,
-                "Tiếng Anh",
-                "Phụ đề tiếng Việt",
-                today.minusDays(1),
-                today.plusDays(42),
-                MovieStatus.NOW_SHOWING,
-                "https://upload.wikimedia.org/wikipedia/en/4/4c/Deadpool_%26_Wolverine_poster.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Hài", "Hành động")),
-            new MovieSeed(
-                "Doi Dac Vu Bat Dac Di",
-                "Kung Fu Panda 4",
-                "Po chuẩn bị tìm người kế nhiệm danh hiệu Thần Long Đại Hiệp, nhưng một phản diện biến hình mới buộc cậu trở lại hành trình võ thuật quen thuộc.",
-                94,
-                AgeRating.P,
-                "Tiếng Anh",
-                "Lồng tiếng Việt",
-                today.minusDays(5),
-                today.plusDays(30),
-                MovieStatus.NOW_SHOWING,
-                "https://upload.wikimedia.org/wikipedia/en/7/7f/Kung_Fu_Panda_4_poster.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Hoạt hình", "Gia đình")),
-            new MovieSeed(
-                "Vu Dieu Mua He",
-                "The Conjuring",
-                "Hai nhà điều tra hiện tượng siêu nhiên Ed và Lorraine Warren giúp một gia đình đối mặt với thế lực ma quái trong căn nhà biệt lập.",
-                112,
-                AgeRating.T18,
-                "Tiếng Anh",
-                "Phụ đề tiếng Việt",
-                today.plusDays(12),
-                today.plusDays(74),
-                MovieStatus.UPCOMING,
-                "https://upload.wikimedia.org/wikipedia/en/8/8c/The_Conjuring_poster.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Kinh dị", "Bí ẩn")),
-            new MovieSeed(
-                "Thanh Pho Sau Nua Dem",
-                "Oppenheimer",
-                "Chân dung J. Robert Oppenheimer và quá trình dẫn dắt Dự án Manhattan, nơi tạo ra vũ khí hạt nhân đầu tiên trong Thế chiến II.",
-                180,
-                AgeRating.T16,
-                "Tiếng Anh",
-                "Phụ đề tiếng Việt",
-                today.plusDays(20),
-                today.plusDays(80),
-                MovieStatus.UPCOMING,
-                "https://upload.wikimedia.org/wikipedia/en/4/4a/Oppenheimer_%28film%29.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Tâm lý", "Bí ẩn")),
-            new MovieSeed(
-                "Duong Dua Mat Troi",
-                "The Avengers",
-                "Những siêu anh hùng mạnh nhất Trái Đất phải học cách hợp tác để ngăn Loki và đội quân ngoài hành tinh tấn công New York.",
-                143,
-                AgeRating.T13,
-                "Tiếng Anh",
-                "Phụ đề tiếng Việt",
-                today.plusDays(26),
-                today.plusDays(88),
-                MovieStatus.UPCOMING,
-                "https://upload.wikimedia.org/wikipedia/vi/f/f9/TheAvengers2012Poster.jpg",
-                "dQw4w9WgXcQ",
-                Set.of("Hành động", "Khoa học viễn tưởng")));
-
-    List<Movie> movies = new ArrayList<>();
-    for (int movieIndex = 0; movieIndex < movieSeeds.size(); movieIndex++) {
-      MovieSeed seed = movieSeeds.get(movieIndex);
-      Movie movie =
-          movieRepository
-              .findFirstByMovieNameIgnoreCase(seed.legacyName())
-              .or(() -> movieRepository.findFirstByMovieNameIgnoreCase(seed.movieName()))
-              .orElseGet(Movie::new);
-
-      movie.setMovieName(seed.movieName());
-      movie.setDescription(seed.description());
-      movie.setDurationMinutes(seed.durationMinutes());
-      movie.setAgeRating(seed.ageRating());
-      movie.setLanguage(seed.language());
-      movie.setSubtitle(seed.subtitle());
-      movie.setReleaseDate(seed.releaseDate());
-      movie.setEndDate(seed.endDate());
-      movie.setStatus(seed.status());
-      movie.setThumbnailUrl(seed.thumbnailUrl());
-      movie.setTrailerUrl(seed.trailerUrl());
-      if (!directors.isEmpty()) {
-        movie.setDirector(directors.get(movieIndex % directors.size()));
-      }
-      movie.setGenres(
-          seed.genreNames().stream()
-              .map(genres::get)
-              .filter(Objects::nonNull)
-              .collect(Collectors.toSet()));
-
-      movies.add(movieRepository.save(movie));
-    }
-
-    return movies;
-  }
-
-  private List<Room> seedBranchesRoomsAndSeats() {
-    List<BranchSeed> branchSeeds =
-        List.of(
-            new BranchSeed(
-                "CN-HCM-01",
-                "MoviePTIT Nguyễn Huệ",
-                "10 Nguyễn Huệ, Quận 1",
-                "TP. Hồ Chí Minh",
-                "0901000001"),
-            new BranchSeed(
-                "CN-HCM-02",
-                "MoviePTIT Landmark",
-                "720A Điện Biên Phủ, Bình Thạnh",
-                "TP. Hồ Chí Minh",
-                "0901000002"),
-            new BranchSeed(
-                "CN-HN-01", "MoviePTIT Hồ Gươm", "20 Hàng Bài, Hoàn Kiếm", "Hà Nội", "0901000003"),
-            new BranchSeed(
-                "CN-DN-01",
-                "MoviePTIT Sông Hàn",
-                "15 Bạch Đằng, Hải Châu",
-                "Đà Nẵng",
-                "0901000004"));
-
-    Map<String, Branch> branches = new LinkedHashMap<>();
-    for (BranchSeed seed : branchSeeds) {
-      Branch branch = branchRepository.findByBranchCode(seed.branchCode()).orElseGet(Branch::new);
-      branch.setBranchCode(seed.branchCode());
-      branch.setName(seed.name());
-      branch.setAddress(seed.address());
-      branch.setCity(seed.city());
-      branch.setPhone(seed.phone());
-      branch.setStatus(BranchStatus.ACTIVE);
-      branches.put(seed.branchCode(), branchRepository.save(branch));
-    }
-
-    List<Room> rooms = new ArrayList<>();
-    branches.values().forEach(branch -> rooms.addAll(seedRooms(branch)));
-    branches.values().stream().findFirst().ifPresent(this::assignDemoStaffToBranch);
-    rooms.forEach(this::seedSeats);
-    return rooms;
-  }
-
-  private void assignDemoStaffToBranch(Branch branch) {
-    userRepository
-        .findByUsername("manager")
-        .ifPresent(
-            manager -> {
-              manager.setBranchId(branch.getBranchId());
-              userRepository.save(manager);
-            });
-    userRepository
-        .findByUsername("staff")
-        .ifPresent(
-            staff -> {
-              staff.setBranchId(branch.getBranchId());
-              userRepository.save(staff);
-            });
-  }
-
-  private List<Room> seedRooms(Branch branch) {
-    List<RoomSeed> roomSeeds =
-        List.of(
-            new RoomSeed("R01", "Phòng Standard 1", RoomTechnology.STANDARD),
-            new RoomSeed("R02", "Phòng IMAX Atmos", RoomTechnology.IMAX),
-            new RoomSeed("R03", "Phòng 4DX Motion", RoomTechnology.FOUR_DX));
-
-    List<Room> rooms = new ArrayList<>();
-    for (RoomSeed seed : roomSeeds) {
-      Room room =
-          roomRepository
-              .findByBranchBranchIdAndCode(branch.getBranchId(), seed.code())
-              .orElseGet(Room::new);
-      room.setBranch(branch);
-      room.setCode(seed.code());
-      room.setName(seed.name());
-      room.setRoomTechnology(seed.roomTechnology());
-      room.setSeatCapacity(50);
-      room.setStatus(RoomStatus.ACTIVE);
-      rooms.add(roomRepository.save(room));
-    }
-    return rooms;
-  }
-
-  private void seedSeats(Room room) {
-    for (char row = 'A'; row <= 'E'; row++) {
-      for (int seatNumber = 1; seatNumber <= 10; seatNumber++) {
-        String rowLabel = String.valueOf(row);
-        String seatCode = rowLabel + seatNumber;
-        if (seatRepository.existsByRoomIdAndSeatCode(room.getId(), seatCode)) {
-          continue;
-        }
-
-        SeatType seatType =
-            switch (row) {
-              case 'A', 'B' -> SeatType.STANDARD;
-              case 'C', 'D' -> SeatType.VIP;
-              default -> SeatType.COUPLE;
-            };
-
-        seatRepository.save(
-            Seat.builder()
-                .room(room)
-                .seatCode(seatCode)
-                .rowLabel(rowLabel)
-                .seatNumber(seatNumber)
-                .seatType(seatType)
-                .build());
-      }
-    }
-  }
-
   private void seedShowtimesAndTickets(List<Movie> movies, List<Room> rooms) {
     if (movies.isEmpty() || rooms.isEmpty()) {
       return;
@@ -569,7 +215,7 @@ public class DataSeedService {
             List.of(LocalTime.of(9, 30), LocalTime.of(14, 0), LocalTime.of(19, 30)),
             List.of(LocalTime.of(10, 15), LocalTime.of(15, 15), LocalTime.of(20, 45)),
             List.of(LocalTime.of(11, 0), LocalTime.of(16, 0), LocalTime.of(21, 30)));
-    LocalDate firstSeedDate = LocalDate.now();
+    LocalDate firstSeedDate = LocalDate.now(clock);
     Map<Long, List<Seat>> activeSeatsByRoom =
         rooms.stream()
             .collect(
@@ -646,28 +292,6 @@ public class DataSeedService {
     }
   }
 
-  private record GenreSeed(String legacyName, String name) {}
-
   private record FoodSeed(
       String legacyName, String name, String description, String price, String imageUrl) {}
-
-  private record BranchSeed(
-      String branchCode, String name, String address, String city, String phone) {}
-
-  private record RoomSeed(String code, String name, RoomTechnology roomTechnology) {}
-
-  private record MovieSeed(
-      String legacyName,
-      String movieName,
-      String description,
-      Integer durationMinutes,
-      AgeRating ageRating,
-      String language,
-      String subtitle,
-      LocalDate releaseDate,
-      LocalDate endDate,
-      MovieStatus status,
-      String thumbnailUrl,
-      String trailerUrl,
-      Set<String> genreNames) {}
 }

@@ -1,6 +1,6 @@
 # Thêm một endpoint
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Ví dụ xuyên suốt: thêm `GET /booking/{id}/receipt` trả phiếu thanh toán của một đơn cho chủ đơn và nhân viên chi nhánh.
 
@@ -14,7 +14,7 @@ Ví dụ xuyên suốt: thêm `GET /booking/{id}/receipt` trả phiếu thanh to
 - [ ] **6. Mã lỗi.** Dùng `ErrorCode` có sẵn nếu đúng nghĩa. Thêm mã mới với HTTP status phù hợp và thông báo tiếng Việt.
 - [ ] **7. Controller.** Thêm method, bọc kết quả trong `ApiResponse`, `@Valid` cho body.
 - [ ] **8. Phân quyền.**
-  - `@PreAuthorize` cho role ở controller hoặc service.
+  - `@PreAuthorize` cho role trên method của controller. Service không khai báo `@PreAuthorize` (`RoleCheckPlacementTest` kiểm).
   - Route GET dưới `/movie`, `/showtime`, `/ticket/showtime`, `/genre`, `/director`, `/food`, `/branch`, `/room` mặc định công khai ở `SecurityConfig`. Endpoint mới dưới các tiền tố này mà cần đăng nhập thì phải có `@PreAuthorize`.
   - Endpoint công khai mới (không thuộc các tiền tố trên) phải thêm vào `PUBLIC_ENDPOINT` của `SecurityConfig`.
 - [ ] **9. Test backend.** Unit test cho quy tắc nghiệp vụ (xem `BackendServiceFixtures` để dựng service thật với repository giả). Endpoint đọc mới: thêm vào `paths()` của `ReadEndpointsSmokeTest`. Có `@Query` mới thì `RepositoryQueryValidationTest` tự kiểm tra cú pháp.

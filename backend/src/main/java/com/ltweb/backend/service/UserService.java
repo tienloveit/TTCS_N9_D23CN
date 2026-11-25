@@ -23,7 +23,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PostAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -42,7 +41,6 @@ public class UserService {
     return createUser(createUserRequest, UserRole.USER);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public UserResponse createUserByAdmin(CreateUserRequest createUserRequest) {
     User currentUser = getCurrentUser();
     if (currentUser.getRole() == UserRole.MANAGER) {
@@ -70,7 +68,6 @@ public class UserService {
     return userMapper.toUserResponse(savedUser);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public PageResponse<List<UserResponse>> searchUsers(
       String username, String email, String phone, Pageable pageable) {
     Specification<User> specification =
@@ -120,7 +117,6 @@ public class UserService {
         usersPage.getTotalPages());
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public UserResponse getUserById(Long id) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -128,7 +124,6 @@ public class UserService {
     return userMapper.toUserResponse(user);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public UserResponse updateUser(Long id, UpdateUserRequest updateUserRequest) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -154,7 +149,6 @@ public class UserService {
     return null;
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public void deleteUser(Long id) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -177,7 +171,6 @@ public class UserService {
     return userMapper.toUserResponse(userRepository.save(user));
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public UserResponse updateUserStatus(Long id, UserStatus status) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

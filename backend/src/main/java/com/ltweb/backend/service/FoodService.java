@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +28,6 @@ public class FoodService {
   private final UserRepository userRepository;
   private final AuditLogService auditLogService;
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public FoodResponse createFood(CreateFoodRequest request) {
     Long branchId = resolveWritableBranchId(request.getBranchId());
@@ -67,7 +65,6 @@ public class FoodService {
         .toList();
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public List<FoodResponse> getAllFoods() {
     User user = getCurrentUser();
     Long managerBranchId = user.getRole() == UserRole.MANAGER ? requireManagedBranch(user) : null;
@@ -90,7 +87,6 @@ public class FoodService {
     return toFoodResponse(getFood(foodId));
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public FoodResponse updateFood(Long foodId, UpdateFoodRequest request) {
     Food food =
@@ -144,7 +140,6 @@ public class FoodService {
     return toFoodResponse(saved);
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   @Transactional
   public void deleteFood(Long foodId) {
     Food food =

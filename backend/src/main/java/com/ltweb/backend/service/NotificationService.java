@@ -39,8 +39,8 @@ public class NotificationService {
         UserRole.ADMIN,
         null,
         NotificationType.REFUND_REQUEST,
-        "Co yeu cau hoan tien moi",
-        "Don " + bookingCode + " dang cho duyet hoan tien.",
+        "Có yêu cầu hoàn tiền mới",
+        "Đơn " + bookingCode + " đang chờ duyệt hoàn tiền.",
         "Booking",
         bookingId);
     if (branchId != null) {
@@ -48,8 +48,8 @@ public class NotificationService {
           UserRole.MANAGER,
           branchId,
           NotificationType.REFUND_REQUEST,
-          "Co yeu cau hoan tien tai chi nhanh",
-          "Don " + bookingCode + " dang cho manager xu ly.",
+          "Có yêu cầu hoàn tiền tại chi nhánh",
+          "Đơn " + bookingCode + " đang chờ quản lý xử lý.",
           "Booking",
           bookingId);
     }
@@ -57,8 +57,8 @@ public class NotificationService {
 
   @Transactional
   public void notifyLowStock(Long branchId, Long foodId, String foodName, int remaining) {
-    String title = remaining <= 0 ? "Bap nuoc da het hang" : "Bap nuoc sap het hang";
-    String message = "Mon " + foodName + " con " + remaining + " phan trong kho.";
+    String title = remaining <= 0 ? "Bắp nước đã hết hàng" : "Bắp nước sắp hết hàng";
+    String message = "Món " + foodName + " còn " + remaining + " phần trong kho.";
     createForRole(UserRole.ADMIN, null, NotificationType.LOW_STOCK, title, message, "Food", foodId);
     if (branchId != null) {
       createForRole(

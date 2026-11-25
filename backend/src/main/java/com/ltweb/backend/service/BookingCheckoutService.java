@@ -26,6 +26,7 @@ import com.ltweb.backend.mapper.BookingMapper;
 import com.ltweb.backend.repository.BookingRepository;
 import com.ltweb.backend.repository.ShowtimeRepository;
 import com.ltweb.backend.repository.TicketRepository;
+import com.ltweb.backend.util.TicketQrCode;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -238,7 +239,7 @@ public class BookingCheckoutService {
       ticket.setBooking(booking);
       ticket.setTicketStatus(status);
       if (status == TicketStatus.BOOKED) {
-        ticket.setQrCode(getOrCreateTicketQrCode(booking, ticket));
+        ticket.setQrCode(TicketQrCode.of(booking, ticket));
       }
       Long seatId = ticket.getSeat().getId();
       BookingTransactionEffects.afterCommit(
@@ -322,22 +323,6 @@ public class BookingCheckoutService {
   private boolean hasActiveSeatHold(Long showtimeId, Ticket ticket) {
     return Boolean.TRUE.equals(
         redisTemplate.hasKey("seat_hold:" + showtimeId + ":" + ticket.getSeat().getId()));
-  }
-
-  private String getOrCreateTicketQrCode(Booking booking, Ticket ticket) {
-    if (StringUtils.hasText(ticket.getQrCode())) {
-      return ticket.getQrCode();
-    }
-    String seatCode =
-        ticket.getSeat() == null || ticket.getSeat().getSeatCode() == null
-            ? ""
-            : ticket.getSeat().getSeatCode();
-    return "CINEMAHUB|BOOKING="
-        + booking.getBookingCode()
-        + "|TICKET="
-        + ticket.getId()
-        + "|SEAT="
-        + seatCode;
   }
 
   /**

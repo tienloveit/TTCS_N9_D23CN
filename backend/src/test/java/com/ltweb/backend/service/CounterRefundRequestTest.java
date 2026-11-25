@@ -101,7 +101,7 @@ class CounterRefundRequestTest {
   void staffOfAnotherBranchCannotRequest() {
     actAs(User.builder().id(8L).username("other").role(UserRole.STAFF).branchId(2L).build());
 
-    assertError(() -> service.requestRefund(5L, "Bán nhầm"), ErrorCode.UNAUTHORIZED);
+    assertError(() -> service.requestRefund(5L, "Bán nhầm"), ErrorCode.ACCESS_DENIED);
   }
 
   @Test
@@ -109,7 +109,7 @@ class CounterRefundRequestTest {
     booking.setStaffUser(null);
     actAs(seller);
 
-    assertError(() -> service.requestRefund(5L, "Khách gọi điện"), ErrorCode.UNAUTHORIZED);
+    assertError(() -> service.requestRefund(5L, "Khách gọi điện"), ErrorCode.ACCESS_DENIED);
   }
 
   @Test

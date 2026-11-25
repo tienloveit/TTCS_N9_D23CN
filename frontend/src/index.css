@@ -917,6 +917,12 @@ select:disabled {
   gap: 16px;
 }
 
+.movie-reviews-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .movie-review-card {
   padding: 18px 20px;
   background: var(--bg-card);

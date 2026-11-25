@@ -4,10 +4,12 @@ import com.ltweb.backend.dto.request.CreateVnpayRequest;
 import com.ltweb.backend.dto.request.QueryRequest;
 import com.ltweb.backend.dto.request.RefundRequest;
 import com.ltweb.backend.dto.response.ApiResponse;
+import com.ltweb.backend.service.VnpayCallbackService;
 import com.ltweb.backend.service.VnpayService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class VnpayController {
 
   private final VnpayService vnpayService;
+  private final VnpayCallbackService vnpayCallbackService;
 
-  public VnpayController(VnpayService vnpayService) {
+  public VnpayController(VnpayService vnpayService, VnpayCallbackService vnpayCallbackService) {
     this.vnpayService = vnpayService;
+    this.vnpayCallbackService = vnpayCallbackService;
   }
 
   @PostMapping("/payment-url")
@@ -33,6 +37,7 @@ public class VnpayController {
   }
 
   @PostMapping("/querydr")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> querydr(
       @Valid @RequestBody QueryRequest request, HttpServletRequest servletRequest) {
     String data = vnpayService.queryDr(request, servletRequest);
@@ -40,6 +45,7 @@ public class VnpayController {
   }
 
   @PostMapping("/refund")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> refund(
       @Valid @RequestBody RefundRequest request, HttpServletRequest servletRequest) {
     String data = vnpayService.refund(request, servletRequest);
@@ -48,11 +54,11 @@ public class VnpayController {
 
   @GetMapping("/return")
   public ApiResponse<Map<String, Object>> paymentReturn(@RequestParam Map<String, String> params) {
-    return vnpayService.processReturnUrl(params);
+    return vnpayCallbackService.processReturnUrl(params);
   }
 
   @GetMapping("/ipn")
   public Map<String, String> ipn(@RequestParam Map<String, String> params) {
-    return vnpayService.processIpn(params);
+    return vnpayCallbackService.processIpn(params);
   }
 }

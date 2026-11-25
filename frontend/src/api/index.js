@@ -33,11 +33,15 @@ export const userApi = {
 export const movieApi = {
   create: (data) => axiosClient.post('/movie', data),
   getAll: (params) => axiosClient.get('/movie', { params }),
+  // Trang khách: lọc, sắp xếp, phân trang ở backend. params: movieName, status, genreId,
+  // ageRating, sort (DEFAULT | RATING | NEWEST | DURATION), page (từ 1), size (tối đa 50).
+  getCatalog: (params) => axiosClient.get('/movie/catalog', { params }),
   getNowShowing: () => axiosClient.get('/movie/now-showing'),
   getUpcoming: () => axiosClient.get('/movie/upcoming'),
   getById: (id) => axiosClient.get(`/movie/${id}`),
   getMyRating: (id) => axiosClient.get(`/movie/${id}/rating/my`),
-  getRatings: (id) => axiosClient.get(`/movie/${id}/ratings`),
+  // result: { data, page, size, totalElements, totalPages }, mới nhất trước.
+  getRatings: (id, params) => axiosClient.get(`/movie/${id}/ratings`, { params }),
   rate: (id, score, comment) => axiosClient.post(`/movie/${id}/rating`, { score, comment }),
   update: (id, data) => axiosClient.put(`/movie/${id}`, data),
   delete: (id) => axiosClient.delete(`/movie/${id}`),

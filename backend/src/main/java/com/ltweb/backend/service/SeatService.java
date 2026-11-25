@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +36,6 @@ public class SeatService {
   private final SeatMapper seatMapper;
 
   @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public SeatResponse createSeat(CreateSeatRequest request) {
     requireRoomAccess(request.getRoomId());
 
@@ -56,7 +54,6 @@ public class SeatService {
   }
 
   @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public SeatResponse updateSeat(Long seatId, UpdateSeatRequest request) {
 
     Seat seat = getSeat(seatId);
@@ -80,7 +77,6 @@ public class SeatService {
   }
 
   @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public void deleteSeat(Long seatId) {
     Seat seat = getSeat(seatId);
     requireRoomAccess(seat.getRoom().getId());
@@ -99,7 +95,6 @@ public class SeatService {
   }
 
   @Transactional
-  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public List<SeatResponse> updateSeatLayout(Long roomId, UpdateSeatLayoutRequest request) {
     requireRoomAccess(roomId);
     if (request.getSeats() == null || request.getSeats().isEmpty()) {
@@ -197,7 +192,7 @@ public class SeatService {
         && Objects.equals(room.getBranch().getBranchId(), currentUser.getBranchId())) {
       return;
     }
-    throw new AppException(ErrorCode.UNAUTHORIZED);
+    throw new AppException(ErrorCode.ACCESS_DENIED);
   }
 
   private User getCurrentUser() {

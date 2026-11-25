@@ -5,6 +5,7 @@ import { branchApi, movieApi, roomApi, showtimeApi } from '../../api';
 import SafeImage from '../../components/Common/SafeImage';
 import { useAuth } from '../../context/useAuth';
 import useModalDialog from '../../components/Common/useModalDialog';
+import { appendReviews } from '../../utils/movieCatalog';
 import {
   addDaysToDateKey,
   cinemaTodayKey,
@@ -25,6 +26,16 @@ import {
 } from '../../components/Common/CinemaIcons';
 
 const DATE_WINDOW_SIZE = 5;
+const REVIEW_PAGE_SIZE = 5;
+const NO_REVIEWS = { items: [], page: 0, totalPages: 0, totalElements: 0 };
+
+// Ghép một trang đánh giá từ backend ({ data, page, totalPages, totalElements }) vào danh sách đang hiện.
+const mergeReviewPage = (previous, result, requestedPage) => ({
+  items: requestedPage === 1 ? result?.data || [] : appendReviews(previous.items, result?.data || []),
+  page: result?.page || requestedPage,
+  totalPages: result?.totalPages || 0,
+  totalElements: result?.totalElements || 0,
+});
 
 // Ngày theo giờ rạp để "Hôm nay" và dải ngày khớp lịch chiếu, bất kể múi giờ của máy.
 const toLocalDateKey = (date = new Date()) => toCinemaDateKey(date);
@@ -63,7 +74,8 @@ export default function MovieDetailPage() {
   const [hoverRating, setHoverRating] = useState(0);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [ratingMessage, setRatingMessage] = useState(null); // { tone: 'success' | 'danger', text }
-  const [reviews, setReviews] = useState([]);
+  const [reviewPage, setReviewPage] = useState(NO_REVIEWS);
+  const [reviewsLoadingMore, setReviewsLoadingMore] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey());
   const [dateWindowOffset, setDateWindowOffset] = useState(0);
   const [selectedCity, setSelectedCity] = useState('ALL');
@@ -123,11 +135,30 @@ export default function MovieDetailPage() {
   }, [id, isAuthenticated]);
 
   useEffect(() => {
+    let active = true;
     movieApi
-      .getRatings(id)
-      .then((res) => setReviews(res.data.result || []))
-      .catch(() => setReviews([]));
+      .getRatings(id, { page: 1, size: REVIEW_PAGE_SIZE })
+      .then((res) => active && setReviewPage((prev) => mergeReviewPage(prev, res.data.result, 1)))
+      .catch(() => active && setReviewPage(NO_REVIEWS));
+    return () => {
+      active = false;
+    };
   }, [id]);
+
+  const refreshReviews = () =>
+    movieApi
+      .getRatings(id, { page: 1, size: REVIEW_PAGE_SIZE })
+      .then((res) => setReviewPage((prev) => mergeReviewPage(prev, res.data.result, 1)));
+
+  const loadMoreReviews = () => {
+    const nextPage = reviewPage.page + 1;
+    setReviewsLoadingMore(true);
+    movieApi
+      .getRatings(id, { page: nextPage, size: REVIEW_PAGE_SIZE })
+      .then((res) => setReviewPage((prev) => mergeReviewPage(prev, res.data.result, nextPage)))
+      .catch(() => {})
+      .finally(() => setReviewsLoadingMore(false));
+  };
 
   const branchById = useMemo(() => {
     const map = new Map();
@@ -374,8 +405,8 @@ export default function MovieDetailPage() {
           : prev
       );
       setRatingMessage({ tone: 'success', text: 'Đã lưu đánh giá của bạn.' });
-      // Refresh reviews list
-      movieApi.getRatings(id).then((r) => setReviews(r.data.result || [])).catch(() => { });
+      // Đánh giá vừa lưu là mới nhất nên nằm ở trang đầu.
+      refreshReviews().catch(() => { });
     } catch {
       setRatingMessage({ tone: 'danger', text: 'Không thể lưu đánh giá. Vui lòng thử lại.' });
     } finally {
@@ -751,11 +782,11 @@ export default function MovieDetailPage() {
 
         <div className="movie-detail-rating">{ratingPanel}</div>
 
-        {reviews.length > 0 && (
+        {reviewPage.items.length > 0 && (
           <section className="movie-reviews-section">
-            <h2 className="movie-section-title">Đánh giá từ khán giả ({reviews.length})</h2>
+            <h2 className="movie-section-title">Đánh giá từ khán giả ({reviewPage.totalElements})</h2>
             <div className="movie-reviews-list">
-              {reviews.map((review) => (
+              {reviewPage.items.map((review) => (
                 <div key={`${review.userId}-${review.movieId}`} className="movie-review-card">
                   <div className="movie-review-header">
                     <div className="movie-review-avatar">
@@ -780,6 +811,20 @@ export default function MovieDetailPage() {
                 </div>
               ))}
             </div>
+            {reviewPage.page < reviewPage.totalPages && (
+              <div className="movie-reviews-more">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={loadMoreReviews}
+                  disabled={reviewsLoadingMore}
+                >
+                  {reviewsLoadingMore
+                    ? 'Đang tải...'
+                    : `Xem thêm đánh giá (${reviewPage.totalElements - reviewPage.items.length})`}
+                </button>
+              </div>
+            )}
           </section>
         )}
       </div>

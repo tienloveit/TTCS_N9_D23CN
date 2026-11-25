@@ -35,15 +35,15 @@ public class BookingAccessPolicy {
   }
 
   public void requireOwner(Booking booking, User user) {
-    require(isOwner(booking, user), ErrorCode.UNAUTHORIZED);
+    require(isOwner(booking, user), ErrorCode.ACCESS_DENIED);
   }
 
   public void requireCanView(Booking booking, User user) {
-    require(isOwner(booking, user) || canManage(booking, user), ErrorCode.UNAUTHORIZED);
+    require(isOwner(booking, user) || canManage(booking, user), ErrorCode.ACCESS_DENIED);
   }
 
   public void requireCanManage(Booking booking, User user) {
-    require(canManage(booking, user), ErrorCode.UNAUTHORIZED);
+    require(canManage(booking, user), ErrorCode.ACCESS_DENIED);
   }
 
   public void requireCanCancel(Booking booking, User user) {
@@ -51,7 +51,7 @@ public class BookingAccessPolicy {
         isOwner(booking, user)
             || user.getRole() == UserRole.ADMIN
             || (user.getRole() == UserRole.STAFF && isInBranch(booking, user.getBranchId())),
-        ErrorCode.UNAUTHORIZED);
+        ErrorCode.ACCESS_DENIED);
   }
 
   /**
@@ -61,7 +61,7 @@ public class BookingAccessPolicy {
   public void requireCanRequestRefund(Booking booking, User user) {
     require(
         isOwner(booking, user) || canRequestRefundForCustomer(booking, user),
-        ErrorCode.UNAUTHORIZED);
+        ErrorCode.ACCESS_DENIED);
   }
 
   /** Người đang thao tác gửi yêu cầu hoàn thay khách (không phải chủ đơn). */
@@ -79,7 +79,7 @@ public class BookingAccessPolicy {
             || (user.getRole() == UserRole.STAFF
                 && user.getBranchId() != null
                 && Objects.equals(branchId(showtime), user.getBranchId())),
-        ErrorCode.UNAUTHORIZED);
+        ErrorCode.ACCESS_DENIED);
   }
 
   public void requireRefundOperator(User user, boolean requireAssignedBranch) {
