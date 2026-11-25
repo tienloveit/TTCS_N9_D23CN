@@ -70,7 +70,7 @@ Nguồn: [ErrorCode.java](../../backend/src/main/java/com/ltweb/backend/exceptio
 | 409 | `CUSTOMER_CONFIRMATION_REQUIRED`, `CUSTOMER_CONTACT_CONFLICT` | Xác định khách tại quầy. Xem [bán tại quầy](../02-domain/booking-lifecycle.md#xác-định-khách-tại-quầy). |
 | 409 | `RESOURCE_IN_USE` | Xóa dữ liệu còn được tham chiếu (MySQL 1451). Nên ngừng hoạt động thay vì xóa. |
 | 409 | `DUPLICATE_VALUE` | Trùng giá trị unique (MySQL 1062). |
-| 400 | `VALIDATION_ERROR` | Body không hợp lệ, danh sách ghế hoặc món trùng, khóa cấu hình không tồn tại. |
+| 400 | `VALIDATION_ERROR` | Body không hợp lệ, danh sách ghế hoặc món trùng, khóa cấu hình không tồn tại, tham số query hoặc path sai kiểu (ví dụ `?status=FOO`). |
 | 400 | `USER_EXISTED`, `USER_NOT_FOUND` | Đăng ký trùng, không tìm thấy tài khoản hoặc email. |
 | 400 | `SHOWTIME_NOT_FOUND` | Suất không tồn tại **hoặc không còn bán được**. |
 | 400 | `SHOWTIME_TIME_OVERLAP`, `SHOWTIME_PRICE_LOCKED`, `SHOWTIME_HAS_BOOKINGS`, `ROOM_NOT_AVAILABLE`, `ROOM_HAS_SHOWTIMES` | Quản lý suất và phòng. |
@@ -124,14 +124,16 @@ Frontend chỉ làm mới token khi gặp 401, không làm mới khi gặp 403.
 
 ## Phân trang và sắp xếp
 
-Không có tham số phân trang chung. Chỉ hai endpoint có phân trang, và quy ước số trang khác nhau:
+Không có tham số phân trang chung. Các endpoint có phân trang và quy ước số trang của từng cái:
 
 | Endpoint | Tham số | Trang đầu | Mặc định | Phản hồi |
 | --- | --- | --- | --- | --- |
 | `GET /booking/search` | `page`, `size` (tối đa 100) | `0` | `size = 15` | `BookingPageResponse`: `content`, `page`, `size`, `totalElements`, `totalPages`, `summary {completed, refundRequested, paidAmount}` |
 | `GET /users` | `page`, `size`, `username`, `email`, `phone` | `1` | `size = 10` | `PageResponse`: `data`, `page` (từ 1), `size`, `totalElements`, `totalPages` |
+| `GET /movie/catalog` | `page`, `size` (tối đa 50), `movieName`, `status`, `genreId`, `ageRating`, `sort` | `1` | `size = 8`, `sort = DEFAULT` | `PageResponse` |
+| `GET /movie/{id}/ratings` | `page`, `size` (tối đa 50) | `1` | `size = 10` | `PageResponse` |
 
-Cả hai sắp xếp cố định theo `createdAt` giảm dần, không nhận tham số `sort`. Các danh sách khác trả toàn bộ, hoặc giới hạn cố định (thông báo và nhật ký: 100 bản ghi mới nhất).
+`GET /booking/search`, `GET /users` và `GET /movie/{id}/ratings` sắp xếp cố định theo `createdAt` giảm dần. `GET /movie/catalog` nhận `sort`: `DEFAULT` (thứ tự thêm phim), `RATING` (điểm trung bình giảm dần, phim chưa có đánh giá tính là 0), `NEWEST` (ngày khởi chiếu mới nhất), `DURATION` (thời lượng dài nhất). Từ khóa `movieName` không phân biệt hoa thường, `%` và `_` được hiểu đúng nghĩa đen. `size` vượt trần bị kẹp về trần, `page` nhỏ hơn 1 được coi là 1. Các danh sách khác trả toàn bộ, hoặc giới hạn cố định (thông báo và nhật ký: 100 bản ghi mới nhất).
 
 Tham số lọc của `GET /booking/search`: `q` (mã đơn, tài khoản khách, phim, chi nhánh, mã ghế, mã vé), `status`, `paymentStatus` (tên `PaymentStatus` hoặc `NO_TRANSACTION`), `branchId` (chỉ ADMIN), `from`, `to` (ngày đặt, gồm cả hai đầu), `showtimeDate`, `checkedInDate`.
 

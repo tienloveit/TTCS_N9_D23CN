@@ -144,7 +144,7 @@ Dùng các hàm này khi so sánh với thời điểm hiện tại. `new Date('
 
 | Khu vực | Điểm vào | Ghi chú |
 | --- | --- | --- |
-| Khám phá phim | `Home/HomePage.jsx`, `MovieList/MovieListPage.jsx`, `MovieDetail/MovieDetailPage.jsx` | Danh sách lọc theo từ khóa, trạng thái, tuổi, thể loại. Chi tiết phim gom suất theo ngày và rạp, có đánh giá và trailer. |
+| Khám phá phim | `Home/HomePage.jsx`, `MovieList/MovieListPage.jsx`, `MovieDetail/MovieDetailPage.jsx` | Danh sách lọc theo từ khóa, trạng thái, tuổi, thể loại qua `GET /movie/catalog`; backend lọc, sắp xếp và phân trang, tham số dựng bằng `utils/movieCatalog.js`. Chi tiết phim gom suất theo ngày và rạp, có trailer và đánh giá tải từng trang 5 bản. |
 | Lịch chiếu theo rạp | `Schedule/SchedulePage.jsx`, `scheduleModel.js` | Tên rạp làm tiêu đề, đổi rạp qua hộp thoại `CinemaPicker`. Dải 14 ngày từ hôm nay theo giờ rạp. Hai cách xem cùng dữ liệu: "Theo phim" (suất nhóm theo định dạng, mỗi suất là một cuống vé) và "Theo giờ" (mọi suất xếp theo giờ, kèm giá vé backend trả về). Lọc theo buổi và tên phim trên dữ liệu đã tải. Rạp, ngày, cách xem nằm trên URL, rạp được nhớ ở localStorage. `/branch/:branchId` chỉ chuyển hướng. Ẩn suất đã bắt đầu. Phép tính thuần nằm trong `scheduleModel.js`, có test `tests/scheduleModel.test.mjs`. |
 | Chọn ghế | `SeatSelect/SeatSelectPage.jsx` | Tải suất, vé, bắp nước, nghe STOMP, gọi `bookingApi.create`. Xem công khai, đặt vé cần đăng nhập. |
 | Thanh toán | `Payment/PaymentPage.jsx`, `PaymentResultPage.jsx` | Đếm ngược theo `expiresAt` của backend. Thiếu `expiresAt` thì hiện cảnh báo, không tự ước tính. Áp hoặc bỏ mã, lấy URL VNPay. Trang kết quả gửi query string về backend và chỉ hiển thị kết quả backend xác nhận. |

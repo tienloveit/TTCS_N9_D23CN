@@ -36,13 +36,14 @@ Cột **Client** là hàm trong [frontend/src/api/index.js](../../frontend/src/a
 
 | Method | Path | Quyền | Mô tả | Client |
 | --- | --- | --- | --- | --- |
-| GET | `/movie?movieName=` | Công khai | Danh sách phim. Phim ẩn chỉ ADMIN thấy. MANAGER chỉ thấy phim có suất ở chi nhánh mình. | `movieApi.getAll` |
+| GET | `/movie?movieName=` | Công khai | Toàn bộ phim, không phân trang, dùng cho danh sách chọn ở khu vận hành. Phim ẩn chỉ ADMIN thấy. MANAGER chỉ thấy phim có suất ở chi nhánh mình. | `movieApi.getAll` |
+| GET | `/movie/catalog` | Công khai | Danh mục phim cho trang khách và ô tìm kiếm, lọc, sắp xếp, phân trang ở DB. Tham số ở [conventions.md](conventions.md#phân-trang-và-sắp-xếp). Phim ẩn chỉ ADMIN thấy. | `movieApi.getCatalog` |
 | GET | `/movie/now-showing`, `/movie/upcoming` | Công khai | Phim theo trạng thái | `movieApi.getNowShowing`, `getUpcoming` |
 | GET | `/movie/{id}` | Công khai | Chi tiết phim | `movieApi.getById` |
 | POST, PUT, DELETE | `/movie`, `/movie/{id}` | ADMIN | Tạo, sửa, xóa phim | `movieApi.create`, `update`, `delete` |
 | POST | `/movie/{id}/rating` | Đăng nhập | `{score 1–5, comment}`. Gọi lại là cập nhật. | `movieApi.rate` |
 | GET | `/movie/{id}/rating/my` | Đăng nhập | Đánh giá của mình, kèm điểm trung bình | `movieApi.getMyRating` |
-| GET | `/movie/{id}/ratings` | Công khai | Mọi đánh giá, mới nhất trước | `movieApi.getRatings` |
+| GET | `/movie/{id}/ratings?page=&size=` | Công khai | Đánh giá mới nhất trước, phân trang (`PageResponse`) | `movieApi.getRatings` |
 | POST | `/movie/media` | ADMIN | Multipart field `file`, JPG/PNG/WebP tối đa 5 MB. Trả đường dẫn ảnh. | Trong `MovieForm.jsx` |
 | GET | `/movie/media/{filename}` | Công khai | Trả byte ảnh | — |
 | GET | `/genre`, `/genre/{id}` | Công khai | Thể loại | `genreApi.getAll` |

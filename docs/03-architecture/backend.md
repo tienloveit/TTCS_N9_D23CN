@@ -84,6 +84,8 @@ Khi thêm thao tác mới trên đơn, tái sử dụng các policy này thay v�
 
 Đổi quy ước thì sửa cả truy vấn trong repository lẫn `getPaymentDate` của service. Dashboard quản trị mặc định lấy 30 ngày. Báo cáo doanh thu tổng hợp trên toàn bộ kết quả lọc, còn danh sách chi tiết trong DTO và XLSX lấy tối đa 200 dòng. Báo cáo vận hành có `summary`, `paymentBreakdown`, `refundQueue`, `showtimeLoads`, file XLSX chỉ xuất các chỉ số tổng hợp.
 
+`GET /movie/catalog` lọc, sắp xếp và phân trang ở DB qua `MovieCatalogSpecifications`, rồi nạp thể loại, đạo diễn và điểm đánh giá cho cả trang bằng hai truy vấn gộp (`findByIdIn`, `findStatsByMovieIds`). Các danh sách phim không phân trang cũng đọc điểm đánh giá gộp như vậy.
+
 `GET /booking/search` lọc, đếm và phân trang ở DB qua `BookingSearchRepository` (Criteria API). `summary` tính trên toàn bộ đơn khớp bộ lọc. ADMIN lọc được mọi chi nhánh, STAFF và MANAGER bị giới hạn ở chi nhánh được phân công và nhận 403 nếu hỏi chi nhánh khác.
 
 Thông báo được lọc ngay trong truy vấn `findVisibleCandidates` (gửi riêng cho người dùng, không chỉ định role, hoặc đúng role và chi nhánh), lấy 100 bản ghi mới nhất rồi `canView` quyết định cuối cùng. Số chưa đọc dựa trên cùng tập này.

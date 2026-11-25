@@ -72,12 +72,10 @@ export default function Navbar() {
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        const res = await movieApi.getAll({ movieName: query });
+        // Backend lọc theo tên và chỉ trả 5 phim đầu, không tải cả danh mục.
+        const res = await movieApi.getCatalog({ movieName: query, size: 5 });
         if (cancelled) return;
-        const keyword = query.toLocaleLowerCase('vi');
-        const movies = (res.data.result || [])
-          .filter((movie) => movie.movieName?.toLocaleLowerCase('vi').includes(keyword))
-          .slice(0, 5);
+        const movies = res.data.result?.data || [];
         setSuggestions({ query, movies });
       } catch {
         if (!cancelled) setSuggestions({ query, movies: [], error: true });

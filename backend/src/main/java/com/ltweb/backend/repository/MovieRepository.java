@@ -3,17 +3,20 @@ package com.ltweb.backend.repository;
 import com.ltweb.backend.entity.Movie;
 import com.ltweb.backend.enums.MovieStatus;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface MovieRepository extends JpaRepository<Movie, Long> {
+public interface MovieRepository
+    extends JpaRepository<Movie, Long>, JpaSpecificationExecutor<Movie> {
 
   @EntityGraph(attributePaths = {"genres", "director"})
   List<Movie> findAll();
@@ -23,6 +26,13 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
   @EntityGraph(attributePaths = {"genres", "director"})
   List<Movie> findByMovieNameContainingIgnoreCase(String movieName);
+
+  /**
+   * Nạp thể loại và đạo diễn cho các phim của một trang danh mục. Trang được lấy riêng không kèm
+   * collection để Hibernate phân trang trong SQL thay vì tải hết rồi cắt trong bộ nhớ.
+   */
+  @EntityGraph(attributePaths = {"genres", "director"})
+  List<Movie> findByIdIn(Collection<Long> ids);
 
   // Không fetch genres: giới hạn 1 dòng cùng fetch collection khiến Hibernate tải hết rồi cắt
   // trong bộ nhớ (HHH90003004). Seeder đọc genres trong transaction của nó.

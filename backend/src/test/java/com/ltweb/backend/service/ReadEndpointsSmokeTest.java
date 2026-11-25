@@ -236,11 +236,17 @@ class ReadEndpointsSmokeTest {
         "/genre",
         "/genre/" + ids.genreId(),
         "/movie",
+        "/movie/catalog",
+        "/movie/catalog?sort=RATING&status=NOW_SHOWING&genreId="
+            + ids.genreId()
+            + "&ageRating=T13&movieName=a%25&page=2&size=500",
+        "/movie/catalog?status=FOO",
         "/movie/upcoming",
         "/movie/now-showing",
         "/movie/" + ids.movieId(),
         "/movie/" + ids.movieId() + "/rating/my",
         "/movie/" + ids.movieId() + "/ratings",
+        "/movie/" + ids.movieId() + "/ratings?page=3&size=0",
         "/notifications",
         "/notifications/unread-count",
         "/promotion",
