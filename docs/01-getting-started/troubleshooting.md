@@ -1,6 +1,6 @@
 # Xử lý lỗi khi chạy local
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 ## Khởi động backend
 
@@ -22,7 +22,7 @@
 
 | Triệu chứng | Nguyên nhân | Cách sửa |
 | --- | --- | --- |
-| DevTools báo `blocked by CORS policy` | Frontend chạy ở origin không nằm trong danh sách CORS | Dùng `localhost` hoặc `127.0.0.1` ở cổng 5173, 5174, 3000. Thêm origin mới vào `SecurityConfig.corsConfigurationSource`. |
+| DevTools báo `blocked by CORS policy` | Frontend chạy ở origin không nằm trong danh sách CORS | Dùng `localhost` hoặc `127.0.0.1` ở cổng 5173, 5174, 3000. Thêm origin mới vào biến `APP_CORS_ALLOWED_ORIGINS` trong `backend/.env` rồi khởi động lại backend. |
 | Mọi API trả 404 | `VITE_API_BASE_URL` thiếu hậu tố `/api` | Sửa thành `http://localhost:8081/api` rồi khởi động lại Vite. |
 | Sửa `.env` frontend nhưng không có tác dụng | Vite chỉ đọc `.env` lúc khởi động | Dừng và chạy lại `npm run dev`. |
 | Đăng nhập xong bị đẩy về `/login` liên tục | Refresh token không còn hợp lệ, ví dụ sau khi đổi `JWT_SECRET_KEY` hoặc xóa Redis | Xóa `accessToken`, `refreshToken` trong localStorage rồi đăng nhập lại. |

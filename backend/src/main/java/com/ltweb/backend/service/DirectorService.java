@@ -10,7 +10,6 @@ import com.ltweb.backend.mapper.DirectorMapper;
 import com.ltweb.backend.repository.DirectorRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -31,7 +30,6 @@ public class DirectorService {
     return directorMapper.toDirectorResponse(getDirector(id));
   }
 
-  @PreAuthorize("hasRole('ADMIN')")
   @Transactional
   public DirectorResponse createDirector(CreateDirectorRequest request) {
     Director director =
@@ -39,7 +37,6 @@ public class DirectorService {
     return directorMapper.toDirectorResponse(directorRepository.save(director));
   }
 
-  @PreAuthorize("hasRole('ADMIN')")
   @Transactional
   public DirectorResponse updateDirector(Long id, UpdateDirectorRequest request) {
     Director director = getDirector(id);
@@ -52,7 +49,6 @@ public class DirectorService {
     return directorMapper.toDirectorResponse(directorRepository.save(director));
   }
 
-  @PreAuthorize("hasRole('ADMIN')")
   @Transactional
   public void deleteDirector(Long id) {
     directorRepository.delete(getDirector(id));

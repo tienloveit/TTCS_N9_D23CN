@@ -10,7 +10,6 @@ import com.ltweb.backend.repository.SystemSettingRepository;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +38,6 @@ public class SystemSettingService {
     createDefault(SUPPORT_HOTLINE, "1900 0000", "Hotline ho tro khach hang");
   }
 
-  @PreAuthorize("hasRole('ADMIN')")
   @Transactional(readOnly = true)
   public List<SystemSettingResponse> getAllSettings() {
     return systemSettingRepository.findAll().stream()
@@ -48,7 +46,6 @@ public class SystemSettingService {
         .toList();
   }
 
-  @PreAuthorize("hasRole('ADMIN')")
   @Transactional
   public SystemSettingResponse updateSetting(
       String settingKey, UpdateSystemSettingRequest request) {

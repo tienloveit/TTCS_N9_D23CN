@@ -3,6 +3,7 @@ package com.ltweb.backend.service;
 import com.ltweb.backend.dto.request.CreateShowtimeRequest;
 import com.ltweb.backend.dto.request.UpdateShowtimeRequest;
 import com.ltweb.backend.dto.response.ShowtimeResponse;
+import com.ltweb.backend.entity.Booking;
 import com.ltweb.backend.entity.Movie;
 import com.ltweb.backend.entity.Room;
 import com.ltweb.backend.entity.Showtime;
@@ -35,7 +36,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,10 +55,7 @@ public class ShowtimeService {
   private final UserRepository userRepository;
   private final ShowtimeMapper showtimeMapper;
   private final TicketService ticketService;
-
-  /** Optional để không phá vỡ constructor hiện có; dùng để hoàn tồn bắp nước khi huỷ booking. */
-  @org.springframework.beans.factory.annotation.Autowired(required = false)
-  private FoodStockService foodStockService;
+  private final BookingReleaseService bookingReleaseService;
 
   @Transactional
   public ShowtimeResponse createShowtime(CreateShowtimeRequest request) {
@@ -98,6 +95,7 @@ public class ShowtimeService {
 
     Showtime showtime = getShowtime(showtimeId);
     requireShowtimeAccess(showtime);
+    boolean wasCancelled = showtime.getStatus() == ShowtimeStatus.CANCELLED;
 
     if (request.getTicketPrice() != null
         && request.getTicketPrice().compareTo(showtime.getTicketPrice()) != 0) {
@@ -118,6 +116,9 @@ public class ShowtimeService {
     if (showtime.getStatus() == null || showtime.getStatus() == ShowtimeStatus.OPEN) {
       requireRoomAvailable(showtime.getRoom());
     }
+    if (!wasCancelled && showtime.getStatus() == ShowtimeStatus.CANCELLED) {
+      cancelPendingBookings(showtimeId);
+    }
 
     // Check overlap nếu thời gian thay đổi
     if (request.getStartTime() != null || request.getEndTime() != null) {
@@ -134,40 +135,40 @@ public class ShowtimeService {
     return showtimeMapper.toResponse(showtimeRepository.save(showtime));
   }
 
-  @PreAuthorize("hasRole('ADMIN')")
+  /**
+   * Suất bị hủy thì đơn đang chờ thanh toán không còn được trả tiền: hủy đơn và trả ghế, bắp nước,
+   * lượt khuyến mãi qua {@link BookingReleaseService}. Khóa từng đơn theo thứ tự id, cùng thứ tự
+   * khóa đơn rồi tới vé như callback VNPay và job dọn đơn hết hạn. Đơn đã thanh toán giữ nguyên.
+   */
+  private void cancelPendingBookings(Long showtimeId) {
+    for (Booking booking : bookingRepository.findPendingByShowtimeIdForUpdate(showtimeId)) {
+      if (booking.getPayment() == null
+          || booking.getPayment().getPaymentStatus() != PaymentStatus.PENDING) {
+        continue;
+      }
+      booking.setStatus(BookingStatus.CANCELLED);
+      booking.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
+      bookingReleaseService.releaseUnpaid(booking);
+      bookingRepository.save(booking);
+      log.info(
+          "Cancelled pending booking {} because showtime {} was cancelled",
+          booking.getBookingCode(),
+          showtimeId);
+    }
+  }
+
+  /**
+   * Chỉ xóa được suất chưa từng có đơn nào. Đơn (kể cả đã hủy hoặc hết hạn) là lịch sử giao dịch và
+   * khóa ngoại {@code fk_bookings_showtime} không cho xóa suất mà đơn còn trỏ tới. Suất đã có đơn
+   * thì chuyển trạng thái sang CANCELLED bằng {@link #update}.
+   */
   @Transactional
   public void delete(Long showtimeId) {
     Showtime showtime = getShowtime(showtimeId);
-
-    // Chặn xóa nếu đã có booking đã thanh toán thành công
-    boolean hasPaidBooking =
-        !bookingRepository.findByShowtimeIdAndStatus(showtimeId, BookingStatus.COMPLETED).isEmpty();
-    if (hasPaidBooking) {
+    if (bookingRepository.existsByShowtimeId(showtimeId)) {
       throw new AppException(ErrorCode.SHOWTIME_HAS_BOOKINGS);
     }
-
-    // Hủy các booking PENDING còn lại
-    bookingRepository
-        .findByShowtimeIdAndStatus(showtimeId, BookingStatus.PENDING)
-        .forEach(
-            b -> {
-              b.setStatus(BookingStatus.CANCELLED);
-              b.getPayment().setPaymentStatus(PaymentStatus.CANCELLED);
-              if (foodStockService != null) {
-                foodStockService.release(b);
-              }
-              b.getTickets()
-                  .forEach(
-                      t -> {
-                        t.setBooking(null);
-                        t.setTicketStatus(TicketStatus.AVAILABLE);
-                      });
-              bookingRepository.save(b);
-            });
-
-    // Xóa toàn bộ vé thuộc suất chiếu này trước khi xóa suất chiếu
     ticketRepository.deleteByShowtimeId(showtimeId);
-
     showtimeRepository.delete(showtime);
   }
 
@@ -186,7 +187,6 @@ public class ShowtimeService {
         .toList();
   }
 
-  @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
   @Transactional(readOnly = true)
   public List<ShowtimeResponse> getToday() {
     LocalDate today = LocalDate.now(clock);
@@ -225,7 +225,11 @@ public class ShowtimeService {
    * thông tin phim + danh sách suất chiếu.
    */
   @Transactional(readOnly = true)
+  /** Lịch chiếu của chi nhánh trong một ngày; không truyền ngày thì lấy hôm nay theo giờ rạp. */
   public List<Map<String, Object>> getByBranch(Long branchId, LocalDate date) {
+    if (date == null) {
+      date = LocalDate.now(clock);
+    }
     LocalDateTime startOfDay = date.atStartOfDay();
     LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 

@@ -1,6 +1,6 @@
 # Quy trình Git
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `3ae857c`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `4961b4d`.
 
 Remote: `git@github.com:tienloveit/TTCS_N9_D23CN.git`. Quy tắc Git bắt buộc cho AI agent nằm trong [AGENTS.md](../../AGENTS.md#quy-tắc-git).
 
@@ -63,7 +63,7 @@ Mỗi commit là một thay đổi có nghĩa và build được. Không gộp s
 
 2. Không commit hoặc push trực tiếp vào `main` và `dev`. Không force-push lên hai nhánh này. Mọi thay đổi vào đó đi qua pull request.
 3. Trước khi mở pull request, chạy lint, build và test liên quan theo [testing.md](testing.md).
-4. Đẩy nhánh và mở pull request vào `dev` (`hotfix/*` và `release/*` xem bên dưới). Mô tả làm gì, vì sao, cách kiểm tra, ảnh chụp nếu đổi giao diện. Ghi rõ nếu có migration mới hay biến môi trường mới.
+4. Đẩy nhánh và mở pull request vào `dev` (`hotfix/*` và `release/*` xem bên dưới). GitHub điền sẵn mô tả theo [pull_request_template.md](../../.github/pull_request_template.md): làm gì, vì sao, cách kiểm tra, ảnh chụp nếu đổi giao diện, migration và biến môi trường mới, checklist điều kiện merge.
 5. Ít nhất một thành viên khác review. Người review chạy thử luồng bị ảnh hưởng, không chỉ đọc diff. Sửa theo góp ý bằng commit mới trên cùng nhánh.
 6. Người mở pull request merge sau khi CI xanh và được duyệt. Lịch sử dùng merge commit.
 7. Xóa nhánh trên remote sau khi merge, rồi dọn ở máy:

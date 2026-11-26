@@ -16,16 +16,12 @@ public enum ErrorCode {
   ACCESS_DENIED(403, "Access denied", HttpStatus.FORBIDDEN),
   TOKEN_INVALID(401, "Invalid JWT token", HttpStatus.UNAUTHORIZED),
   TOKEN_SIGNING_FAILED(500, "Failed to sign JWT token", HttpStatus.INTERNAL_SERVER_ERROR),
-  OTP_INVALID(401, "Invalid OTP", HttpStatus.UNAUTHORIZED),
+  OTP_INVALID(400, "Invalid OTP", HttpStatus.BAD_REQUEST),
   OTP_RATE_LIMIT(
       429, "Too many OTP requests. Please try again later", HttpStatus.TOO_MANY_REQUESTS),
-  PASSWORD_INCORRECT(401, "Password incorrect", HttpStatus.UNAUTHORIZED),
+  PASSWORD_INCORRECT(400, "Password incorrect", HttpStatus.BAD_REQUEST),
   OAUTH2_EMAIL_MISSING(400, "Google account does not provide an email", HttpStatus.BAD_REQUEST),
   OAUTH2_EMAIL_NOT_VERIFIED(401, "Google email is not verified", HttpStatus.UNAUTHORIZED),
-
-  // Price
-  SEATTYPE_EXIST(401, "Seat type already exist", HttpStatus.BAD_REQUEST),
-  SEATTYPE_NOT_EXIST(401, "Seat type does not exist", HttpStatus.BAD_REQUEST),
 
   // User Management
   USER_EXISTED(400, "User already exists", HttpStatus.BAD_REQUEST),
@@ -65,6 +61,8 @@ public enum ErrorCode {
 
   // Showtime Management
   SHOWTIME_NOT_FOUND(400, "Showtime does not exist", HttpStatus.BAD_REQUEST),
+  SHOWTIME_CANCELLED(
+      400, "Suất chiếu đã bị hủy nên đơn không thể thanh toán", HttpStatus.BAD_REQUEST),
   SHOWTIME_PRICE_LOCKED(
       400,
       "Không thể đổi giá suất chiếu đã có ghế đang giữ hoặc vé đã bán",
@@ -72,7 +70,9 @@ public enum ErrorCode {
   SHOWTIME_TIME_OVERLAP(
       400, "Showtime time overlaps with an existing schedule", HttpStatus.BAD_REQUEST),
   SHOWTIME_HAS_BOOKINGS(
-      400, "Cannot delete showtime that has existing bookings", HttpStatus.BAD_REQUEST),
+      400,
+      "Suất chiếu đã có đơn đặt vé nên không xóa được. Hãy chuyển trạng thái suất sang Đã hủy",
+      HttpStatus.BAD_REQUEST),
 
   // Booking Management
   BOOKING_NOT_FOUND(400, "Booking does not exist", HttpStatus.BAD_REQUEST),

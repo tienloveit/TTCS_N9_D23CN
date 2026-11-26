@@ -49,10 +49,12 @@ export default function OpsShell({ area, density }) {
   useEffect(() => {
     if (branchId == null || isAdmin || branchNames.has(branchId)) return;
     let active = true;
-    branchApi.getById(branchId).then(({data}) => {
-      if (active && data.result?.name) {
-        branchNames.set(branchId, data.result.name);
-        setBranch({ id: branchId, name: data.result.name });
+    // GET /branch/{id} chỉ mở cho ADMIN và MANAGER; danh sách /branch công khai nên STAFF cũng đọc được.
+    branchApi.getAll().then(({data}) => {
+      const found = (data.result || []).find(item => String(item.branchId) === String(branchId));
+      if (active && found?.name) {
+        branchNames.set(branchId, found.name);
+        setBranch({ id: branchId, name: found.name });
       }
     }).catch(() => {});
     return () => { active = false; };

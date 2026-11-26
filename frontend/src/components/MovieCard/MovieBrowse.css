@@ -496,10 +496,75 @@
 
 .cinema-navbar .navbar-search-clear { width: 27px; height: 27px; }
 .cinema-navbar .navbar-links { gap: 3px; }
-.cinema-navbar .navbar-user { gap: 5px; }
 .cinema-navbar .navbar-links > a,
-.cinema-navbar .navbar-user-trigger { padding-inline: 9px; white-space: nowrap; }
-.cinema-navbar .navbar-user-trigger span { overflow: hidden; max-width: 12ch; text-overflow: ellipsis; }
+.cinema-navbar .navbar-account { padding-inline: 9px; white-space: nowrap; }
+.cinema-navbar .navbar-account span { overflow: hidden; max-width: 12ch; text-overflow: ellipsis; }
+
+/* Menu tài khoản: tên đăng nhập mở dropdown có Tài khoản của tôi và Đăng xuất. */
+.cinema-navbar .navbar-account-menu { position: relative; }
+.cinema-navbar button.navbar-account {
+  min-height: 38px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+}
+.cinema-navbar button.navbar-account:hover { background: var(--bg-card); color: var(--text-primary); }
+.cinema-navbar button.navbar-account[aria-expanded="true"] { background: var(--surface-hover); color: var(--text-primary); }
+.cinema-navbar .navbar-account-chevron { transition: transform var(--duration-fast) var(--ease); }
+.cinema-navbar button.navbar-account[aria-expanded="true"] .navbar-account-chevron { transform: rotate(180deg); }
+
+.cinema-navbar .navbar-account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 500;
+  display: grid;
+  gap: 2px;
+  min-width: 200px;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+.cinema-navbar .navbar-account-dropdown[hidden] { display: none; }
+
+.cinema-navbar .navbar-account-dropdown .navbar-account-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.cinema-navbar .navbar-account-dropdown .navbar-account-item:hover { background: var(--surface-hover); }
+.cinema-navbar .navbar-account-dropdown .navbar-account-item[aria-current] {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: var(--fw-semibold);
+}
+.cinema-navbar .navbar-account-dropdown .navbar-account-logout { color: var(--danger); }
+.cinema-navbar .navbar-account-dropdown .navbar-account-logout:hover:not(:disabled) { background: var(--danger-soft); }
+.cinema-navbar .navbar-account-dropdown .navbar-account-logout:disabled { cursor: progress; opacity: 0.7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-navbar button.navbar-account,
+  .cinema-navbar .navbar-account-chevron { transition: none; }
+}
+.cinema-navbar .navbar-links > .navbar-register { padding-inline: 20px; font-size: .85rem; }
 .cinema-navbar .navbar-links > .btn-primary { background: var(--brand); color: #fff; }
 .cinema-navbar .navbar-links > .btn-primary:hover { background: var(--brand-strong); color: #fff; }
 
@@ -534,7 +599,7 @@
 
 @media (max-width: 1050px) and (min-width: 901px) {
   .cinema-navbar .navbar-links > a,
-  .cinema-navbar .navbar-user-trigger { font-size: .81rem; padding-inline: 7px; }
+  .cinema-navbar .navbar-account { font-size: .81rem; padding-inline: 7px; }
 }
 
 @media (max-width: 980px) {

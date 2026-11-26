@@ -1,6 +1,6 @@
 # Dữ liệu demo và tài khoản
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 > [!WARNING]
 > Mọi cách nạp dữ liệu dưới đây đều ghi hoặc xóa dữ liệu. Chỉ chạy trên database demo riêng, đã sao lưu. Không chạy trên database có dữ liệu thật.
@@ -40,7 +40,7 @@ $env:APP_DEMO_SEED_ENABLED = "true"
 
 Seed làm các việc sau, chạy lại nhiều lần không tạo trùng:
 
-1. `DataSeedService.seedInitialData` tạo hoặc cập nhật tài khoản demo, bắp nước, thể loại, đạo diễn, phim, bốn chi nhánh, phòng, ghế và suất chiếu, rồi gán `manager` và `staff` vào chi nhánh đầu tiên.
+1. `DataSeedService.seedInitialData` tạo hoặc cập nhật tài khoản demo, bắp nước và suất chiếu. Thể loại, đạo diễn và phim do `DemoCatalogSeeder` tạo. Bốn chi nhánh, phòng và ghế do `DemoVenueSeeder` tạo, kèm việc gán `manager` và `staff` vào chi nhánh đầu tiên.
 2. `DataSeeder` xóa suất chiếu đã kết thúc hơn 30 ngày cùng đơn, vé và bắp nước của các suất đó, sinh suất chiếu từ hôm nay tới 14 ngày sau, rồi tạo một số đơn mẫu và đơn chờ hoàn tiền.
 
 Khi dùng xong, gỡ biến để lần chạy sau không seed nữa:

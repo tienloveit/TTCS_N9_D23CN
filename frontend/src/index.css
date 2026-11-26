@@ -159,7 +159,6 @@ select:disabled {
 .page-title-icon,
 .section-icon,
 .nav-svg-icon,
-.navbar-dropdown-icon,
 .navbar-user-icon,
 .footer-logo-icon,
 .footer-contact-icon,
@@ -246,8 +245,8 @@ select:disabled {
   gap: 8px;
 }
 
-.navbar-links a,
-.navbar-links button {
+.navbar-links a {
+  min-height: 38px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
@@ -256,83 +255,20 @@ select:disabled {
   transition: all var(--transition);
 }
 
-.navbar-links a:hover,
-.navbar-links button:hover {
+.navbar-links a:hover {
   color: var(--text-primary);
   background: var(--bg-card);
 }
 
-.navbar-user {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.navbar-user-menu {
-  position: relative;
-}
-
-.navbar-user-name {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: var(--fw-regular);
+.navbar-account {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.navbar-user-trigger {
-  background: transparent;
-  min-height: 38px;
-}
-
 .navbar-user-icon {
   width: 16px;
   height: 16px;
-}
-
-.navbar-user-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 220px;
-  padding: 8px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  z-index: 220;
-  animation: dropdownFade 0.15s ease;
-}
-
-.navbar-user-dropdown-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: var(--fw-semibold);
-  text-align: left;
-  transition: all var(--transition);
-}
-
-.navbar-user-dropdown-item:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-}
-
-.navbar-user-dropdown-divider {
-  height: 1px;
-  margin: 4px 0;
-  background: var(--border);
-}
-
-.navbar-user-dropdown-logout:hover {
-  color: #dc2626;
 }
 
 /* ==================== NAVBAR SEARCH ==================== */
@@ -979,6 +915,12 @@ select:disabled {
 .movie-reviews-list {
   display: grid;
   gap: 16px;
+}
+
+.movie-reviews-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
 
 .movie-review-card {
@@ -2711,12 +2653,6 @@ select:disabled {
   }
 }
 
-.navbar-dropdown-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--blue);
-}
-
 /* ==================== BRANCH LIST ==================== */
 
 .branch-grid {
@@ -3662,6 +3598,7 @@ textarea:focus-visible,
   }
   .navbar-mobile-drawer a,
   .navbar-mobile-drawer button {
+    min-height: 44px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -3677,6 +3614,23 @@ textarea:focus-visible,
   .navbar-mobile-drawer button:hover {
     background: var(--bg-secondary);
     color: var(--text-primary);
+  }
+  .navbar-drawer-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-2);
+  }
+  .navbar-mobile-drawer .navbar-drawer-register {
+    color: var(--accent);
+  }
+  .navbar-mobile-drawer .navbar-drawer-logout {
+    color: var(--danger);
+  }
+  .navbar-mobile-drawer .navbar-drawer-logout:hover:not(:disabled) {
+    background: var(--danger-soft);
+    color: var(--danger);
   }
 }
 
@@ -4305,89 +4259,6 @@ button.seat {
   padding-top: 14px;
   margin-top: 10px;
   border-top: 2px dashed var(--border);
-}
-
-/* 8. ProfilePage Tabs, Membership Card & Form Grid */
-.pf-wrap {
-  max-width: 860px;
-  margin: 0 auto;
-}
-
-.pf-tabs {
-  display: inline-flex;
-  gap: 6px;
-  padding: 5px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-.pf-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: var(--fw-bold);
-  color: var(--text-secondary);
-  background: transparent;
-  transition: all var(--transition);
-}
-
-.pf-tab.is-active {
-  background: #ffffff;
-  color: var(--blue);
-  box-shadow: var(--shadow-sm);
-}
-
-.pf-tier-card {
-  position: relative;
-  overflow: hidden;
-  padding: 28px 32px;
-  margin-bottom: 24px;
-  border-radius: var(--radius-lg);
-  color: #ffffff;
-  box-shadow: var(--shadow-md);
-}
-
-.pf-tier-watermark {
-  position: absolute;
-  top: 18px;
-  right: 24px;
-  opacity: 0.22;
-  pointer-events: none;
-}
-
-.pf-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-@media (max-width: 640px) {
-  .pf-form-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.pf-promo-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--border-light);
-}
-
-.pf-promo-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 /* 9. Footer Policy Modal */

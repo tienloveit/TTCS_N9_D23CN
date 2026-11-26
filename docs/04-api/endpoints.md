@@ -1,6 +1,6 @@
 # Danh sách endpoint
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/backend-review-cleanup` (tách từ commit `7105c25`).
 
 Đường dẫn tính từ `http://localhost:8081/api`. Quy ước phản hồi, lỗi và phân trang ở [conventions.md](conventions.md). Dự án chưa có Swagger/OpenAPI, nên file này là danh mục chính.
 
@@ -30,19 +30,20 @@ Cột **Client** là hàm trong [frontend/src/api/index.js](../../frontend/src/a
 | GET, PUT, DELETE | `/users/{id}` | ADMIN, MANAGER | MANAGER chỉ với STAFF (CN) | `userApi.getById`, `update`, `delete` |
 | PUT | `/users/{id}/status?status=` | ADMIN, MANAGER | Đổi `ACTIVE`, `INACTIVE`, `BLOCKED` | `userApi.updateStatus` |
 | GET | `/my-info` | Đăng nhập | Hồ sơ của chính mình | `userApi.getMyInfo` |
-| PUT | `/my-info` | Đăng nhập | Chỉ `fullName`, `dob`, `phoneNumber`, `gender`, `email`. Không đổi role, chi nhánh, trạng thái. | `userApi.updateMyInfo` |
+| PUT | `/my-info` | Đăng nhập | Chỉ `fullName`, `dob`, `phoneNumber`, `gender`, `email`. Không đổi role, chi nhánh, trạng thái. Bỏ trường hoặc gửi `null` để giữ giá trị hiện tại. Gửi chuỗi rỗng để xóa họ tên, email hoặc số điện thoại. Email và số điện thoại đã xóa trả về `null`. | `userApi.updateMyInfo` |
 
 ## Phim
 
 | Method | Path | Quyền | Mô tả | Client |
 | --- | --- | --- | --- | --- |
-| GET | `/movie?movieName=` | Công khai | Danh sách phim. Phim ẩn chỉ ADMIN thấy. MANAGER chỉ thấy phim có suất ở chi nhánh mình. | `movieApi.getAll` |
+| GET | `/movie?movieName=` | Công khai | Toàn bộ phim, không phân trang, dùng cho danh sách chọn ở khu vận hành. Phim ẩn chỉ ADMIN thấy. MANAGER chỉ thấy phim có suất ở chi nhánh mình. | `movieApi.getAll` |
+| GET | `/movie/catalog` | Công khai | Danh mục phim cho trang khách và ô tìm kiếm, lọc, sắp xếp, phân trang ở DB. Tham số ở [conventions.md](conventions.md#phân-trang-và-sắp-xếp). Phim ẩn chỉ ADMIN thấy. | `movieApi.getCatalog` |
 | GET | `/movie/now-showing`, `/movie/upcoming` | Công khai | Phim theo trạng thái | `movieApi.getNowShowing`, `getUpcoming` |
 | GET | `/movie/{id}` | Công khai | Chi tiết phim | `movieApi.getById` |
 | POST, PUT, DELETE | `/movie`, `/movie/{id}` | ADMIN | Tạo, sửa, xóa phim | `movieApi.create`, `update`, `delete` |
 | POST | `/movie/{id}/rating` | Đăng nhập | `{score 1–5, comment}`. Gọi lại là cập nhật. | `movieApi.rate` |
 | GET | `/movie/{id}/rating/my` | Đăng nhập | Đánh giá của mình, kèm điểm trung bình | `movieApi.getMyRating` |
-| GET | `/movie/{id}/ratings` | Công khai | Mọi đánh giá, mới nhất trước | `movieApi.getRatings` |
+| GET | `/movie/{id}/ratings?page=&size=` | Công khai | Đánh giá mới nhất trước, phân trang (`PageResponse`) | `movieApi.getRatings` |
 | POST | `/movie/media` | ADMIN | Multipart field `file`, JPG/PNG/WebP tối đa 5 MB. Trả đường dẫn ảnh. | Trong `MovieForm.jsx` |
 | GET | `/movie/media/{filename}` | Công khai | Trả byte ảnh | — |
 | GET | `/genre`, `/genre/{id}` | Công khai | Thể loại | `genreApi.getAll` |

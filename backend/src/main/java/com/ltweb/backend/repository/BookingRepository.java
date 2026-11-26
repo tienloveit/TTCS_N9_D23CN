@@ -371,7 +371,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, Booking
       "select b.id from Booking b where b.status = com.ltweb.backend.enums.BookingStatus.PENDING and b.expiresAt <= :time order by b.id")
   List<Long> findExpiredBookingIds(@Param("time") LocalDateTime time);
 
-  List<Booking> findByShowtimeIdAndStatus(Long showtimeId, BookingStatus status);
+  boolean existsByShowtimeId(Long showtimeId);
+
+  /** Đơn chờ thanh toán của một suất, khóa để ghi theo thứ tự id. */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select b from Booking b where b.showtime.id = :showtimeId"
+          + " and b.status = com.ltweb.backend.enums.BookingStatus.PENDING order by b.id")
+  List<Booking> findPendingByShowtimeIdForUpdate(@Param("showtimeId") Long showtimeId);
 
   /** Số đơn của khách đang chờ thanh toán và còn hạn giữ ghế. */
   long countByUserIdAndStatusAndExpiresAtAfter(

@@ -1,7 +1,9 @@
-import { DataTable, FilterBar, OpsButton, OpsConfirm, OpsDialog, OpsPage, OpsPanel, Segmented, StatusBadge, Field } from '../../components/Ops';
+import { DataTable, FilterBar, OpsButton, OpsConfirm, OpsDialog, OpsPage, OpsPanel, Segmented, StatusBadge, Field, Select } from '../../components/Ops';
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import { foodApi } from '../../api';
+import { branchApi, foodApi } from '../../api';
+import { useAuth } from '../../context/useAuth';
+import { branchScopeLabel, canEditBranchItem } from '../../utils/branchScope';
 import SafeImage from '../../components/Common/SafeImage';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '../../components/Common/CinemaIcons';
 
@@ -13,6 +15,8 @@ const formatCurrency = (amount) =>
   }).format(Number(amount || 0));
 
 const FoodManagement = () => {
+  const { user, isAdmin } = useAuth();
+  const [branches, setBranches] = useState([]);
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -34,6 +38,7 @@ const FoodManagement = () => {
     lowStockThreshold: '',
     unlimitedStock: false,
     active: true,
+    branchId: '',
   });
 
   const fetchFoods = async () => {
@@ -52,7 +57,12 @@ const FoodManagement = () => {
 
   useEffect(() => {
     fetchFoods();
+    branchApi.getAll()
+      .then((res) => setBranches(res.data.result || []))
+      .catch(() => setBranches([]));
   }, []);
+
+  const ownBranchName = branchScopeLabel({ branchId: user?.branchId }, branches);
 
   const handleOpenModal = (food = null) => {
     if (food) {
@@ -66,6 +76,7 @@ const FoodManagement = () => {
         lowStockThreshold: food.lowStockThreshold ?? '',
         unlimitedStock: food.stockQuantity == null,
         active: food.active !== false,
+        branchId: food.branchId == null ? '' : String(food.branchId),
       });
     } else {
       setEditingFood(null);
@@ -78,6 +89,7 @@ const FoodManagement = () => {
         lowStockThreshold: '',
         unlimitedStock: false,
         active: true,
+        branchId: '',
       });
     }
     setIsModalOpen(true);
@@ -101,7 +113,7 @@ const FoodManagement = () => {
     if (saving) return;
     setSaving(true);
     try {
-      const { stockQuantity, lowStockThreshold, unlimitedStock, ...rest } = formData;
+      const { stockQuantity, lowStockThreshold, unlimitedStock, branchId, ...rest } = formData;
       const payload = {
         ...rest,
         price: formData.price ? Number(formData.price) : 0,
@@ -111,10 +123,12 @@ const FoodManagement = () => {
       };
 
       if (editingFood) {
+        // Phạm vi không đổi khi sửa: UpdateFoodRequest coi branchId null là giữ nguyên.
         await foodApi.update(editingFood.id, payload);
         toast.success(`Đã cập nhật "${formData.name}"`);
       } else {
-        await foodApi.create(payload);
+        // MANAGER luôn tạo món cho chi nhánh của mình, backend cũng ép giá trị này.
+        await foodApi.create({ ...payload, branchId: isAdmin ? (branchId ? Number(branchId) : null) : user?.branchId ?? null });
         toast.success(`Đã thêm "${formData.name}"`);
       }
       handleCloseModal();
@@ -155,7 +169,9 @@ const FoodManagement = () => {
 
 
   return (
-    <OpsPage title="Quản lý bắp nước" description={<>Tổng cộng <strong>{foods.length}</strong> sản phẩm trong hệ thống.</>} actions={<OpsButton variant="primary" icon={<PlusIcon size={18} />} onClick={() => handleOpenModal()}>
+    <OpsPage title="Quản lý bắp nước" description={isAdmin
+      ? <>Tổng cộng <strong>{foods.length}</strong> sản phẩm trong hệ thống.</>
+      : <><strong>{foods.length}</strong> sản phẩm bán tại {ownBranchName}. Món dùng chung toàn hệ thống chỉ quản trị viên sửa được.</>} actions={<OpsButton variant="primary" icon={<PlusIcon size={18} />} onClick={() => handleOpenModal()}>
           Thêm sản phẩm
         </OpsButton>}>
 
@@ -186,7 +202,8 @@ const FoodManagement = () => {
             { key: 'mo_ta', header: "Mô tả", render: food => <> <span className="o-clamp" title={food.description || undefined}>
                       {food.description || '—'}
                     </span> </> },
-            { key: 'gia', header: "Giá", render: food => formatCurrency(food.price) },
+            { key: 'pham_vi', header: "Phạm vi", render: food => branchScopeLabel(food, branches) },
+            { key: 'gia', header: "Giá", align: 'end', render: food => formatCurrency(food.price) },
             { key: 'ton_kho', header: "Tồn kho", render: food => food.stockQuantity == null ? (
                       <span className="o-subline">Không giới hạn</span>
                     ) : (
@@ -202,7 +219,9 @@ const FoodManagement = () => {
             { key: 'trang_thai', header: "Trạng thái", render: food => <> <StatusBadge tone={food.active !== false ? 'success' : 'neutral'}>
                       {food.active !== false ? 'Đang bán' : 'Ngừng bán'}
                     </StatusBadge> </> },
-            { key: 'hanh_dong', header: "Hành động", render: food => <> <div className="o-actions">
+            { key: 'hanh_dong', header: "Hành động", render: food => !canEditBranchItem(food, user)
+              ? <small className="o-subline">Chỉ quản trị viên sửa</small>
+              : <> <div className="o-actions">
                       <OpsButton
                         variant="ghost"
                         size="sm"
@@ -243,6 +262,21 @@ const FoodManagement = () => {
                   placeholder="Ví dụ Combo Bắp Nước Lớn"
                 />
               </Field>
+
+              {isAdmin && !editingFood ? (
+                <Field label="Phạm vi bán">
+                  <Select name="branchId" value={formData.branchId} onChange={handleInputChange}>
+                    <option value="">Toàn hệ thống</option>
+                    {branches.map((branch) => <option key={branch.branchId} value={branch.branchId}>{branch.name}</option>)}
+                  </Select>
+                </Field>
+              ) : (
+                <div className="o-field">
+                  <span className="o-field__label">Phạm vi bán</span>
+                  <p className="o-field__static">{editingFood ? branchScopeLabel(editingFood, branches) : ownBranchName}</p>
+                  {editingFood && <span className="o-field__hint">Không đổi phạm vi sau khi tạo.</span>}
+                </div>
+              )}
 
               <Field label="Mô tả">
                 <textarea

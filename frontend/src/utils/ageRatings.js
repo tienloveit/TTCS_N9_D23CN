@@ -9,3 +9,11 @@ export const AGE_RATINGS = [
 
 // Hiển thị khi phim chưa có phân loại. Không tự điền "P" vì sẽ bị hiểu là phim cho mọi độ tuổi.
 export const AGE_RATING_UNKNOWN = 'Chưa cập nhật';
+
+const AGE_RATING_LABELS = Object.fromEntries(AGE_RATINGS.map((rating) => [rating.code, rating.description]));
+
+/** Mô tả đầy đủ của mã phân loại ("T13" → "Phim dành cho khán giả từ đủ 13 tuổi"), dùng cho chữ ẩn và title. */
+export const getAgeRatingLabel = (ageRating) => {
+  const code = String(ageRating || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return AGE_RATING_LABELS[code] || `Phân loại ${ageRating}`;
+};

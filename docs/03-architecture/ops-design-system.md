@@ -1,6 +1,6 @@
 # Design system khu vận hành: "Bảng suất chiếu"
 
-> Đối chiếu mã nguồn ngày 2026-11-25, commit `6e80be9`.
+> Đối chiếu mã nguồn ngày 2026-11-25, nhánh `fix/ops-role-actions` (tách từ commit `6928326`).
 
 Đây là nguồn duy nhất của luật giao diện cho `/staff`, `/manager` và `/admin`. Code là sự thật: giá trị token nằm trong [tokens.css](../../frontend/src/styles/tokens.css) và [ops.css](../../frontend/src/components/Ops/ops.css), API thành phần nằm trong [components/Ops](../../frontend/src/components/Ops/) và trang `/ops-gallery` (chỉ có khi chạy Vite dev). Tài liệu này giải thích ý nghĩa và luật dùng.
 
@@ -17,7 +17,7 @@
 1. **Thời gian là trục chính.** Giờ chiếu luôn hiện bằng chữ số co hẹp, cỡ lớn, đều cột, giống bảng suất chiếu ở sảnh rạp. Màn nào có lịch chiếu đều có vạch "bây giờ".
 2. **Một khung, ba vai trò.** Cùng một khung trang (`OpsShell`). Menu thay đổi theo vai trò, còn nhãn phạm vi ("Toàn hệ thống" hoặc tên chi nhánh) luôn hiện ở thanh trên.
 3. **Mật độ theo trạm.** Có hai chế độ: `touch` cho quầy và cổng soát vé (ô điều khiển 44px), `desk` cho manager và admin (ô điều khiển 36px). Chỉ đổi biến CSS, không viết CSS riêng cho từng chế độ.
-4. **Màu chỉ dùng để nói trạng thái.** Nền và chữ dùng các tông xám trung tính. Nút chính màu mực đen. Màu gỉ sắt thương hiệu (`--o-mark`) chỉ dùng cho hai nghĩa "bạn đang ở đây" và "bây giờ". Xanh lá, hổ phách, đỏ, xanh dương chỉ dùng cho trạng thái.
+4. **Màu thương hiệu dẫn thao tác, màu trạng thái nói trạng thái.** Nền trang, panel và bảng dùng các tông xám trung tính. Sidebar nền mực tối. Màu gỉ sắt thương hiệu (`--o-accent`, cùng màu với `--o-mark`) dùng cho nút chính, điều khiển đang chọn (nhóm nút, tab, thẻ lựa chọn, mục menu), ô đang nhập, vạch "bây giờ" và vòng focus. Biểu đồ dùng xanh dương `--o-chart-1`, cột "hôm nay" dùng `--o-mark`. Xanh lá, hổ phách, đỏ chỉ dùng cho trạng thái.
 5. **Phân tầng bằng viền, không bằng bóng đổ.** Panel phẳng, có viền mảnh. Bóng đổ chỉ dành cho lớp nổi: hộp thoại, drawer, menu, toast.
 
 ## Token
@@ -33,12 +33,16 @@ Token chung nằm trong `src/styles/tokens.css`. Biến mật độ (`--o-contro
 | `--o-sunken` | Đầu bảng, dòng đang hover, ô chọn trong nhóm nút, thanh tiến độ rỗng |
 | `--o-line` | Đường kẻ trang trí: viền panel, kẻ dòng bảng. Tương phản thấp, không mang nghĩa |
 | `--o-control-line` | Viền mang nghĩa: ô nhập, checkbox, nút viền (đạt 3:1) |
-| `--o-ink`, `--o-ink-hover` | Chữ chính, nền nút chính và trạng thái hover của nó |
-| `--o-ink-2` | Chữ phụ, cột biểu đồ, phần đã bán của thanh lấp đầy |
+| `--o-ink`, `--o-ink-hover` | Chữ chính |
+| `--o-ink-2` | Chữ phụ |
 | `--o-muted` | Chú thích, nhãn trường, đầu cột bảng |
-| `--o-mark`, `--o-mark-soft` | **Chỉ** cho "đang ở đây" (mục menu đang chọn, dòng đang chọn), "bây giờ" (vạch giờ hiện tại) và vòng focus |
-| `--success`, `--warning`, `--danger`, `--info` và biến thể `-soft`, `-strong` | **Chỉ** cho trạng thái. Luôn đi kèm chữ hoặc icon, không chỉ dựa vào màu |
-| `--o-chart-1`, `--o-chart-2`, `--o-chart-grid` | Chuỗi số liệu thứ nhất, thứ hai và lưới ngang của biểu đồ |
+| `--o-mark`, `--o-mark-soft` | "Đang ở đây" (dòng đang chọn), "bây giờ" (vạch giờ hiện tại, cột hôm nay) và vòng focus |
+| `--o-accent`, `--o-accent-hover` | Nền nút chính và trạng thái hover, viền ô đang nhập, viền điều khiển đang chọn |
+| `--o-accent-soft`, `--o-accent-ink` | Nền và chữ của điều khiển đang chọn: `Segmented`, `Tabs`, `ChoiceCards`, giờ chiếu và món đã chọn ở quầy. Badge `tone="brand"` |
+| `--o-nav-bg`, `--o-nav-ink`, `--o-nav-muted`, `--o-nav-hover`, `--o-nav-line` | Sidebar tối: nền, chữ mục đang chọn, chữ mục thường và tiêu đề nhóm, hover, đường kẻ |
+| `--o-nav-active`, `--o-nav-mark` | Nền và vạch trái của mục menu đang chọn trên sidebar tối |
+| `--success`, `--warning`, `--danger`, `--info` và biến thể `-soft`, `-strong` | Trạng thái. Luôn đi kèm chữ hoặc icon, không chỉ dựa vào màu. `--info` còn là màu chuỗi số liệu chính |
+| `--o-chart-1`, `--o-chart-2`, `--o-chart-grid` | Chuỗi số liệu thứ nhất (xanh dương), thứ hai, lưới ngang của biểu đồ. `--o-chart-1` cũng tô thanh lấp đầy và phần đã bán trên lịch chiếu |
 
 ### Chữ
 
@@ -145,7 +149,7 @@ Gặp lỗi thì sửa code theo thông báo. Không nới luật để qua lint
 
 Các luật máy không kiểm được. Người review và AI phải đi qua từng mục:
 
-- [ ] `--o-mark` chỉ dùng cho "đang ở đây", "bây giờ" và focus. Màu trạng thái chỉ dùng cho trạng thái và luôn có chữ hoặc icon đi kèm.
+- [ ] Màu thương hiệu chỉ ở nút chính, điều khiển đang chọn, ô đang nhập, "đang ở đây", "bây giờ" và focus. Mỗi vùng tối đa một nút `primary`. Màu trạng thái chỉ dùng cho trạng thái và luôn có chữ hoặc icon đi kèm.
 - [ ] Bóng đổ chỉ có ở lớp nổi (hộp thoại, drawer, menu, toast). Panel phân tầng bằng viền.
 - [ ] Mật độ chỉ đổi bằng biến CSS, không có CSS riêng cho `touch` hay `desk`.
 - [ ] Trạng thái dùng ARIA hoặc `data-*`, không dùng class `is-*`.

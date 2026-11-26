@@ -3,6 +3,7 @@ package com.ltweb.backend.config;
 import com.ltweb.backend.service.CustomUserDetailService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -53,6 +54,10 @@ public class SecurityConfig {
   private final AuthenticationEntryPoint authenticationEntryPoint;
   private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
   private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+
+  /** Origin của frontend, khai báo một lần ở app.cors.allowed-origins và dùng chung với /ws. */
+  @Value("${app.cors.allowed-origins:}")
+  private String[] allowedOrigins = new String[0];
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -134,14 +139,7 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(
-        List.of(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:5174",
-            "http://127.0.0.1:3000"));
+    config.setAllowedOrigins(List.of(allowedOrigins));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
     config.setAllowCredentials(true);

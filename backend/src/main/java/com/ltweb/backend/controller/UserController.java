@@ -48,6 +48,7 @@ public class UserController {
   }
 
   @GetMapping("/users")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<PageResponse<List<UserResponse>>> searchUsers(
       @RequestParam(defaultValue = "1") int page,
       @RequestParam(defaultValue = "10") int size,
@@ -64,6 +65,7 @@ public class UserController {
   }
 
   @GetMapping("/users/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<UserResponse> getUserById(@PathVariable Long id) {
     ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
     apiResponse.setMessage("Get User by id!");
@@ -72,6 +74,7 @@ public class UserController {
   }
 
   @PutMapping("/users/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<UserResponse> updateUser(
       @PathVariable Long id, @RequestBody @Valid UpdateUserRequest updateUserRequest) {
     ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
@@ -81,6 +84,7 @@ public class UserController {
   }
 
   @DeleteMapping("/users/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
   public ApiResponse<String> deleteUser(@PathVariable Long id) {
     ApiResponse<String> apiResponse = new ApiResponse<>();
     userService.deleteUser(id);

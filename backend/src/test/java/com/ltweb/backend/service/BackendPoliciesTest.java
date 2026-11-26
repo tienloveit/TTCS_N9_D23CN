@@ -45,7 +45,7 @@ class BackendPoliciesTest {
   void permissionsRemainSpecificToEachOperation(UserRole role) {
     User operator = User.builder().id(2L).role(role).branchId(5L).status(UserStatus.ACTIVE).build();
     if (role == UserRole.USER) {
-      assertDenied(() -> access.requireCanView(booking, operator), ErrorCode.UNAUTHORIZED);
+      assertDenied(() -> access.requireCanView(booking, operator), ErrorCode.ACCESS_DENIED);
     } else {
       access.requireCanView(booking, operator);
       access.requireCanManage(booking, operator);
@@ -55,15 +55,15 @@ class BackendPoliciesTest {
     else assertDenied(() -> access.requireCanRefund(booking, operator), ErrorCode.ACCESS_DENIED);
     if (role == UserRole.ADMIN || role == UserRole.STAFF)
       access.requireCanCancel(booking, operator);
-    else assertDenied(() -> access.requireCanCancel(booking, operator), ErrorCode.UNAUTHORIZED);
+    else assertDenied(() -> access.requireCanCancel(booking, operator), ErrorCode.ACCESS_DENIED);
     if (role == UserRole.ADMIN || role == UserRole.STAFF)
       access.requireCanCreateAtCounter(booking.getShowtime(), operator);
     else
       assertDenied(
           () -> access.requireCanCreateAtCounter(booking.getShowtime(), operator),
-          ErrorCode.UNAUTHORIZED);
+          ErrorCode.ACCESS_DENIED);
     access.requireOwner(booking, customer);
-    assertDenied(() -> access.requireOwner(booking, operator), ErrorCode.UNAUTHORIZED);
+    assertDenied(() -> access.requireOwner(booking, operator), ErrorCode.ACCESS_DENIED);
   }
 
   @Test
@@ -72,7 +72,7 @@ class BackendPoliciesTest {
         User.builder().id(2L).role(UserRole.MANAGER).branchId(6L).status(UserStatus.ACTIVE).build();
     assertDenied(() -> access.requireCanRefund(booking, manager), ErrorCode.ACCESS_DENIED);
     manager.setBranchId(null);
-    assertDenied(() -> access.requireCanView(booking, manager), ErrorCode.UNAUTHORIZED);
+    assertDenied(() -> access.requireCanView(booking, manager), ErrorCode.ACCESS_DENIED);
     assertDenied(() -> access.requireRefundOperator(manager, true), ErrorCode.ACCESS_DENIED);
     manager.setBranchId(5L);
     manager.setStatus(UserStatus.BLOCKED);

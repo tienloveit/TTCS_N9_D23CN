@@ -1,6 +1,6 @@
 # Ca kiểm thử: Khách hàng (USER)
 
-> Đối chiếu mã nguồn ngày 2026-11-21, commit `4319c45`.
+> Đối chiếu mã nguồn ngày 2026-11-25, commit `b16458a` và thay đổi đang làm việc.
 
 - Người kiểm thử:
 - Ngày chạy:
@@ -12,7 +12,7 @@
 | U-02 | Đăng nhập sai mật khẩu | Có tài khoản `user` | 1) Mở `/login`<br>2) Nhập `user` với mật khẩu sai | Báo sai tài khoản hoặc mật khẩu (HTTP 401), không lưu token. | |
 | U-03 | Đăng nhập Google | Đã cấu hình Google OAuth | 1) Bấm đăng nhập với Google<br>2) Chọn tài khoản Google | Về `/oauth2/callback` rồi vào trang chủ đã đăng nhập. Lần đầu tạo tài khoản USER mới, lần sau vào đúng tài khoản cũ. | |
 | U-04 | Quên mật khẩu | Tài khoản có email nhận được, SMTP đã cấu hình | 1) Mở `/forgot-password`, nhập email<br>2) Nhập OTP trong email và mật khẩu mới<br>3) Đăng nhập bằng mật khẩu mới | Nhận email OTP 6 chữ số. Đổi mật khẩu thành công. OTP sai báo lỗi. Gửi OTP quá 5 lần trong 1 phút báo thử lại sau (429). | |
-| U-05 | Xem phim và lịch chiếu | Có dữ liệu demo | 1) Mở `/movies`, lọc theo thể loại<br>2) Mở chi tiết một phim<br>3) Mở `/branches`, chọn rạp và ngày | Danh sách lọc đúng. Chi tiết có trailer, đánh giá, suất theo ngày và rạp. Lịch rạp không hiện suất đã bắt đầu. Đổi rạp giữ nguyên ngày. | |
+| U-05 | Xem phim và lịch chiếu | Có dữ liệu demo | 1) Mở `/movies`, lọc theo thể loại<br>2) Mở chi tiết một phim<br>3) Mở `/branches`, chọn rạp và ngày<br>4) Chuyển sang "Theo giờ", lọc buổi tối<br>5) Tải lại trang | Danh sách lọc đúng. Chi tiết có trailer, đánh giá, suất theo ngày và rạp. Lịch rạp không hiện suất đã bắt đầu. Đổi rạp giữ nguyên ngày. Bảng "Theo giờ" chỉ còn suất từ 17:00 đến 21:59. URL giữ rạp, ngày và chế độ xem sau khi tải lại. | |
 | U-06 | Chặn truy cập khu quản trị | Đăng nhập `user` | 1) Gõ `/admin` trên thanh địa chỉ<br>2) Gõ `/staff/booking`<br>3) Gọi `GET /api/admin/reports/revenue` với token của `user` | Bước 1, 2 bị chuyển về trang chủ. Bước 3 trả 403. | |
 | U-07 | Ghế cập nhật realtime | Hai trình duyệt, một đăng nhập `user`, một đăng nhập `user2` | 1) Cả hai mở cùng một suất ở `/showtime/:id/seats`<br>2) `user` chọn ghế A5 và đặt<br>3) Quan sát trình duyệt của `user2` | Ghế A5 ở trình duyệt `user2` chuyển sang đang giữ mà không cần tải lại. `user2` không đặt được A5. | |
 | U-08 | Giới hạn số vé | Đăng nhập `user`, `booking.maxTicketsPerTransaction = 8` | 1) Chọn 9 ghế cùng suất<br>2) Đặt vé | Không tạo đơn, báo vượt số vé tối đa. | |
@@ -27,4 +27,5 @@
 | U-17 | Yêu cầu hoàn tiền | Đơn đã thanh toán dưới 24 giờ, chưa soát vé | 1) Mở "Vé của tôi"<br>2) Bấm yêu cầu hoàn, nhập lý do | Đơn chuyển "Chờ hoàn tiền". Quản lý chi nhánh nhận thông báo. Đơn quá 24 giờ không có nút yêu cầu hoàn. | |
 | U-18 | Không hoàn vé đã soát | Đơn đã thanh toán, có vé đã check-in | 1) Mở "Vé của tôi" | Không có nút yêu cầu hoàn. Gọi `POST /api/booking/{id}/refund-request` trả lỗi không thể hoàn. | |
 | U-19 | Đánh giá phim | Đăng nhập `user` | 1) Mở chi tiết phim, chấm 4 sao và bình luận<br>2) Chấm lại 5 sao | Đánh giá hiện trong danh sách. Lần thứ hai cập nhật đánh giá cũ, không tạo bản mới. Điểm trung bình đổi theo. | |
-| U-20 | Hồ sơ và đổi mật khẩu | Đăng nhập `user` | 1) Mở `/profile`, sửa họ tên, ngày sinh<br>2) Đổi mật khẩu với mật khẩu hiện tại sai<br>3) Đổi với mật khẩu hiện tại đúng | Hồ sơ lưu được. Mật khẩu hiện tại sai báo lỗi tại form, không bị đăng xuất. Mật khẩu đúng đổi thành công. | |
+| U-20 | Hồ sơ và đổi mật khẩu | Đăng nhập `user` | 1) Mở `/profile`, sửa họ tên, ngày sinh<br>2) Sửa email thành email của tài khoản khác rồi lưu<br>3) Mở `/profile#password`<br>4) Đổi mật khẩu với mật khẩu hiện tại sai<br>5) Đổi với mật khẩu hiện tại đúng | Hồ sơ lưu được. Lưu email trùng tài khoản khác báo lỗi bằng tiếng Việt, form vẫn mở. Mở `/profile#password` thì form đổi mật khẩu mở sẵn. Mật khẩu hiện tại sai báo lỗi tại form, không bị đăng xuất. Mật khẩu đúng đổi thành công. | |
+| U-21 | Vào tài khoản từ Navbar và đăng xuất | Đăng nhập `user` | 1) Bấm tên đăng nhập trên Navbar<br>2) Bấm Đăng xuất cạnh Vé của tôi hai lần nhanh<br>3) Lặp lại trên điện thoại, lần này đăng xuất từ ngăn kéo | Bấm tên mở thẳng `/profile` và liên kết tên được đánh dấu là trang hiện tại. Nút bị khóa trong lúc gửi yêu cầu, chỉ gửi một yêu cầu đăng xuất. Cả hai vị trí đều đưa khách về `/login` và Navbar trở về trạng thái chưa đăng nhập. | |

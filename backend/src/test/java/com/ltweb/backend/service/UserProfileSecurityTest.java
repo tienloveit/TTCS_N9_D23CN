@@ -89,6 +89,18 @@ class UserProfileSecurityTest {
   }
 
   @Test
+  void emptyContactsClearStoredValues() throws Exception {
+    mvc.perform(
+            put("/my-info")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"\",\"email\":\"\",\"phoneNumber\":\"\"}"))
+        .andExpect(status().isOk());
+    assertThat(user.getFullName()).isEmpty();
+    assertThat(user.getEmail()).isNull();
+    assertThat(user.getPhoneNumber()).isNull();
+  }
+
+  @Test
   void craftedProfileRequestCannotOverwriteAdministrativeOrMembershipFields() throws Exception {
     mvc.perform(
             put("/my-info")
